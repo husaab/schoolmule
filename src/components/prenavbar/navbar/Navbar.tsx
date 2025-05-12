@@ -22,11 +22,11 @@ const NavBar: FC = () => {
         {/* logo */}
         <Link href="" scroll={false}>
             <Image
-              src="/logo/mulelogo.png"
+              src="/logo/trimmedlogo.png"
               alt="Logo"
-              width={128}
-              height={128}
-              className="h-20 sm:h-28 md:h-36 lg:h-44 xl:h-52 w-auto"
+              width={100}
+              height={100}
+              quality={100}
             />
         </Link>
 
