@@ -1,0 +1,145 @@
+// File: src/app/signup/page.tsx
+'use client'
+
+import { FC } from 'react'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import PreNavBar from '@/components/prenavbar/navbar/Navbar'
+import Footer from '@/components/prefooter/Footer'
+import { useUserStore } from '@/store/useUserStore'
+import { useNotificationStore } from '@/store/useNotificationStore'
+
+interface SignUpFormInputs {
+  fullName: string
+  email: string
+  password: string
+  school: string
+}
+
+const SignupPage: FC = () => {
+  return (
+    <>
+      <PreNavBar />
+      <main className="font-sans flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
+        <div className="w-full max-w-lg bg-white p-10 rounded-lg shadow-lg">
+          <h2 className="text-3xl text-black font-bold text-center mb-8">Create Your SchoolMule Account</h2>
+          <SignUpForm />
+          <p className="text-center mt-6 text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/login" className="text-blue-600 hover:underline">
+              Log In
+            </Link>
+          </p>
+        </div>
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+const SignUpForm: FC = () => {
+  const router = useRouter()
+  const showNotification = useNotificationStore(state => state.showNotification)
+  const setUser = useUserStore.getState().setUser
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm<SignUpFormInputs>()
+
+  const onSubmit: SubmitHandler<SignUpFormInputs> = async data => {
+    try {
+      router.replace('/dashboard')
+      //const response: RegisterResponse = await registerUser(registrationData);
+    //   showNotification(response.success ? "Registration Successful" : "Registration Failed", response.success ? "success" : "error");
+    //   if (response.success) {
+    //     useUserStore.getState().setUser(response.data);
+      router.replace('/dashboard')
+ 
+    } catch (err: any) {
+      showNotification(err.message || 'Sign up failed', 'error')
+    }
+  }
+
+  const schools = [
+    { value: '', label: 'Select your school' },
+    { value: 'al_haadi_academy', label: 'Al Haadi Academy' },
+    { value: 'al_rasool', label: 'Al Rasool' },
+    { value: 'jaafari_community_centre', label: 'Jaafari Community Centre (JCC)' },
+  ]
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div>
+        <label htmlFor="fullName" className="block text-lg font-medium text-gray-700">
+          Full Name
+        </label>
+        <input
+          id="fullName"
+          type="text"
+          {...register('fullName', { required: 'Full name is required' })}
+          placeholder='ex. John Doe'
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
+        />
+        {errors.fullName && <p className="text-red-600 text-sm mt-1">{errors.fullName.message}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="email" className="block text-lg font-medium text-gray-700">
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          placeholder='ex. johndoe@gmail.com'
+          {...register('email', { required: 'Email is required' })}
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
+        />
+        {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="password" className="block text-lg font-medium text-gray-700">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Minimum length is 6' } })}
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
+        />
+        {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="school" className="block text-lg font-medium text-gray-700">
+          School
+        </label>
+        <select
+          id="school"
+          {...register('school', { required: 'Please select your school' })}
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 bg-white"
+        >
+          {schools.map(s => (
+            <option key={s.value} value={s.value} disabled={!s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        {errors.school && <p className="text-red-600 text-sm mt-1">{errors.school.message}</p>}
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 transition disabled:opacity-50"
+      >
+        {isSubmitting ? 'Creating account...' : 'Sign Up'}
+      </button>
+    </form>
+  )
+}
+
+export default SignupPage

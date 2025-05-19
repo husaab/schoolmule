@@ -1,0 +1,111 @@
+// File: src/app/contact/page.tsx
+'use client'
+import { FC, useState } from 'react'
+import PreNavBar from '@/components/prenavbar/navbar/Navbar'
+import Footer from '@/components/prefooter/Footer'
+
+const ContactPage: FC = () => {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // TODO: integrate API endpoint or mailto
+    console.log({ name, email, message })
+    setSubmitted(true)
+  }
+
+  return (
+    <>
+      <PreNavBar />
+      <main className="font-sans bg-white text-gray-800 py-45 px-6 lg:px-20">
+        <section className="max-w-3xl mx-auto space-y-8">
+          <h1 className="text-3xl font-bold text-center">Contact Us</h1>
+
+          {!submitted ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-lg font-medium text-gray-700">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-lg font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="message" className="block text-lg font-medium text-gray-700">
+                  Message
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={8}
+                  required
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2 px-4 bg-cyan-600 text-white font-semibold rounded-md hover:bg-blue-500 transition"
+              >
+                Send Message
+              </button>
+            </form>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-green-600 font-medium text-lg">
+                Thank you, {name}! Your message has been received.
+              </p>
+            </div>
+          )}
+
+          <div className="pt-8 border-t border-gray-200">
+            <h2 className="text-lg font-semibold">Other ways to reach us</h2>
+            <p>
+              <strong>Email:</strong>{' '}
+              <a href="mailto:schoolmule@gmail.com" className="text-blue-600 hover:underline">
+                schoolmule@gmail.com
+              </a>
+            </p>
+            <p>
+              <strong>Phone:</strong> (555) 123-4567
+            </p>
+            <p>
+              <strong>Address:</strong> 123 Education St., Toronto, ON, Canada
+            </p>
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+export default ContactPage;
