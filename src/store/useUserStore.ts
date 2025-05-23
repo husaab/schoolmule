@@ -2,11 +2,11 @@ import { create, StateCreator } from 'zustand';
 import { createJSONStorage, persist, PersistOptions } from 'zustand/middleware';
 
 export type User = {
-    id: number | null;
+    id: string | null;
     username: string | null;
     role: string | null;
     email: string | null;
-    phone: string | null;
+    school: string | null;
 }
 
 type UserStore = {
@@ -30,7 +30,7 @@ export const useUserStore = create<UserStore>(
                 username: null,
                 role: null,
                 email: null,
-                phone: null
+                school: null
             },
 
             setUser: (user) => set({ user }),
@@ -41,7 +41,7 @@ export const useUserStore = create<UserStore>(
                     username: null,
                     role: null,
                     email: null,
-                    phone: null
+                    school: null
                 }
             }),
             hasHydrated: false, // track hydration

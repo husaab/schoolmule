@@ -142,11 +142,11 @@ const WelcomePage: FC = () => {
               Join hundreds of schools already simplifying administration with SchoolMule.
             </p>
             <div className="flex justify-center gap-4">
-              <Link href="/signup" className="px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition">
-                Sign Up Free
-              </Link>
               <Link href="/login" className="px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-white hover:text-blue-600 transition">
                 Log In
+              </Link>
+              <Link href="/signup" className="px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition">
+                Sign Up
               </Link>
             </div>
           </div>

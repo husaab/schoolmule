@@ -1,7 +1,7 @@
 // File: src/app/signup/page.tsx
 'use client'
 
-import { FC } from 'react'
+import { FC, useState } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -9,12 +9,21 @@ import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { RegisterRequest, RegisterResponse } from '@/services/types/auth'
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { register as registerUser } from '@/services/authService'
+import {
+  faEye,
+  faEyeSlash
+} from "@fortawesome/free-solid-svg-icons";
 
 interface SignUpFormInputs {
   fullName: string
   email: string
   password: string
+  confirmPassword: string
   school: string
+  role: string
 }
 
 const SignupPage: FC = () => {
@@ -22,7 +31,7 @@ const SignupPage: FC = () => {
     <>
       <PreNavBar />
       <main className="font-sans flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
-        <div className="w-full max-w-lg bg-white p-10 rounded-lg shadow-lg">
+        <div className="w-full mt-40 mb-20 max-w-lg bg-white p-10 rounded-lg shadow-lg">
           <h2 className="text-3xl text-black font-bold text-center mb-8">Create Your SchoolMule Account</h2>
           <SignUpForm />
           <p className="text-center mt-6 text-sm text-gray-600">
@@ -42,22 +51,38 @@ const SignUpForm: FC = () => {
   const router = useRouter()
   const showNotification = useNotificationStore(state => state.showNotification)
   const setUser = useUserStore.getState().setUser
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<SignUpFormInputs>()
 
   const onSubmit: SubmitHandler<SignUpFormInputs> = async data => {
+    const registrationData: RegisterRequest = {
+      username: data.fullName,
+      email: data.email,
+      password: data.password,
+      role: data.role,
+      school: data.school
+    }
     try {
-      router.replace('/dashboard')
-      //const response: RegisterResponse = await registerUser(registrationData);
-    //   showNotification(response.success ? "Registration Successful" : "Registration Failed", response.success ? "success" : "error");
-    //   if (response.success) {
-    //     useUserStore.getState().setUser(response.data);
-      router.replace('/dashboard')
- 
+      const response: RegisterResponse = await registerUser(registrationData);
+      console.log(response);
+      showNotification(response.success ? "Registration Successful" : "Registration Failed", response.success ? "success" : "error");
+      if (response.success) {
+        const user = {
+          id: response.data.userId,              // ✅ mapped to `id`
+          username: response.data.username,
+          email: response.data.email,
+          role: response.data.role,
+          school: response.data.school
+        };
+        setUser(user);
+        router.replace('/dashboard');
+      }
     } catch (err: any) {
       showNotification(err.message || 'Sign up failed', 'error')
     }
@@ -65,9 +90,9 @@ const SignUpForm: FC = () => {
 
   const schools = [
     { value: '', label: 'Select your school' },
-    { value: 'al_haadi_academy', label: 'Al Haadi Academy' },
-    { value: 'al_rasool', label: 'Al Rasool' },
-    { value: 'jaafari_community_centre', label: 'Jaafari Community Centre (JCC)' },
+    { value: 'ALHAADIACADEMY', label: 'Al Haadi Academy' },
+    { value: 'ALRASOOLACADEMY', label: 'Al Rasool' },
+    { value: 'JCC', label: 'Jaafari Community Centre (JCC)' },
   ]
 
   return (
@@ -100,18 +125,51 @@ const SignUpForm: FC = () => {
         {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
       </div>
 
-      <div>
+      <div className="relative">
         <label htmlFor="password" className="block text-lg font-medium text-gray-700">
           Password
         </label>
         <input
           id="password"
-          type="password"
-          {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Minimum length is 6' } })}
+          placeholder='*********'
+          type={showPassword ? 'text' : 'password'}
+          {...register('password', {
+            required: 'Password is required',
+            minLength: { value: 6, message: 'Minimum length is 6' }
+          })}
           className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
         />
+        <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute inset-y-13 right-0 pr-3 flex items-center text-gray-500"
+                >
+                  {showPassword ? (
+                    <FontAwesomeIcon icon={faEye}/>
+                  ) : (
+                    <FontAwesomeIcon icon={faEyeSlash}/>
+                  )}
+                </button>
         {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
       </div>
+
+      <div>
+        <label htmlFor="confirmPassword" className="block text-lg font-medium text-gray-700">
+          Confirm Password
+        </label>
+        <input
+          id="confirmPassword"
+          type="password"
+          {...register('confirmPassword', {
+            required: 'Please confirm your password',
+            validate: value =>
+              value === watch('password') || 'Passwords do not match'
+          })}
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2"
+        />
+        {errors.confirmPassword && <p className="text-red-600 text-sm mt-1">{errors.confirmPassword.message}</p>}
+      </div>
+
 
       <div>
         <label htmlFor="school" className="block text-lg font-medium text-gray-700">
@@ -129,6 +187,23 @@ const SignUpForm: FC = () => {
           ))}
         </select>
         {errors.school && <p className="text-red-600 text-sm mt-1">{errors.school.message}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="role" className="block text-lg font-medium text-gray-700">
+          Role
+        </label>
+        <select
+          id="role"
+          {...register('role', { required: 'Please select your role' })}
+          className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 bg-white"
+        >
+          <option value="" disabled>Select your role</option>
+          <option value="TEACHER">Teacher</option>
+          <option value="PARENT">Parent</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+        {errors.role && <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>}
       </div>
 
       <button

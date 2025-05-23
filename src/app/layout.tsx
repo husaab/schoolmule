@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import AuthGuard from '@/components/AuthGuard';
+import Notification from '../components/shared/notification';
 import "./globals.css";
 
 const roboto = Roboto({
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body
         className={`${roboto.className} antialiased`}
       >
+        <Notification />
         <AuthGuard> 
           {children}
         </AuthGuard>

@@ -4,6 +4,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import Link from 'next/link';
+import { login } from '@/services/authService';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -54,9 +55,18 @@ const LoginForm: FC = () => {
   const onSubmit: SubmitHandler<LoginFormInputs> = async data => {
     try {
       const response = await login(data)
-      setUser(response.data)
-      showNotification('Logged in successfully', 'success')
-      router.replace('/dashboard')
+      if(response.success){
+         const user = {
+          id: response.data.userId,              // ✅ mapped to `id`
+          username: response.data.username,
+          email: response.data.email,
+          role: response.data.role,
+          school: response.data.school
+        };
+        setUser(user);
+        showNotification('Logged in successfully', 'success')
+        router.replace('/dashboard')
+      }
     } catch (err: any) {
       showNotification('Login failed, invalid email or password', 'error')
     }
@@ -84,6 +94,7 @@ const LoginForm: FC = () => {
         </label>
         <input
           id="password"
+          placeholder='*********'
           type={showPassword ? 'text' : 'password'}
           {...register('password', { required: 'Password is required' })}
           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-black focus:border-blue-500 focus:ring-blue-500 px-4 py-2"

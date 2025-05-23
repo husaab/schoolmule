@@ -17,7 +17,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       router.replace('/welcome')
     }
     // if logged in and on a public page → redirect to your dashboard
-    else if (user.id && PUBLIC_PATHS.includes(path)) {
+    if (user.id && PUBLIC_PATHS.includes(path)) {
       router.replace('/dashboard')
     }
   }, [user.id, path, router])
