@@ -6,6 +6,7 @@ import { useUserStore } from '@/store/useUserStore';
 import Modal from '../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore';
 
+
 const LogoutModal = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const user = useUserStore((state) => state.user);
@@ -32,7 +33,7 @@ const LogoutModal = () => {
             className="block flex items-center p-2 my-4 rounded hover:text-gray-500"
             onClick={openModal}  
         >
-            <ArrowRightStartOnRectangleIcon className="h-4 w-4 mr-2 text-red-700" aria-hidden="true" />
+            <ArrowRightStartOnRectangleIcon className="h-5 w-5 mr-2 text-red-700" aria-hidden="true" />
             Logout
         </button>
 

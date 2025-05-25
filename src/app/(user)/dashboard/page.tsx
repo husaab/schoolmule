@@ -1,12 +1,22 @@
 'use client'
 import LogoutModal from '../../../components/logout/logoutModal';
+import Navbar from '../../../components/navbar/Navbar';
+import Sidebar from '@/components/sidebar/Sidebar';
 
 const DashboardPage = () => {
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold">Welcome to your Dashboard</h1>
-      <LogoutModal />
-    </div>
+  <>
+    <Navbar/>
+    <Sidebar />
+    <main className = "ml-32 bg-white min-h-screen p-10">
+          <div className="py-40 p-50 text-black">
+            <h1 className="text-3xl font-bold">Welcome to your Dashboard</h1>
+          </div>
+    </main>
+
+  
+  
+  </>
   );
 };
 
