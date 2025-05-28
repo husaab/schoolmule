@@ -93,6 +93,7 @@ const SignUpForm: FC = () => {
     { value: 'ALHAADIACADEMY', label: 'Al Haadi Academy' },
     { value: 'ALRASOOLACADEMY', label: 'Al Rasool' },
     { value: 'JCC', label: 'Jaafari Community Centre (JCC)' },
+    { value: 'PLAYGROUND', label: 'Playground Testing'}
   ]
 
   return (
@@ -177,9 +178,13 @@ const SignUpForm: FC = () => {
         </label>
         <select
           id="school"
+          defaultValue=""
           {...register('school', { required: 'Please select your school' })}
           className="mt-1 block w-full text-black border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 px-4 py-2 bg-white"
         >
+          <option value="" hidden>
+            Select your school
+          </option>
           {schools.map(s => (
             <option key={s.value} value={s.value} disabled={!s.value}>
               {s.label}
