@@ -39,7 +39,7 @@ const LogoutModal = () => {
 
         {/* Logout confirmation modal */}
         <Modal isOpen={isModalOpen} onClose={closeModal} style="p-9">
-            <h2 className="text-lg mb-4 text-black">
+            <h2 className="text-lg mb-4 text-black p-3">
                 {user.username 
                     ? `Goodbye ${user.username}, are you sure you want to log out?`
                     : 'Are you sure you want to log out?'

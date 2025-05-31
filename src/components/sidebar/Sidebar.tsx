@@ -7,8 +7,8 @@ import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/students', label: 'Students' },
-  { href: '/add-student', label: 'Add Students' },
-  { href: '/update-grades', label: 'Update Grades' },
+  { href: '/classes', label: 'Classes' },
+  { href: '/subjects', label: 'Subjects' },
   { href: '/report-cards', label: 'Generate Report Cards' }
 ];
 
