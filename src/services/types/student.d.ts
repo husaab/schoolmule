@@ -42,3 +42,27 @@ export interface AllStudentsResponse {
   data: StudentPayload[];
   message?: string;
 }
+
+export interface EnrollStudentPayload {
+  studentId: string;
+}
+
+/**
+ * Response returned by POST /classes/:classId/students
+ */
+export interface EnrollStudentResponse {
+  status: string;
+  data: {
+    classId: string;
+    studentId: string;
+  };
+  message?: string;
+}
+
+/**
+ * Response returned by DELETE /classes/:classId/students/:studentId
+ */
+export interface UnenrollStudentResponse {
+  status: string;
+  message: string;
+}
