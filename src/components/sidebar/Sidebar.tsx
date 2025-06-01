@@ -8,8 +8,10 @@ const links = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/students', label: 'Students' },
   { href: '/classes', label: 'Classes' },
-  { href: '/subjects', label: 'Subjects' },
-  { href: '/report-cards', label: 'Generate Report Cards' }
+  { href: '/gradebook', label: 'Gradebook' },
+  { href: 'Attendance', label: 'Attendance'},
+  { href: '/report-cards', label: 'Generate Report Cards' },
+  { href: '/analytics', label: 'Analytics'}
 ];
 
 const Sidebar = () => {

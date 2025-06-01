@@ -117,7 +117,7 @@ const ClassViewModal: React.FC<ClassViewModalProps> = ({
       <div className="flex justify-end mt-6">
         <button
           onClick={onClose}
-          className="px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 transition"
+          className="px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 transition cursor-pointer"
         >
           Close
         </button>

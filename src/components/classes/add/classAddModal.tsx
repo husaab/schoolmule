@@ -126,6 +126,8 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
           />
         </div>
 
+        <p className="text-sm text-gray-600 italic">Note: you can only add Assessments and Students after creating the class. Once created, click “Edit” to add both.</p>
+
         {/* Buttons */}
         <div className="flex justify-end space-x-4 pt-4">
           <button
