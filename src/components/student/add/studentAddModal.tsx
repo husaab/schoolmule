@@ -56,7 +56,29 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
 
     const res = await createStudent(payload);
     if (res.status === 'success') {
-      onAdd(res.data);
+      const raw = res.data as any;
+      const newStudent: StudentPayload = {
+        studentId:       raw.student_id,
+        name:            raw.name,
+        homeroomTeacherId: raw.homeroom_teacher_id,
+        school:          raw.school,
+        grade:           raw.grade === null ? null : Number(raw.grade),
+        oen:             raw.oen,
+        mother: {
+          name:  raw.mother_name,
+          email: raw.mother_email,
+          phone: raw.mother_number,
+        },
+        father: {
+          name:  raw.father_name,
+          email: raw.father_email,
+          phone: raw.father_number,
+        },
+        emergencyContact: raw.emergency_contact,
+        createdAt:        raw.created_at,
+        lastModifiedAt:   raw.last_modified_at,
+      };
+      onAdd(newStudent);
       showNotification('Student added successfully', 'success');
       onClose();
       // reset form fields

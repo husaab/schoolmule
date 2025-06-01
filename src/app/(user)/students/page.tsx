@@ -10,11 +10,13 @@ import StudentEditModal from '@/components/student/edit/studentEditModal';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/store/useUserStore';
 
 const StudentsPage = () => {
 
     const [students, setStudents] = useState<StudentPayload[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const user = useUserStore((state) => state.user);
     const [gradeFilter, setGradeFilter] = useState<string>('');
     const router = useRouter();
     const [showAddModal, setShowAddModal] = useState(false);
@@ -23,7 +25,8 @@ const StudentsPage = () => {
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null)
 
     useEffect(() => {
-    getAllStudents()
+      if(user.school != null) {
+        getAllStudents(user.school)
       .then((res) => {
         if (res.status === 'success') {
           setStudents(res.data);
@@ -32,6 +35,7 @@ const StudentsPage = () => {
         }
       })
       .catch((err) => console.error('Error loading students:', err));
+      }
   }, []);
 
    const grades = Array.from(

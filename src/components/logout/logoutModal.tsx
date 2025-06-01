@@ -46,10 +46,10 @@ const LogoutModal = () => {
                 }
             </h2>
             <div className="flex justify-between space-x-4">
-            <button onClick={closeModal} className="px-4 py-2 text-white bg-cyan-600 rounded-md">
+            <button onClick={closeModal} className="px-4 py-2 text-white bg-cyan-600 rounded-md cursor-pointer">
                 Cancel
             </button>
-            <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded-md">
+            <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded-md cursor-pointer">
                 Confirm Logout
             </button>
             </div>

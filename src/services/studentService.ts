@@ -1,8 +1,10 @@
 import apiClient from './apiClient';
 import { StudentResponse, AllStudentsResponse, StudentPayload } from './types/student';
 
-export const getAllStudents = async (): Promise<AllStudentsResponse> => {
-  return apiClient<AllStudentsResponse>(`/students`);
+export const getAllStudents = async (
+  school: string
+): Promise<AllStudentsResponse> => {
+  return apiClient<AllStudentsResponse>(`/students?school=${encodeURIComponent(school)}`);
 };
 
 /**
