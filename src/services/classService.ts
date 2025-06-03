@@ -1,12 +1,19 @@
 // src/services/classService.ts
 
-import apiClient from './apiClient';
-import { ClassPayload, ClassResponse, AllClassesResponse } from './types/class';
-import { AllAssessmentsResponse } from './types/assessment';
-import { AllStudentsResponse,
-  EnrollStudentPayload, 
-  EnrollStudentResponse, 
-  UnenrollStudentResponse  } from './types/student';
+import apiClient from "./apiClient";
+import {
+  ClassPayload,
+  ClassResponse,
+  AllClassesResponse,
+} from "./types/class";
+import { AllAssessmentsResponse } from "./types/assessment";
+import {
+  AllStudentsResponse,
+  EnrollStudentPayload,
+  EnrollStudentResponse,
+  UnenrollStudentResponse,
+} from "./types/student";
+
 /**
  * Fetch all classes for a given school
  * @param school The school identifier
@@ -24,16 +31,14 @@ export const getAllClasses = async (
  * Fetch a single class by its ID
  * @param id The class ID (UUID)
  */
-export const getClassById = async (
-  id: string
-): Promise<ClassResponse> => {
+export const getClassById = async (id: string): Promise<ClassResponse> => {
   return apiClient<ClassResponse>(`/classes/${id}`);
 };
 
 /**
  * Fetch classes filtered by grade within a specific school
  * @param school The school identifier
- * @param grade  The grade number to filter
+ * @param grade The grade number to filter
  */
 export const getClassesByGrade = async (
   school: string,
@@ -45,8 +50,8 @@ export const getClassesByGrade = async (
 };
 
 /**
- * Fetch classes for a given homeroom teacher name
- * @param teacherName The full name of the homeroom teacher
+ * Fetch classes for a given teacher name
+ * @param teacherName The full name of the teacher
  */
 export const getClassesByTeacher = async (
   teacherName: string
@@ -59,25 +64,30 @@ export const getClassesByTeacher = async (
 /**
  * Create a new class
  * @param classData
- *    An object containing all required fields: 
+ *    An object containing all required fields:
  *    - school
  *    - grade
  *    - subject
- *    - homeroomTeacherName
+ *    - teacherName
+ *    - teacherId
  */
 export const createClass = async (
-  classData: Omit<ClassPayload, 'classId' | 'createdAt' | 'lastModifiedAt'>
+  classData: Omit<
+    ClassPayload,
+    "classId" | "createdAt" | "lastModifiedAt"
+  >
 ): Promise<ClassResponse> => {
-    const body = {
-        school:                classData.school,
-        grade:                 classData.grade,
-        subject:               classData.subject,
-        homeroom_teacher_name: classData.homeroomTeacherName,
-    }
+  const body = {
+    school:      classData.school,
+    grade:       classData.grade,
+    subject:     classData.subject,
+    teacherName: classData.teacherName,  // ✅ matches req.body.teacherName
+    teacherId:   classData.teacherId,    // ✅ matches req.body.teacherId
+  };
   return apiClient<ClassResponse>(`/classes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: body,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body
   });
 };
 
@@ -85,18 +95,26 @@ export const createClass = async (
  * Update an existing class (partial update)
  * @param id The class ID to update
  * @param updateData One or more of:
- *   { school, grade, subject, homeroomTeacherName }
+ *   { school, grade, subject, teacherName, teacherId }
  */
 export const updateClass = async (
   id: string,
   updateData: Partial<
-    Omit<ClassPayload, 'classId' | 'createdAt' | 'lastModifiedAt'>
+    Omit<ClassPayload, "classId" | "createdAt" | "lastModifiedAt">
   >
 ): Promise<ClassResponse> => {
+  // Convert our camelCase -> snake_case as expected by backend
+  const body: any = {};
+  if (updateData.school !== undefined)     body.school = updateData.school;
+  if (updateData.grade !== undefined)      body.grade = updateData.grade;
+  if (updateData.subject !== undefined)    body.subject = updateData.subject;
+  if (updateData.teacherName !== undefined) body.teacherName = updateData.teacherName;
+  if (updateData.teacherId   !== undefined) body.teacherId   = updateData.teacherId;
+
   return apiClient<ClassResponse>(`/classes/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: updateData,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body,
   });
 };
 
@@ -108,7 +126,7 @@ export const deleteClass = async (
   id: string
 ): Promise<{ status: string; message: string }> => {
   return apiClient<{ status: string; message: string }>(`/classes/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 };
 
@@ -138,7 +156,7 @@ export const getStudentsInClass = async (
 
 /**
  * POST /classes/:classId/students
- * → Enroll a student in a class 
+ * → Enroll a student in a class
  * @param classId   The class UUID
  * @param payload   { studentId: string }
  */
@@ -147,8 +165,8 @@ export const enrollStudentInClass = async (
   payload: EnrollStudentPayload
 ): Promise<EnrollStudentResponse> => {
   return apiClient<EnrollStudentResponse>(`/classes/${classId}/students`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: payload,
   });
 };
@@ -166,11 +184,15 @@ export const unenrollStudentFromClass = async (
   return apiClient<UnenrollStudentResponse>(
     `/classes/${classId}/students/${studentId}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
     }
   );
 };
 
+/**
+ * POST /classes/:classId/students/bulk
+ * → Bulk-enroll students
+ */
 export const bulkEnrollStudentsToClass = async (
   classId: string,
   payload: BulkEnrollPayload
@@ -178,13 +200,12 @@ export const bulkEnrollStudentsToClass = async (
   return apiClient<BulkEnrollResponse>(
     `/classes/${classId}/students/bulk`,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: payload,
     }
   );
 };
-
 
 export interface BulkEnrollPayload {
   /** If true, the backend will ignore studentIds and enroll every student in this class’s grade */
@@ -194,21 +215,23 @@ export interface BulkEnrollPayload {
 }
 
 export interface BulkEnrollResponse {
-  status: 'success' | 'failed';
+  status: "success" | "failed";
   /** An array of objects showing which (classId, studentId) pairs were actually inserted */
   data: Array<{ classId: string; studentId: string }>;
   /** If something went wrong, the backend may include a message here */
   message?: string;
 }
 
-
-export const bulkUnenrollStudentsFromClass = async (
-  classId: string) => {
+/**
+ * POST /classes/:classId/students/bulk-unenroll
+ * → Bulk-unenroll all students from a class
+ */
+export const bulkUnenrollStudentsFromClass = async (classId: string) => {
   return apiClient(
     `/classes/${classId}/students/bulk-unenroll`,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
     }
   );
 };

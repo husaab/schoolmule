@@ -57,7 +57,7 @@ const ClassesPage = () => {
     const lower = searchTerm.toLowerCase()
     const matchesText =
       c.subject.toLowerCase().includes(lower) ||
-      c.homeroomTeacherName.toLowerCase().includes(lower)
+      c.teacherName.toLowerCase().includes(lower)
     const matchesGrade =
       gradeFilter === '' || String(c.grade) === gradeFilter
     return matchesText && matchesGrade
@@ -162,7 +162,7 @@ const ClassesPage = () => {
                             {cls.subject}
                           </p>
                           <p className="text-gray-600 text-sm">
-                            Homeroom: {cls.homeroomTeacherName || '-'}
+                            Teacher: {cls.teacherName || '-'}
                           </p>
                         </div>
 

@@ -21,8 +21,10 @@ import AssessmentAddModal from '@/components/assessments/add/assessmentAddModal'
 import ClassUnenrollStudentModal from '@/components/classes/student/unenroll/classUnenrollStudentModal'
 import ClassEnrollStudentModal from '@/components/classes/student/enroll/classEnrollStudentModal'
 import ClassUnenrollAllStudentsModal from '@/components/classes/student/unenroll/all/classUnenrollAllStudentModal'
-import { getAllStudents } from '@/services/studentService' // your studentService
+import { getAllStudents } from '@/services/studentService'
 import { useUserStore } from '@/store/useUserStore'
+import { getTeachersBySchool } from '@/services/teacherService'
+import type { TeacherPayload } from '@/services/types/teacher'
 
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
@@ -30,24 +32,18 @@ export default function EditClassPage() {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((state) => state.user)
 
+  // ───── Manage Students ─────
   const [isStudentsCollapsed, setIsStudentsCollapsed] = useState(false)
   const [enrolledStudents, setEnrolledStudents] = useState<StudentPayload[]>([])
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [studentsError, setStudentsError] = useState<string | null>(null)
-
-  // Only track which student to confirm removal for
   const [studentToUnenroll, setStudentToUnenroll] = useState<StudentPayload | null>(null)
-
   const [isAssessmentsCollapsed, setIsAssessmentsCollapsed] = useState(false)
-
-  // “All students” list (used by the modal)
   const [allStudents, setAllStudents] = useState<StudentPayload[]>([])
-
-  // Controls the “Enroll Students” modal
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [showUnenrollAllModal, setShowUnenrollAllModal] = useState(false)
 
-  // — Class Details State —
+  // ───── Class Details ─────
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,27 +51,24 @@ export default function EditClassPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editSubject, setEditSubject] = useState('')
   const [editGrade, setEditGrade] = useState<number | ''>('')
-  const [editTeacher, setEditTeacher] = useState('')
+  const [editTeacherId, setEditTeacherId] = useState<string>('')    // store selected teacherId
+  const [teachers, setTeachers] = useState<TeacherPayload[]>([])     // list of teacher options
+  const [loadingTeachers, setLoadingTeachers] = useState(false)
 
-  // — Assessment State —
+  // ───── Assessments ─────
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
   const [assessLoading, setAssessLoading] = useState(false)
   const [assessError, setAssessError] = useState<string | null>(null)
-
   const [searchAssess, setSearchAssess] = useState('')
   const [weightSort, setWeightSort] = useState<'asc' | 'desc'>('asc')
-
-  // Track which assessment is being edited / deleted
   const [editingAssessment, setEditingAssessment] = useState<AssessmentPayload | null>(null)
   const [deleteAssessmentTarget, setDeleteAssessmentTarget] = useState<AssessmentPayload | null>(null)
   const [showAddAssessmentModal, setShowAddAssessmentModal] = useState(false)
 
-  // ─────────────────────────────────────────────────────────────────────────────────────────
-  // Fetch “all students” once (so the enroll modal can filter by grade)
+  // ───── Fetch “all students” once ─────
   useEffect(() => {
     async function fetchAll() {
       try {
-        // Assuming your studentService has getAllStudents(school)
         const res = await getAllStudents(user.school || '')
         if (res.status === 'success') {
           setAllStudents(res.data)
@@ -87,10 +80,9 @@ export default function EditClassPage() {
       }
     }
     fetchAll()
-  }, [])
+  }, [user.school])
 
-  // ─────────────────────────────────────────────────────────────────────────────────────────
-  // ─ Fetch class on mount ─
+  // ───── Fetch class on mount ─────
   useEffect(() => {
     async function fetchClass() {
       setLoading(true)
@@ -112,7 +104,7 @@ export default function EditClassPage() {
     fetchClass()
   }, [classId])
 
-  // ─ Fetch “currently enrolled” students once classData is available ─
+  // ───── Fetch enrolled students once classData is available ─────
   useEffect(() => {
     if (!classData) return
 
@@ -137,16 +129,7 @@ export default function EditClassPage() {
     fetchStudents()
   }, [classData, classId])
 
-  // ─ Populate “edit” fields when entering edit mode ─
-  useEffect(() => {
-    if (isEditing && classData) {
-      setEditSubject(classData.subject)
-      setEditGrade(classData.grade)
-      setEditTeacher(classData.homeroomTeacherName)
-    }
-  }, [isEditing, classData])
-
-  // ─ Fetch assessments once classData is available ─
+  // ───── Fetch assessments once classData is available ─────
   useEffect(() => {
     if (!classData) return
 
@@ -171,6 +154,40 @@ export default function EditClassPage() {
     fetchAssessments()
   }, [classData, classId])
 
+  // ───── Fetch teachers once entering edit mode ─────
+  useEffect(() => {
+    if (!isEditing || !user.school) return
+
+    const fetchTeachers = async () => {
+      setLoadingTeachers(true)
+      try {
+        const res = await getTeachersBySchool(user.school!)
+        if (res.status === 'success') {
+          setTeachers(res.data)
+        } else {
+          console.error('Failed to fetch teachers:', res.message)
+          showNotification('Failed to load teacher list', 'error')
+        }
+      } catch (err) {
+        console.error('Error loading teachers:', err)
+        showNotification('Error loading teacher list', 'error')
+      } finally {
+        setLoadingTeachers(false)
+      }
+    }
+
+    fetchTeachers()
+  }, [isEditing, user.school, showNotification])
+
+  // ───── Populate “edit” fields when starting to edit ─────
+  useEffect(() => {
+    if (isEditing && classData) {
+      setEditSubject(classData.subject)
+      setEditGrade(classData.grade)
+      setEditTeacherId(classData.teacherId)
+    }
+  }, [isEditing, classData])
+
   if (loading) {
     return (
       <div className="ml-32 bg-white min-h-screen p-10 text-center">
@@ -193,32 +210,54 @@ export default function EditClassPage() {
   }
   if (!classData) return null
 
-  const { subject, grade, homeroomTeacherName, school, createdAt, lastModifiedAt } = classData
+  // Destructure using new fields
+  const {
+    subject,
+    grade,
+    teacherName,    // ← renamed
+    teacherId,      // ← new (but not displayed here)
+    school,
+    createdAt,
+    lastModifiedAt,
+  } = classData
 
   // ─── Save changes on class details ───
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editSubject.trim() === '' || editGrade === '' || editTeacher.trim() === '') {
+    if (
+      editSubject.trim() === '' ||
+      editGrade === '' ||
+      editTeacherId.trim() === ''
+    ) {
       showNotification('All fields are required', 'error')
+      return
+    }
+
+    // Find full name of selected teacher
+    const selectedTeacher = teachers.find((t) => t.userId === editTeacherId)
+    if (!selectedTeacher) {
+      showNotification('Selected teacher not found', 'error')
       return
     }
 
     try {
       const payload = {
-        grade: editGrade as number,
-        subject: editSubject.trim(),
-        homeroom_teacher_name: editTeacher.trim(),
+        grade:       editGrade as number,
+        subject:     editSubject.trim(),
+        teacherName: selectedTeacher.fullName,
+        teacherId:   selectedTeacher.userId,
       }
       const res = await updateClass(classId, payload)
       if (res.status === 'success') {
         const updatedRaw = res.data as any
         setClassData({
-          classId: updatedRaw.classId,
-          school: updatedRaw.school,
-          grade: updatedRaw.grade,
-          subject: updatedRaw.subject,
-          homeroomTeacherName: updatedRaw.homeroomTeacherName,
-          createdAt: updatedRaw.createdAt,
+          classId:       updatedRaw.classId,
+          school:        updatedRaw.school,
+          grade:         updatedRaw.grade,
+          subject:       updatedRaw.subject,
+          teacherName:   updatedRaw.teacherName,
+          teacherId:     updatedRaw.teacherId,
+          createdAt:     updatedRaw.createdAt,
           lastModifiedAt: updatedRaw.lastModifiedAt,
         })
         showNotification('Class updated successfully', 'success')
@@ -231,6 +270,7 @@ export default function EditClassPage() {
       showNotification('Error updating class', 'error')
     }
   }
+
   const handleCancel = () => {
     setIsEditing(false)
   }
@@ -247,7 +287,7 @@ export default function EditClassPage() {
   // ─── Compute total weight ───
   const totalWeight = assessments.reduce((sum, a) => sum + a.weightPercent, 0)
 
-  // ─── “Remove” a student (opens the confirm modal) ───
+  // ─── Remove a student (opens confirm modal) ───
   const handleRemoveClick = (stu: StudentPayload) => {
     setStudentToUnenroll(stu)
   }
@@ -263,7 +303,7 @@ export default function EditClassPage() {
           <h1 className="text-3xl text-center">Edit Class</h1>
         </div>
 
-        {/* Container for class details + assessments */}
+        {/* Container for class details + sections */}
         <div className="w-[70%] mx-auto space-y-8">
           {/* ---------------- Class Details Box ---------------- */}
           <div className="border border-gray-300 rounded-lg shadow-lg p-6 bg-gray-50 relative">
@@ -302,7 +342,7 @@ export default function EditClassPage() {
                   <strong>Grade:</strong> {grade}
                 </div>
                 <div>
-                  <strong>Homeroom Teacher:</strong> {homeroomTeacherName || '-'}
+                  <strong>Teacher:</strong> {teacherName || '-'}
                 </div>
                 <div>
                   <strong>School:</strong> {school}
@@ -312,7 +352,7 @@ export default function EditClassPage() {
                 </div>
                 <div>
                   <strong>Last Modified:</strong>{' '}
-                  {lastModifiedAt ? new Date(lastModifiedAt).toLocaleDateString() : '-'}
+                  {lastModifiedAt ? new Date(lastModifiedAt).toLocaleString() : '-'}
                 </div>
               </div>
             ) : (
@@ -346,14 +386,28 @@ export default function EditClassPage() {
                   </select>
                 </div>
 
+                {/* Teacher Dropdown */}
                 <div>
-                  <label className="block text-sm mb-1">Homeroom Teacher Name</label>
-                  <input
-                    required
-                    value={editTeacher}
-                    onChange={(e) => setEditTeacher(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                  />
+                  <label className="block text-sm mb-1">Teacher</label>
+                  {loadingTeachers ? (
+                    <p className="text-gray-600">Loading teachers…</p>
+                  ) : (
+                    <select
+                      required
+                      value={editTeacherId}
+                      onChange={(e) => setEditTeacherId(e.target.value)}
+                      className="w-full border rounded px-2 py-1"
+                    >
+                      <option value="" disabled>
+                        Select teacher
+                      </option>
+                      {teachers.map((t) => (
+                        <option key={t.userId} value={t.userId}>
+                          {t.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </form>
             )}
@@ -395,7 +449,7 @@ export default function EditClassPage() {
                     Currently Enrolled
                   </h3>
 
-                  {/* Make the list scrollable past a certain height */}
+                  {/* Scrollable list */}
                   <div className="max-h-80 overflow-y-auto space-y-2">
                     {studentsLoading ? (
                       <p className="text-gray-600">Loading students…</p>
@@ -441,7 +495,6 @@ export default function EditClassPage() {
                     Unenroll All
                   </button>
                 </div>
-
               </div>
             )}
           </div>
@@ -576,15 +629,6 @@ export default function EditClassPage() {
         />
       )}
 
-      {showUnenrollAllModal && (
-      <ClassUnenrollAllStudentsModal
-        isOpen={showUnenrollAllModal}
-        onClose={() => setShowUnenrollAllModal(false)}
-        classId={classId}
-        onUnenrolledAll={() => setEnrolledStudents([])}
-      />
-      )}
-
       {/* ─ Assessment Delete Modal ─ */}
       {deleteAssessmentTarget && (
         <AssessmentDeleteModal
@@ -600,6 +644,7 @@ export default function EditClassPage() {
         />
       )}
 
+      {/* ─ Add Assessment Modal ─ */}
       {showAddAssessmentModal && (
         <AssessmentAddModal
           isOpen={showAddAssessmentModal}
@@ -612,6 +657,7 @@ export default function EditClassPage() {
         />
       )}
 
+      {/* ─ Unenroll Single Student Modal ─ */}
       {studentToUnenroll && (
         <ClassUnenrollStudentModal
           isOpen={!!studentToUnenroll}
@@ -619,7 +665,6 @@ export default function EditClassPage() {
           classId={classId}
           student={studentToUnenroll}
           onUnenrolled={(studentId) => {
-            // Update local state
             setEnrolledStudents((prev) =>
               prev.filter((s) => s.studentId !== studentId)
             )
@@ -628,6 +673,7 @@ export default function EditClassPage() {
         />
       )}
 
+      {/* ─ Enroll Students Modal ─ */}
       {showEnrollModal && (
         <ClassEnrollStudentModal
           isOpen={showEnrollModal}
@@ -637,7 +683,6 @@ export default function EditClassPage() {
           allStudents={allStudents}
           enrolledStudentIds={enrolledStudents.map((s) => s.studentId)}
           onEnrolled={(newlyEnrolledIds) => {
-            // Merge newly enrolled into local state
             setEnrolledStudents((prev) => [
               ...prev,
               ...allStudents.filter((stu) =>
@@ -645,6 +690,16 @@ export default function EditClassPage() {
               ),
             ])
           }}
+        />
+      )}
+
+      {/* ─ Unenroll All Students Modal ─ */}
+      {showUnenrollAllModal && (
+        <ClassUnenrollAllStudentsModal
+          isOpen={showUnenrollAllModal}
+          onClose={() => setShowUnenrollAllModal(false)}
+          classId={classId}
+          onUnenrolledAll={() => setEnrolledStudents([])}
         />
       )}
     </>

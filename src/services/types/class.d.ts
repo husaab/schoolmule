@@ -4,12 +4,13 @@
  * Represents a single class record as returned by the API
  */
 export interface ClassPayload {
-  classId: string;
-  school: string;
-  grade: number;
-  subject: string;
-  homeroomTeacherName: string;
-  createdAt: string;
+  classId:      string;
+  school:       string;
+  grade:        number;
+  subject:      string;
+  teacherName:  string; // ← newly added
+  teacherId:    string; // ← newly added
+  createdAt:    string;
   lastModifiedAt: string;
 }
 

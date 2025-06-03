@@ -1,12 +1,14 @@
-// File: src/components/class/add/ClassAddModal.tsx
+// File: src/components/classes/add/ClassAddModal.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Modal from '../../shared/modal' // adjust path if needed
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createClass } from '@/services/classService'
-import { ClassPayload } from '@/services/types/class'
+import type { ClassPayload } from '@/services/types/class'
+import { getTeachersBySchool } from '@/services/teacherService'
+import type { TeacherPayload } from '@/services/types/teacher'
 
 interface ClassAddModalProps {
   isOpen: boolean
@@ -22,55 +24,96 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore((state) => state.showNotification)
 
+  // ------ LOCAL STATE ------
   const [grade, setGrade] = useState<number | ''>('')
   const [subject, setSubject] = useState('')
-  const [homeroomTeacherName, setHomeroomTeacherName] = useState('')
+  const [teacherId, setTeacherId] = useState<string>('')                // <-- store selected teacher's ID
+  const [teachers, setTeachers] = useState<TeacherPayload[]>([])        // <-- will hold all teachers for dropdown
+  const [loadingTeachers, setLoadingTeachers] = useState<boolean>(false)
+  // --------------------------
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (grade === '' || subject.trim() === '' || homeroomTeacherName.trim() === '') {
-      showNotification('Grade, subject, and homeroom teacher name are required', 'error')
-      return
-    }
+  // 1) When the modal opens (and user.school is known), fetch all teachers in that school
+  useEffect(() => {
+    if (!isOpen) return
 
     if (!user?.school) {
       showNotification('Unable to determine your school, contact support', 'error')
       return
     }
 
-    // Build the payload for createClass
+    const fetchTeachers = async () => {
+      setLoadingTeachers(true)
+      try {
+        const res = await getTeachersBySchool(user.school!)
+        if (res.status === 'success') {
+          setTeachers(res.data)
+        } else {
+          console.error('Failed to fetch teachers:', res.message)
+          showNotification('Failed to load teacher list', 'error')
+        }
+      } catch (err) {
+        console.error('Error loading teachers:', err)
+        showNotification('Error loading teacher list', 'error')
+      } finally {
+        setLoadingTeachers(false)
+      }
+    }
+
+    fetchTeachers()
+  }, [isOpen, user?.school, showNotification])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // 2) Validate required fields
+    if (grade === '' || subject.trim() === '' || teacherId === '') {
+      showNotification('Grade, subject, and teacher are required', 'error')
+      return
+    }
+    if (!user?.school) {
+      showNotification('Unable to determine your school, contact support', 'error')
+      return
+    }
+
+    // 3) Find the teacher’s full name from the array
+    const selectedTeacher = teachers.find((t) => t.userId === teacherId)
+    if (!selectedTeacher) {
+      showNotification('Selected teacher not found', 'error')
+      return
+    }
+
+    // 4) Build the payload for createClass()
     const payload = {
-      school: user.school,
-      grade: grade,
-      subject: subject.trim(),
-      homeroomTeacherName: homeroomTeacherName.trim(),
+      school:      user.school,
+      grade:       grade,
+      subject:     subject.trim(),
+      teacherName: selectedTeacher.fullName,
+      teacherId:   selectedTeacher.userId,
     }
 
     try {
       const res = await createClass(payload)
       if (res.status === 'success') {
-        // Raw response is in res.data; shape: { classId, school, grade, subject, homeroomTeacherName, createdAt, lastModifiedAt }
-        const raw = res.data as any
-
+        const raw = res.data
         const newClass: ClassPayload = {
-            classId: raw.classId,
-            school: raw.school,
-            grade: raw.grade,
-            subject: raw.subject,
-            homeroomTeacherName: raw.homeroomTeacherName,
-            createdAt: raw.createdAt,
-            lastModifiedAt: raw.lastModifiedAt,
+          classId:        raw.classId,
+          school:         raw.school,
+          grade:          raw.grade,
+          subject:        raw.subject,
+          teacherName:    raw.teacherName,
+          teacherId:      raw.teacherId,
+          createdAt:      raw.createdAt,
+          lastModifiedAt: raw.lastModifiedAt,
         }
 
         onAdd(newClass)
         showNotification('Class created successfully', 'success')
         onClose()
 
-        // reset fields
+        // Reset fields
         setGrade('')
         setSubject('')
-        setHomeroomTeacherName('')
+        setTeacherId('')
       } else {
         showNotification(res.message || 'Failed to create class', 'error')
       }
@@ -83,68 +126,86 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
       <h2 className="text-xl mb-4 text-black">Add New Class</h2>
-      <form onSubmit={handleSubmit} className="space-y-4 text-black">
-        {/* Grade */}
-        <div>
-          <label className="block text-sm">Grade</label>
-          <select
-            required
-            value={grade}
-            onChange={(e) => setGrade(Number(e.target.value))}
-            className="w-full border rounded px-2 py-1"
-          >
-            <option value="" disabled>
-              Select grade
-            </option>
-            {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-              <option key={g} value={g}>
-                {g}
+
+      {/* If teachers are still loading, show a spinner or message */}
+      {loadingTeachers ? (
+        <p className="text-gray-600">Loading teachers…</p>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4 text-black">
+          {/* Grade */}
+          <div>
+            <label className="block text-sm">Grade</label>
+            <select
+              required
+              value={grade}
+              onChange={(e) => setGrade(Number(e.target.value))}
+              className="w-full border rounded px-2 py-1"
+            >
+              <option value="" disabled>
+                Select grade
               </option>
-            ))}
-          </select>
-        </div>
+              {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Subject */}
-        <div>
-          <label className="block text-sm">Subject</label>
-          <input
-            required
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
+          {/* Subject */}
+          <div>
+            <label className="block text-sm">Subject</label>
+            <input
+              required
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border rounded px-2 py-1"
+            />
+          </div>
 
-        {/* Homeroom Teacher Name */}
-        <div>
-          <label className="block text-sm">Homeroom Teacher Name</label>
-          <input
-            required
-            value={homeroomTeacherName}
-            onChange={(e) => setHomeroomTeacherName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
+          {/* Teacher Dropdown */}
+          <div>
+            <label className="block text-sm">Teacher</label>
+            <select
+              required
+              value={teacherId}
+              onChange={(e) => setTeacherId(e.target.value)}
+              className="w-full border rounded px-2 py-1"
+            >
+              <option value="" disabled>
+                Select teacher
+              </option>
+              {teachers.map((t) => (
+                <option key={t.userId} value={t.userId}>
+                  {t.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <p className="text-sm text-gray-600 italic">Note: you can only add Assessments and Students after creating the class. Once created, click “Edit” to add both.</p>
+          <p className="text-sm text-gray-600 italic">
+            Note: you can only add Assessments and Students after creating the class.
+            Once created, click “Edit” to add both.
+          </p>
 
-        {/* Buttons */}
-        <div className="flex justify-end space-x-4 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-red-500 text-white rounded-md cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-green-400 text-white rounded-md cursor-pointer"
-          >
-            Add Class
-          </button>
-        </div>
-      </form>
+          {/* Buttons */}
+          <div className="flex justify-end space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-red-500 text-white rounded-md cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-400 text-white rounded-md cursor-pointer"
+            >
+              Add Class
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   )
 }
