@@ -92,6 +92,17 @@ export const createClass = async (
 };
 
 /**
+ * Fetch classes for a given teacher ID (UUID)
+ */
+export const getClassesByTeacherId = async (
+  teacherId: string
+): Promise<AllClassesResponse> => {
+  return apiClient<AllClassesResponse>(
+    `/classes/teacher/id/${encodeURIComponent(teacherId)}`
+  )
+}
+
+/**
  * Update an existing class (partial update)
  * @param id The class ID to update
  * @param updateData One or more of:
@@ -234,4 +245,52 @@ export const bulkUnenrollStudentsFromClass = async (classId: string) => {
       headers: { "Content-Type": "application/json" },
     }
   );
+};
+
+export const getScoresByClass = async (
+  classId: string
+): Promise<{ status: string; data: Array<{
+    student_id: string;
+    student_name: string;
+    assessment_id: string;
+    assessment_name: string;
+    weight_percent: number;
+    score: number | null;
+  }>; message?: string }> => {
+  return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`);
+};
+
+export const upsertScoresByClass = async (
+  classId: string,
+  scores: Array<{ studentId: string; assessmentId: string; score: number }>
+) => {
+  return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: { scores },
+  });
+};
+
+/**
+ * NEW: Download the Excel (XLSX) file for this class’s gradebook.
+ *
+ * Returns a Promise<Blob>, which the caller can turn into a downloadable URL.
+ */
+export const downloadGradebookExcel = async (
+  classId: string
+): Promise<Blob> => {
+  // We assume NEXT_PUBLIC_BASE_URL is set to your API origin
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
+  const url = `${baseURL}/studentAssessments/classes/${encodeURIComponent(classId)}/scores/csv`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    // You do NOT need `headers: { "Content-Type": ... }` for a GET
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate Excel file. Status: ${response.status}`);
+  }
+
+  return response.blob();
 };
