@@ -13,6 +13,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "github:fortawesome/react-fontawesome",
     "@heroicons/react": "^2.2.0",
+    "date-fns-tz": "^3.2.0",
     "framer-motion": "^12.12.1",
     "next": "15.3.1",
     "nodemon": "^3.1.10",

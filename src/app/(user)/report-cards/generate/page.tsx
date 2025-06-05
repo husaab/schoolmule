@@ -1,0 +1,165 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Navbar from '@/components/navbar/Navbar';
+import Sidebar from '@/components/sidebar/Sidebar';
+import { getAllStudents } from '@/services/studentService';
+import { StudentPayload } from '@/services/types/student';
+import { useUserStore } from '@/store/useUserStore';
+
+export default function GenerateReportCardsPage() {
+  const user = useUserStore((state) => state.user);
+  const [students, setStudents] = useState<StudentPayload[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [generateAll, setGenerateAll] = useState<boolean>(false);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (user.school) {
+      getAllStudents(user.school).then((res) => {
+        if (res.status === 'success') {
+          setStudents(res.data);
+        }
+      });
+    }
+  }, [user.school]);
+
+  const groupedByGrade = students.reduce((acc, student) => {
+    const grade = `Grade ${student.grade ?? '-'}`;
+    acc[grade] = acc[grade] || [];
+    acc[grade].push(student);
+    return acc;
+  }, {} as Record<string, StudentPayload[]>);
+
+  useEffect(() => {
+    if (generateAll) {
+      const allIds = students.map((s) => s.studentId);
+      setSelectedStudents(new Set(allIds));
+    } else if (selectedGrade) {
+      const gradeIds = groupedByGrade[selectedGrade]?.map((s) => s.studentId) || [];
+      setSelectedStudents(new Set(gradeIds));
+    } else {
+      setSelectedStudents(new Set());
+    }
+  }, [generateAll, selectedGrade, students]);
+
+  const handleSelectStudent = (id: string) => {
+    if (generateAll || selectedGrade) return;
+    setSelectedStudents((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const handleGenerate = () => {
+    // TODO: Trigger backend API call to generate reports
+    console.log('Generating report cards for:', [...selectedStudents]);
+  };
+
+  return (
+    <>
+      <Navbar />
+      <Sidebar />
+      <main className="ml-32 min-h-screen p-10 bg-white text-black">
+        <h1 className="text-3xl font-bold text-center pt-40 mb-6">Generate Report Cards</h1>
+
+        <div className="w-[70%] mx-auto space-y-6">
+          <div className="flex flex-col items-start gap-4 text-lg">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={generateAll}
+                onChange={(e) => {
+                  setGenerateAll(e.target.checked);
+                  if (e.target.checked) {
+                    setSelectedGrade('');
+                  }
+                }}
+                className="mr-2"
+              />
+              Generate Report Cards for All Grades
+            </label>
+
+            <div className="w-full">
+              <label className="font-medium">Or select specific grade:</label>
+              <select
+                disabled={generateAll}
+                value={selectedGrade}
+                onChange={(e) => {
+                  setSelectedGrade(e.target.value);
+                  setGenerateAll(false);
+                }}
+                className="w-full border px-3 py-2 rounded mt-1"
+              >
+                <option value="">-- Select Grade --</option>
+                {Object.keys(groupedByGrade)
+                  .sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
+                  .map((grade) => (
+                    <option key={grade} value={grade}>
+                      {grade}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="max-h-[50vh] overflow-y-scroll border p-4 rounded custom-scrollbar">
+            {Object.entries(groupedByGrade)
+              .sort(([a], [b]) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
+              .map(([grade, students]) => {
+                const collapsed = selectedGrade && grade !== selectedGrade;
+                if (generateAll || !selectedGrade || !collapsed) {
+                  return (
+                    <div key={grade} className="mb-6">
+                      <h2 className="text-xl font-semibold mb-2">{grade}</h2>
+                      <div className="space-y-2">
+                        {students.map((student) => (
+                          <label
+                            key={student.studentId}
+                            className="flex items-center justify-between border px-4 py-2 rounded"
+                          >
+                            <span>{student.name}</span>
+                            <input
+                              type="checkbox"
+                              disabled={generateAll || !!selectedGrade}
+                              checked={selectedStudents.has(student.studentId)}
+                              onChange={() => handleSelectStudent(student.studentId)}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={handleGenerate}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded"
+            >
+              Generate Report Cards
+            </button>
+          </div>
+        </div>
+
+        <style jsx global>{`
+          .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+          }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+          }
+        `}</style>
+      </main>
+    </>
+  );
+}
