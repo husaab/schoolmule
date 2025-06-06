@@ -8,6 +8,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { getClassesByTeacherId } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const GradebookDashboard: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -166,14 +167,12 @@ const GradebookDashboard: React.FC = () => {
 
                       <div className="flex items-center space-x-4">
                         {/* “Open Gradebook” → navigate into detailed gradebook page */}
-                        <button
-                          onClick={() =>
-                            router.push(`/gradebook/${cls.classId}`)
-                          }
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
-                        >
-                          Open
-                        </button>
+                        <Link
+                        href={`/gradebook/${cls.classId}`}
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
+                      >
+                        Open
+                      </Link>
 
                         {/* You could add “Export CSV” here once you implement that */}
                       </div>

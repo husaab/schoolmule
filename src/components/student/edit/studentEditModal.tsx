@@ -6,7 +6,9 @@ import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import Modal from '../../shared/modal';
 import { updateStudent } from '@/services/studentService';
+import { getTeachersBySchool } from '@/services/teacherService';
 import { StudentPayload } from '@/services/types/student';
+import { TeacherPayload } from '@/services/types/teacher';
 
 interface StudentEditModalProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
   const [fatherEmail, setFatherEmail] = useState('');
   const [fatherPhone, setFatherPhone] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+  const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
+  const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
 
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -42,8 +46,26 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       setFatherEmail(student.father?.email || '');
       setFatherPhone(student.father?.phone || '');
       setEmergencyContact(student.emergencyContact || '');
+      setHomeroomTeacherId(student.homeroomTeacherId || '');
     }
   }, [isOpen, student]);
+
+  useEffect(() => {
+    if (!isOpen || !user?.school) return;
+    const fetchTeachers = async () => {
+      try {
+        const res = await getTeachersBySchool(user.school!);
+        if (res.status === 'success') {
+          setTeachers(res.data);
+        } else {
+          showNotification('Failed to load teachers', 'error');
+        }
+      } catch (err) {
+        showNotification('Error fetching teachers', 'error');
+      }
+    };
+    fetchTeachers();
+  }, [isOpen, user?.school, showNotification]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +79,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       grade: grade,
       oen: oen || null,
       school: user?.school || '',
-      homeroomTeacherId: null,
+      homeroomTeacherId: homeroomTeacherId || null,
       mother: {
         name: motherName || null,
         email: motherEmail || null,
@@ -74,26 +96,27 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
     const res = await updateStudent(student.studentId, updateData);
     const raw = res.data as any;
     const updated: StudentPayload = {
-    studentId:       raw.student_id,
-    name:            raw.name,
-    homeroomTeacherId: raw.homeroom_teacher_id,
-    school:          raw.school,
-    grade:           raw.grade === null ? null : Number(raw.grade),
-    oen:             raw.oen,
-    mother: {
-        name:  raw.mother_name,
+      studentId: raw.student_id,
+      name: raw.name,
+      homeroomTeacherId: raw.homeroom_teacher_id,
+      school: raw.school,
+      grade: raw.grade === null ? null : Number(raw.grade),
+      oen: raw.oen,
+      mother: {
+        name: raw.mother_name,
         email: raw.mother_email,
         phone: raw.mother_number,
-    },
-    father: {
-        name:  raw.father_name,
+      },
+      father: {
+        name: raw.father_name,
         email: raw.father_email,
         phone: raw.father_number,
-    },
-        emergencyContact: raw.emergency_contact,
-        createdAt:        raw.created_at,
-        lastModifiedAt:   raw.last_modified_at,
+      },
+      emergencyContact: raw.emergency_contact,
+      createdAt: raw.created_at,
+      lastModifiedAt: raw.last_modified_at,
     };
+
     if (res.status === 'success') {
       onUpdate(updated);
       showNotification('Student updated successfully', 'success');
@@ -126,9 +149,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
           >
             <option value="" disabled>Select grade</option>
             {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
+              <option key={g} value={g}>{g}</option>
             ))}
           </select>
         </div>
@@ -140,7 +161,19 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
             className="w-full border rounded px-2 py-1"
           />
         </div>
-        {/* parent/emergency fields */}
+        <div>
+          <label className="block text-sm">Homeroom Teacher</label>
+          <select
+            value={homeroomTeacherId}
+            onChange={(e) => setHomeroomTeacherId(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          >
+            <option value="">Select teacher</option>
+            {teachers.map((t) => (
+              <option key={t.userId} value={t.userId}>{t.fullName}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="block text-sm">Mother Name</label>
           <input

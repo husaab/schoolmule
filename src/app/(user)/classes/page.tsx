@@ -8,6 +8,7 @@ import ClassViewModal from '@/components/classes/view/classViewModal'
 import ClassAddModal from '@/components/classes/add/classAddModal'
 import ClassDeleteModal from '@/components/classes/delete/classDeleteModal'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses } from '@/services/classService'
@@ -15,7 +16,7 @@ import { getAllClasses } from '@/services/classService'
 const ClassesPage = () => {
   const user = useUserStore((state) => state.user)
   const router = useRouter()
-
+  
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string>('')
@@ -173,14 +174,12 @@ const ClassesPage = () => {
                           >
                             View
                           </button>
-                          <button
-                            onClick={() => {
-                              router.push(`/classes/${cls.classId}/edit`)
-                            }}
-                            className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
+                          <Link
+                            href={`/classes/${cls.classId}/edit`}
+                            className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer inline-block text-center"
                           >
                             Edit
-                          </button>
+                          </Link>
                           {/* Delete “×” button */}
                           <button
                             onClick={() => setDeleteTarget(cls)}

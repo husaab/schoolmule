@@ -61,7 +61,7 @@ const ClassViewModal: React.FC<ClassViewModalProps> = ({
           <strong>Grade:</strong> {classData.grade}
         </div>
         <div>
-          <strong>Homeroom Teacher:</strong> {classData.homeroomTeacherName}
+          <strong>Homeroom Teacher:</strong> {classData.teacherName}
         </div>
         <div>
           <strong>School:</strong> {classData.school}

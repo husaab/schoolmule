@@ -15,3 +15,9 @@ export const getTeachersBySchool = async (
     `/teachers?school=${encodeURIComponent(school)}`
   );
 };
+
+export const getTeacherById = async (
+  id: string
+): Promise<{ status: string; data: TeacherPayload }> => {
+  return apiClient<{ status: string; data: TeacherPayload }>(`/teachers/${id}`);
+};

@@ -17,6 +17,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { AssessmentPayload } from '@/services/types/assessment'
+import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 
 interface ScoreRow {
   student_id: string
@@ -36,6 +37,9 @@ const GradebookClass = () => {
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
   const [scoresMatrix, setScoresMatrix] = useState<ScoreRow[]>([])
+
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means “no entry yet”)
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
@@ -271,6 +275,7 @@ const GradebookClass = () => {
                   </th>
                 ))}
                 <th className="px-4 py-2 text-center text-gray-700">Total</th>
+                <th className="px-4 py-2 text-center text-gray-700">Feedback</th>
               </tr>
             </thead>
 
@@ -331,6 +336,18 @@ const GradebookClass = () => {
                         {/* Show the weighted total with one decimal place: */}
                         {total.toFixed(1)}%
                       </td>
+
+                      <td className="px-4 py-2 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedStudentId(stu.studentId);
+                            setIsFeedbackModalOpen(true);
+                          }}
+                          className="text-sm px-2 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded cursor-pointer"
+                        >
+                          Feedback
+                        </button>
+                      </td>
                     </tr>
                   )
                 })
@@ -367,6 +384,15 @@ const GradebookClass = () => {
 
         {error && <p className="mt-4 text-center text-red-600">{error}</p>}
       </main>
+
+      {selectedStudentId && (
+        <OpenFeedBackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          studentId={selectedStudentId}
+          classId={classId}
+        />
+      )}
     </>
   )
 }

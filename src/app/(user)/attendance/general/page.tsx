@@ -21,6 +21,19 @@ export default function GeneralAttendancePage() {
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore(state => state.showNotification)
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('');
+
+  const grades = Array.from(
+    new Set(students.map(s => s.grade).filter((g): g is number => g != null))
+  ).sort((a, b) => a - b);
+
+  const filteredStudents = students.filter(s => {
+    const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGrade = gradeFilter === '' || String(s.grade) === gradeFilter;
+    return matchesName && matchesGrade;
+  });
+
  const [selectedDate, setSelectedDate] = useState(() => {
   return format(new Date(), 'yyyy-MM-dd'); // Uses user’s browser local time
     });
@@ -59,7 +72,7 @@ export default function GeneralAttendancePage() {
     }));
   };
 
-  const groupedByGrade = students.reduce((acc, student) => {
+  const groupedByGrade = filteredStudents.reduce((acc, student) => {
     const grade = `Grade ${student.grade ?? '-'}`;
     acc[grade] = acc[grade] || [];
     acc[grade].push(student);
@@ -85,6 +98,25 @@ export default function GeneralAttendancePage() {
         />
         </div>
         <div className="w-[70%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2 w-[70%] mx-auto">
+        <input
+          type="text"
+          placeholder="Search by name…"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 text-black"
+        />
+        <select
+          value={gradeFilter}
+          onChange={e => setGradeFilter(e.target.value)}
+          className="w-full sm:w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 text-black"
+        >
+          <option value="">All Grades</option>
+          {grades.map(g => (
+            <option key={g} value={String(g)}>Grade {g}</option>
+          ))}
+        </select>
+        </div>
           {Object.entries(groupedByGrade)
             .sort(([a], [b]) => {
                 const numA = parseInt(a.replace(/\D/g, ''), 10);

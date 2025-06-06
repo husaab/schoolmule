@@ -1,12 +1,14 @@
 // File: src/components/StudentAddModal.tsx
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import Modal from '../../shared/modal';
 import { createStudent } from '@/services/studentService';
+import { getTeachersBySchool } from '@/services/teacherService';
 import { StudentPayload } from '@/services/types/student';
+import { TeacherPayload } from '@/services/types/teacher';
 
 interface StudentAddModalProps {
   isOpen: boolean;
@@ -26,8 +28,34 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
   const [fatherPhone, setFatherPhone] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
 
+  const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
+  const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore((state) => state.showNotification);
+
+  useEffect(() => {
+    if (!isOpen || !user?.school) return;
+
+    const fetchTeachers = async () => {
+      setLoadingTeachers(true);
+      try {
+        const res = await getTeachersBySchool(user.school!);
+        if (res.status === 'success') {
+          setTeachers(res.data);
+        } else {
+          showNotification('Failed to load teachers', 'error');
+        }
+      } catch (err) {
+        showNotification('Error fetching teachers', 'error');
+      } finally {
+        setLoadingTeachers(false);
+      }
+    };
+
+    fetchTeachers();
+  }, [isOpen, user?.school, showNotification]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +68,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       grade: grade,
       oen: oen || null,
       school: user?.school || '',
-      homeroomTeacherId: null as null,
+      homeroomTeacherId: homeroomTeacherId || null,
       mother: {
         name: motherName || null,
         email: motherEmail || null,
@@ -58,30 +86,29 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
     if (res.status === 'success') {
       const raw = res.data as any;
       const newStudent: StudentPayload = {
-        studentId:       raw.student_id,
-        name:            raw.name,
+        studentId: raw.student_id,
+        name: raw.name,
         homeroomTeacherId: raw.homeroom_teacher_id,
-        school:          raw.school,
-        grade:           raw.grade === null ? null : Number(raw.grade),
-        oen:             raw.oen,
+        school: raw.school,
+        grade: raw.grade === null ? null : Number(raw.grade),
+        oen: raw.oen,
         mother: {
-          name:  raw.mother_name,
+          name: raw.mother_name,
           email: raw.mother_email,
           phone: raw.mother_number,
         },
         father: {
-          name:  raw.father_name,
+          name: raw.father_name,
           email: raw.father_email,
           phone: raw.father_number,
         },
         emergencyContact: raw.emergency_contact,
-        createdAt:        raw.created_at,
-        lastModifiedAt:   raw.last_modified_at,
+        createdAt: raw.created_at,
+        lastModifiedAt: raw.last_modified_at,
       };
       onAdd(newStudent);
       showNotification('Student added successfully', 'success');
       onClose();
-      // reset form fields
       setName('');
       setGrade('');
       setOen('');
@@ -92,6 +119,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       setFatherEmail('');
       setFatherPhone('');
       setEmergencyContact('');
+      setHomeroomTeacherId('');
     } else {
       showNotification('Failed to add student', 'error');
     }
@@ -112,19 +140,17 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
         </div>
         <div>
           <label className="block text-sm">Grade</label>
-            <select
-                required
-                value={grade}
-                onChange={(e) => setGrade(Number(e.target.value))}
-                className="w-full border rounded px-2 py-1"
-            >
-                <option value="" disabled>Select grade</option>
-                {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-                <option key={g} value={g}>
-                    {g}
-                </option>
-                ))}
-            </select>
+          <select
+            required
+            value={grade}
+            onChange={(e) => setGrade(Number(e.target.value))}
+            className="w-full border rounded px-2 py-1"
+          >
+            <option value="" disabled>Select grade</option>
+            {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm">OEN</label>
@@ -135,7 +161,19 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             className="w-full border rounded px-2 py-1"
           />
         </div>
-        {/* Optional parent/emergency fields */}
+        <div>
+          <label className="block text-sm">Homeroom Teacher</label>
+          <select
+            value={homeroomTeacherId}
+            onChange={(e) => setHomeroomTeacherId(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          >
+            <option value="">Select teacher</option>
+            {teachers.map((t) => (
+              <option key={t.userId} value={t.userId}>{t.fullName}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="block text-sm">Mother Name</label>
           <input

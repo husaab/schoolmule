@@ -1,9 +1,10 @@
 // File: src/components/StudentViewModal.tsx
 'use client'
 
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../shared/modal';
 import { StudentPayload } from '@/services/types/student';
+import { getTeacherById } from '@/services/teacherService';
 
 interface StudentViewModalProps {
   isOpen: boolean;
@@ -12,6 +13,23 @@ interface StudentViewModalProps {
 }
 
 const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, student }) => {
+  const [teacherName, setTeacherName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTeacher = async () => {
+      if (!student.homeroomTeacherId) return;
+      try {
+        const res = await getTeacherById(student.homeroomTeacherId);
+        if (res.status === 'success') {
+          setTeacherName(res.data.fullName);
+        }
+      } catch (err) {
+        console.error('Error fetching teacher', err);
+      }
+    };
+    fetchTeacher();
+  }, [student.homeroomTeacherId]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
       <h2 className="text-xl mb-4 text-black">Student Details</h2>
@@ -29,7 +47,7 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
           <strong>School:</strong> {student.school}
         </div>
         <div>
-          <strong>Homeroom Teacher ID:</strong> {student.homeroomTeacherId ?? '-'}
+          <strong>Homeroom Teacher:</strong> {teacherName ?? '—'}
         </div>
         <div>
           <strong>Mother's Name:</strong> {student.mother?.name ?? '-'}
