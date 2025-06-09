@@ -214,7 +214,7 @@ const SignUpForm: FC = () => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 transition disabled:opacity-50"
+        className="cursor-pointer w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 transition disabled:opacity-50"
       >
         {isSubmitting ? 'Creating account...' : 'Sign Up'}
       </button>

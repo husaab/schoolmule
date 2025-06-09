@@ -6,6 +6,9 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
+import { generateBulkReportCards } from '@/services/reportCardService';
+import GenerateReportCardModal from '@/components/report-cards/generateReportCardModal';
+import { useNotificationStore } from '@/store/useNotificationStore';
 
 export default function GenerateReportCardsPage() {
   const user = useUserStore((state) => state.user);
@@ -13,6 +16,12 @@ export default function GenerateReportCardsPage() {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [generateAll, setGenerateAll] = useState<boolean>(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const showNotification = useNotificationStore(state => state.showNotification);
+
+  const [term, setTerm] = useState<string>('Term 1');
+  const [isLoading, setIsLoading] = useState(false);
+  const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (user.school) {
@@ -52,9 +61,31 @@ export default function GenerateReportCardsPage() {
     });
   };
 
-  const handleGenerate = () => {
-    // TODO: Trigger backend API call to generate reports
-    console.log('Generating report cards for:', [...selectedStudents]);
+  const handleGenerate = async () => {
+    if (!term || selectedStudents.size === 0) {
+      showNotification('Please select a term and at least one student.', "error");
+      return;
+    }
+    setShowModal(true);
+    setIsLoading(true);
+    setResultMessage(null);
+
+    try {
+      const res = await generateBulkReportCards({
+        term,
+        studentIds: [...selectedStudents],
+      });
+
+      const successCount = res.generated.length;
+      const failedCount = res.failed.length;
+
+      setResultMessage(`Generated ${successCount} report card(s). ${failedCount > 0 ? failedCount + ' failed.' : ''}`);
+    } catch (err) {
+      console.error(err);
+      setResultMessage('An error occurred while generating report cards.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -66,6 +97,18 @@ export default function GenerateReportCardsPage() {
 
         <div className="w-[70%] mx-auto space-y-6">
           <div className="flex flex-col items-start gap-4 text-lg">
+            <div className="w-full">
+            <label className="font-medium">Select term:</label>
+            <select
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              className="w-full border px-3 py-2 rounded mt-1"
+            >
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Final Term">Final Term</option>
+            </select>
+          </div>
             <label className="inline-flex items-center">
               <input
                 type="checkbox"
@@ -139,10 +182,16 @@ export default function GenerateReportCardsPage() {
           <div className="text-center">
             <button
               onClick={handleGenerate}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded"
+              className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded cursor-pointer"
             >
               Generate Report Cards
             </button>
+            {isLoading && (
+              <p className="text-blue-600 mt-4">Generating report cards, please wait...</p>
+            )}
+            {resultMessage && (
+              <p className="text-green-600 mt-4">{resultMessage}</p>
+            )}
           </div>
         </div>
 
@@ -160,6 +209,12 @@ export default function GenerateReportCardsPage() {
           }
         `}</style>
       </main>
+      <GenerateReportCardModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        studentIds={[...selectedStudents]}
+        term={term}
+      />
     </>
   );
 }

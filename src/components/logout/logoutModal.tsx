@@ -30,7 +30,7 @@ const LogoutModal = () => {
     return (
         <div>
         <button 
-            className="block flex items-center p-2 my-4 rounded hover:text-gray-500"
+            className="block flex items-center p-2 my-4 rounded hover:text-red-800 cursor-pointer"
             onClick={openModal}  
         >
             <ArrowRightStartOnRectangleIcon className="h-5 w-5 mr-2 text-red-700" aria-hidden="true" />

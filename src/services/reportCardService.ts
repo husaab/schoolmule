@@ -4,7 +4,10 @@ import apiClient from './apiClient';
 import type {
   ReportCardFeedbackPayload,
   ReportCardFeedbackResponse,
-  ReportCardTerm
+  ReportCardTerm,
+  ReportCardBulkGenerateRequest,
+  ReportCardBulkGenerateResponse,
+  ReportCardStatusResponse
 } from './types/reportCard';
 
 /**
@@ -36,4 +39,44 @@ export const upsertReportCardFeedback = async (
       body: payload,
     }
   );
+};
+
+/**
+ * POST /report-cards/generate/bulk
+ * → Generate report cards for multiple students for a given term
+ */
+export const generateBulkReportCards = async (
+  payload: ReportCardBulkGenerateRequest
+): Promise<ReportCardBulkGenerateResponse> => {
+  return apiClient<ReportCardBulkGenerateResponse>(
+    `/report-cards/generate/bulk`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    }
+  );
+};
+
+/**
+ * GET /report-cards/view?term=...
+ * → Get all generated report cards for a specific term
+ */
+export const getGeneratedReportCards = async (
+  term: string
+): Promise<ReportCardStatusResponse> => {
+  return apiClient<ReportCardStatusResponse>(
+    `/report-cards/view?term=${encodeURIComponent(term)}`
+  );
+};
+
+export const getSignedReportCardUrl = async (filePath: string): Promise<string | null> => {
+  const response = await apiClient<{ url: string }>(`/report-cards/signed-url?path=${encodeURIComponent(filePath)}`);
+  return response.url || null;
+};
+
+export const deleteReportCard = async (filePath: string): Promise<{ status: string }> => {
+  return apiClient<{ status: string }>(`/report-cards/delete?filePath=${encodeURIComponent(filePath)}`, {
+    method: 'DELETE',
+  });
 };

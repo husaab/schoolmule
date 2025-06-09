@@ -115,7 +115,7 @@ const Sidebar = () => {
           <span>Settings</span>
         </Link>
 
-        <div className="text-red-600 pl-2 hover:bg-gray-100">
+        <div className="text-red-600 pl-2 hover:text-red-800 cursor-pointer">
           <LogoutModal />
         </div>
       </nav>
