@@ -30,7 +30,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     username: ''
   },
 
-  showNotification: (message, type, duration = 3000) => {
+  showNotification: (message, type, duration = 4000) => {
     set({ message, type, isOpen: true, duration });
     setTimeout(() => {
       set({ isOpen: false });

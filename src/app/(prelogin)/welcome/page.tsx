@@ -150,6 +150,7 @@ const WelcomePage: FC = () => {
               </Link>
             </div>
           </div>
+          
         </section>
       </main>
 

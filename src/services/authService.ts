@@ -21,3 +21,29 @@ export const register = async (userData: RegisterRequest): Promise<RegisterRespo
     body: userData,
   });
 };
+
+export function resendVerificationEmail({ email }: { email: string }) {
+  return apiClient('/auth/verify-email', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export interface ConfirmEmailResponse {
+  success: boolean;
+  status: number;
+  message: string;
+  data?: {
+    id: string;
+    email: string;
+    username: string;
+    isVerified: boolean;
+  };
+}
+
+
+export function confirmEmail(token: string): Promise<ConfirmEmailResponse> {
+  return apiClient('/auth/confirm-email?token=' + encodeURIComponent(token), {
+    method: 'GET',
+  });
+}

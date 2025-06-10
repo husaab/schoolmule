@@ -32,6 +32,9 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
       <Link href="/product" className={linkBase}>
         Our Product
       </Link>
+      <Link href="/demo" className={linkBase}>
+        Demo
+      </Link>
       <Link href="/contact" scroll={false} className={linkBase}>
         Contact
       </Link>

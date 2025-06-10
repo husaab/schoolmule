@@ -31,6 +31,7 @@ export interface RegisterResponse {
     school: string;
     role: string;
     isVerified: boolean;
+    isVerifiedSchool: boolean;
     emailToken: string;
     createdAt: string;
     lastModifiedAt: string;
@@ -55,6 +56,7 @@ export interface LoginResponse {
     school: string;
     role: string;
     isVerified: boolean;
+    isVerifiedSchool: boolean;
     createdAt: string;
     lastModifiedAt: string;
   };
