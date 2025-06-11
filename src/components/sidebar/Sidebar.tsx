@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import LogoutModal from '../logout/logoutModal';
 import { Cog6ToothIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
+import { useUserStore } from '@/store/useUserStore'
 
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -14,6 +15,7 @@ const links = [
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const user = useUserStore(s => s.user);
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -105,6 +107,22 @@ const Sidebar = () => {
             </div>
           )}
         </div>
+
+        {/* ✅ Admin Panel Link - visible only to admins */}
+        {user?.role === 'ADMIN' && (
+          <Link
+            href="/admin-panel"
+            className={`block px-4 py-2 rounded hover:bg-gray-100 ${
+              pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
+            }`}
+          >
+            Admin Panel
+          </Link>
+        )}
+
+        <Link href="/schedule" className="flex items-center px-4 py-2 rounded hover:bg-gray-100">
+          Schedule
+        </Link>
 
         <Link href="/analytics" className="flex items-center px-4 py-2 rounded hover:bg-gray-100">
           Analytics

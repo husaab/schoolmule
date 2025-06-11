@@ -28,6 +28,16 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       else if(user.id && !user.isVerifiedEmail && path !== '/verify-email' && path !== '/verify-email-token'){
         router.replace('/verify-email');
       }
+
+      else if (
+        user.id &&
+        user.role != "ADMIN" &&
+        user.isVerifiedEmail &&
+        !user.isVerifiedSchool &&
+        path !== '/school-approval'
+      ) {
+        router.replace('/school-approval');
+      }
     }
     // logged in on a public page → dashboard
 

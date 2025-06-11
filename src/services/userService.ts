@@ -31,3 +31,10 @@ export const updateUser = async (
     body: updateData,
   });
 };
+
+export const deleteUserAccount = async (userId: string) => {
+  return apiClient(`/auth/delete-user`, {
+    method: 'DELETE',
+    body: { userId },
+  });
+};
