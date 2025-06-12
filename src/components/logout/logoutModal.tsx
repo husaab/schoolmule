@@ -5,6 +5,7 @@ import { ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useUserStore } from '@/store/useUserStore';
 import Modal from '../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { logout } from '@/services/authService';
 
 
 const LogoutModal = () => {
@@ -21,10 +22,15 @@ const LogoutModal = () => {
 
     // Handle logout logic
     const handleLogout = async () => {
-        const username = user.username;
-        clearUser();
-        closeModal();  // Close modal after logout
-        window.location.href = '/login';
+          try {
+            await logout();         // 🔐 Wait for backend to clear cookies
+            clearUser();            // 🧹 Clear Zustand store
+            closeModal();           // ❌ Close the modal
+            window.location.href = '/login'; // 🚪 Redirect
+        } catch (error) {
+            console.error('Logout failed:', error);
+            showNotification('Logout failed. Please try again.', 'error');
+        }
     };
 
     return (

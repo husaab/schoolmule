@@ -11,7 +11,7 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
 
 export const logout = async (): Promise<void> => {
   return apiClient<void>('/auth/logout', {
-    method: 'POST',
+    method: 'POST'
   });
 };
 
@@ -47,3 +47,4 @@ export function confirmEmail(token: string): Promise<ConfirmEmailResponse> {
     method: 'GET',
   });
 }
+

@@ -123,7 +123,7 @@ const LoginForm: FC = () => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 px-4 bg-cyan-600 cursor-pointer text-white font-semibold rounded-md hover:bg-blue-500 transition disabled:opacity-50"
+        className="w-full py-3 px-4 bg-cyan-600 cursor-pointer text-white font-semibold rounded-md hover:bg-cyan-700 transition disabled:opacity-50"
       >
         {isSubmitting ? 'Logging in...' : 'Log In'}
       </button>

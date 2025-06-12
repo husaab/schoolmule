@@ -6,10 +6,14 @@ import { useUserStore } from '@/store/useUserStore';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/prefooter/Footer';
 import { deleteUserAccount } from '@/services/userService';
+import { logout } from '@/services/authService';
+import { useNotificationStore } from '@/store/useNotificationStore';
+import { statsBuffer } from 'framer-motion';
 
 export default function SchoolApprovalPage() {
   const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const notify = useNotificationStore(state => state.showNotification);
 
   const handleDeleteAccount = async () => {
   try {
@@ -43,9 +47,15 @@ export default function SchoolApprovalPage() {
           <p className="text-sm text-gray-600 mt-4">
             Not your account?{' '}
             <button
-              onClick={() => {
-                useUserStore.getState().clearUser();
-                router.replace('/login');
+              onClick={async () => {
+                try {
+                  await logout(); // ✅ Wait for cookies to clear
+                  useUserStore.getState().clearUser(); // ✅ Clear Zustand
+                  router.replace('/login'); // ✅ Redirect
+                } catch (err) {
+                  console.error('Logout failed', err);
+                  notify('Logout failed. Please try again.', 'error');
+                }
               }}
               className="text-blue-600 hover:underline cursor-pointer"
             >

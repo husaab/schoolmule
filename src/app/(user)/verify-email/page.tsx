@@ -7,7 +7,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { resendVerificationEmail } from '@/services/authService'
 import Navbar from '@/components/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
-import LogoutModal from '@/components/logout/logoutModal'
+import { logout } from '@/services/authService'
 
 export default function VerifyEmailPage() {
   const router = useRouter()
@@ -57,13 +57,19 @@ export default function VerifyEmailPage() {
           <p className="text-sm text-gray-600 mt-4">
             Not your account?{' '}
             <button
-                onClick={() => {
-                useUserStore.getState().clearUser();
-                router.replace('/login');
-                }}
-                className="text-blue-600 hover:underline cursor-pointer"
+              onClick={async () => {
+                try {
+                  await logout(); // ✅ Wait for cookies to clear
+                  useUserStore.getState().clearUser(); // ✅ Clear Zustand
+                  router.replace('/login'); // ✅ Redirect
+                } catch (err) {
+                  console.error('Logout failed', err);
+                  notify('Logout failed. Please try again.', 'error');
+                }
+              }}
+              className="text-blue-600 hover:underline cursor-pointer"
             >
-                Log out
+              Log out
             </button>
             </p>
         </div>

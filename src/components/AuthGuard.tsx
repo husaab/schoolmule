@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 
-const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo']
+const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const router   = useRouter()
@@ -37,6 +37,12 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         path !== '/school-approval'
       ) {
         router.replace('/school-approval');
+      }
+
+      else if (
+        user.id && path.startsWith('/admin-panel') && user.role != "ADMIN"
+      ) {
+        router.replace('/dashboard')
       }
     }
     // logged in on a public page → dashboard
