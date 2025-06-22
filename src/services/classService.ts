@@ -276,21 +276,23 @@ export const upsertScoresByClass = async (
  *
  * Returns a Promise<Blob>, which the caller can turn into a downloadable URL.
  */
+
+// src/services/classService.ts
 export const downloadGradebookExcel = async (
   classId: string
 ): Promise<Blob> => {
-  // We assume NEXT_PUBLIC_BASE_URL is set to your API origin
   const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
-  const url = `${baseURL}/studentAssessments/classes/${encodeURIComponent(classId)}/scores/csv`;
+  const url = `${baseURL}/studentAssessments/classes/${encodeURIComponent(
+    classId
+  )}/scores/csv`;
 
   const response = await fetch(url, {
     method: "GET",
-    // You do NOT need `headers: { "Content-Type": ... }` for a GET
+    credentials: "include",    // ← send cookie
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to generate Excel file. Status: ${response.status}`);
+    throw new Error(`Failed to download gradebook: ${response.status}`);
   }
-
   return response.blob();
 };
