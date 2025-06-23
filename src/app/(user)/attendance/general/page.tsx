@@ -39,7 +39,7 @@ export default function GeneralAttendancePage() {
     });
 
   useEffect(() => {
-    getGeneralAttendanceByDate(selectedDate).then(res => {
+    getGeneralAttendanceByDate(selectedDate, user.school!).then(res => {
       if (res.status === 'success') {
         const map: Record<string, AttendanceStatus> = {};
         for (const entry of res.data) {
@@ -163,6 +163,7 @@ export default function GeneralAttendancePage() {
                 const res = await submitGeneralAttendance({
                   attendanceDate: selectedDate,
                   entries,
+                  school: user.school!
                 });
                 if (res.status === 'success') {
                   showNotification('Attendance saved successfully', "success");

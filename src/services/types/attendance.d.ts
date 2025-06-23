@@ -8,6 +8,7 @@ export interface AttendanceEntry {
 export interface GeneralAttendanceRequest {
   attendanceDate: string; // yyyy-mm-dd
   entries: AttendanceEntry[];
+  school: string;
 }
 
 export interface ClassAttendanceRequest extends GeneralAttendanceRequest {

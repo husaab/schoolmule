@@ -1,17 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import React, { useState } from 'react';
 import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getInitials } from '@/lib/utility';
-import LogoutModal from '@/components/logout/logoutModal';
 import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { updatePassword, updateUser } from '@/services/userService';
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye , faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import DeleteUserModal from '@/components/user/delete/DeleteUserModal';
 
 
 const Settings = () => {
@@ -19,6 +17,7 @@ const Settings = () => {
   const setUser = useUserStore((state) => state.setUser);
   const showNotification = useNotificationStore((state) => state.showNotification);
   const userInitials = getInitials(user.username);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const [username, setUsername] = useState(user.username || '');
   const [oldPassword, setOldPassword] = useState('');
@@ -179,10 +178,26 @@ const Settings = () => {
         </button>
         </div>
 
+        <div className="mt-8">
+          {user.school !== 'PLAYGROUND' && 
+          (        <button
+            onClick={() => setDeleteModalOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg cursor-pointer"
+          >
+            Delete Account
+          </button>)}
+        </div>
+
         </div>
     </main>
 
-  
+    <DeleteUserModal
+      isOpen={deleteModalOpen}
+      onClose={() => setDeleteModalOpen(false)}
+      onDeleted={() => {
+        // optional: show a final toast, redirect, etc.
+      }}
+    />
   
   </>
   );

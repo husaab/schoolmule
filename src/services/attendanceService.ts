@@ -8,6 +8,7 @@ import {
 
 /**
  * POST /attendance/general
+ * body: { attendanceDate, entries, school }
  */
 export const submitGeneralAttendance = async (
   payload: GeneralAttendanceRequest
@@ -33,12 +34,14 @@ export const submitClassAttendance = async (
 };
 
 /**
- * GET /attendance/general?date=YYYY-MM-DD
+ * GET /attendance/general?date=...&school=...
  */
 export const getGeneralAttendanceByDate = async (
-  date: string
+  date: string,
+  school: string
 ): Promise<GetAttendanceResponse> => {
-  return apiClient<GetAttendanceResponse>(`/attendance/general?date=${encodeURIComponent(date)}`);
+  const qs = `?date=${encodeURIComponent(date)}&school=${encodeURIComponent(school)}`;
+  return apiClient<GetAttendanceResponse>(`/attendance/general${qs}`);
 };
 
 /**
