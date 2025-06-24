@@ -14,8 +14,8 @@ interface Props {
 
 const grades = [1, 2, 3, 4, 5, 6, 7, 8]
 const timeSlots = [
-  "08:00", "08:45", "09:30", "10:15", "11:00", "11:45", "12:00",
-  "12:30", "13:15", "14:00", "14:45", "15:30"
+  "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+  "14:00", "15:00", "16:00", "17:00"
 ]
 
 const daysOfWeek: { label: string; value: string }[] = [
@@ -37,11 +37,18 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
   }, [currentDayLabel])
 
   const formatTime = (timeStr: string): string => {
-    const parsed = parse(timeStr, 'HH:mm', new Date())
-    return showMilitaryTime
-      ? format(parsed, 'HH:mm')
-      : `${format(parsed, 'h:mm a')}`
+  // trim off any trailing ":ss"
+  const hhmm = timeStr.length > 5 ? timeStr.slice(0, 5) : timeStr
+  // now safely parse exactly "HH:mm"
+  const parsed = parse(hhmm, 'HH:mm', new Date())
+  if (isNaN(parsed.getTime())) {
+    // fallback if it still failed
+    return hhmm
   }
+  return showMilitaryTime
+    ? format(parsed, 'HH:mm')
+    : format(parsed, 'h:mm a')
+}
 
   const colorMapRef = useRef<Record<string, string>>({})
 
@@ -55,6 +62,49 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
     const color = colors[Math.floor(Math.random() * colors.length)]
     colorMapRef.current[subject] = color
     return color
+  }
+
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  const getTimeSlotIndex = (timeStr: string): number => {
+    return timeSlots.findIndex(slot => slot === timeStr)
+  }
+
+  const calculateEntryPosition = (entry: ScheduleEntry) => {
+    const startMinutes = timeToMinutes(entry.start_time)
+    const endMinutes = timeToMinutes(entry.end_time)
+    const slotDurationMinutes = 60 // Each slot is 60 minutes
+    
+    // Find which slot this entry starts in or overlaps with
+    let startSlotIndex = -1
+    let startOffset = 0
+    
+    for (let i = 0; i < timeSlots.length; i++) {
+      const slotStartMinutes = timeToMinutes(timeSlots[i])
+      const slotEndMinutes = slotStartMinutes + slotDurationMinutes
+      
+      if (startMinutes >= slotStartMinutes && startMinutes < slotEndMinutes) {
+        startSlotIndex = i
+        startOffset = ((startMinutes - slotStartMinutes) / slotDurationMinutes) * 100
+        break
+      }
+    }
+    
+    if (startSlotIndex === -1) return null
+    
+    // Calculate total height based on duration
+    const durationMinutes = endMinutes - startMinutes
+    const heightPercentage = (durationMinutes / slotDurationMinutes) * 100
+    
+    return {
+      startSlotIndex,
+      startOffset,
+      heightPercentage,
+      durationMinutes
+    }
   }
 
   return (
@@ -87,49 +137,72 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                     ))}
                   </tr>
                 </thead>
-                <tbody>
-                  {timeSlots.map((slot) => (
-                    <tr key={`${day.value}-${slot}`}>
+                <tbody className="relative">
+                  {timeSlots.map((slot, slotIndex) => (
+                    <tr key={`${day.value}-${slot}`} className="h-20">
                       <td className="border px-2 py-2 font-medium bg-slate-100">
                         {formatTime(slot)}
                       </td>
-                      {grades.map((grade) => {
-                        const entry = dailySchedules.find(
-                          (s) =>
-                            s.grade === grade &&
-                            format(new Date(`1970-01-01T${s.start_time}`), 'HH:mm') === slot
-                        )
-                        return (
-                          <td
-                            key={`${day.value}-${slot}-${grade}`}
-                            className="border h-20 relative"
-                          >
-                            {entry ? (
-                              <div className={`rounded-md p-1 text-xs h-full flex flex-col justify-between ${getRandomColor(entry.subject)}`}>
-                                <div className="flex-grow flex flex-col items-center justify-center text-center px-1">
-                                  <div className="font-semibold">
-                                    {entry.is_lunch ? '🥪 ' + entry.subject : entry.subject}
+                      {grades.map((grade) => (
+                        <td
+                          key={`${day.value}-${slot}-${grade}`}
+                          className="border relative"
+                          style={{ height: '80px' }}
+                        >
+                          {/* Render entries that start in this slot */}
+                          {dailySchedules
+                            .filter(entry => {
+                              const position = calculateEntryPosition(entry)
+                              return position && position.startSlotIndex === slotIndex && entry.grade === grade
+                            })
+                            .map(entry => {
+                              const position = calculateEntryPosition(entry)
+                              if (!position) return null
+                              
+                              return (
+                                <div
+                                  key={entry.schedule_id}
+                                  className={`absolute left-0 right-0 rounded-md p-1 text-xs flex flex-col justify-between ${getRandomColor(entry.subject)} border border-gray-300 z-10`}
+                                  style={{
+                                    top: `${position.startOffset}%`,
+                                    height: `${position.heightPercentage}%`,
+                                    minHeight: '40px'
+                                  }}
+                                >
+                                  <div className="flex-grow flex flex-col items-center justify-center text-center px-1">
+                                    <div className="font-semibold text-[10px] leading-tight">
+                                      {entry.is_lunch ? '🥪 ' + entry.subject : entry.subject}
+                                    </div>
+                                    <div className="text-[9px] leading-tight">
+                                      {entry.is_lunch ? entry.lunch_supervisor : entry.teacher_name}
+                                    </div>
+                                    <div className="text-[8px] text-gray-600 mt-1">
+                                      {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
+                                    </div>
                                   </div>
-                                  <div className="text-[11px]">
-                                    {entry.is_lunch ? entry.lunch_supervisor : entry.teacher_name}
+                                  <div className="flex justify-between text-xs px-1 pb-1">
+                                    <button
+                                      onClick={() => onDeleteClick(entry)}
+                                      className="text-red-500 hover:scale-110 transition-transform cursor-pointer"
+                                    >✖</button>
+                                    <button 
+                                      onClick={() => onEditClick(entry)}
+                                      className="text-blue-500 hover:scale-110 transition-transform cursor-pointer"
+                                    >✎</button>
                                   </div>
                                 </div>
-                                <div className="flex justify-between text-base px-1 pb-1">
-                                  <button
-                                    onClick={() => onDeleteClick(entry)}
-                                    className="text-red-500 hover:scale-110 transition-transform cursor-pointer"
-                                  >✖</button>
-                                  <button 
-                                    onClick={() => onEditClick(entry)}
-                                  className="text-blue-500 hover:scale-110 transition-transform cursor-pointer">✎</button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-gray-400 text-xs italic">—</div>
-                            )}
-                          </td>
-                        )
-                      })}
+                              )
+                            })}
+                          
+                          {/* Show placeholder if no entry starts in this slot for this grade */}
+                          {!dailySchedules.some(entry => {
+                            const position = calculateEntryPosition(entry)
+                            return position && position.startSlotIndex === slotIndex && entry.grade === grade
+                          }) && (
+                            <div className="text-gray-400 text-xs italic absolute inset-0 flex items-center justify-center"></div>
+                          )}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
