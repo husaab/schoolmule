@@ -9,6 +9,7 @@ import { getClassAttendanceByDate, submitClassAttendance } from '@/services/atte
 import { StudentPayload } from '@/services/types/student';
 import { format } from 'date-fns-tz';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useUserStore } from '@/store/useUserStore';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
@@ -21,6 +22,7 @@ export default function ClassAttendancePage() {
   );
   const [className, setClassName] = useState<string>('');
   const showNotification = useNotificationStore(state => state.showNotification);
+  const user = useUserStore(state => state.user);
 
   useEffect(() => {
     getClassById(classId).then((res) => {
@@ -66,6 +68,7 @@ export default function ClassAttendancePage() {
       classId,
       attendanceDate: selectedDate,
       entries,
+      school: user.school!
     });
 
     if (res.status === 'success') {

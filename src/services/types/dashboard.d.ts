@@ -33,3 +33,13 @@ export interface AttendanceRateResponse {
     rate: number
   }
 }
+
+export interface AttendanceTrendPoint {
+  date: string;    // e.g. "2025-06-18"
+  rate: number;    // 0–1
+}
+
+export interface AttendanceTrendResponse {
+  status: string;
+  data: AttendanceTrendPoint[];
+}

@@ -7,7 +7,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { createSchedule } from '@/services/scheduleService'
 import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
-import { addDays, format, isMonday, startOfMonth, endOfMonth, parse } from 'date-fns'
+import { addDays, format, isMonday, startOfMonth, endOfMonth, parse, startOfWeek } from 'date-fns'
 
 interface ScheduleAddModalProps {
   isOpen: boolean
@@ -27,7 +27,7 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
   const [dayOfWeek, setDayOfWeek] = useState('Monday')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
-  const [weekStartDate, setWeekStartDate] = useState('')
+  const [weekStartDate, setWeekStartDate] = useState<string>(() => format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'))
   const [isLunch, setIsLunch] = useState(false)
   const [lunchSupervisor, setLunchSupervisor] = useState('')
 
@@ -39,17 +39,23 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
   const mondays: string[] = []
   let current = start
 
-    while (current <= end) {
-        if (isMonday(current)) {
-        mondays.push(format(current, 'yyyy-MM-dd'))
-        }
-        current = addDays(current, 1)
-    }
+  while (current <= end) {
+      if (isMonday(current)) {
+      mondays.push(format(current, 'yyyy-MM-dd'))
+      }
+      current = addDays(current, 1)
+  }
 
-    return mondays
-    }
+  return mondays
+  }
 
-    const mondays = generateMondays()
+  const mondays = generateMondays()
+
+  useEffect(() => {
+    if (isOpen) {
+      setWeekStartDate(format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen || !user?.school) return
@@ -256,6 +262,10 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
             </option>
             ))}
         </select>
+        <p className="text-sm text-gray-500 mt-1">
+          Defaulting to this week’s Monday:{' '}
+          {format(parse(weekStartDate, 'yyyy-MM-dd', new Date()), 'MMMM d, yyyy')}
+        </p>
         </div>
 
         <div className="flex justify-end space-x-4 pt-4">

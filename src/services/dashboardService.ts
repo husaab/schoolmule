@@ -4,6 +4,8 @@ import apiClient from './apiClient'
 import {
   DashboardSummaryResponse,
   AttendanceRateResponse,
+  AttendanceTrendPoint,
+  AttendanceTrendResponse
 } from './types/dashboard'
 
 /**
@@ -70,3 +72,25 @@ export const getMonthlyAttendanceRate = async (
     `/dashboard/attendance/monthly${query}`
   )
 }
+
+
+/**
+ * GET /dashboard/attendance/trend
+ * @param school   school code
+ * @param days     lookback window (e.g. 7, 14, 30)
+ * @param endDate  optional YYYY-MM-DD; defaults to today
+ */
+export const getAttendanceTrend = async (
+  school: string,
+  days = 7,
+  endDate?: string
+): Promise<AttendanceTrendResponse> => {
+  // manually build the query string
+  let query = `?school=${encodeURIComponent(school)}&days=${encodeURIComponent(days)}`;
+  if (endDate) {
+    query += `&endDate=${encodeURIComponent(endDate)}`;
+  }
+  return apiClient<AttendanceTrendResponse>(
+    `/dashboard/attendance/trend${query}`
+  );
+};

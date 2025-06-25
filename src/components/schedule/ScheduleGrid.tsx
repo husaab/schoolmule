@@ -162,7 +162,7 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                               return (
                                 <div
                                   key={entry.schedule_id}
-                                  className={`absolute left-0 right-0 rounded-md p-1 text-xs flex flex-col justify-between ${getRandomColor(entry.subject)} border border-gray-300 z-10`}
+                                  className={`absolute left-0 right-0 rounded-md p-1 text-sm flex flex-col justify-between ${getRandomColor(entry.subject)} border border-gray-300 z-10`}
                                   style={{
                                     top: `${position.startOffset}%`,
                                     height: `${position.heightPercentage}%`,
@@ -170,13 +170,13 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                                   }}
                                 >
                                   <div className="flex-grow flex flex-col items-center justify-center text-center px-1">
-                                    <div className="font-semibold text-[10px] leading-tight">
-                                      {entry.is_lunch ? '🥪 ' + entry.subject : entry.subject}
+                                    <div className="font-semibold text-[15px] leading-tight">
+                                      {entry.is_lunch ? entry.subject + '🥪 ' : entry.subject}
                                     </div>
-                                    <div className="text-[9px] leading-tight">
+                                    <div className="text-[11px] mt-1 leading-tight">
                                       {entry.is_lunch ? entry.lunch_supervisor : entry.teacher_name}
                                     </div>
-                                    <div className="text-[8px] text-gray-600 mt-1">
+                                    <div className="text-[11px] text-gray-600 mt-1">
                                       {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                                     </div>
                                   </div>
