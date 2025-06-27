@@ -3,24 +3,37 @@
 import { FC, useState } from 'react'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
+import { sendContactForm, ContactPayload } from '@/services/emailService'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 const ContactPage: FC = () => {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [message, setMessage]   = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const notify = useNotificationStore(s => s.showNotification)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: integrate API endpoint or mailto
-    console.log({ name, email, message })
-    setSubmitted(true)
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()    // 🚫 Prevent the browser’s default GET+reload
+
+    const payload: ContactPayload = { name, email, message }
+    try {
+      const res = await sendContactForm(payload)
+      if (res.success) {
+        notify('Email has been sent!', 'success')
+        setSubmitted(true)
+      } else {
+        notify(res.message || 'Failed to send contact email', 'error')
+      }
+    } catch (err: any) {
+      notify('Error sending message: ' + err.message, 'error')
+    }
   }
 
   return (
     <>
       <PreNavBar />
-      <main className="font-sans bg-white text-gray-800 py-45 px-6 lg:px-20">
+      <main className="font-sans bg-white text-gray-800 py-45 px-6 lg:px-20 min-h-screen">
         <section className="max-w-3xl mx-auto space-y-8">
           <h1 className="text-3xl font-bold text-center">Contact Us</h1>
 
@@ -67,13 +80,13 @@ const ContactPage: FC = () => {
                   required
                   value={message}
                   onChange={e => setMessage(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2 px-4 bg-cyan-600 text-white font-semibold rounded-md hover:bg-blue-500 transition"
+                className="w-full py-2 px-4 bg-cyan-600 text-white font-semibold rounded-md hover:bg-cyan-700 transition cursor-pointer"
               >
                 Send Message
               </button>
@@ -108,4 +121,4 @@ const ContactPage: FC = () => {
   )
 }
 
-export default ContactPage;
+export default ContactPage

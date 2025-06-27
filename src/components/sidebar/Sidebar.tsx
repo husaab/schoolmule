@@ -2,9 +2,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import LogoutModal from '../logout/logoutModal';
-import { Cog6ToothIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
+import { Cog6ToothIcon, ChevronDownIcon, ChevronUpIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
+import { useSidebarStore } from '@/store/useSidebarStore'
 
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -13,9 +14,15 @@ const links = [
   { href: '/gradebook', label: 'Gradebook' }
 ];
 
+const supportLinks = [
+  { href: '/help', label: 'Help & Support' },
+  { href: '/contact', label: 'Contact' }
+];
+
 const Sidebar = () => {
   const pathname = usePathname();
   const user = useUserStore(s => s.user);
+  const { isOpen: sidebarOpen, closeSidebar } = useSidebarStore();
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -23,14 +30,49 @@ const Sidebar = () => {
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
 
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    closeSidebar();
+  }, [pathname, closeSidebar]);
+
+  // Close sidebar when clicking outside (mobile)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebar = document.getElementById('mobile-sidebar');
+      if (sidebarOpen && sidebar && !sidebar.contains(event.target as Node)) {
+        closeSidebar();
+      }
+    };
+
+    if (sidebarOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sidebarOpen, closeSidebar]);
+
   return (
-    <aside className="h-screen w-64 fixed left-0 px-4 py-35 bg-white text-black z-20 shadow-lg">
-      <nav className="space-y-4 text-lg">
+    <aside 
+      id="mobile-sidebar"
+      className={`
+        w-64 fixed -top-10 bottom-0 lg:top-10 left-0 px-4 pt-20 bg-white text-black shadow-lg z-40 transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        lg:translate-x-0 lg:z-20
+      `}
+    >
+      {/* Mobile close button */}
+      <button
+        onClick={closeSidebar}
+        className="lg:hidden absolute top-15 right-4 p-2 text-gray-600 hover:text-gray-800"
+      >
+        <XMarkIcon className="h-6 w-6" />
+      </button>
+
+      <nav className="space-y-3 text-sm lg:text-lg xl:text-lg overflow-y-auto h-full pb-20 mt-8 lg:mt-4">
         {links.map(link => (
           <Link
             key={link.href}
             href={link.href}
-            className={`block px-4 py-2 rounded hover:bg-gray-100 ${
+            className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
               pathname === link.href ? 'bg-gray-200 font-semibold' : ''
             }`}
           >
@@ -55,7 +97,7 @@ const Sidebar = () => {
             <div className="ml-6 mt-2 space-y-2">
               <Link
                 href="/attendance/general"
-                className={`block px-2 py-1 rounded hover:bg-gray-100 ${
+                className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
                   pathname === '/attendance/general' ? 'bg-gray-200 font-semibold' : ''
                 }`}
               >
@@ -63,7 +105,7 @@ const Sidebar = () => {
               </Link>
               <Link
                 href="/attendance/class"
-                className={`block px-2 py-1 rounded hover:bg-gray-100 ${
+                className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
                   pathname === '/attendance/class' ? 'bg-gray-200 font-semibold' : ''
                 }`}
               >
@@ -90,7 +132,7 @@ const Sidebar = () => {
             <div className="ml-6 mt-2 space-y-2">
               <Link
                 href="/report-cards/generate"
-                className={`block px-2 py-1 rounded hover:bg-gray-100 ${
+                className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
                   pathname === '/report-cards/generate' ? 'bg-gray-200 font-semibold' : ''
                 }`}
               >
@@ -98,7 +140,7 @@ const Sidebar = () => {
               </Link>
               <Link
                 href="/report-cards/view"
-                className={`block px-2 py-1 rounded hover:bg-gray-100 ${
+                className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
                   pathname === '/report-cards/view' ? 'bg-gray-200 font-semibold' : ''
                 }`}
               >
@@ -112,7 +154,7 @@ const Sidebar = () => {
         {user?.role === 'ADMIN' && (
           <Link
             href="/admin-panel"
-            className={`block px-4 py-2 rounded hover:bg-gray-100 ${
+            className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
               pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
             }`}
           >
@@ -120,25 +162,40 @@ const Sidebar = () => {
           </Link>
         )}
 
-        <Link href="/schedule" className="flex items-center px-4 py-2 rounded hover:bg-gray-100">
+        <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
           Schedule
         </Link>
 
-        <Link href="/analytics" className="flex items-center px-4 py-2 rounded hover:bg-gray-100">
+        <Link href="/analytics" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
           Analytics
         </Link>
 
-        <Link href="/settings" className="flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700">
+        <Link href="/settings" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700">
           <Cog6ToothIcon className="h-5 w-5 mr-2" />
           <span>Settings</span>
         </Link>
 
-        <div className="text-red-600 pl-2 hover:text-red-800 cursor-pointer">
+        {/* Support Links */}
+        <div className="lg:hidden xl:hidden border-t pt-3 mt-3">
+          {supportLinks.map(link => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
+                pathname === link.href ? 'bg-gray-200 font-semibold' : ''
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="transform transition duration-200 hover:scale-110 text-red-600 hover:text-red-800 cursor-pointer">
           <LogoutModal />
         </div>
       </nav>
     </aside>
-  );
-};
+  )
+}
 
 export default Sidebar;

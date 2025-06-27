@@ -92,7 +92,7 @@ const GradebookClass = () => {
 
   if (error) {
     return (
-      <div className="ml-32 bg-white min-h-screen p-10 text-center">
+      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
         <p className="text-red-600">{error}</p>
         <button
           onClick={() => router.push('/gradebook')}
@@ -106,7 +106,7 @@ const GradebookClass = () => {
 
   if (loading) {
     return (
-      <div className="ml-32 bg-white min-h-screen p-10 text-center">
+      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
         <p className="text-gray-600">Loading gradebook data…</p>
       </div>
     )
@@ -245,7 +245,7 @@ const GradebookClass = () => {
       <Navbar />
       <Sidebar />
 
-      <main className="ml-32 bg-white min-h-screen p-10">
+      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
         <div className="pt-40 mb-8 text-black text-center">
           <h1 className="text-3xl font-semibold">
             Gradebook: {classData.subject} – Grade {classData.grade}

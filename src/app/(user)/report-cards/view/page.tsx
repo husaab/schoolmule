@@ -97,10 +97,10 @@ export default function ViewReportCardsPage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 bg-white min-h-screen p-10 text-black pt-40">
-        <h1 className="text-3xl font-bold text-center mb-6">View Report Cards</h1>
+      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-black">
+        <h1 className="text-3xl font-bold text-center mb-6 pt-40">View Report Cards</h1>
 
-        <div className="w-[70%] mx-auto space-y-6">
+        <div className="w-[85%] lg:w-[75%] mx-auto space-y-6">
           <div className="w-full">
             <label className="font-medium">Select term:</label>
             <select

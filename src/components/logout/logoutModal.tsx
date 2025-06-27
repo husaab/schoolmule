@@ -36,11 +36,11 @@ const LogoutModal = () => {
     return (
         <div>
         <button 
-            className="block flex items-center p-2 my-4 rounded hover:text-red-800 cursor-pointer"
+            className="flex items-center px-4 py-2 rounded hover:bg-gray-100 hover:text-red-800 cursor-pointer w-full"
             onClick={openModal}  
         >
-            <ArrowRightStartOnRectangleIcon className="h-5 w-5 mr-2 text-red-700" aria-hidden="true" />
-            Logout
+            <ArrowRightStartOnRectangleIcon className="h-5 w-5 mr-2 text-red-600" aria-hidden="true" />
+            <span className="text-red-600">Logout</span>
         </button>
 
         {/* Logout confirmation modal */}

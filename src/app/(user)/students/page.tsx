@@ -53,10 +53,10 @@ const StudentsPage = () => {
     <>
         <Navbar/>
         <Sidebar />
-        <main className = "ml-32 bg-white min-h-screen p-10">
-            <div className="py-40 p-50 text-black">
-                <h1 className="text-3xl text-center">Students</h1>
-                <div className="mt-10 p-8 w-[70%] max-h-[80vh] sm:w-12/12 md:w-11/12 lg:w-10/12 mx-auto overflow-y-scroll custom-scrollbar border-2 border-cyan-600 rounded-lg shadow-lg space-y-4">
+        <main className = "lg:ml-64 bg-white min-h-screen p-4 lg:p-4 lg:p-10">
+            <div className="pt-32 lg:pt-40 text-black">
+                <h1 className="text-2xl lg:text-3xl text-center">Students</h1>
+                <div className="mt-6 lg:mt-10 p-4 lg:p-8 w-full lg:w-[90%] xl:w-[80%] max-h-[80vh] mx-auto overflow-y-scroll custom-scrollbar border-2 border-cyan-600 rounded-lg shadow-lg space-y-4">
 
              {/* Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
@@ -91,31 +91,33 @@ const StudentsPage = () => {
             {filteredStudents.map((student) => (
             <div
               key={student.studentId}
-              className="flex items-center justify-between p-4 bg-white border border-cyan-400 rounded-lg shadow-sm"
+              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-cyan-400 rounded-lg shadow-sm space-y-2 sm:space-y-0"
             >
-              <span className="font-medium text-gray-800 flex-1">{student.name}</span>
+              <span className="font-medium text-gray-800 flex-1 text-center sm:text-left">{student.name}</span>
 
-              <div className="flex items-center space-x-6">
-                <span className="w-24 text-gray-600 text-right">Grade: {student.grade ?? '-'}</span>
-                <span className="w-64 text-gray-600 text-right mr-12">OEN: {student.oen ?? '-'}</span>
-                <button
-                  onClick={() => setViewStudent(student)}
-                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-rgeen-700 cursor-pointer"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => setEditStudent(student)}
-                  className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
-                >
-                  Edit
-                </button>
-                <button
-                    onClick={() => setDeleteTarget(student)}
-                    className="text-2xl text-red-600 hover:text-red-800 font-bold px-2 cursor-pointer"
+              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-6">
+                <span className="text-gray-600 text-sm">Grade: {student.grade ?? '-'}</span>
+                <span className="text-gray-600 text-sm">OEN: {student.oen ?? '-'}</span>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setViewStudent(student)}
+                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer text-sm touch-manipulation"
                   >
-                    ×
+                    View
                   </button>
+                  <button
+                    onClick={() => setEditStudent(student)}
+                    className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer text-sm touch-manipulation"
+                  >
+                    Edit
+                  </button>
+                  <button
+                      onClick={() => setDeleteTarget(student)}
+                      className="text-xl text-red-600 hover:text-red-800 font-bold px-2 cursor-pointer touch-manipulation"
+                    >
+                      ×
+                    </button>
+                </div>
               </div>
             </div>
           ))}

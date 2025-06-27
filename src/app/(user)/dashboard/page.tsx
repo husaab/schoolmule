@@ -53,7 +53,7 @@ const DashboardPage: React.FC = () => {
 
   if (error || !summary) {
     return (
-      <div className="ml-32 p-10 text-red-600">
+      <div className="lg:ml-64 p-4 lg:p-10 text-red-600">
         {error || 'No data available'}
       </div>
     )
@@ -75,14 +75,17 @@ const DashboardPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 pt-40 bg-gray-50 min-h-screen p-10 ">
+      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
         <div className="text-black text-center">
-          <h1 className="text-3xl font-semibold ">
-            {getSchoolName(user.school!)} Dashboard
+          <h1 className="text-2xl lg:text-3xl font-semibold">
+            {user.school
+              ? `${getSchoolName(user.school)} Dashboard`
+              : 'Dashboard'
+            }
           </h1>
         </div>
         {/* Attendance Trend Chart */}
-        <div className="w-[70%] mx-auto bg-white p-6 rounded-2xl shadow-md mt-10">
+        <div className="w-full lg:w-[90%] xl:w-[70%] mx-auto bg-white p-4 lg:p-6 rounded-2xl shadow-md mt-6 lg:mt-10">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-medium text-gray-800">Attendance Trend</h2>
             <select
@@ -133,9 +136,9 @@ const DashboardPage: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="text-center grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 w-[70%] mx-auto">
+        <div className="text-center grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mt-6 lg:mt-8 w-full lg:w-[90%] xl:w-[70%] mx-auto px-4 lg:px-0">
           {metrics.map((m) => (
-            <div key={m.label} className="bg-white p-6 rounded-2xl shadow-md">
+            <div key={m.label} className="bg-white p-4 lg:p-6 rounded-2xl shadow-md">
               <h3 className="text-gray-500 text-sm uppercase tracking-wide">
                 {m.label}
               </h3>
@@ -147,18 +150,18 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Next Steps */}
-        <div className="w-[70%] mx-auto mt-12">
+        <div className="w-full md:w-[70%] lg:w-[80%] xl:w-[70%] mx-auto mt-8 lg:mt-12 px-4 lg:px-0">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">Next Steps</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Link href="/classes" className="block bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <Link href="/classes" className="block bg-white p-4 lg:p-6 rounded-2xl shadow-md hover:shadow-lg transition">
                 <h3 className="text-lg font-medium mb-2 text-black">Explore Your Classes</h3>
                 <p className="text-gray-600">View all your classes</p>
             </Link>
-            <Link href="/gradebook" className="block bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+            <Link href="/gradebook" className="block bg-white p-4 lg:p-6 rounded-2xl shadow-md hover:shadow-lg transition">
                 <h3 className="text-lg font-medium mb-2 text-black">Add Student Grades</h3>
                 <p className="text-gray-600">Record or update grades</p>
             </Link>
-            <Link href="/attendance/general" className="block bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+            <Link href="/attendance/general" className="block bg-white p-4 lg:p-6 rounded-2xl shadow-md hover:shadow-lg transition">
                 <h3 className="text-lg font-medium mb-2 text-black">Mark Attendance</h3>
                 <p className="text-gray-600">Take today’s attendance</p>
             </Link>

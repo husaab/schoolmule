@@ -83,7 +83,7 @@ export default function GeneralAttendancePage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 min-h-screen bg-white p-10">
+      <main className="lg:ml-64 min-h-screen bg-white p-4 lg:p-10">
         <h1 className="text-3xl text-center mb-6 pt-40 text-black">General Attendance</h1>
         <div className="mb-4 flex items-center justify-center gap-2 text-black">
         <label htmlFor="attendance-date" className="font-medium">
@@ -97,7 +97,7 @@ export default function GeneralAttendancePage() {
             className="border px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
         />
         </div>
-        <div className="w-[70%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
+        <div className="w-[90%] lg:w-[75%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2 w-[70%] mx-auto">
         <input
           type="text"

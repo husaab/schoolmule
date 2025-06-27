@@ -190,14 +190,14 @@ export default function EditClassPage() {
 
   if (loading) {
     return (
-      <div className="ml-32 bg-white min-h-screen p-10 text-center">
+      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
         <p className="text-black">Loading class data…</p>
       </div>
     )
   }
   if (error) {
     return (
-      <div className="ml-32 bg-white min-h-screen p-10 text-center">
+      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
         <p className="text-red-600">{error}</p>
         <button
           onClick={() => router.push('/classes')}
@@ -297,14 +297,14 @@ export default function EditClassPage() {
       <Navbar />
       <Sidebar />
 
-      <main className="ml-32 bg-white min-h-screen p-10">
+      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
         {/* Page header */}
         <div className="pt-30 pb-10 text-black">
           <h1 className="text-3xl text-center">Edit Class</h1>
         </div>
 
         {/* Container for class details + sections */}
-        <div className="w-[70%] mx-auto space-y-8">
+        <div className="w-[90%] lg:w-[75%] mx-auto space-y-8">
           {/* ---------------- Class Details Box ---------------- */}
           <div className="border border-gray-300 rounded-lg shadow-lg p-6 bg-gray-50 relative">
             {!isEditing ? (

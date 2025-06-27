@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
-import { getClassesByTeacherId } from '@/services/classService'
+import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -26,22 +26,34 @@ const GradebookDashboard: React.FC = () => {
 
     setLoading(true)
     setError(null)
-
-    getClassesByTeacherId(user.id)
-      .then((res) => {
-        if (res.status === 'success') {
-          setClasses(res.data)
-        } else {
-          setError(res.message || 'Failed to load your classes')
+     if (user.school) {
+          if(user.role === 'ADMIN') {
+            getAllClasses(user.school)
+            .then((res) => {
+              if (res.status === 'success') {
+                setClasses(res.data)
+              } else {
+                console.error('Failed to fetch classes:', res.message)
+              }
+            })
+            .catch((err) => {
+              console.error('Error loading classes:', err)
+            })
+          } else{
+            getClassesByTeacherId(user.id)
+            .then((res) => {
+              if (res.status === 'success') {
+                setClasses(res.data)
+              } else {
+                setError(res.message || 'Failed to load your classes')
+              }
+            })
+            .catch((err) => {
+              console.error('Error loading classes:', err)
+            })
+          }
         }
-      })
-      .catch((err) => {
-        console.error(err)
-        setError('Error loading classes')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+        setLoading(false);
   }, [user?.id])
 
   // Build the unique list of grades for the classes this teacher teaches
@@ -76,7 +88,7 @@ const GradebookDashboard: React.FC = () => {
       <Navbar />
       <Sidebar />
 
-      <main className="ml-32 bg-white min-h-screen p-10">
+      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
         <div className="pt-40 text-center text-black mb-8">
           <h1 className="text-3xl font-semibold">Gradebook</h1>
           <p className="text-gray-600 mt-2">
@@ -84,7 +96,7 @@ const GradebookDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="w-[75%] mx-auto space-y-6">
+        <div className="w-[85%] lg:w-[75%] mx-auto space-y-6">
           {/* Optional “Grade Filter” dropdown */}
           <div className="flex justify-end mb-4">
             <select
@@ -159,6 +171,9 @@ const GradebookDashboard: React.FC = () => {
                       <div>
                         <p className="font-medium text-gray-800">
                           {cls.subject}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          Teacher: {cls.teacherName || '-'}
                         </p>
                         <p className="text-gray-600 text-sm">
                           Class ID: {cls.classId.slice(0, 8)}…{/* truncated */}

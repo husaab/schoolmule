@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
-import { getAllClasses } from '@/services/classService'
+import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
 
 const ClassesPage = () => {
   const user = useUserStore((state) => state.user)
@@ -26,8 +26,10 @@ const ClassesPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
 
   useEffect(() => {
+    if(!user.id) return;
     if (user.school) {
-      getAllClasses(user.school)
+      if(user.role === 'ADMIN') {
+        getAllClasses(user.school)
         .then((res) => {
           if (res.status === 'success') {
             setClasses(res.data)
@@ -38,8 +40,21 @@ const ClassesPage = () => {
         .catch((err) => {
           console.error('Error loading classes:', err)
         })
+      } else{
+        getClassesByTeacherId(user.id)
+        .then((res) => {
+          if (res.status === 'success') {
+            setClasses(res.data)
+          } else {
+            console.error('Failed to fetch classes:', res.message)
+          }
+        })
+        .catch((err) => {
+          console.error('Error loading classes:', err)
+        })
+      }
     }
-  }, [user.school])
+  }, [user.school, user.id, user.role])
 
   // Build unique grade list
   const availableGrades = Array.from(
@@ -77,11 +92,11 @@ const ClassesPage = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 bg-white min-h-screen p-10">
-        <div className="py-40 p-50 text-black">
-          <h1 className="text-3xl text-center">Classes</h1>
+      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-4 lg:p-10">
+        <div className="pt-32 lg:pt-40 text-black">
+          <h1 className="text-2xl lg:text-3xl text-center">Classes</h1>
 
-          <div className="mt-10 p-8 w-[70%] max-h-[80vh] sm:w-12/12 md:w-11/12 lg:w-10/12 mx-auto overflow-y-scroll custom-scrollbar border-2 border-cyan-600 rounded-lg shadow-lg space-y-4">
+          <div className="mt-6 lg:mt-10 p-4 lg:p-8 w-full lg:w-[90%] xl:w-[70%] max-h-[80vh] mx-auto overflow-y-scroll custom-scrollbar border-2 border-cyan-600 rounded-lg shadow-lg space-y-4">
             {/* Controls: Search, Grade Filter, Add Class */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
               {/* Search */}

@@ -86,8 +86,8 @@ const Settings = () => {
   <>
     <Navbar/>
     <Sidebar />
-    <main className = "ml-32 bg-white min-h-screen p-10">
-        <div className="py-40 p-50 text-black">
+    <main className = "lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
+        <div className="pt-10 xl:pt-30 lg:pt-30 text-black">
             {/* User Block */}
                 <div className="flex items-center space-x-4 mb-8">
                     <div className="bg-gray-300 text-black rounded-full h-14 w-14 flex items-center justify-center font-bold">

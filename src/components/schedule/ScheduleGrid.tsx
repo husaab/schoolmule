@@ -121,17 +121,17 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                 dayRefs.current[day.value] = el
               }}
             >
-            <h3 className="text-lg font-semibold text-left mb-2 text-gray-800">
+            <h3 className="text-base sm:text-lg font-semibold text-left mb-2 text-gray-800">
               {day.label}
             </h3>
 
             <div className="overflow-x-auto border rounded bg-white shadow">
-              <table className="min-w-full text-sm text-center text-black border-collapse">
+              <table className="text-xs sm:text-sm text-center text-black border-collapse" style={{ minWidth: '800px' }}>
                 <thead>
                   <tr className="bg-cyan-100 sticky top-0 z-10">
-                    <th className="px-2 py-3 border">Time</th>
+                    <th className="px-1 sm:px-2 py-2 sm:py-3 border text-xs sm:text-sm">Time</th>
                     {grades.map((grade) => (
-                      <th key={grade} className="px-2 py-3 border">
+                      <th key={grade} className="px-1 sm:px-2 py-2 sm:py-3 border text-xs sm:text-sm min-w-[80px] sm:min-w-[100px]">
                         Grade {grade}
                       </th>
                     ))}
@@ -139,15 +139,15 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                 </thead>
                 <tbody className="relative">
                   {timeSlots.map((slot, slotIndex) => (
-                    <tr key={`${day.value}-${slot}`} className="h-20">
-                      <td className="border px-2 py-2 font-medium bg-slate-100">
+                    <tr key={`${day.value}-${slot}`} className="h-16 sm:h-20">
+                      <td className="border px-1 sm:px-2 py-2 font-medium bg-slate-100 text-xs sm:text-sm">
                         {formatTime(slot)}
                       </td>
                       {grades.map((grade) => (
                         <td
                           key={`${day.value}-${slot}-${grade}`}
                           className="border relative"
-                          style={{ height: '80px' }}
+                          style={{ height: '64px', minHeight: '64px' }}
                         >
                           {/* Render entries that start in this slot */}
                           {dailySchedules
@@ -162,32 +162,32 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                               return (
                                 <div
                                   key={entry.schedule_id}
-                                  className={`absolute left-0 right-0 rounded-md p-1 text-sm flex flex-col justify-between ${getRandomColor(entry.subject)} border border-gray-300 z-10`}
+                                  className={`absolute left-0 right-0 rounded-md p-1 text-xs sm:text-sm flex flex-col justify-between ${getRandomColor(entry.subject)} border border-gray-300 z-10`}
                                   style={{
                                     top: `${position.startOffset}%`,
                                     height: `${position.heightPercentage}%`,
-                                    minHeight: '40px'
+                                    minHeight: '32px'
                                   }}
                                 >
                                   <div className="flex-grow flex flex-col items-center justify-center text-center px-1">
-                                    <div className="font-semibold text-[15px] leading-tight">
-                                      {entry.is_lunch ? entry.subject + '🥪 ' : entry.subject}
+                                    <div className="font-semibold text-[8px] sm:text-[12px] leading-tight">
+                                      {entry.is_lunch ? '🥪 ' + entry.subject : entry.subject}
                                     </div>
-                                    <div className="text-[11px] mt-1 leading-tight">
+                                    <div className="text-[7px] sm:text-[10px] leading-tight">
                                       {entry.is_lunch ? entry.lunch_supervisor : entry.teacher_name}
                                     </div>
-                                    <div className="text-[11px] text-gray-600 mt-1">
+                                    <div className="text-[6px] sm:text-[9px] text-gray-600 mt-1 hidden sm:block">
                                       {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                                     </div>
                                   </div>
-                                  <div className="flex justify-between text-xs px-1 pb-1">
+                                  <div className="flex justify-between text-[10px] sm:text-xs px-1 pb-1">
                                     <button
                                       onClick={() => onDeleteClick(entry)}
-                                      className="text-red-500 hover:scale-110 transition-transform cursor-pointer"
+                                      className="text-red-500 hover:scale-110 transition-transform cursor-pointer touch-manipulation"
                                     >✖</button>
                                     <button 
                                       onClick={() => onEditClick(entry)}
-                                      className="text-blue-500 hover:scale-110 transition-transform cursor-pointer"
+                                      className="text-blue-500 hover:scale-110 transition-transform cursor-pointer touch-manipulation"
                                     >✎</button>
                                   </div>
                                 </div>

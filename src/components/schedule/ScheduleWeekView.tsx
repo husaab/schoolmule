@@ -43,30 +43,42 @@ const ScheduleWeekView = () => {
   return (
     <div className="text-black flex flex-col h-full">
       {/* Week Controls */}
-      <div className="flex justify-center items-center space-x-4 mb-4">
-        <button onClick={handlePrevWeek} className="px-3 py-1 border rounded hover:bg-gray-100 cursor-pointer">&larr;</button>
-        <h2 className="text-xl font-semibold">Week of {format(weekStartDate, 'MMMM d, yyyy')}</h2>
-        <button onClick={handleNextWeek} className="px-3 py-1 border rounded hover:bg-gray-100 cursor-pointer">&rarr;</button>
+      <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
+        <button 
+          onClick={handlePrevWeek} 
+          className="px-4 py-2 border rounded hover:bg-gray-100 cursor-pointer touch-manipulation"
+        >
+          &larr; Previous Week
+        </button>
+        <h2 className="text-lg sm:text-xl font-semibold text-center">
+          Week of {format(weekStartDate, 'MMMM d, yyyy')}
+        </h2>
+        <button 
+          onClick={handleNextWeek} 
+          className="px-4 py-2 border rounded hover:bg-gray-100 cursor-pointer touch-manipulation"
+        >
+          Next Week &rarr;
+        </button>
       </div>
 
       {/* Action Buttons */}
-      <div className='flex items-center justify-between mb-4 space-x-4 sticky top-[5rem] bg-white z-20 py-2 px-2'>
-                  <button
+      <div className='flex flex-col sm:flex-row items-center justify-between mb-4 space-y-2 sm:space-y-0 sm:space-x-4 sticky top-[5rem] bg-white z-20 py-2 px-2'>
+        <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded cursor-pointer"
+          className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded cursor-pointer touch-manipulation"
         >
           + Add Schedule
         </button>
         <button
           onClick={() => setShowMilitaryTime((prev) => !prev)}
-          className="px-3 py-1  bg-cyan-500 text-white text-sm rounded hover:bg-cyan-600 cursor-pointer"
+          className="w-full sm:w-auto px-3 py-2 bg-cyan-500 text-white text-sm rounded hover:bg-cyan-600 cursor-pointer touch-manipulation"
         >
           {showMilitaryTime ? 'Show Standard Time' : 'Show Military Time'}
         </button>
       </div>
 
       {/* Scrollable Grid Section */}
-      <div className="overflow-y-auto max-h-[calc(100vh-12rem)] pr-2">
+      <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-16rem)] lg:max-h-[calc(100vh-12rem)]">
         <ScheduleGrid schedules={schedules} weekStartDate={weekStartDate} showMilitaryTime={showMilitaryTime} onDeleteClick={setDeleting} onEditClick={setEditing}/>
       </div>
 

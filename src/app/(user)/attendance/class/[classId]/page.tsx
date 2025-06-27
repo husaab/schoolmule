@@ -82,7 +82,7 @@ export default function ClassAttendancePage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 min-h-screen bg-white p-10">
+      <main className="lg:ml-64 min-h-screen bg-white p-4 lg:p-10">
         <div className="pt-40 text-black text-center mb-6">
           <h1 className="text-3xl font-semibold">{className} – Class Attendance</h1>
         </div>
@@ -100,7 +100,7 @@ export default function ClassAttendancePage() {
           />
         </div>
 
-        <div className="w-[70%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
+        <div className="w-[90%] lg:w-[75%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
           {students.map((student) => (
             <div
               key={student.studentId}

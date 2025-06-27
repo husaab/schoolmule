@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUserStore } from '@/store/useUserStore';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
-import { getClassesByTeacherId } from '@/services/classService';
+import { getClassesByTeacherId, getAllClasses } from '@/services/classService';
 import { useRouter } from 'next/navigation';
 import { ClassPayload } from '@/services/types/class';
 
@@ -17,14 +17,23 @@ const ClassAttendanceDashboard = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    getClassesByTeacherId(user.id).then((res) => {
-      if (res.status === 'success') {
-        setClasses(res.data);
-      } else {
-        console.error(res.message || 'Failed to load classes');
-      }
-    });
+    if(user.role === 'ADMIN') {
+      getAllClasses(user.school!).then((res) => {
+        if(res.status === 'success'){
+          setClasses(res.data);
+        } else {
+          console.error(res.message || 'Failed to load classes');
+        }
+      })
+    } else{ 
+      getClassesByTeacherId(user.id).then((res) => {
+        if (res.status === 'success') {
+          setClasses(res.data);
+        } else {
+          console.error(res.message || 'Failed to load classes');
+        }
+      });
+    }
   }, [user?.id]);
 
   const availableGrades = Array.from(
@@ -55,13 +64,13 @@ const ClassAttendanceDashboard = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-32 min-h-screen bg-white p-10 text-black">
+      <main className="lg:ml-64 min-h-screen bg-white p-4 lg:p-10 text-black">
         <div className="pt-40 text-center mb-8">
           <h1 className="text-3xl font-semibold">Class Attendance</h1>
           <p className="text-gray-600 mt-2">Select a class below to record attendance</p>
         </div>
 
-        <div className="w-[75%] mx-auto space-y-6">
+        <div className="w-[85%] lg:w-[75%] mx-auto space-y-6">
           {/* Grade Filter */}
           <div className="flex justify-end mb-4">
             <select
