@@ -121,11 +121,11 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
                 dayRefs.current[day.value] = el
               }}
             >
-            <h3 className="text-base sm:text-lg font-semibold text-left mb-2 text-gray-800">
+            <h3 className="text-base sm:text-lg font-semibold text-left xl:text-center mb-2 text-gray-800">
               {day.label}
             </h3>
 
-            <div className="overflow-x-auto border rounded bg-white shadow">
+            <div className="xl:w-max xl:mx-auto overflow-x-auto border rounded bg-white shadow">
               <table className="text-xs sm:text-sm text-center text-black border-collapse" style={{ minWidth: '800px' }}>
                 <thead>
                   <tr className="bg-cyan-100 sticky top-0 z-10">

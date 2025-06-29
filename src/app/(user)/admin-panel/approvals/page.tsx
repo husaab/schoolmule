@@ -59,8 +59,8 @@ const ApprovalsPage = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="ml-60 pt-40 bg-white min-h-screen p-4 lg:p-10 text-black">
-        <h1 className="text-3xl font-bold mb-6 text-center">{user.school} - Pending Approvals</h1>
+      <main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black">
+        <h1 className="text-2xl lg:text-3xl font-bold mb-4 lg:mb-6 text-center">{user.school} - Pending Approvals</h1>
 
         {loading ? (
           <p>Loading...</p>
