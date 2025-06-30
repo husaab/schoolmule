@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 
 const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
+const PARENT_PATHS = ['/parent-home']
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const router   = useRouter()
@@ -44,11 +45,15 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       ) {
         router.replace('/dashboard')
       }
+
+      else if (user.id && user.role == 'PARENT' && PARENT_PATHS.includes(path)){
+        router.replace("/parent-home")
+      }
     }
     // logged in on a public page → dashboard
 
 
-  }, [hasHydrated, user.id,  user.isVerifiedEmail, path, router])
+  }, [hasHydrated, user.id,  user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

@@ -67,7 +67,19 @@ const LoginForm: FC = () => {
         };
         setUser(user);
         showNotification('Logged in successfully', 'success')
-        router.replace('/dashboard')
+        if(!user.isVerifiedEmail) {
+          router.replace("/verify-email")
+        } else if(user.isVerifiedEmail) {
+          if(!user.isVerifiedSchool) {
+            router.replace("/school-approval")
+          } else {
+            if(user.role == 'PARENT'){
+              router.replace("/parent-home")
+            } else{
+              router.replace("/dashboard")
+            }
+          }
+        }
       }
     } catch (err: any) {
       showNotification('Login failed, invalid email or password', 'error')

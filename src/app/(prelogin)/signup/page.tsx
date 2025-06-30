@@ -83,7 +83,7 @@ const SignUpForm: FC = () => {
           isVerifiedSchool: response.data.isVerifiedSchool
         };
         setUser(user);
-        router.replace('/dashboard');
+        router.replace('/verify-email');
       }
     } catch (err: any) {
       showNotification(err.message || 'Sign up failed', 'error')
