@@ -166,6 +166,10 @@ const Sidebar = () => {
           Schedule
         </Link>
 
+        <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+          Parent Communication
+        </Link>
+
         <Link href="/analytics" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
           Analytics
         </Link>

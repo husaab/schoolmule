@@ -107,14 +107,35 @@ const AddRelationModal: React.FC<AddRelationModalProps> = ({ isOpen, onClose, on
     try {
       const res = await createParentStudent(payload);
       if (res.status === 'success' && res.data) {
-        onAdd(res.data);
+        const raw = res.data;
+        const stud = students.find(
+          (s) => s.studentId === raw.studentId
+        );
+        // hydrate parentUser details (and include phone)
+        const par = parents.find((p) => p.userId === raw.parentId);
+        const enriched: ParentStudentPayload = {
+          ...raw,
+          student: {
+            name: stud!.name,
+            grade: stud!.grade!,
+          },
+          parentUser: par
+            ? {
+                firstName: par.firstName,
+                lastName: par.lastName,
+                email: par.email,
+              }
+            : null,
+        };
+
+        onAdd(enriched);
         showNotification('Relation added', 'success');
         reset(); onClose();
       } else {
         showNotification(res.message || 'Failed', 'error');
       }
     } catch {
-      showNotification('Error creating relation','error');
+      showNotification('Error creating relation, relation already exists','error');
     }
   };
 
@@ -188,7 +209,11 @@ const AddRelationModal: React.FC<AddRelationModalProps> = ({ isOpen, onClose, on
                   name="parent"
                   value={p.userId}
                   checked={selectedParentId === p.userId}
-                  onChange={() => setSelectedParentId(p.userId)}
+                  onChange={() => {
+                    setSelectedParentId(p.userId)
+                    setParentName(`${p.firstName} ${p.lastName}`)
+                    setParentEmail(p.email)
+                  }}
                   className="mr-2"
                 />
                 <label htmlFor={`par-${p.userId}`} className="text-black">

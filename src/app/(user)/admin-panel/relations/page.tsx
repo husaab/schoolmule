@@ -3,19 +3,24 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getAllParentStudents } from '@/services/parentStudentService';
 import { ParentStudentPayload } from '@/services/types/parentStudent';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import AddRelationModal from '@/components/relation/add/page';
+import DeleteRelationModal from '@/components/relation/delete/page';
+import EditRelationModal from '@/components/relation/edit/page';
 
 const ParentStudentRelationsPage = () => {
   const user = useUserStore((state) => state.user);
   const notify = useNotificationStore((s) => s.showNotification);
   const [relations, setRelations] = useState<ParentStudentPayload[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gradeFilter, setGradeFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deletingRelation, setDeletingRelation] = useState<ParentStudentPayload | null>(null);
+  const [editingRelation, setEditingRelation] = useState<ParentStudentPayload | null>(null);
 
   useEffect(() => {
     const loadRelations = async () => {
@@ -38,14 +43,37 @@ const ParentStudentRelationsPage = () => {
     loadRelations();
   }, [user.school, notify]);
 
-  const filteredRelations = relations.filter(relation => 
-    relation.student?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    relation.parentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    relation.relation.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const grades = useMemo(() => {
+    const set = new Set<number>();
+    relations.forEach(r => {
+      if (r.student?.grade != null) set.add(r.student.grade);
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [relations]);
+
+   const filteredRelations = relations
+    .filter(relation =>
+      relation.student?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      relation.parentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      relation.relation.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(relation =>
+      gradeFilter === '' ||
+      String(relation.student?.grade) === gradeFilter
+    )
 
   const handleAdd = (newRel: ParentStudentPayload) => {
     setRelations((prev) => [newRel, ...prev]);
+  };
+
+  const handleDeleted = (id: string) => {
+    setRelations(prev => prev.filter(r => r.parentStudentLinkId !== id));
+  };
+
+  const handleUpdated = (updated: ParentStudentPayload) => {
+    setRelations(prev =>
+      prev.map(r => r.parentStudentLinkId === updated.parentStudentLinkId ? updated : r)
+    );
   };
 
   return (
@@ -71,6 +99,18 @@ const ParentStudentRelationsPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
+          <select
+            value={gradeFilter}
+            onChange={e => setGradeFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          >
+            <option value="">All Grades</option>
+            {grades.map(g => (
+              <option key={g} value={String(g)}>
+                Grade {g}
+              </option>
+            ))}
+          </select>
           <button onClick={() => setShowAddModal(true)} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg cursor-pointer">
             + Add Relation
           </button>
@@ -88,7 +128,7 @@ const ParentStudentRelationsPage = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="overflow-y-auto max-h-[60vh] space-y-4 pr-2">
             {filteredRelations.map((relation) => (
               <div
                 key={relation.parentStudentLinkId}
@@ -127,10 +167,10 @@ const ParentStudentRelationsPage = () => {
 
                   {/* Actions */}
                   <div className="flex items-center justify-end space-x-2">
-                    <button className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-sm cursor-pointer">
+                    <button onClick={() => setEditingRelation(relation)} className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-sm cursor-pointer">
                       Edit
                     </button>
-                    <button className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm cursor-pointer">
+                    <button onClick={() => setDeletingRelation(relation)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm cursor-pointer">
                       Delete
                     </button>
                   </div>
@@ -170,6 +210,23 @@ const ParentStudentRelationsPage = () => {
         onClose={() => setShowAddModal(false)}
         onAdd={handleAdd}
       />
+      {deletingRelation && (
+        <DeleteRelationModal
+          isOpen={true}
+          relation={deletingRelation}
+          onClose={() => setDeletingRelation(null)}
+          onDeleted={handleDeleted}
+        />
+      )}
+
+      {editingRelation && (
+        <EditRelationModal
+          isOpen={true}
+          relation={editingRelation}
+          onClose={() => setEditingRelation(null)}
+          onUpdated={handleUpdated}
+        />
+      )}
     </>
   );
 };
