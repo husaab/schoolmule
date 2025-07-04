@@ -21,7 +21,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set) => ({
   message: '',
   type: 'success',
-  duration: 3000,
+  duration: 4000,
   isOpen: false,
   currentNotification: null,
   user: {

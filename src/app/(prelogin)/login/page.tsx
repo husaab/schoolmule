@@ -74,7 +74,7 @@ const LoginForm: FC = () => {
             router.replace("/school-approval")
           } else {
             if(user.role == 'PARENT'){
-              router.replace("/parent-home")
+              router.replace("/parent/dashboard")
             } else{
               router.replace("/dashboard")
             }

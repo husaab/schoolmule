@@ -6,10 +6,12 @@ import Image from 'next/image';
 import NavLinks from './navlinks/Navlinks';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useSidebarStore } from '@/store/useSidebarStore';
+import { useUserStore } from '@/store/useUserStore';
 
 const NavBar: FC = () => {
   const [atTop, setAtTop] = useState<boolean>(true);
   const { toggleSidebar } = useSidebarStore();
+  const user = useUserStore((state) => state.user)
 
   useEffect(() => {
     const handleScroll = () => setAtTop(window.pageYOffset < 10);
@@ -30,7 +32,7 @@ const NavBar: FC = () => {
         </button>
 
         {/* logo */}
-        <Link href="/dashboard" scroll={false} className="flex-shrink-0">
+        <Link href={user?.role === 'PARENT' ? '/parent/dashboard' : '/dashboard'} scroll={false} className="flex-shrink-0">
             <Image
               src="/logo/trimmedlogo.png"
               alt="Logo"
