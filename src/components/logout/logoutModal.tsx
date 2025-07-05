@@ -6,6 +6,7 @@ import { useUserStore } from '@/store/useUserStore';
 import Modal from '../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { logout } from '@/services/authService';
+import { useRouter } from 'next/navigation';
 
 
 const LogoutModal = () => {
@@ -13,6 +14,7 @@ const LogoutModal = () => {
     const user = useUserStore((state) => state.user);
     const clearUser = useUserStore((state) => state.clearUser)
     const showNotification = useNotificationStore((state) => state.showNotification);
+    const router = useRouter()
 
     // Function to open modal
     const openModal = () => setIsModalOpen(true);
@@ -26,7 +28,7 @@ const LogoutModal = () => {
             await logout();         // 🔐 Wait for backend to clear cookies
             clearUser();            // 🧹 Clear Zustand store
             closeModal();           // ❌ Close the modal
-            window.location.href = '/login'; // 🚪 Redirect
+            router.push('/login') // 🚪 Redirect
         } catch (error) {
             console.error('Logout failed:', error);
             showNotification('Logout failed. Please try again.', 'error');

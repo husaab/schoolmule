@@ -18,7 +18,8 @@ const parentLinks = [
   { href: '/parent/dashboard', label: 'Dashboard' },
   { href: '/parent/communication', label: 'Communication' },
   { href: '/parent/feedback', label: 'Feedback' },
-  { href: '/parent/report-cards', label: 'Report Cards'}
+  { href: '/parent/report-cards', label: 'Report Cards'},
+    { href: '/parent/staff-list', label: 'Staff List'},
 ];
 
 const supportLinks = [
@@ -56,6 +57,8 @@ const Sidebar = () => {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [sidebarOpen, closeSidebar]);
+
+  if (!user) return null
 
   return (
     <aside 
@@ -175,7 +178,7 @@ const Sidebar = () => {
                 Schedule
               </Link>
 
-              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
                 Parent Communication
               </Link>
 

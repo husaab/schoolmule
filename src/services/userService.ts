@@ -1,4 +1,4 @@
-import { UserResponse } from './types/user';
+import { UserResponse, AllUsersResponse } from './types/user';
 import apiClient from './apiClient';
 /**
  * Update a user's password.
@@ -37,4 +37,15 @@ export const deleteUserAccount = async (userId: string) => {
     method: 'DELETE',
     body: { userId },
   });
+};
+
+
+/**
+ * Fetch all users in a given school
+ * GET /api/users/school/:school
+ */
+export const getUsersBySchool = async (
+  school: string
+): Promise<AllUsersResponse> => {
+  return apiClient<AllUsersResponse>(`/users/school/${encodeURIComponent(school)}`);
 };

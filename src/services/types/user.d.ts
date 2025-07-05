@@ -31,6 +31,6 @@ export interface UserPayload {
 
 export interface AllUsersResponse {
   status: string;
-  users: UserPayload[];
+  data: UserPayload[];
   message?: string;
 }
