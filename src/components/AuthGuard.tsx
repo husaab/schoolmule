@@ -3,18 +3,46 @@
 import { ReactNode, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
+import { validateSession } from '@/services/authService'
 
 const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
 const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings']
+
+// Check if path matches parent patterns (including dynamic routes)
+const isParentPath = (path: string) => {
+  return PARENT_PATHS.some(parentPath => path.startsWith(parentPath)) || path.startsWith('/parent/feedback/')
+}
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const router   = useRouter()
   const path     = usePathname()
   const user        = useUserStore(s => s.user)
   const hasHydrated = useUserStore(s => s.hasHydrated)
+  const clearUser = useUserStore(s => s.clearUser)
 
   useEffect(() => {
     if (!hasHydrated) return
+
+    // Validate session if user appears to be logged in
+    if (user.id) {
+      validateSession()
+        .then(response => {
+          if (!response.success) {
+            // Session is invalid, clear user state
+            clearUser()
+            if (!PUBLIC_PATHS.includes(path)) {
+              router.replace('/welcome')
+            }
+          }
+        })
+        .catch(() => {
+          // Session validation failed, clear user state
+          clearUser()
+          if (!PUBLIC_PATHS.includes(path)) {
+            router.replace('/welcome')
+          }
+        })
+    }
 
     // not logged in → /welcome
     if (!user.id && !PUBLIC_PATHS.includes(path)) {
@@ -46,14 +74,14 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         router.replace('/dashboard')
       }
 
-      else if (user.id && user.role == 'PARENT' && !PARENT_PATHS.includes(path)){
+      else if (user.id && user.role == 'PARENT' && !isParentPath(path)){
         router.replace("/parent/dashboard")
       }
     }
     // logged in on a public page → dashboard
 
 
-  }, [hasHydrated, user.id,  user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool])
+  }, [hasHydrated, user.id,  user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

@@ -82,3 +82,31 @@ export const deleteAssessment = async (
     method: 'DELETE',
   })
 }
+
+export interface StudentAssessmentPayload {
+  studentId: string;
+  assessmentId: string;
+  score: number | null;
+}
+
+/**
+ * Response wrapper for single student-assessment fetch
+ */
+export interface StudentAssessmentResponse {
+  status: string;
+  data: StudentAssessmentPayload | null;
+  message?: string;
+}
+
+/**
+ * Fetch a single student-assessment by student and assessment IDs
+ * GET /api/studentAssessments/:studentId/:assessmentId
+ */
+export const getStudentAssessment = async (
+  studentId: string,
+  assessmentId: string
+): Promise<StudentAssessmentResponse> => {
+  return apiClient<StudentAssessmentResponse>(
+    `/studentAssessments/${encodeURIComponent(studentId)}/${encodeURIComponent(assessmentId)}`
+  )
+}

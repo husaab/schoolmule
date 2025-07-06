@@ -48,3 +48,26 @@ export function confirmEmail(token: string): Promise<ConfirmEmailResponse> {
   });
 }
 
+export interface SessionValidationResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    userId: string;
+    username: string;
+    fullName: string;
+    email: string;
+    school: string;
+    role: string;
+    isVerified: boolean;
+    isVerifiedSchool: boolean;
+    createdAt: string;
+    lastModifiedAt: string;
+  };
+}
+
+export function validateSession(): Promise<SessionValidationResponse> {
+  return apiClient('/auth/me', {
+    method: 'GET',
+  });
+}
+

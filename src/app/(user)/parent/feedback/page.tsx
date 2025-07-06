@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -11,9 +12,21 @@ import Link from 'next/link'
 
 const ParentFeedbackPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [children, setChildren] = useState<ParentStudentPayload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Handle old URL format with query parameters
+  useEffect(() => {
+    const studentId = searchParams.get('studentId')
+    if (studentId) {
+      // Redirect to new URL format
+      router.replace(`/parent/feedback/${studentId}`)
+      return
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     if (!user.id) return
@@ -64,9 +77,9 @@ const ParentFeedbackPage: React.FC = () => {
                   </div>
                   <Link
                     href={`/parent/feedback/${child.studentId}`}
-                    className="mt-4 md:mt-0 px-4 py-2 bg-blue-400 text-white rounded-lg text-sm hover:bg-blue-500"
+                    className="mt-4 md:mt-0 px-4 py-2 bg-blue-400 text-white rounded-lg text-sm hover:bg-blue-500 cursor-pointer"
                   >
-                    View Student Assessments & Feedback
+                    View Feedback
                   </Link>
                 </div>
               ))

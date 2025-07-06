@@ -34,7 +34,9 @@ const Sidebar = () => {
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
+  const isFeedbackPath = pathname.startsWith('/feedback')
 
+  const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
 
@@ -127,6 +129,62 @@ const Sidebar = () => {
                 )}
               </div>
 
+              {/* Admin-only link */}
+              {user?.role === 'ADMIN' && (
+                <Link
+                  href="/admin-panel"
+                  className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
+                    pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
+                  }`}
+                >
+                  Admin Panel
+                </Link>
+              )}
+
+              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+                Schedule
+              </Link>
+
+              {/* Feedback Dropdown */}
+              <div>
+                <button
+                  onClick={() => setFeedbackOpen(!feedbackOpen)}
+                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
+                >
+                  <span>Feedback</span>
+                  {feedbackOpen ? (
+                    <ChevronUpIcon className="h-5 w-5" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5" />
+                  )}
+                </button>
+                {feedbackOpen && (
+                  <div className="ml-6 mt-2 space-y-2">
+                   <Link href="/feedback/send"
+                     className={`block px-2 py-1 rounded transform transition duration-200
+                      ${pathname === '/feedback/send'
+                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
+                          : 'hover:bg-gray-100'}`}
+                   >
+                     Send Feedback
+                   </Link>
+              
+                   <Link href="/feedback"
+                     className={`block px-2 py-1 rounded transform transition duration-200
+                       ${pathname.startsWith('/teacher/feedback') && pathname !== '/teacher/feedback/send'
+                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
+                          : 'hover:bg-gray-100'}`}
+                   >
+                     View / Edit Feedback
+                   </Link>
+                  </div>
+                )}
+              </div>
+
+              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+                Parent Communication
+              </Link>
+
               {/* Report Cards Dropdown */}
               <div>
                 <button
@@ -162,25 +220,6 @@ const Sidebar = () => {
                 )}
               </div>
 
-              {/* Admin-only link */}
-              {user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin-panel"
-                  className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
-                    pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
-                  }`}
-                >
-                  Admin Panel
-                </Link>
-              )}
-
-              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Schedule
-              </Link>
-
-              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Parent Communication
-              </Link>
 
               <Link href="/analytics" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
                 Analytics
