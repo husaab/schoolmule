@@ -7,7 +7,9 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import { getFeedbackByStudentId } from '@/services/feedbackService'
 import ViewFeedbackModal from '@/components/feedback/view/ViewFeedbackModal'
-import { EyeIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/outline'
+import ReplyMessageModal from '@/components/messages/reply/ReplyMessageModal'
+import { SendMessagePayload, MessagePayload } from '@/services/types/message'
 
 const ParentStudentFeedbackPage: React.FC = () => {
   const params = useParams()
@@ -17,6 +19,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null)
+  const [replyTarget, setReplyTarget] = useState<MessagePayload | null>(null)
 
   // Load feedback for the student
   useEffect(() => {
@@ -68,7 +71,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
 
   // Get student name from first feedback entry
   const studentName = feedbackList.length > 0 
-    ? (feedbackList[0].recipientName || feedbackList[0].recipient_name || 'Student')
+    ? (feedbackList[0].studentName || feedbackList[0].student_name || 'Student')
     : 'Student'
 
   return (
@@ -113,7 +116,10 @@ const ParentStudentFeedbackPage: React.FC = () => {
                       Assessment
                     </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                      Score
+                      Student Score
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Weight
                     </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                       Teacher
@@ -151,14 +157,10 @@ const ParentStudentFeedbackPage: React.FC = () => {
                           {assessmentName || '—'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
-                          {score !== null && score !== undefined ? (
-                            <div className="flex items-center">
-                              <span className="font-medium">{score}</span>
-                              {weightPercentage && (
-                                <span className="text-gray-500 ml-1">/ {weightPercentage}%</span>
-                              )}
-                            </div>
-                          ) : '—'}
+                          {score !== null && score !== undefined ? `${score}/100` : '—'}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
+                          {weightPercentage ? `${weightPercentage}%` : '—'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                           {senderName}
@@ -166,10 +168,33 @@ const ParentStudentFeedbackPage: React.FC = () => {
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
                             onClick={() => setSelectedFeedback(feedback)}
-                            className="text-blue-600 hover:text-blue-900 p-2 rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+                            className="text-blue-600 hover:text-blue-700 pr-3 rounded-md transition-colors cursor-pointer transform transition duration-200 hover:scale-130"
                             title="View Feedback"
                           >
-                            <EyeIcon className="h-5 w-5" />
+                            <EyeIcon className="h-6 w-6" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Convert feedback to message format for reply
+                              const messageData: MessagePayload = {
+                                message_id: feedback.feedbackId || feedback.feedback_id || '',
+                                sender_id: feedback.senderId || feedback.sender_id,
+                                sender_name: feedback.senderName || feedback.sender_name,
+                                recipient_id: feedback.recipientId || feedback.recipient_id,
+                                recipient_name: feedback.recipientName || feedback.recipient_name,
+                                school: feedback.school,
+                                subject: `Feedback for ${studentName} on ${assessmentName} in ${courseName || feedback.subject}`,
+                                body: feedback.body,
+                                created_at: feedback.createdAt || feedback.created_at || new Date().toISOString(),
+                                last_modified_at: feedback.lastModifiedAt || feedback.last_modified_at
+                              }
+                              setReplyTarget(messageData)
+                            }}
+                            title="Reply"
+                            className="text-cyan-600 hover:text-cyan-700 cursor-pointer transform transition duration-200 hover:scale-130"
+                          >
+                            <ChatBubbleLeftEllipsisIcon className="h-6 w-6" />
                           </button>
                         </td>
                       </tr>
@@ -213,6 +238,18 @@ const ParentStudentFeedbackPage: React.FC = () => {
             isOpen={!!selectedFeedback}
             onClose={() => setSelectedFeedback(null)}
             feedback={selectedFeedback}
+          />
+        )}
+
+        {/* Reply */}
+        {replyTarget && (
+          <ReplyMessageModal
+            isOpen={!!replyTarget}
+            onClose={() => setReplyTarget(null)}
+            original={replyTarget}
+            onSent={(newMsg) => {
+              setReplyTarget(null)
+            }}
           />
         )}
       </main>

@@ -16,6 +16,17 @@ export interface MessagePayload {
   last_modified_at?: string;       // timestamp of last edit
 }
 
+
+export interface SendMessagePayload {
+  senderId: string;
+  recipientId: string;
+  school: string;
+  subject?: string;
+  body: string;
+  senderName: string;
+  recipientName: string;
+}
+
 /**
  * Response wrapper for a single-message endpoint
  */

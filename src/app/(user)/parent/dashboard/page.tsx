@@ -8,6 +8,7 @@ import { getStudentsByParentId } from '@/services/parentStudentService'
 import { ParentStudentPayload } from '@/services/types/parentStudent'
 import Spinner from '@/components/Spinner'
 import ParentChildCard from '@/components/parent/card/ParentChildCard'
+import StaffList from '@/components/staff/StaffList'
 
 const ParentDashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -67,7 +68,7 @@ const ParentDashboardPage: React.FC = () => {
 
         {/* Children Cards List */}
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto mb-8">
             {children.length === 0 ? (
               <div className="col-span-full text-center text-gray-500">
                 No children linked to your account yet.
@@ -77,6 +78,17 @@ const ParentDashboardPage: React.FC = () => {
                 <ParentChildCard key={childLink.studentId} childLink={childLink} />
               ))
             )}
+          </div>
+        )}
+
+        {/* Staff Directory */}
+        {!loading && !error && (
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">School Staff Directory</h2>
+              <p className="text-sm text-gray-600 mb-6">Contact information for school staff members.</p>
+              <StaffList school={user.school!} showContactInfo={true} showActions={true} />
+            </div>
           </div>
         )}
       </main>

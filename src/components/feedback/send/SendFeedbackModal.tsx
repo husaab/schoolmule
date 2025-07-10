@@ -136,7 +136,8 @@ const SendFeedbackModal: React.FC<SendFeedbackModalProps> = ({
             weightPercentage: Number(weight),
             childName: student.name,
             courseName,
-            studentId: student.studentId
+            studentId: student.studentId,
+            studentName: student.name
           })
         }
         )

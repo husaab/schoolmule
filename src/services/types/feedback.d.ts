@@ -10,6 +10,8 @@ export interface FeedbackPayload {
   senderName?: string;
   recipientId: string;
   recipientName?: string;
+  studentId?: string;
+  studentName?: string;
   school: string;
   subject?: string;
   body: string;
@@ -18,7 +20,6 @@ export interface FeedbackPayload {
   weightPercentage: number;
   createdAt: string;
   lastModifiedAt: string;
-  studentId: string;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface SendFeedbackRequest {
   childName: string;
   courseName: string;
   studentId: string;
+  studentName: string;
 }
 
 /**

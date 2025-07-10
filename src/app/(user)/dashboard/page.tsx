@@ -8,6 +8,8 @@ import { getSchoolName } from '@/lib/schoolUtils'
 import { getDashboardSummary, getAttendanceTrend  } from '@/services/dashboardService'
 import { DashboardSummaryData, AttendanceTrendPoint  } from '@/services/types/dashboard'
 import Spinner from '@/components/Spinner'
+import StaffList from '@/components/staff/StaffList'
+import { Listbox, Transition } from '@headlessui/react'
 import { format } from 'date-fns'
 import {
   LineChart, Line, CartesianGrid,
@@ -147,6 +149,15 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* Staff Directory */}
+        <div className="w-full lg:w-[90%] xl:w-[70%] mx-auto mt-8 lg:mt-12 px-4 lg:px-0">
+          <div className="bg-white p-4 lg:p-6 rounded-2xl shadow-md">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">School Staff Directory</h2>
+            <p className="text-sm text-gray-600 mb-6">Manage and view school staff members.</p>
+            <StaffList school={user.school!} showContactInfo={true} showActions={true} />
+          </div>
         </div>
 
         {/* Next Steps */}

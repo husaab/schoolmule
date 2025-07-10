@@ -9,10 +9,12 @@ import { getClassesByTeacherId } from '@/services/classService'
 import { getSentFeedback } from '@/services/feedbackService'
 import { ClassPayload } from '@/services/types/class'
 import { FeedbackPayload } from '@/services/types/feedback'
-import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, EyeIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/outline'
 import ViewFeedbackModal from '@/components/feedback/view/ViewFeedbackModal'
 import EditFeedbackModal from '@/components/feedback/edit/EditFeedbackModal'
 import DeleteFeedbackModal from '@/components/feedback/delete/DeleteFeedbackModal'
+import ReplyMessageModal from '@/components/messages/reply/ReplyMessageModal'
+import { SendMessagePayload } from '@/services/messageService'
 
 const ViewEditFeedbackPage: React.FC = () => {
   const user = useUserStore(s => s.user)
@@ -31,6 +33,7 @@ const ViewEditFeedbackPage: React.FC = () => {
   const [viewModalOpen, setViewModalOpen] = useState<any>(null)
   const [editModalOpen, setEditModalOpen] = useState<any>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState<any>(null)
+  const [replyTarget, setReplyTarget] = useState<SendMessagePayload | null>(null)
 
   // Load data
   const loadData = async () => {
@@ -237,6 +240,9 @@ const ViewEditFeedbackPage: React.FC = () => {
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Student
                     </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Parent
+                    </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                       Subject
                     </th>
@@ -244,7 +250,10 @@ const ViewEditFeedbackPage: React.FC = () => {
                       Assessment
                     </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                      Score
+                      Student Score
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Weight
                     </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                       Date
@@ -257,7 +266,8 @@ const ViewEditFeedbackPage: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredFeedback.map((feedback, index) => {
                     const createdAt = feedback.createdAt || feedback.created_at
-                    const recipientName = feedback.recipientName || feedback.recipient_name || 'Unknown Student'
+                    const studentName = feedback.studentName || feedback.student_name || 'Unknown Student'
+                    const parentName = feedback.recipientName || feedback.recipient_name || 'Unknown Parent'
                     const assessmentName = feedback.assessmentName || feedback.assessment_name
                     const score = feedback.score
                     const weightPercentage = feedback.weightPercentage || feedback.weight_percentage
@@ -265,11 +275,15 @@ const ViewEditFeedbackPage: React.FC = () => {
                     return (
                       <tr key={feedback.feedbackId || feedback.feedback_id || index} className="hover:bg-gray-50">
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{recipientName}</div>
-                          <div className="text-xs text-gray-500 sm:hidden">
+                          <div className="text-sm font-medium text-gray-900">{studentName}</div>
+                          <div className="text-xs text-gray-500 md:hidden">
+                            <div>Parent: {parentName}</div>
                             {feedback.subject && <div>Subject: {feedback.subject}</div>}
                             <div>Date: {new Date(createdAt).toLocaleDateString()}</div>
                           </div>
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">
+                          {parentName}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                           {feedback.subject || '—'}
@@ -278,7 +292,10 @@ const ViewEditFeedbackPage: React.FC = () => {
                           {assessmentName || '—'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
-                          {score ? `${score}/${weightPercentage}%` : '—'}
+                          {score !== null && score !== undefined ? `${score}/100` : '—'}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
+                          {weightPercentage ? `${weightPercentage}%` : '—'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                           {new Date(createdAt).toLocaleDateString()}
@@ -299,6 +316,7 @@ const ViewEditFeedbackPage: React.FC = () => {
                             >
                               <PencilIcon className="h-5 w-5" />
                             </button>
+                           
                             <button
                               onClick={() => setDeleteModalOpen(feedback)}
                               className="text-red-600 hover:text-red-900 p-1 cursor-pointer"
@@ -343,6 +361,7 @@ const ViewEditFeedbackPage: React.FC = () => {
             onDeleted={reloadFeedback}
           />
         )}
+
       </main>
     </>
   )
