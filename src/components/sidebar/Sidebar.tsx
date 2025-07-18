@@ -35,10 +35,12 @@ const Sidebar = () => {
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isFeedbackPath = pathname.startsWith('/feedback')
+  const isFinancialPath = pathname.startsWith('/financials')
 
   const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
+  const [financialOpen, setFinancialOpen]   = useState(isFinancialPath);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -129,18 +131,6 @@ const Sidebar = () => {
                 )}
               </div>
 
-              {/* Admin-only link */}
-              {user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin-panel"
-                  className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
-                    pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
-                  }`}
-                >
-                  Admin Panel
-                </Link>
-              )}
-
               <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
                 Schedule
               </Link>
@@ -220,10 +210,53 @@ const Sidebar = () => {
                 )}
               </div>
 
+              {/* ─── Financials ───────────────────────── */}
+            <div>
+              <button
+                onClick={() => setFinancialOpen(o => !o)}
+                className="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 rounded cursor-pointer"
+              >
+                <span>Financials</span>
+                {financialOpen
+                  ? <ChevronUpIcon className="h-5 w-5"/>
+                  : <ChevronDownIcon className="h-5 w-5"/>
+                }
+              </button>
+              {financialOpen && (
+                <div className="ml-6 mt-2 space-y-2">
+                  <Link
+                    href="/financials/tuition"
+                    className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
+                      pathname.startsWith('/financials/tuition') ? 'bg-gray-200 font-semibold' : ''
+                    }`}
+                  >
+                    Tuition & Invoices
+                  </Link>
+                  <Link
+                    href="/financials/other-fees"
+                    className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
+                      pathname.startsWith('/financials/other-fees') ? 'bg-gray-200 font-semibold' : ''
+                    }`}
+                  >
+                    Other Fees
+                  </Link>
+                </div>
+              )}
+            </div>
 
-              <Link href="/analytics" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Analytics
-              </Link>
+              
+              {/* Admin-only link */}
+              {user?.role === 'ADMIN' && (
+                <Link
+                  href="/admin-panel"
+                  className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
+                    pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
+                  }`}
+                >
+                  Admin Panel
+                </Link>
+              )}
+
             </>
           )}
 
