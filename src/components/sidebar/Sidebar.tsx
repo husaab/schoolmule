@@ -233,9 +233,9 @@ const Sidebar = () => {
                     Tuition & Invoices
                   </Link>
                   <Link
-                    href="/financials/other-fees"
+                    href="/financials/overview"
                     className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                      pathname.startsWith('/financials/other-fees') ? 'bg-gray-200 font-semibold' : ''
+                      pathname.startsWith('/financials/overview') ? 'bg-gray-200 font-semibold' : ''
                     }`}
                   >
                     Financial Overview
