@@ -67,6 +67,9 @@ const ClassViewModal: React.FC<ClassViewModalProps> = ({
           <strong>School:</strong> {classData.school}
         </div>
         <div>
+          <strong>Term:</strong> {classData.termName || 'Not assigned'}
+        </div>
+        <div>
           <strong>Created At:</strong>{' '}
           {new Date(classData.createdAt).toLocaleString()}
         </div>

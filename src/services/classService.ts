@@ -81,8 +81,10 @@ export const createClass = async (
     school:      classData.school,
     grade:       classData.grade,
     subject:     classData.subject,
-    teacherName: classData.teacherName,  // ✅ matches req.body.teacherName
-    teacherId:   classData.teacherId,    // ✅ matches req.body.teacherId
+    teacherName: classData.teacherName,
+    teacherId:   classData.teacherId,
+    termId:      classData.termId,
+    termName:    classData.termName,
   };
   return apiClient<ClassResponse>(`/classes`, {
     method: "POST",
@@ -121,6 +123,8 @@ export const updateClass = async (
   if (updateData.subject !== undefined)    body.subject = updateData.subject;
   if (updateData.teacherName !== undefined) body.teacherName = updateData.teacherName;
   if (updateData.teacherId   !== undefined) body.teacherId   = updateData.teacherId;
+  if (updateData.termId !== undefined)     body.termId = updateData.termId;
+  if (updateData.termName !== undefined)   body.termName = updateData.termName;
 
   return apiClient<ClassResponse>(`/classes/${id}`, {
     method: "PATCH",

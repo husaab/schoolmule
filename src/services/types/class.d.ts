@@ -8,8 +8,10 @@ export interface ClassPayload {
   school:       string;
   grade:        number;
   subject:      string;
-  teacherName:  string; // ← newly added
-  teacherId:    string; // ← newly added
+  teacherName:  string;
+  teacherId:    string;
+  termId:       string;
+  termName:     string;
   createdAt:    string;
   lastModifiedAt: string;
 }

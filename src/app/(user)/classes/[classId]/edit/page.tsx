@@ -25,6 +25,8 @@ import { getAllStudents } from '@/services/studentService'
 import { useUserStore } from '@/store/useUserStore'
 import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
+import { getTermsBySchool } from '@/services/termService'
+import type { TermPayload } from '@/services/types/term'
 
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
@@ -52,8 +54,11 @@ export default function EditClassPage() {
   const [editSubject, setEditSubject] = useState('')
   const [editGrade, setEditGrade] = useState<number | ''>('')
   const [editTeacherId, setEditTeacherId] = useState<string>('')    // store selected teacherId
+  const [editTermId, setEditTermId] = useState<string>('')         // store selected termId
   const [teachers, setTeachers] = useState<TeacherPayload[]>([])     // list of teacher options
+  const [terms, setTerms] = useState<TermPayload[]>([])             // list of term options
   const [loadingTeachers, setLoadingTeachers] = useState(false)
+  const [loadingTerms, setLoadingTerms] = useState(false)
 
   // ───── Assessments ─────
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
@@ -154,7 +159,7 @@ export default function EditClassPage() {
     fetchAssessments()
   }, [classData, classId])
 
-  // ───── Fetch teachers once entering edit mode ─────
+  // ───── Fetch teachers and terms once entering edit mode ─────
   useEffect(() => {
     if (!isEditing || !user.school) return
 
@@ -176,7 +181,25 @@ export default function EditClassPage() {
       }
     }
 
+    const fetchTerms = async () => {
+      setLoadingTerms(true)
+      try {
+        const res = await getTermsBySchool(user.school!)
+        if (res.status === 'success') {
+          setTerms(res.data)
+        } else {
+          showNotification('Failed to load terms list', 'error')
+        }
+      } catch (err) {
+        console.error('Error loading terms:', err)
+        showNotification('Error loading terms list', 'error')
+      } finally {
+        setLoadingTerms(false)
+      }
+    }
+
     fetchTeachers()
+    fetchTerms()
   }, [isEditing, user.school, showNotification])
 
   // ───── Populate “edit” fields when starting to edit ─────
@@ -185,6 +208,7 @@ export default function EditClassPage() {
       setEditSubject(classData.subject)
       setEditGrade(classData.grade)
       setEditTeacherId(classData.teacherId)
+      setEditTermId(classData.termId || '')
     }
   }, [isEditing, classData])
 
@@ -216,6 +240,8 @@ export default function EditClassPage() {
     grade,
     teacherName,    // ← renamed
     teacherId,      // ← new (but not displayed here)
+    termName,       // ← term name
+    termId,         // ← term id
     school,
     createdAt,
     lastModifiedAt,
@@ -227,7 +253,8 @@ export default function EditClassPage() {
     if (
       editSubject.trim() === '' ||
       editGrade === '' ||
-      editTeacherId.trim() === ''
+      editTeacherId.trim() === '' ||
+      editTermId.trim() === ''
     ) {
       showNotification('All fields are required', 'error')
       return
@@ -240,12 +267,21 @@ export default function EditClassPage() {
       return
     }
 
+    // Find selected term's name
+    const selectedTerm = terms.find((t) => t.termId === editTermId)
+    if (!selectedTerm) {
+      showNotification('Selected term not found', 'error')
+      return
+    }
+
     try {
       const payload = {
         grade:       editGrade as number,
         subject:     editSubject.trim(),
         teacherName: selectedTeacher.fullName,
         teacherId:   selectedTeacher.userId,
+        termId:      selectedTerm.termId,
+        termName:    selectedTerm.name,
       }
       const res = await updateClass(classId, payload)
       if (res.status === 'success') {
@@ -257,6 +293,8 @@ export default function EditClassPage() {
           subject:       updatedRaw.subject,
           teacherName:   updatedRaw.teacherName,
           teacherId:     updatedRaw.teacherId,
+          termId:        updatedRaw.termId,
+          termName:      updatedRaw.termName,
           createdAt:     updatedRaw.createdAt,
           lastModifiedAt: updatedRaw.lastModifiedAt,
         })
@@ -348,6 +386,9 @@ export default function EditClassPage() {
                   <strong>School:</strong> {school}
                 </div>
                 <div>
+                  <strong>Term:</strong> {termName || 'Not assigned'}
+                </div>
+                <div>
                   <strong>Created At:</strong> {new Date(createdAt).toLocaleString()}
                 </div>
                 <div>
@@ -404,6 +445,30 @@ export default function EditClassPage() {
                       {teachers.map((t) => (
                         <option key={t.userId} value={t.userId}>
                           {t.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Term Dropdown */}
+                <div>
+                  <label className="block text-sm mb-1">Term</label>
+                  {loadingTerms ? (
+                    <p className="text-gray-600">Loading terms…</p>
+                  ) : (
+                    <select
+                      required
+                      value={editTermId}
+                      onChange={(e) => setEditTermId(e.target.value)}
+                      className="w-full border rounded px-2 py-1"
+                    >
+                      <option value="" disabled>
+                        Select term
+                      </option>
+                      {terms.map((t) => (
+                        <option key={t.termId} value={t.termId}>
+                          {t.name} ({t.academicYear})
                         </option>
                       ))}
                     </select>

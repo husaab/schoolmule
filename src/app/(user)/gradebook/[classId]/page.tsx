@@ -17,6 +17,8 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { AssessmentPayload } from '@/services/types/assessment'
+import { getTermsBySchool } from '@/services/termService'
+import type { TermPayload } from '@/services/types/term'
 import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 
 interface ScoreRow {
@@ -37,6 +39,7 @@ const GradebookClass = () => {
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
   const [scoresMatrix, setScoresMatrix] = useState<ScoreRow[]>([])
+  const [termData, setTermData] = useState<TermPayload | null>(null)
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -89,6 +92,27 @@ const GradebookClass = () => {
         setLoading(false)
       })
   }, [classId])
+
+  // Fetch term details when classData becomes available
+  useEffect(() => {
+    if (!classData?.termId || !classData?.school) return
+
+    const fetchTermData = async () => {
+      try {
+        const res = await getTermsBySchool(classData.school)
+        if (res.status === 'success') {
+          const term = res.data.find(t => t.termId === classData.termId)
+          if (term) {
+            setTermData(term)
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching term data:', err)
+      }
+    }
+
+    fetchTermData()
+  }, [classData?.termId, classData?.school])
 
   if (error) {
     return (
@@ -254,6 +278,16 @@ const GradebookClass = () => {
             {students.length} students &ndash; {assessments.length}{' '}
             {assessments.length === 1 ? 'assessment' : 'assessments'}
           </p>
+          {classData.termName && (
+            <p className="text-gray-600 mt-1">
+              <strong>Term:</strong> {classData.termName}
+              {termData && (
+                <span className="ml-2">
+                  ({new Date(termData.startDate).toLocaleDateString()} - {new Date(termData.endDate).toLocaleDateString()})
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         <div className="mx-auto w-[80%] overflow-x-auto border border-gray-200 rounded-lg shadow-sm">

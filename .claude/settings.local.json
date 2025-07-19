@@ -4,7 +4,8 @@
       "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(sed:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

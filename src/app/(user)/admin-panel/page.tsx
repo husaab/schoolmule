@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -17,6 +17,12 @@ const adminLinks = [
     label: 'Parent-Student Relations',
     description: 'View and manage parent-student mappings.',
     icon: UserGroupIcon,
+  },
+  {
+    href: '/admin-panel/school-settings',
+    label: 'School Settings',
+    description: 'Manage school terms and academic year settings.',
+    icon: CogIcon,
   },
   // You can add more admin tools here later
 ];

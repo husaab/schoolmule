@@ -9,6 +9,8 @@ import { createClass } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
+import { getTermsBySchool } from '@/services/termService'
+import type { TermPayload } from '@/services/types/term'
 
 interface ClassAddModalProps {
   isOpen: boolean
@@ -27,9 +29,12 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   // ------ LOCAL STATE ------
   const [grade, setGrade] = useState<number | ''>('')
   const [subject, setSubject] = useState('')
-  const [teacherId, setTeacherId] = useState<string>('')                // <-- store selected teacher's ID
-  const [teachers, setTeachers] = useState<TeacherPayload[]>([])        // <-- will hold all teachers for dropdown
+  const [teacherId, setTeacherId] = useState<string>('')
+  const [termId, setTermId] = useState<string>('')
+  const [teachers, setTeachers] = useState<TeacherPayload[]>([])
+  const [terms, setTerms] = useState<TermPayload[]>([])
   const [loadingTeachers, setLoadingTeachers] = useState<boolean>(false)
+  const [loadingTerms, setLoadingTerms] = useState<boolean>(false)
   // --------------------------
 
   // 1) When the modal opens (and user.school is known), fetch all teachers in that school
@@ -59,15 +64,33 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
       }
     }
 
+    const fetchTerms = async () => {
+      setLoadingTerms(true)
+      try {
+        const res = await getTermsBySchool(user.school!)
+        if (res.status === 'success') {
+          setTerms(res.data)
+        } else {
+          showNotification('Failed to load terms list', 'error')
+        }
+      } catch (err) {
+        console.error('Error loading terms:', err)
+        showNotification('Error loading terms list', 'error')
+      } finally {
+        setLoadingTerms(false)
+      }
+    }
+
     fetchTeachers()
+    fetchTerms()
   }, [isOpen, user?.school, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // 2) Validate required fields
-    if (grade === '' || subject.trim() === '' || teacherId === '') {
-      showNotification('Grade, subject, and teacher are required', 'error')
+    if (grade === '' || subject.trim() === '' || teacherId === '' || termId === '') {
+      showNotification('Grade, subject, teacher, and term are required', 'error')
       return
     }
     if (!user?.school) {
@@ -82,13 +105,22 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
       return
     }
 
-    // 4) Build the payload for createClass()
+    // 4) Find the selected term's name
+    const selectedTerm = terms.find((t) => t.termId === termId)
+    if (!selectedTerm) {
+      showNotification('Selected term not found', 'error')
+      return
+    }
+
+    // 5) Build the payload for createClass()
     const payload = {
       school:      user.school,
       grade:       grade,
       subject:     subject.trim(),
       teacherName: selectedTeacher.fullName,
       teacherId:   selectedTeacher.userId,
+      termId:      selectedTerm.termId,
+      termName:    selectedTerm.name,
     }
 
     try {
@@ -102,6 +134,8 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
           subject:        raw.subject,
           teacherName:    raw.teacherName,
           teacherId:      raw.teacherId,
+          termId:         raw.termId,
+          termName:       raw.termName,
           createdAt:      raw.createdAt,
           lastModifiedAt: raw.lastModifiedAt,
         }
@@ -114,6 +148,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
         setGrade('')
         setSubject('')
         setTeacherId('')
+        setTermId('')
       } else {
         showNotification(res.message || 'Failed to create class', 'error')
       }
@@ -127,9 +162,9 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
       <h2 className="text-xl mb-4 text-black">Add New Class</h2>
 
-      {/* If teachers are still loading, show a spinner or message */}
-      {loadingTeachers ? (
-        <p className="text-gray-600">Loading teachers…</p>
+      {/* If teachers or terms are still loading, show a spinner or message */}
+      {loadingTeachers || loadingTerms ? (
+        <p className="text-gray-600">Loading data…</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 text-black">
           {/* Grade */}
@@ -178,6 +213,26 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
               {teachers.map((t) => (
                 <option key={t.userId} value={t.userId}>
                   {t.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Term Dropdown */}
+          <div>
+            <label className="block text-sm">Term</label>
+            <select
+              required
+              value={termId}
+              onChange={(e) => setTermId(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-black"
+            >
+              <option value="" disabled className="text-black">
+                Select term
+              </option>
+              {terms.map((t) => (
+                <option key={t.termId} value={t.termId} className="text-black">
+                  {t.name} ({t.academicYear})
                 </option>
               ))}
             </select>
