@@ -43,3 +43,42 @@ export interface AttendanceTrendResponse {
   status: string;
   data: AttendanceTrendPoint[];
 }
+
+/**
+ * Monthly revenue trend data point
+ */
+export interface MonthlyRevenueTrendPoint {
+  month: string;          // e.g. "2025-01-01T00:00:00.000Z"  
+  revenue: number;        // total revenue for that month
+  invoiceCount: number;   // number of invoices for that month
+}
+
+/**
+ * Invoice status counts breakdown
+ */
+export interface InvoiceStatusCounts {
+  pending: number;
+  paid: number;
+  overdue: number;
+  cancelled: number;
+}
+
+/**
+ * Data payload for financial overview metrics
+ */
+export interface FinancialOverviewData {
+  totalRevenue: number;               // total money collected
+  totalOutstanding: number;           // total money still owed
+  statusCounts: InvoiceStatusCounts;  // breakdown by status
+  studentsWithInvoices: number;       // count of students with invoices
+  monthlyTrends: MonthlyRevenueTrendPoint[];  // 12 months of revenue trends
+  averagePayment: number;             // average payment amount
+}
+
+/**
+ * Response shape for GET /dashboard/financial
+ */
+export interface FinancialOverviewResponse {
+  status: string;
+  data: FinancialOverviewData;
+}

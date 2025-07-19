@@ -5,7 +5,8 @@ import {
   DashboardSummaryResponse,
   AttendanceRateResponse,
   AttendanceTrendPoint,
-  AttendanceTrendResponse
+  AttendanceTrendResponse,
+  FinancialOverviewResponse
 } from './types/dashboard'
 
 /**
@@ -94,3 +95,16 @@ export const getAttendanceTrend = async (
     `/dashboard/attendance/trend${query}`
   );
 };
+
+/**
+ * Fetch financial overview metrics for a given school
+ * GET /dashboard/financial?school=...
+ */
+export const getFinancialOverview = async (
+  school: string
+): Promise<FinancialOverviewResponse> => {
+  const query = `?school=${encodeURIComponent(school)}`
+  return apiClient<FinancialOverviewResponse>(
+    `/dashboard/financial${query}`
+  )
+}

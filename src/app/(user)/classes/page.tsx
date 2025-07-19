@@ -12,12 +12,16 @@ import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
+import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
+import Spinner from '@/components/Spinner'
 
 const ClassesPage = () => {
   const user = useUserStore((state) => state.user)
   const router = useRouter()
   
   const [classes, setClasses] = useState<ClassPayload[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string>('')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<number>>(new Set())
@@ -25,35 +29,35 @@ const ClassesPage = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
 
-  useEffect(() => {
-    if(!user.id) return;
-    if (user.school) {
-      if(user.role === 'ADMIN') {
-        getAllClasses(user.school)
-        .then((res) => {
-          if (res.status === 'success') {
-            setClasses(res.data)
-          } else {
-            console.error('Failed to fetch classes:', res.message)
-          }
-        })
-        .catch((err) => {
-          console.error('Error loading classes:', err)
-        })
-      } else{
-        getClassesByTeacherId(user.id)
-        .then((res) => {
-          if (res.status === 'success') {
-            setClasses(res.data)
-          } else {
-            console.error('Failed to fetch classes:', res.message)
-          }
-        })
-        .catch((err) => {
-          console.error('Error loading classes:', err)
-        })
+  const loadClasses = async () => {
+    if (!user.school || !user.id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let response;
+      if (user.role === 'ADMIN') {
+        response = await getAllClasses(user.school);
+      } else {
+        response = await getClassesByTeacherId(user.id);
       }
+      
+      if (response.status === 'success') {
+        setClasses(response.data);
+      } else {
+        setError(response.message || 'Failed to load classes');
+      }
+    } catch (err) {
+      console.error('Error loading classes:', err);
+      setError('Error loading classes');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadClasses();
   }, [user.school, user.id, user.role])
 
   // Build unique grade list
@@ -92,45 +96,109 @@ const ClassesPage = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-4 lg:p-10">
-        <div className="pt-32 lg:pt-40 text-black">
-          <h1 className="text-2xl lg:text-3xl text-center">Classes</h1>
+      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
+        <div className="text-black text-center mb-6">
+          <h1 className="text-2xl lg:text-3xl font-semibold">Classes Management</h1>
+          <p className="text-gray-600 mt-2">Manage class schedules and assignments for your school.</p>
+        </div>
 
-          <div className="mt-6 lg:mt-10 p-4 lg:p-8 w-full lg:w-[90%] xl:w-[70%] max-h-[80vh] mx-auto overflow-y-scroll custom-scrollbar border-2 border-cyan-600 rounded-lg shadow-lg space-y-4">
-            {/* Controls: Search, Grade Filter, Add Class */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-              {/* Search */}
-              <input
-                type="text"
-                placeholder="Search by subject or teacher…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-              />
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl shadow-md">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Class Directory</h2>
+                  <p className="text-sm text-gray-600">View and manage all class schedules</p>
+                </div>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Class
+                </button>
+              </div>
 
-              {/* Grade Filter */}
-              <select
-                value={gradeFilter}
-                onChange={(e) => setGradeFilter(e.target.value)}
-                className="w-full sm:w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-              >
-                <option value="">All Grades</option>
-                {availableGrades.map((g) => (
-                  <option key={g} value={String(g)}>
-                    Grade {g}
-                  </option>
-                ))}
-              </select>
-
-              {/* + Add Class */}
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-500 cursor-pointer"
-              >
-                + Add Class
-              </button>
+              {/* Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Classes
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search by subject or teacher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Grade
+                  </label>
+                  <select
+                    value={gradeFilter}
+                    onChange={(e) => setGradeFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  >
+                    <option value="">All Grades</option>
+                    {availableGrades.map((g) => (
+                      <option key={g} value={String(g)}>
+                        Grade {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {(searchTerm || gradeFilter) && (
+                <div className="mt-4 flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">
+                    Showing {filteredClasses.length} of {classes.length} classes
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSearchTerm('')
+                      setGradeFilter('')
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
             </div>
+          </div>
 
+          {/* Classes Content */}
+          <div className="p-6">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Spinner />
+              </div>
+            ) : error ? (
+              <div className="text-center text-red-600 py-8">
+                {error}
+              </div>
+            ) : filteredClasses.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                  <AcademicCapIcon className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {classes.length === 0 ? 'No Classes' : 'No Matching Classes'}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {classes.length === 0 
+                    ? 'Add your first class to get started.' 
+                    : 'Try adjusting your search or filters.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
             {/* Collapsible grade sections */}
             {availableGrades.map((g) => {
               const classesForGrade = filteredClasses.filter(
@@ -171,7 +239,7 @@ const ClassesPage = () => {
                     classesForGrade.map((cls) => (
                       <div
                         key={cls.classId}
-                        className="flex items-center justify-between p-4 bg-white border border-cyan-400 rounded-lg shadow-sm"
+                        className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex-1">
                           <p className="font-medium text-gray-800">
@@ -208,6 +276,8 @@ const ClassesPage = () => {
                 </div>
               )
             })}
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -248,7 +318,7 @@ const ClassesPage = () => {
         <ClassAddModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
-          onAdd={(newClass) => setClasses((prev) => [newClass, ...prev])}
+          onAdd={() => loadClasses()}
         />
       )}
 
@@ -258,9 +328,7 @@ const ClassesPage = () => {
           isOpen={!!deleteTarget}
           onClose={() => setDeleteTarget(null)}
           classData={deleteTarget}
-          onDeleted={(id) =>
-            setClasses((prev) => prev.filter((c) => c.classId !== id))
-          }
+          onDeleted={() => loadClasses()}
         />
       )}
     </>

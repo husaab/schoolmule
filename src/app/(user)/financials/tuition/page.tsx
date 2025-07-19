@@ -8,6 +8,7 @@ import { getTuitionPlansBySchool } from '@/services/tuitionPlanService'
 import { TuitionPlanPayload } from '@/services/types/tuitionPlan'
 import { ChevronDownIcon, ChevronUpIcon, PlusIcon, PencilIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import AddTuitionPlanModal from '@/components/tuitionPlan/add/AddTuitionPlanModal'
 import EditTuitionPlanModal from '@/components/tuitionPlan/edit/EditTuitionPlanModal'
 import DeleteTuitionPlanModal from '@/components/tuitionPlan/delete/DeleteTuitionPlanModal'
@@ -17,12 +18,13 @@ import ViewTuitionInvoiceModal from '@/components/tuitionInvoice/view/ViewTuitio
 import EditTuitionInvoiceModal from '@/components/tuitionInvoice/edit/EditTuitionInvoiceModal'
 import DeleteTuitionInvoiceModal from '@/components/tuitionInvoice/delete/DeleteTuitionInvoiceModal'
 import TuitionInvoiceCommentsModal from '@/components/tuitionInvoice/comments/TuitionInvoiceCommentsModal'
-import { getTuitionInvoicesBySchool } from '@/services/tuitionInvoiceService'
+import { getTuitionInvoicesBySchool, updateTuitionInvoice } from '@/services/tuitionInvoiceService'
 import { getTuitionInvoiceCommentsBySchool } from '@/services/tuitionInvoiceCommentService'
 import { TuitionInvoicePayload } from '@/services/types/tuitionInvoice'
 
 const TuitionPage: React.FC = () => {
   const user = useUserStore(state => state.user)
+  const showNotification = useNotificationStore(state => state.showNotification)
   
   // Tuition Plan State
   const [tuitionPlans, setTuitionPlans] = useState<TuitionPlanPayload[]>([])
@@ -50,6 +52,7 @@ const TuitionPage: React.FC = () => {
   const [deleteInvoiceModalOpen, setDeleteInvoiceModalOpen] = useState<TuitionInvoicePayload | null>(null)
   const [commentsModalOpen, setCommentsModalOpen] = useState<TuitionInvoicePayload | null>(null)
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
   // Load tuition plans
   const loadTuitionPlans = async () => {
@@ -122,6 +125,43 @@ const TuitionPage: React.FC = () => {
       ...prev,
       [invoiceId]: newCount
     }))
+  }
+
+  // Handle status change for inline editing
+  const handleStatusChange = async (invoice: TuitionInvoicePayload, newStatus: string) => {
+    // Prevent updating if already updating
+    if (updatingStatus === invoice.invoiceId) return
+
+    setUpdatingStatus(invoice.invoiceId)
+
+    try {
+      const updatedInvoice = {
+        ...invoice,
+        status: newStatus as 'pending' | 'paid' | 'overdue' | 'cancelled'
+      }
+
+      const response = await updateTuitionInvoice(invoice.invoiceId, updatedInvoice)
+      
+      if (response.status === 'success') {
+        // Update the invoice in the local state
+        setTuitionInvoices(prev => 
+          prev.map(inv => 
+            inv.invoiceId === invoice.invoiceId 
+              ? { ...inv, status: newStatus as any }
+              : inv
+          )
+        )
+        showNotification(`Invoice status updated to ${newStatus}`, 'success')
+      } else {
+        console.error('Failed to update invoice status:', response.message)
+        showNotification('Failed to update invoice status', 'error')
+      }
+    } catch (error) {
+      console.error('Error updating invoice status:', error)
+      showNotification('Error updating invoice status', 'error')
+    } finally {
+      setUpdatingStatus(null)
+    }
   }
 
   useEffect(() => {
@@ -474,17 +514,26 @@ const TuitionPage: React.FC = () => {
                           {new Date(invoice.dateDue).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.status === 'paid' 
-                              ? 'bg-green-100 text-green-800'
-                              : invoice.status === 'overdue'
-                              ? 'bg-red-100 text-red-800'
-                              : invoice.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                          </span>
+                          <select
+                            value={invoice.status}
+                            onChange={(e) => handleStatusChange(invoice, e.target.value)}
+                            disabled={updatingStatus === invoice.invoiceId}
+                            className={`text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer ${
+                              invoice.status === 'paid' 
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.status === 'overdue'
+                                ? 'bg-red-100 text-red-800'
+                                : invoice.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            } ${updatingStatus === invoice.invoiceId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {invoiceStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <button

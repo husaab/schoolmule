@@ -238,7 +238,7 @@ const Sidebar = () => {
                       pathname.startsWith('/financials/other-fees') ? 'bg-gray-200 font-semibold' : ''
                     }`}
                   >
-                    Other Fees
+                    Financial Overview
                   </Link>
                 </div>
               )}
