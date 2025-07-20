@@ -83,102 +83,174 @@ export default function GeneralAttendancePage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen bg-white p-4 lg:p-10">
-        <h1 className="text-3xl text-center mb-6 pt-40 text-black">General Attendance</h1>
-        <div className="mb-4 flex items-center justify-center gap-2 text-black">
-        <label htmlFor="attendance-date" className="font-medium">
-            Attendance Date:
-        </label>
-        <input
-            id="attendance-date"
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
-        />
+      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10 pb-24">
+        <div className="text-black text-center mb-6">
+          <h1 className="text-2xl lg:text-3xl font-semibold">General Attendance</h1>
+          <p className="text-gray-600 mt-2">Track daily attendance for all students</p>
         </div>
-        <div className="w-[90%] lg:w-[75%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2 w-[70%] mx-auto">
-        <input
-          type="text"
-          placeholder="Search by name…"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 text-black"
-        />
-        <select
-          value={gradeFilter}
-          onChange={e => setGradeFilter(e.target.value)}
-          className="w-full sm:w-48 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 text-black"
-        >
-          <option value="">All Grades</option>
-          {grades.map(g => (
-            <option key={g} value={String(g)}>Grade {g}</option>
-          ))}
-        </select>
-        </div>
-          {Object.entries(groupedByGrade)
-            .sort(([a], [b]) => {
-                const numA = parseInt(a.replace(/\D/g, ''), 10);
-                const numB = parseInt(b.replace(/\D/g, ''), 10);
-                return numA - numB;
-            })
-            .map(([grade, students]) => (
-            <div key={grade}>
-              <h2 className="text-xl font-semibold mb-2">{grade}</h2>
-              <div className="space-y-2">
-                {students.map(student => (
-                  <div
-                    key={student.studentId}
-                    className="flex items-center justify-between border border-gray-300 rounded px-4 py-2 text-sm"
+
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl shadow-md">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Student Attendance</h2>
+                  <p className="text-sm text-gray-600">Mark attendance for {format(new Date(selectedDate), 'MMM dd, yyyy')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="attendance-date" className="text-sm font-medium text-gray-700">
+                    Date:
+                  </label>
+                  <input
+                    id="attendance-date"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Students
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Grade
+                  </label>
+                  <select
+                    value={gradeFilter}
+                    onChange={(e) => setGradeFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   >
-                    <span className="flex-1">{student.name}</span>
-                    <div className="flex space-x-4 items-center text-sm">
-                      {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map(status => (
-                        <label key={status} className="flex items-center space-x-1 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={attendance[student.studentId] === status}
-                            onChange={() => handleSelect(student.studentId, status)}
-                          />
-                          <span>{status}</span>
-                        </label>
+                    <option value="">All Grades</option>
+                    {grades.map((g) => (
+                      <option key={g} value={String(g)}>
+                        Grade {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {(searchTerm || gradeFilter) && (
+                <div className="mt-4 flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">
+                    Showing {filteredStudents.length} of {students.length} students
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSearchTerm('')
+                      setGradeFilter('')
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Students Content */}
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="space-y-4">
+              {Object.entries(groupedByGrade)
+                .sort(([a], [b]) => {
+                  const numA = parseInt(a.replace(/\D/g, ''), 10);
+                  const numB = parseInt(b.replace(/\D/g, ''), 10);
+                  return numA - numB;
+                })
+                .map(([grade, students]) => (
+                  <div key={grade} className="space-y-2">
+                    {/* Grade header */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg">
+                      <span className="font-semibold text-lg">{grade}</span>
+                      <span className="text-sm">{students.length} students</span>
+                    </div>
+
+                    {/* Student cards */}
+                    <div className="space-y-2">
+                      {students.map(student => (
+                        <div
+                          key={student.studentId}
+                          className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">{student.name}</p>
+                            <p className="text-gray-600 text-sm">Grade {student.grade}</p>
+                          </div>
+                          <div className="flex space-x-4 items-center">
+                            {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map(status => (
+                              <label key={status} className="flex items-center space-x-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={attendance[student.studentId] === status}
+                                  onChange={() => handleSelect(student.studentId, status)}
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className={`text-sm ${
+                                  status === 'PRESENT' ? 'text-green-700' :
+                                  status === 'LATE' ? 'text-yellow-700' :
+                                  'text-red-700'
+                                }`}>
+                                  {status}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
                 ))}
-              </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        <div className="text-center mt-6">
-          <button
-            onClick={async () => {
-              const entries = Object.entries(attendance)
-                .filter(([_, status]) => status !== null)
-                .map(([studentId, status]) => ({ studentId, status: status as AttendanceStatus }));
+        {/* Sticky Save Button at Bottom */}
+        <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-20 p-4 bg-white border-t border-gray-200 shadow-lg">
+          <div className="flex justify-center">
+            <button
+              onClick={async () => {
+                const entries = Object.entries(attendance)
+                  .filter(([_, status]) => status !== null)
+                  .map(([studentId, status]) => ({ studentId, status: status as AttendanceStatus }));
 
-              try {
-                const res = await submitGeneralAttendance({
-                  attendanceDate: selectedDate,
-                  entries,
-                  school: user.school!
-                });
-                if (res.status === 'success') {
-                  showNotification('Attendance saved successfully', "success");
-                } else {
-                  showNotification('Failed to save attendance', "error");
+                try {
+                  const res = await submitGeneralAttendance({
+                    attendanceDate: selectedDate,
+                    entries,
+                    school: user.school!
+                  });
+                  if (res.status === 'success') {
+                    showNotification('Attendance saved successfully', "success");
+                  } else {
+                    showNotification('Failed to save attendance', "error");
+                  }
+                } catch (err) {
+                  console.error(err);
+                  showNotification('Unexpected error saving attendance, contact support if persists', "error");
                 }
-              } catch (err) {
-                console.error(err);
-                showNotification('Unexpected error saving attendance, contact support if persists', "error");
-              }
-            }}
-            className="bg-green-400 hover:bg-green-600 text-white px-6 py-2 rounded cursor-pointer"
-          >
-            Save All Changes
-          </button>
+              }}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer font-semibold shadow-md"
+            >
+              Save All Changes
+            </button>
+          </div>
         </div>
       </main>
 

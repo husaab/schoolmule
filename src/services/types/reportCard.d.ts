@@ -1,11 +1,9 @@
 // src/services/types/reportCard.ts
 
-export type ReportCardTerm = 'First Term' | 'Second Term' | 'Midterm' | 'Final Term'
-
 export interface ReportCardFeedbackPayload {
   studentId: string
   classId: string
-  term: ReportCardTerm
+  term: string
   workHabits?: string
   behavior?: string
   comment?: string

@@ -30,7 +30,8 @@ export default function DemoPage() {
           role: response.data.role,
           school: response.data.school,
           isVerifiedEmail: response.data.isVerified,
-          isVerifiedSchool: response.data.isVerifiedSchool
+          isVerifiedSchool: response.data.isVerifiedSchool,
+          activeTerm: response.data.activeTerm
         }
 
         setUser(user)

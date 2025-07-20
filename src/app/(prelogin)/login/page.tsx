@@ -63,7 +63,8 @@ const LoginForm: FC = () => {
           role: response.data.role,
           school: response.data.school,
           isVerifiedEmail: response.data.isVerified,
-          isVerifiedSchool: response.data.isVerifiedSchool
+          isVerifiedSchool: response.data.isVerifiedSchool,
+          activeTerm: response.data.activeTerm
         };
         setUser(user);
         showNotification('Logged in successfully', 'success')

@@ -82,54 +82,85 @@ export default function ClassAttendancePage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen bg-white p-4 lg:p-10">
-        <div className="pt-40 text-black text-center mb-6">
-          <h1 className="text-3xl font-semibold">{className} – Class Attendance</h1>
+      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10 pb-24">
+        <div className="text-black text-center mb-6">
+          <h1 className="text-2xl lg:text-3xl font-semibold">Class Attendance</h1>
+          <p className="text-gray-600 mt-2">{className || 'Loading...'}</p>
         </div>
 
-        <div className="mb-4 flex items-center justify-center gap-2 text-black">
-          <label htmlFor="attendance-date" className="font-medium">
-            Attendance Date:
-          </label>
-          <input
-            id="attendance-date"
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          />
-        </div>
-
-        <div className="w-[90%] lg:w-[75%] mx-auto max-h-[60vh] overflow-y-scroll custom-scrollbar border border-cyan-600 rounded-lg p-4 space-y-4 text-black">
-          {students.map((student) => (
-            <div
-              key={student.studentId}
-              className="flex items-center justify-between border border-gray-300 rounded px-4 py-2 text-sm"
-            >
-              <span className="flex-1">{student.name}</span>
-              <div className="flex space-x-4 items-center text-sm">
-                {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map((status) => (
-                  <label key={status} className="flex items-center space-x-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={attendance[student.studentId] === status}
-                      onChange={() => handleSelect(student.studentId, status)}
-                    />
-                    <span>{status}</span>
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl shadow-md">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Student Attendance</h2>
+                  <p className="text-sm text-gray-600">Mark attendance for {className} on {format(new Date(selectedDate), 'MMM dd, yyyy')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="attendance-date" className="text-sm font-medium text-gray-700">
+                    Date:
                   </label>
-                ))}
+                  <input
+                    id="attendance-date"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Students Content */}
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="space-y-2">
+              {students.map((student) => (
+                <div
+                  key={student.studentId}
+                  className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">{student.name}</p>
+                    <p className="text-gray-600 text-sm">Grade {student.grade}</p>
+                  </div>
+                  <div className="flex space-x-4 items-center">
+                    {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map((status) => (
+                      <label key={status} className="flex items-center space-x-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={attendance[student.studentId] === status}
+                          onChange={() => handleSelect(student.studentId, status)}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className={`text-sm ${
+                          status === 'PRESENT' ? 'text-green-700' :
+                          status === 'LATE' ? 'text-yellow-700' :
+                          'text-red-700'
+                        }`}>
+                          {status}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="text-center mt-6">
-          <button
-            onClick={handleSave}
-            className="bg-green-500 hover:bg-green-700 text-white px-6 py-2 rounded cursor-pointer"
-          >
-            Save All Changes
-          </button>
+        {/* Sticky Save Button at Bottom */}
+        <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-20 p-4 bg-white border-t border-gray-200 shadow-lg">
+          <div className="flex justify-center">
+            <button
+              onClick={handleSave}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer font-semibold shadow-md"
+            >
+              Save All Changes
+            </button>
+          </div>
         </div>
       </main>
     </>

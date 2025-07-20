@@ -25,13 +25,11 @@ const DashboardPage: React.FC = () => {
   const [trend, setTrend]     = useState<AttendanceTrendPoint[]>([])
   const [daysWindow, setDaysWindow] = useState<number>(7)
 
-  const term = 'Term 1' // TODO: replace with dynamic term selection
-
   useEffect(() => {
     if (!user.school) return
     setLoading(true)
     Promise.all([
-      getDashboardSummary(user.school, term, today),
+      getDashboardSummary(user.school, user.activeTerm!, today),
       getAttendanceTrend(user.school, daysWindow, today)
     ])
       .then(([sumRes, trendRes]) => {

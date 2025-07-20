@@ -25,7 +25,7 @@ import { getAllStudents } from '@/services/studentService'
 import { useUserStore } from '@/store/useUserStore'
 import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
-import { getTermsBySchool } from '@/services/termService'
+import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
 
 export default function EditClassPage() {
@@ -57,6 +57,7 @@ export default function EditClassPage() {
   const [editTermId, setEditTermId] = useState<string>('')         // store selected termId
   const [teachers, setTeachers] = useState<TeacherPayload[]>([])     // list of teacher options
   const [terms, setTerms] = useState<TermPayload[]>([])             // list of term options
+  const [currentTermData, setCurrentTermData] = useState<TermPayload | null>(null) // current term details for display
   const [loadingTeachers, setLoadingTeachers] = useState(false)
   const [loadingTerms, setLoadingTerms] = useState(false)
 
@@ -108,6 +109,24 @@ export default function EditClassPage() {
     }
     fetchClass()
   }, [classId])
+
+  // ───── Fetch current term details when classData becomes available ─────
+  useEffect(() => {
+    if (!classData?.termName || !classData?.school) return
+
+    const fetchCurrentTermData = async () => {
+      try {
+        const res = await getTermByNameAndSchool(classData.termName, classData.school)
+        if (res.status === 'success') {
+          setCurrentTermData(res.data)
+        }
+      } catch (err) {
+        console.error('Error fetching current term data:', err)
+      }
+    }
+
+    fetchCurrentTermData()
+  }, [classData?.termName, classData?.school])
 
   // ───── Fetch enrolled students once classData is available ─────
   useEffect(() => {
@@ -387,6 +406,19 @@ export default function EditClassPage() {
                 </div>
                 <div>
                   <strong>Term:</strong> {termName || 'Not assigned'}
+                  {currentTermData && (
+                    <span className="ml-2 text-sm text-gray-600">
+                      ({new Date(currentTermData.startDate).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })} - {new Date(currentTermData.endDate).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })})
+                    </span>
+                  )}
                 </div>
                 <div>
                   <strong>Created At:</strong> {new Date(createdAt).toLocaleString()}

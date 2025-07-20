@@ -12,6 +12,8 @@ import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
+import { getTermsBySchool } from '@/services/termService'
+import { TermPayload } from '@/services/types/term'
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 
@@ -20,10 +22,12 @@ const ClassesPage = () => {
   const router = useRouter()
   
   const [classes, setClasses] = useState<ClassPayload[]>([])
+  const [terms, setTerms] = useState<TermPayload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string>('')
+  const [termFilter, setTermFilter] = useState<string>('active')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<number>>(new Set())
   const [viewClass, setViewClass] = useState<ClassPayload | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -56,8 +60,22 @@ const ClassesPage = () => {
     }
   };
 
+  const loadTerms = async () => {
+    if (!user.school) return;
+    
+    try {
+      const response = await getTermsBySchool(user.school);
+      if (response.status === 'success') {
+        setTerms(response.data);
+      }
+    } catch (err) {
+      console.error('Error loading terms:', err);
+    }
+  };
+
   useEffect(() => {
     loadClasses();
+    loadTerms();
   }, [user.school, user.id, user.role])
 
   // Build unique grade list
@@ -72,7 +90,10 @@ const ClassesPage = () => {
     .filter((g) => g >= 1 && g <= 8)
     .sort((a, b) => a - b)
 
-  // Filter classes by search AND grade
+  // Get active term for default filtering
+  const activeTerm = terms.find(t => t.isActive);
+  
+  // Filter classes by search, grade, AND term
   const filteredClasses = classes.filter((c) => {
     const lower = searchTerm.toLowerCase()
     const matchesText =
@@ -80,7 +101,17 @@ const ClassesPage = () => {
       c.teacherName.toLowerCase().includes(lower)
     const matchesGrade =
       gradeFilter === '' || String(c.grade) === gradeFilter
-    return matchesText && matchesGrade
+    
+    let matchesTerm = true;
+    if (termFilter === 'active') {
+      matchesTerm = activeTerm ? c.termName === activeTerm.name : true;
+    } else if (termFilter === 'all') {
+      matchesTerm = true;
+    } else {
+      matchesTerm = c.termName === termFilter;
+    }
+    
+    return matchesText && matchesGrade && matchesTerm
   })
 
   const toggleGrade = (grade: number) => {
@@ -122,7 +153,7 @@ const ClassesPage = () => {
               </div>
 
               {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Search Classes
@@ -152,9 +183,27 @@ const ClassesPage = () => {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Term
+                  </label>
+                  <select
+                    value={termFilter}
+                    onChange={(e) => setTermFilter(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  >
+                    <option value="active">Active Term ({activeTerm?.name})</option>
+                    <option value="all">All Terms</option>
+                    {terms.map((term) => (
+                      <option key={term.termId} value={term.name}>
+                        {term.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               
-              {(searchTerm || gradeFilter) && (
+              {(searchTerm || gradeFilter || termFilter !== 'active') && (
                 <div className="mt-4 flex items-center space-x-2">
                   <span className="text-sm text-gray-600">
                     Showing {filteredClasses.length} of {classes.length} classes
@@ -163,6 +212,7 @@ const ClassesPage = () => {
                     onClick={() => {
                       setSearchTerm('')
                       setGradeFilter('')
+                      setTermFilter('active')
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
@@ -247,6 +297,9 @@ const ClassesPage = () => {
                           </p>
                           <p className="text-gray-600 text-sm">
                             Teacher: {cls.teacherName || '-'}
+                          </p>
+                          <p className="text-gray-500 text-xs">
+                            Term: {cls.termName || 'Not assigned'}
                           </p>
                         </div>
 

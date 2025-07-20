@@ -35,6 +35,7 @@ export interface RegisterResponse {
     emailToken: string;
     createdAt: string;
     lastModifiedAt: string;
+    activeTerm: string;
   };
 }
 
@@ -59,5 +60,6 @@ export interface LoginResponse {
     isVerifiedSchool: boolean;
     createdAt: string;
     lastModifiedAt: string;
+    activeTerm: string;
   };
 }

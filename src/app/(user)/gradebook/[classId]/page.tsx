@@ -17,7 +17,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { AssessmentPayload } from '@/services/types/assessment'
-import { getTermsBySchool } from '@/services/termService'
+import { getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
 import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 
@@ -95,16 +95,13 @@ const GradebookClass = () => {
 
   // Fetch term details when classData becomes available
   useEffect(() => {
-    if (!classData?.termId || !classData?.school) return
+    if (!classData?.termName || !classData?.school) return
 
     const fetchTermData = async () => {
       try {
-        const res = await getTermsBySchool(classData.school)
+        const res = await getTermByNameAndSchool(classData.termName, classData.school)
         if (res.status === 'success') {
-          const term = res.data.find(t => t.termId === classData.termId)
-          if (term) {
-            setTermData(term)
-          }
+          setTermData(res.data)
         }
       } catch (err) {
         console.error('Error fetching term data:', err)
@@ -112,7 +109,7 @@ const GradebookClass = () => {
     }
 
     fetchTermData()
-  }, [classData?.termId, classData?.school])
+  }, [classData?.termName, classData?.school])
 
   if (error) {
     return (
@@ -283,14 +280,22 @@ const GradebookClass = () => {
               <strong>Term:</strong> {classData.termName}
               {termData && (
                 <span className="ml-2">
-                  ({new Date(termData.startDate).toLocaleDateString()} - {new Date(termData.endDate).toLocaleDateString()})
+                  ({new Date(termData.startDate).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })} - {new Date(termData.endDate).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })})
                 </span>
               )}
             </p>
           )}
         </div>
 
-        <div className="mx-auto w-[80%] overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <div className="mx-auto w-[90%] overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
           <table className="w-full table-auto whitespace-nowrap">
             <thead className="bg-gray-100">
               <tr>
@@ -390,7 +395,7 @@ const GradebookClass = () => {
           </table>
         </div>
 
-        <div className="mt-6 flex ml-42 space-x-4">
+        <div className="mt-6 flex ml-20 space-x-4">
           <button
             onClick={() => router.push('/gradebook')}
             className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"

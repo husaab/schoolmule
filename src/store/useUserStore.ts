@@ -8,7 +8,8 @@ export type User = {
     email: string | null;
     school: string | null;
     isVerifiedEmail: boolean,
-    isVerifiedSchool: boolean
+    isVerifiedSchool: boolean,
+    activeTerm: string | null
 }
 
 type UserStore = {
@@ -34,7 +35,8 @@ export const useUserStore = create<UserStore>(
                 email: null,
                 school: null,
                 isVerifiedEmail: false,
-                isVerifiedSchool: false
+                isVerifiedSchool: false,
+                activeTerm: null
             },
 
             setUser: (user) => set({ user }),
@@ -47,7 +49,8 @@ export const useUserStore = create<UserStore>(
                     email: null,
                     school: null,
                     isVerifiedEmail: false,
-                    isVerifiedSchool: false
+                    isVerifiedSchool: false,
+                    activeTerm: null
                 }
             }),
             hasHydrated: false, // track hydration

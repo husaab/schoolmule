@@ -29,6 +29,15 @@ export const getTermsBySchoolId = async (schoolId: string): Promise<TermsRespons
 };
 
 /**
+ * Get a single term by name and school
+ * GET /api/terms/by-name?termName=TERM_NAME&school=SCHOOL_ENUM
+ */
+export const getTermByNameAndSchool = async (termName: string, school: string): Promise<TermResponse> => {
+  const query = `?termName=${encodeURIComponent(termName)}&school=${encodeURIComponent(school)}`;
+  return apiClient<TermResponse>(`/terms/by-name${query}`);
+};
+
+/**
  * Get active term for a school
  * GET /api/terms/active?school=SCHOOL_ENUM
  */
