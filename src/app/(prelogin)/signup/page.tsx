@@ -209,7 +209,6 @@ const SignUpForm: FC = () => {
           <option value="" disabled>Select your role</option>
           <option value="TEACHER">Teacher</option>
           <option value="PARENT">Parent</option>
-          <option value="ADMIN">Admin</option>
         </select>
         {errors.role && <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>}
       </div>

@@ -19,7 +19,7 @@ import {
 
 const Footer: FC = () => {
   const year = new Date().getFullYear()
-  const supportEmail = 'schoolmule@gmail.com'
+  const supportEmail = 'schoolmule.official@gmail.com'
   const subject = 'Technical Support Request'
   const mailto = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}`
 
