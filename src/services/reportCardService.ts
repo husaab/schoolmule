@@ -4,7 +4,6 @@ import apiClient from './apiClient';
 import type {
   ReportCardFeedbackPayload,
   ReportCardFeedbackResponse,
-  ReportCardTerm,
   ReportCardBulkGenerateRequest,
   ReportCardBulkGenerateResponse,
   ReportCardStatusResponse
@@ -17,7 +16,7 @@ import type {
 export const getReportCardFeedback = async (
   studentId: string,
   classId: string,
-  term: ReportCardTerm
+  term: string
 ): Promise<ReportCardFeedbackResponse> => {
   return apiClient<ReportCardFeedbackResponse>(
     `/report-cards/feedback?studentId=${encodeURIComponent(studentId)}&classId=${encodeURIComponent(classId)}&term=${encodeURIComponent(term)}`
@@ -67,6 +66,19 @@ export const getGeneratedReportCards = async (
 ): Promise<ReportCardStatusResponse> => {
   return apiClient<ReportCardStatusResponse>(
     `/report-cards/view?term=${encodeURIComponent(term)}`
+  );
+};
+
+/**
+ * GET /report-cards/view?term=...
+ * → Get all generated report cards for a specific term
+ */
+export const getGeneratedReportCardsByStudentId = async (
+  studentId: string,
+  term: string
+): Promise<ReportCardStatusResponse> => {
+  return apiClient<ReportCardStatusResponse>(
+    `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`
   );
 };
 

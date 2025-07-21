@@ -6,11 +6,11 @@ import { useUserStore } from '@/store/useUserStore'
 import { validateSession } from '@/services/authService'
 
 const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
-const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings']
+const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
 
 // Check if path matches parent patterns (including dynamic routes)
 const isParentPath = (path: string) => {
-  return PARENT_PATHS.some(parentPath => path.startsWith(parentPath)) || path.startsWith('/parent/feedback/')
+  return PARENT_PATHS.some(parentPath => path.startsWith(parentPath))
 }
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
