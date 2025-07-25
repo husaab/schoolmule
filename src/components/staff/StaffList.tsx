@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { getStaffBySchool } from '@/services/staffService'
 import { StaffPayload } from '@/services/types/staff'
 import { PhoneIcon, EnvelopeIcon, ClockIcon, EyeIcon, PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -41,7 +41,7 @@ const StaffList: React.FC<StaffListProps> = ({
   const canEdit = !isParent // Teachers and admins can edit
   const canDelete = isAdmin // Only admins can delete
 
-  const loadStaff = async () => {
+  const loadStaff = useCallback(async () => {
       if (!school) return
       
       setLoading(true)
@@ -60,11 +60,11 @@ const StaffList: React.FC<StaffListProps> = ({
       } finally {
         setLoading(false)
       }
-    }
+    }, [school])
 
   useEffect(() => {
     loadStaff()
-  }, [school])
+  }, [school, loadStaff])
 
   const reloadStaff = () => {
     loadStaff()

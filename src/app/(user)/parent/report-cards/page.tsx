@@ -66,7 +66,7 @@ const ParentReportCardsPage: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <DocumentTextIcon className="h-8 w-8 text-cyan-600" />
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-800">Your Children's Report Cards</h2>
+                  <h2 className="text-xl font-semibold text-gray-800">Your Children&apos;s Report Cards</h2>
                   <p className="text-sm text-gray-600">Select a child to view their report cards</p>
                 </div>
               </div>

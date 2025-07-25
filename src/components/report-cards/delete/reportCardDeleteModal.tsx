@@ -43,7 +43,7 @@ const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
       <h2 className="text-lg font-semibold mb-4 text-black">Delete Report Card</h2>
       <p className="text-black mb-6">
-        Are you sure you want to delete <strong>{studentName}</strong>'s report card for this term?
+        Are you sure you want to delete <strong>{studentName}</strong>&apos;s report card for this term?
       </p>
       <div className="flex justify-end space-x-4">
         <button

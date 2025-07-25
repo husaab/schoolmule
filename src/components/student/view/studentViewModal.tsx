@@ -50,22 +50,22 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
           <strong>Homeroom Teacher:</strong> {teacherName ?? '—'}
         </div>
         <div>
-          <strong>Mother's Name:</strong> {student.mother?.name ?? '-'}
+          <strong>Mother&apos;s Name:</strong> {student.mother?.name ?? '-'}
         </div>
         <div>
-          <strong>Mother's Email:</strong> {student.mother?.email ?? '-'}
+          <strong>Mother&apos;s Email:</strong> {student.mother?.email ?? '-'}
         </div>
         <div>
-          <strong>Mother's Phone:</strong> {student.mother?.phone ?? '-'}
+          <strong>Mother&apos;s Phone:</strong> {student.mother?.phone ?? '-'}
         </div>
         <div>
-          <strong>Father's Name:</strong> {student.father?.name ?? '-'}
+          <strong>Father&apos;s Name:</strong> {student.father?.name ?? '-'}
         </div>
         <div>
-          <strong>Father's Email:</strong> {student.father?.email ?? '-'}
+          <strong>Father&apos;s Email:</strong> {student.father?.email ?? '-'}
         </div>
         <div>
-          <strong>Father's Phone:</strong> {student.father?.phone ?? '-'}
+          <strong>Father&apos;s Phone:</strong> {student.father?.phone ?? '-'}
         </div>
         <div>
           <strong>Emergency Contact:</strong> {student.emergencyContact ?? '-'}

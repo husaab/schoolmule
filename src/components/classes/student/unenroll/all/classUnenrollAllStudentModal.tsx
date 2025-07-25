@@ -29,15 +29,10 @@ const ClassUnenrollAllStudentsModal: React.FC<ClassUnenrollAllStudentsModalProps
   const handleUnenrollAll = async () => {
     setLoading(true)
     try {
-      const res = await bulkUnenrollStudentsFromClass(classId)
-      console.log(res)
-      if (res.status === 'success') {
+      await bulkUnenrollStudentsFromClass(classId)
         showNotification('All students have been unenrolled.', 'success')
         onUnenrolledAll()
         onClose()
-      } else {
-        showNotification(res.message || 'Failed to unenroll all students', 'error')
-      }
     } catch (err) {
       console.error('Error unenrolling all students:', err)
       showNotification('Error unenrolling students', 'error')

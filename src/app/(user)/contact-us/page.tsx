@@ -25,8 +25,8 @@ export default function ContactUsPage() {
       } else {
         notify(res.message || 'Failed to send message', 'error')
       }
-    } catch (err: any) {
-      notify('Error sending message: ' + err.message, 'error')
+    } catch {
+      notify('Error sending message: ', 'error')
     }
   }
 

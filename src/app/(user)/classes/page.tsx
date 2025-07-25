@@ -1,25 +1,23 @@
 // File: src/app/(user)/classes/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import ClassViewModal from '@/components/classes/view/classViewModal'
 import ClassAddModal from '@/components/classes/add/classAddModal'
 import ClassDeleteModal from '@/components/classes/delete/classDeleteModal'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
-import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 
 const ClassesPage = () => {
   const user = useUserStore((state) => state.user)
-  const router = useRouter()
   
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
@@ -33,12 +31,12 @@ const ClassesPage = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
 
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     if (!user.school || !user.id) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       let response;
       if (user.role === 'ADMIN') {
@@ -46,7 +44,7 @@ const ClassesPage = () => {
       } else {
         response = await getClassesByTeacherId(user.id);
       }
-      
+
       if (response.status === 'success') {
         setClasses(response.data);
       } else {
@@ -58,11 +56,11 @@ const ClassesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id, user.role, user.school]);
 
-  const loadTerms = async () => {
+  const loadTerms = useCallback(async () => {
     if (!user.school) return;
-    
+
     try {
       const response = await getTermsBySchool(user.school);
       if (response.status === 'success') {
@@ -71,12 +69,12 @@ const ClassesPage = () => {
     } catch (err) {
       console.error('Error loading terms:', err);
     }
-  };
+  }, [user.school]);
 
   useEffect(() => {
     loadClasses();
     loadTerms();
-  }, [user.school, user.id, user.role])
+  }, [user.school, user.id, user.role, loadClasses, loadTerms])
 
   // Build unique grade list
   const availableGrades = Array.from(

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { ScheduleEntry } from '@/services/types/schedule'
 import { getSchedulesForWeek } from '@/services/scheduleService'
@@ -19,7 +19,7 @@ const ScheduleWeekView = () => {
   const [deleting, setDeleting] = useState<ScheduleEntry | null>(null);
   const [editing, setEditing] = useState<ScheduleEntry|null>(null)
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       const school = user.school
       if (!school) return
@@ -31,11 +31,11 @@ const ScheduleWeekView = () => {
     } catch (error) {
       console.error('Error fetching schedules:', error)
     }
-  }
+  }, [user.school, weekStartDate])
 
   useEffect(() => {
     fetchSchedules()
-  }, [weekStartDate])
+  }, [weekStartDate, fetchSchedules])
 
   const handleNextWeek = () => setWeekStartDate((prev) => addWeeks(prev, 1))
   const handlePrevWeek = () => setWeekStartDate((prev) => subWeeks(prev, 1))
@@ -92,7 +92,7 @@ const ScheduleWeekView = () => {
         isOpen={!!deleting}
         onClose={() => setDeleting(null)}
         schedule={deleting!}
-        onDeleted={(id) => {
+        onDeleted={() => {
           setDeleting(null);
           fetchSchedules();
         }}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -54,8 +54,27 @@ const TuitionPage: React.FC = () => {
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
+   // Load comment counts efficiently with single API call
+  const loadCommentCounts = useCallback(async () => {
+    try {
+      const response = await getTuitionInvoiceCommentsBySchool(user.school!)
+      if (response.status === 'success') {
+        // Group comments by invoice ID and count them
+        const counts: Record<string, number> = {}
+        response.data.forEach(comment => {
+          counts[comment.invoiceId] = (counts[comment.invoiceId] || 0) + 1
+        })
+        setCommentCounts(counts)
+      }
+    } catch (error) {
+      console.error('Error loading comment counts:', error)
+      // Set empty counts if error
+      setCommentCounts({})
+    }
+  }, [user.school])
+
   // Load tuition plans
-  const loadTuitionPlans = async () => {
+  const loadTuitionPlans = useCallback(async () => {
     if (!user.school) return
     
     setPlansLoading(true)
@@ -74,10 +93,10 @@ const TuitionPage: React.FC = () => {
     } finally {
       setPlansLoading(false)
     }
-  }
+  }, [user.school])
 
   // Load tuition invoices
-  const loadTuitionInvoices = async () => {
+  const loadTuitionInvoices = useCallback(async () => {
     if (!user.school) return
     
     setInvoicesLoading(true)
@@ -98,26 +117,7 @@ const TuitionPage: React.FC = () => {
     } finally {
       setInvoicesLoading(false)
     }
-  }
-
-  // Load comment counts efficiently with single API call
-  const loadCommentCounts = async () => {
-    try {
-      const response = await getTuitionInvoiceCommentsBySchool(user.school!)
-      if (response.status === 'success') {
-        // Group comments by invoice ID and count them
-        const counts: Record<string, number> = {}
-        response.data.forEach(comment => {
-          counts[comment.invoiceId] = (counts[comment.invoiceId] || 0) + 1
-        })
-        setCommentCounts(counts)
-      }
-    } catch (error) {
-      console.error('Error loading comment counts:', error)
-      // Set empty counts if error
-      setCommentCounts({})
-    }
-  }
+  }, [user.school, loadCommentCounts])
 
   // Update comment count for a specific invoice
   const updateCommentCount = (invoiceId: string, newCount: number) => {
@@ -147,7 +147,7 @@ const TuitionPage: React.FC = () => {
         setTuitionInvoices(prev => 
           prev.map(inv => 
             inv.invoiceId === invoice.invoiceId 
-              ? { ...inv, status: newStatus as any }
+              ? { ...inv, status: newStatus }
               : inv
           )
         )
@@ -167,7 +167,7 @@ const TuitionPage: React.FC = () => {
   useEffect(() => {
     loadTuitionPlans()
     loadTuitionInvoices()
-  }, [user.school])
+  }, [user.school, loadTuitionPlans, loadTuitionInvoices])
 
   // Filter plans by grade
   const filteredPlans = selectedGrade 

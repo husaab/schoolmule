@@ -216,7 +216,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
                 <DocumentTextIcon className="h-8 w-8 text-cyan-600" />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">
-                    {student?.student?.name}'s Report Cards
+                    {student?.student?.name}&apos;s Report Cards
                   </h2>
                   <p className="text-sm text-gray-600">Select a term to view available report cards</p>
                 </div>

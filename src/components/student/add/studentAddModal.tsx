@@ -30,7 +30,6 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
 
   const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
   const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
-  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -39,7 +38,6 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
     if (!isOpen || !user?.school) return;
 
     const fetchTeachers = async () => {
-      setLoadingTeachers(true);
       try {
         const res = await getTeachersBySchool(user.school!);
         if (res.status === 'success') {
@@ -47,11 +45,9 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
         } else {
           showNotification('Failed to load teachers', 'error');
         }
-      } catch (err) {
+      } catch {
         showNotification('Error fetching teachers', 'error');
-      } finally {
-        setLoadingTeachers(false);
-      }
+      } 
     };
 
     fetchTeachers();
@@ -84,28 +80,8 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
 
     const res = await createStudent(payload);
     if (res.status === 'success') {
-      const raw = res.data as any;
-      const newStudent: StudentPayload = {
-        studentId: raw.student_id,
-        name: raw.name,
-        homeroomTeacherId: raw.homeroom_teacher_id,
-        school: raw.school,
-        grade: raw.grade === null ? null : Number(raw.grade),
-        oen: raw.oen,
-        mother: {
-          name: raw.mother_name,
-          email: raw.mother_email,
-          phone: raw.mother_number,
-        },
-        father: {
-          name: raw.father_name,
-          email: raw.father_email,
-          phone: raw.father_number,
-        },
-        emergencyContact: raw.emergency_contact,
-        createdAt: raw.created_at,
-        lastModifiedAt: raw.last_modified_at,
-      };
+      // Backend now returns camelCase data
+      const newStudent = res.data as StudentPayload;
       onAdd(newStudent);
       showNotification('Student added successfully', 'success');
       onClose();

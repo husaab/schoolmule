@@ -14,7 +14,7 @@ const ContactPage: FC = () => {
   const notify = useNotificationStore(s => s.showNotification)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()    // 🚫 Prevent the browser’s default GET+reload
+    e.preventDefault() 
 
     const payload: ContactPayload = { name, email, message }
     try {
@@ -25,8 +25,8 @@ const ContactPage: FC = () => {
       } else {
         notify(res.message || 'Failed to send contact email', 'error')
       }
-    } catch (err: any) {
-      notify('Error sending message: ' + err.message, 'error')
+    } catch {
+      notify('Error sending message: ', 'error')
     }
   }
 

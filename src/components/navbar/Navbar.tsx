@@ -4,7 +4,7 @@ import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import NavLinks from './navlinks/Navlinks';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useSidebarStore } from '@/store/useSidebarStore';
 import { useUserStore } from '@/store/useUserStore';
 

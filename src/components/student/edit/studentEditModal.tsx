@@ -60,7 +60,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
         } else {
           showNotification('Failed to load teachers', 'error');
         }
-      } catch (err) {
+      } catch {
         showNotification('Error fetching teachers', 'error');
       }
     };
@@ -94,28 +94,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
     };
 
     const res = await updateStudent(student.studentId, updateData);
-    const raw = res.data as any;
-    const updated: StudentPayload = {
-      studentId: raw.student_id,
-      name: raw.name,
-      homeroomTeacherId: raw.homeroom_teacher_id,
-      school: raw.school,
-      grade: raw.grade === null ? null : Number(raw.grade),
-      oen: raw.oen,
-      mother: {
-        name: raw.mother_name,
-        email: raw.mother_email,
-        phone: raw.mother_number,
-      },
-      father: {
-        name: raw.father_name,
-        email: raw.father_email,
-        phone: raw.father_number,
-      },
-      emergencyContact: raw.emergency_contact,
-      createdAt: raw.created_at,
-      lastModifiedAt: raw.last_modified_at,
-    };
+    // Backend now returns camelCase data
+    const updated = res.data as StudentPayload;
 
     if (res.status === 'success') {
       onUpdate(updated);

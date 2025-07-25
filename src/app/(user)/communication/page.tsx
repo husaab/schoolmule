@@ -6,7 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import { PaperAirplaneIcon, InboxIcon, ArrowUpTrayIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
-import { getInboxMessages, getSentMessages, deleteMessage as apiDeleteMessage } from '@/services/messageService'
+import { getInboxMessages, getSentMessages } from '@/services/messageService'
 import SendMessageModal from '@/components/messages/send/SendMessageModal'
 import ViewMessageModal from '@/components/messages/view/ViewMessageModal'
 import { MessagePayload } from '@/services/types/message'
@@ -46,17 +46,6 @@ const CommunicationPage: React.FC = () => {
         .finally(() => setLoading(false))
     }
   }, [user?.id, activeTab])
-
-  // Remove a message locally after delete
-  const handleDelete = async (id: string) => {
-    if (!user?.id) return
-    try {
-      await apiDeleteMessage(id, { senderId: user.id })
-      setSentMessages(prev => prev.filter(m => m.message_id !== id))
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
   const messages = activeTab === 'inbox' ? inboxMessages : sentMessages
 

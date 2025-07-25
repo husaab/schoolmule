@@ -28,7 +28,12 @@ const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
     dueDate: ''
   })
   const [generating, setGenerating] = useState(false)
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<{
+    invoicesCreated: number;
+    invoicesSkipped: number;
+    totalStudents: number;
+    errors?: string[];
+  } | null>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -49,7 +54,7 @@ const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
 
     try {
       const payload: GenerateInvoicesRequest = {
-        school: user.school,
+        school: user.school!,
         grade: formData.grade || undefined,
         billingMonth: formData.billingMonth,
         dueDate: formData.dueDate
@@ -94,7 +99,7 @@ const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
         {!results ? (
           <div className="space-y-4">
             <p className="text-sm text-gray-600 mb-4">
-              Create tuition invoices for students based on their grade's monthly tuition plan.
+              Create tuition invoices for students based on their grade&apos;s monthly tuition plan.
             </p>
 
             <div>

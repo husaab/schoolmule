@@ -72,7 +72,7 @@ const TuitionInvoiceCommentsModal: React.FC<TuitionInvoiceCommentsModalProps> = 
     }
 
     loadComments()
-  }, [isOpen, invoice.invoiceId])
+  }, [isOpen, invoice.invoiceId, commentCount, onCommentCountChange, showNotification])
 
   const handleAddComment = async () => {
     if (!newComment.trim()) {

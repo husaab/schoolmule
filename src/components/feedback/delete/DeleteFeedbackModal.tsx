@@ -4,12 +4,13 @@ import React, { useState } from 'react'
 import Modal from '@/components/shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteFeedback } from '@/services/feedbackService'
+import { FeedbackPayload } from '@/services/types/feedback'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 interface DeleteFeedbackModalProps {
   isOpen: boolean
   onClose: () => void
-  feedback: any
+  feedback: FeedbackPayload
   onDeleted: () => void
 }
 
@@ -25,9 +26,8 @@ const DeleteFeedbackModal: React.FC<DeleteFeedbackModalProps> = ({
   const handleDelete = async () => {
     if (!feedback) return
 
-    const feedbackId = feedback.feedbackId || feedback.feedback_id
-    const senderId = feedback.senderId || feedback.sender_id
-
+    const feedbackId = feedback.feedbackId
+    const senderId = feedback.senderId
     if (!feedbackId || !senderId) {
       showNotification('Missing feedback information', 'error')
       return
@@ -54,9 +54,9 @@ const DeleteFeedbackModal: React.FC<DeleteFeedbackModalProps> = ({
 
   if (!feedback) return null
 
-  const recipientName = feedback.recipientName || feedback.recipient_name || 'Unknown Student'
+  const recipientName = feedback.recipientName || 'Unknown Student'
   const subject = feedback.subject || 'No Subject'
-  const createdAt = feedback.createdAt || feedback.created_at
+  const createdAt = feedback.createdAt
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">

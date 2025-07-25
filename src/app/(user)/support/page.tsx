@@ -34,8 +34,8 @@ export default function SupportPage() {
       } else {
         notify(res.message || 'Failed to submit ticket', 'error')
       }
-    } catch (err: any) {
-      notify('Error: ' + err.message, 'error')
+    } catch {
+      notify('Error: ', 'error')
     }
   }
 

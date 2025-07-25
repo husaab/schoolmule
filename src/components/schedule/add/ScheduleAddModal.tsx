@@ -90,7 +90,7 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
       }
     }
     fetchTeachers()
-  }, [isOpen, user?.school])
+  }, [isOpen, user?.school, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

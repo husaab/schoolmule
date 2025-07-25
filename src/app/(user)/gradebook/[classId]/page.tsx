@@ -162,9 +162,9 @@ const GradebookClass = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || 'Failed to download Excel sheet');
+      setError('Failed to download Excel sheet');
     }
   };
 
@@ -253,9 +253,9 @@ const GradebookClass = () => {
         throw new Error(refreshed.message || 'Failed to refresh scores')
       }
       showNotification('Grades successfully saved', 'success')
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      setError(err.message || 'Error saving scores')
+      setError('Error saving scores')
     } finally {
       setSaving(false)
     }

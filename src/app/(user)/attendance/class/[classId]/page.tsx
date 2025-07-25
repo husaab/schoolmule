@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -61,7 +61,7 @@ export default function ClassAttendancePage() {
 
   const handleSave = async () => {
     const entries = Object.entries(attendance)
-                .filter(([_, status]) => status !== null)
+                .filter(([, status]) => status !== null)
                 .map(([studentId, status]) => ({ studentId, status: status as AttendanceStatus }));
 
     const res = await submitClassAttendance({

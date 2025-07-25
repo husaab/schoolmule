@@ -9,10 +9,9 @@ import { getDashboardSummary, getAttendanceTrend  } from '@/services/dashboardSe
 import { DashboardSummaryData, AttendanceTrendPoint  } from '@/services/types/dashboard'
 import Spinner from '@/components/Spinner'
 import StaffList from '@/components/staff/StaffList'
-import { Listbox, Transition } from '@headlessui/react'
 import { format } from 'date-fns'
 import {
-  LineChart, Line, CartesianGrid,
+  LineChart, Line,
   XAxis, YAxis, Tooltip,ResponsiveContainer } from 'recharts'
 import Link from 'next/link'
 
@@ -41,7 +40,7 @@ const DashboardPage: React.FC = () => {
         setError('Failed to load dashboard data')
       })
       .finally(() => setLoading(false))
-  }, [user.school, daysWindow])
+  }, [user.school, daysWindow, user.activeTerm, today])
 
   if (loading) {
     return (

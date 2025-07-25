@@ -50,7 +50,7 @@ export default function GeneralAttendancePage() {
         console.error('Failed to load attendance for date:', selectedDate);
       }
     });
-  }, [selectedDate]);
+  }, [selectedDate, user.school]);
   
 
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function GeneralAttendancePage() {
             <button
               onClick={async () => {
                 const entries = Object.entries(attendance)
-                  .filter(([_, status]) => status !== null)
+                  .filter(([, status]) => status !== null)
                   .map(([studentId, status]) => ({ studentId, status: status as AttendanceStatus }));
 
                 try {

@@ -1,6 +1,5 @@
 import apiClient from "./apiClient";
 import {
-  ParentPayload,
   AllParentsResponse,
   ParentResponse,
 } from "./types/parent";

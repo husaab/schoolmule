@@ -19,7 +19,7 @@ const AboutPage: FC = () => {
           </h1>
           <p className="text-xl text-gray-600 leading-relaxed">
             SchoolMule was founded by educators who understand the daily challenges of school administration. 
-            We're committed to building software that truly serves the education community.
+            We&apos;re committed to building software that truly serves the education community.
           </p>
         </section>
 
@@ -44,7 +44,7 @@ const AboutPage: FC = () => {
                   <AcademicCapIcon className="h-20 w-20 text-cyan-600 mx-auto mb-6" />
                   <h3 className="text-2xl font-bold text-gray-800 mb-4">Education First</h3>
                   <p className="text-gray-600">
-                    Every feature is designed with educators' real needs in mind, 
+                    Every feature is designed with educators&apos; real needs in mind, 
                     not just technical possibilities.
                   </p>
                 </div>
@@ -162,9 +162,9 @@ const AboutPage: FC = () => {
                 </div>
               </div>
               <p className="text-lg text-gray-600 mb-6 italic">
-                "SchoolMule has completely transformed our administrative workflow. What used to take 
+&quot;SchoolMule has completely transformed our administrative workflow. What used to take 
                 our staff 3 hours now takes 20 minutes. The automated report cards alone have saved 
-                us countless hours each semester."
+                us countless hours each semester.&quot;
               </p>
               <div className="flex items-center">
                 <div className="bg-gray-200 rounded-full w-12 h-12 flex items-center justify-center mr-4">
@@ -186,9 +186,9 @@ const AboutPage: FC = () => {
                 </div>
               </div>
               <p className="text-lg text-gray-600 mb-6 italic">
-                "The parent portal has revolutionized our parent engagement. Parents love having 
-                real-time access to their child's progress, and it's reduced our administrative 
-                phone calls by 80%."
+&quot;The parent portal has revolutionized our parent engagement. Parents love having 
+                real-time access to their child&apos;s progress, and it&apos;s reduced our administrative 
+                phone calls by 80%.&quot;
               </p>
               <div className="flex items-center">
                 <div className="bg-gray-200 rounded-full w-12 h-12 flex items-center justify-center mr-4">
@@ -196,7 +196,7 @@ const AboutPage: FC = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-800">Michael Rodriguez</p>
-                  <p className="text-gray-600">Administrator, St. Mary's Academy</p>
+                  <p className="text-gray-600">Administrator, St. Mary&apos;s Academy</p>
                 </div>
               </div>
             </div>

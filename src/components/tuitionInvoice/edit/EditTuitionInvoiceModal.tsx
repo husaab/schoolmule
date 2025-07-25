@@ -346,7 +346,7 @@ const EditTuitionInvoiceModal: React.FC<EditTuitionInvoiceModalProps> = ({
                 </select>
                 {isStatusDisabled && (
                   <p className="text-xs text-green-600 mt-1">
-                    Status automatically set to "Paid" because payment amount equals or exceeds amount due.
+                    Status automatically set to &quot;Paid&quot; because payment amount equals or exceeds amount due.
                   </p>
                 )}
               </div>

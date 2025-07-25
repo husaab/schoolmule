@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -15,7 +15,7 @@ const FinancialOverviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadFinancialData = async () => {
+  const loadFinancialData = useCallback(async () => {
     if (!user.school) return
     
     setLoading(true)
@@ -34,11 +34,11 @@ const FinancialOverviewPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user.school])
 
   useEffect(() => {
     loadFinancialData()
-  }, [user.school])
+  }, [user.school, loadFinancialData])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

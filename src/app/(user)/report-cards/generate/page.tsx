@@ -27,6 +27,13 @@ export default function GenerateReportCardsPage() {
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  const groupedByGrade = students.reduce((acc, student) => {
+    const grade = `Grade ${student.grade ?? '-'}`;
+    acc[grade] = acc[grade] || [];
+    acc[grade].push(student);
+    return acc;
+  }, {} as Record<string, StudentPayload[]>);
+
   useEffect(() => {
     if (user.school) {
       setLoadingTerms(true);
@@ -65,14 +72,7 @@ export default function GenerateReportCardsPage() {
         setLoadingTerms(false);
       });
     }
-  }, [user.school, user.activeTerm, showNotification]);
-
-  const groupedByGrade = students.reduce((acc, student) => {
-    const grade = `Grade ${student.grade ?? '-'}`;
-    acc[grade] = acc[grade] || [];
-    acc[grade].push(student);
-    return acc;
-  }, {} as Record<string, StudentPayload[]>);
+  }, [user.school, user.activeTerm, showNotification, groupedByGrade]);
 
   useEffect(() => {
     if (generateAll) {
@@ -84,13 +84,17 @@ export default function GenerateReportCardsPage() {
     } else {
       setSelectedStudents(new Set());
     }
-  }, [generateAll, selectedGrade, students]);
+  }, [generateAll, selectedGrade, students, groupedByGrade]);
 
   const handleSelectStudent = (id: string) => {
     if (generateAll || selectedGrade) return;
     setSelectedStudents((prev) => {
       const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
       return newSet;
     });
   };

@@ -9,12 +9,10 @@ import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const GradebookDashboard: React.FC = () => {
   const user = useUserStore((state) => state.user)
-  const router = useRouter()
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
@@ -71,7 +69,7 @@ const GradebookDashboard: React.FC = () => {
           console.error('Error loading terms:', err);
         });
     }
-  }, [user?.id, user?.school])
+  }, [user?.id, user?.school, user.role])
 
   // Build the unique list of grades for the classes this teacher teaches
   const availableGrades = Array.from(
@@ -203,7 +201,7 @@ const GradebookDashboard: React.FC = () => {
               <div className="text-center text-red-600 py-8">{error}</div>
             ) : !loading && !error && availableGrades.length === 0 ? (
               <div className="text-center text-gray-600 py-8">
-                You haven't been assigned any classes yet.
+                You haven&apos;t been assigned any classes yet.
               </div>
             ) : (
               <div className="space-y-4">

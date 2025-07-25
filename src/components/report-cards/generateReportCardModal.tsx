@@ -43,7 +43,7 @@ export default function GenerateReportCardModal({ isOpen, onClose, studentIds, t
     return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
     } ;
-  }, [isOpen, studentIds, term]);
+  }, [isOpen, studentIds, term, isLoading]);
 
   if (!isOpen) return null;
 

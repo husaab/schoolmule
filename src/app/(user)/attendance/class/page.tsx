@@ -34,7 +34,7 @@ const ClassAttendanceDashboard = () => {
         }
       });
     }
-  }, [user?.id]);
+  }, [user?.id, user.role, user.school]);
 
   const availableGrades = Array.from(
     new Set(

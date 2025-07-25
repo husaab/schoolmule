@@ -32,7 +32,7 @@ const ApprovalsPage = () => {
       }
     };
     loadApprovals();
-  }, []);
+  }, [user.school, notify]);
 
   const handleApprove = async (userId: string) => {
     try {

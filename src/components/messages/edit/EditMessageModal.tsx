@@ -48,7 +48,7 @@ const EditMessageModal: React.FC<EditMessageModalProps> = ({
         body: body.trim()
       })
       if (res.status === 'success') {
-        const raw = res.data as any
+        const raw = res.data
         const updated: MessagePayload = {
           ...message,
           subject: raw.subject,

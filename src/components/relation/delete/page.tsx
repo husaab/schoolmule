@@ -19,9 +19,10 @@ const DeleteRelationModal: React.FC<DeleteRelationModalProps> = ({
   relation,
   onDeleted,
 }) => {
-if (!isOpen || !relation) return null;
   const showNotification = useNotificationStore(s => s.showNotification);
   const [loading, setLoading] = useState(false);
+
+  if (!isOpen || !relation) return null;
 
   const handleDelete = async () => {
     setLoading(true);

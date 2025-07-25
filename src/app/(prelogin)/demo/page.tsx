@@ -1,21 +1,13 @@
 // File: src/app/prelogin/demo/page.tsx
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useNotificationStore } from '@/store/useNotificationStore'
-import { useUserStore } from '@/store/useUserStore'
-import { login } from '@/services/authService'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import Link from 'next/link'
 import { CalendarDaysIcon, CheckCircleIcon, ChartBarIcon, DocumentTextIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 export default function DemoPage() {
-  const router = useRouter()
-  const notify = useNotificationStore(s => s.showNotification)
-  const setUser = useUserStore.getState().setUser
-
-  return (
+ return (
     <>
       <PreNavBar />
       <main className="font-sans bg-gray-50 py-40 px-6">
@@ -26,7 +18,7 @@ export default function DemoPage() {
               Schedule Your SchoolMule Demo
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how SchoolMule can transform your school's operations. Book a personalized 
+              See how SchoolMule can transform your school&apos;s operations. Book a personalized 
               30-minute demonstration tailored to your specific needs.
             </p>
           </div>
@@ -35,7 +27,7 @@ export default function DemoPage() {
             {/* Demo Benefits */}
             <div className="space-y-8">
               <div className="bg-white rounded-xl p-8 shadow-lg">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">What You'll See in Your Demo</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">What You&apos;ll See in Your Demo</h2>
                 <ul className="space-y-4">
                   <li className="flex items-start space-x-3">
                     <CheckCircleIcon className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
@@ -83,7 +75,7 @@ export default function DemoPage() {
 
               {/* Feature Highlights */}
               <div className="bg-white rounded-xl p-8 shadow-lg">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Key Features You'll Experience</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-6">Key Features You&apos;ll Experience</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-3">
                     <UserGroupIcon className="w-6 h-6 text-cyan-600" />

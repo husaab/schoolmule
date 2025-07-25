@@ -8,7 +8,6 @@ import Footer from '@/components/prefooter/Footer';
 import { deleteUserAccount } from '@/services/userService';
 import { logout } from '@/services/authService';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { statsBuffer } from 'framer-motion';
 
 export default function SchoolApprovalPage() {
   const router = useRouter();
@@ -20,8 +19,8 @@ export default function SchoolApprovalPage() {
     await deleteUserAccount(user.id!); // API call
     useUserStore.getState().clearUser();
     router.replace('/signup'); // or /goodbye
-  } catch (err: any) {
-    console.error(err.message || 'Failed to delete account', 'error');
+  } catch {
+    console.error('Failed to delete account', 'error');
   }
 };
 
@@ -52,8 +51,7 @@ export default function SchoolApprovalPage() {
                   await logout(); // ✅ Wait for cookies to clear
                   useUserStore.getState().clearUser(); // ✅ Clear Zustand
                   router.replace('/login'); // ✅ Redirect
-                } catch (err) {
-                  console.error('Logout failed', err);
+                } catch {
                   notify('Logout failed. Please try again.', 'error');
                 }
               }}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -43,33 +43,7 @@ const SchoolSettingsPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedTerm, setSelectedTerm] = useState<TermPayload | null>(null)
 
-  useEffect(() => {
-    if (!user?.school) {
-      setError('Unable to determine your school')
-      setLoading(false)
-      return
-    }
-
-    fetchData()
-  }, [user?.school])
-
-  const fetchData = async () => {
-    if (!user?.school) return
-
-    setLoading(true)
-    setError(null)
-    
-    try {
-      await Promise.all([fetchSchoolData(), fetchTerms()])
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError('Error loading data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchSchoolData = async () => {
+    const fetchSchoolData = useCallback(async () => {
     if (!user?.school) return
 
     try {
@@ -90,9 +64,9 @@ const SchoolSettingsPage = () => {
     } catch (err) {
       console.error('Error fetching school data:', err)
     }
-  }
+  }, [user.school]);
 
-  const fetchTerms = async () => {
+  const fetchTerms = useCallback(async () => {
     if (!user?.school) return
 
     try {
@@ -106,7 +80,33 @@ const SchoolSettingsPage = () => {
       console.error('Error fetching terms:', err)
       setError('Error fetching terms')
     }
-  }
+  }, [user.school]);
+
+  useEffect(() => {
+    if (!user?.school) {
+      setError('Unable to determine your school')
+      setLoading(false)
+      return
+    }
+
+    const fetchData = async () => {
+        if (!user?.school) return
+
+        setLoading(true)
+        setError(null)
+        
+        try {
+          await Promise.all([fetchSchoolData(), fetchTerms()])
+        } catch (err) {
+          console.error('Error fetching data:', err)
+          setError('Error loading data')
+        } finally {
+          setLoading(false)
+        }
+    }
+
+    fetchData()
+  }, [user?.school, fetchSchoolData, fetchTerms])
 
   const handleSchoolSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,7 +258,7 @@ const SchoolSettingsPage = () => {
                   School Information
                 </h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Manage your school's basic information and settings
+                  Manage your school&apos;s basic information and settings
                 </p>
               </div>
               {!isEditingSchool && (
@@ -415,7 +415,7 @@ const SchoolSettingsPage = () => {
               <div>
                 <h2 className="text-xl font-semibold">Academic Terms</h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  Manage your school's academic terms and their schedules
+                  Manage your school&apos;s academic terms and their schedules
                 </p>
               </div>
               <button

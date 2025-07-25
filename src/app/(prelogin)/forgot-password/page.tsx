@@ -24,8 +24,8 @@ const ForgotPasswordPage: FC = () => {
       } else {
         notify(response.message || 'Something went wrong.', 'error')
       }
-    } catch (err: any) {
-      notify(err?.message || 'Internal server error.', 'error')
+    } catch {
+      notify('Internal server error.', 'error')
     } finally {
       setLoading(false)
     }
@@ -42,7 +42,7 @@ const ForgotPasswordPage: FC = () => {
           </h2>
 
           <p className="text-md text-gray-600 text-center mb-8">
-            Enter your email and we'll send you a secure link to reset your password.
+            Enter your email and we&apos;ll send you a secure link to reset your password.
             The link will expire in 15 minutes.
           </p>
 

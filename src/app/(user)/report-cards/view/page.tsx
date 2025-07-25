@@ -5,7 +5,7 @@ import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
 import { EyeIcon, ArrowDownTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { getGeneratedReportCards, getSignedReportCardUrl, deleteReportCard } from '@/services/reportCardService';
+import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/reportCardService';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import ReportCardDeleteModal from '@/components/report-cards/delete/reportCardDeleteModal';
 import { getTermsBySchool } from '@/services/termService';

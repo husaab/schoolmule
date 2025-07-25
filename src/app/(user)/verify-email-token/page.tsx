@@ -13,7 +13,6 @@ export default function VerifyEmailTokenPage() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const notify = useNotificationStore((s) => s.showNotification)
-  const clearUser = useUserStore((s) => s.clearUser)
 
   const didRun = useRef(false)
 

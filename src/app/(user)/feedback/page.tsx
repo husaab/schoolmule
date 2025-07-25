@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -9,19 +9,17 @@ import { getClassesByTeacherId } from '@/services/classService'
 import { getSentFeedback } from '@/services/feedbackService'
 import { ClassPayload } from '@/services/types/class'
 import { FeedbackPayload } from '@/services/types/feedback'
-import { PencilIcon, TrashIcon, EyeIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import ViewFeedbackModal from '@/components/feedback/view/ViewFeedbackModal'
 import EditFeedbackModal from '@/components/feedback/edit/EditFeedbackModal'
 import DeleteFeedbackModal from '@/components/feedback/delete/DeleteFeedbackModal'
-import ReplyMessageModal from '@/components/messages/reply/ReplyMessageModal'
-import { SendMessagePayload } from '@/services/messageService'
 
 const ViewEditFeedbackPage: React.FC = () => {
   const user = useUserStore(s => s.user)
   const teacherId = user.id!
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
-  const [feedbackList, setFeedbackList] = useState<any[]>([])
+  const [feedbackList, setFeedbackList] = useState<FeedbackPayload[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filter states
@@ -30,34 +28,34 @@ const ViewEditFeedbackPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Modal states
-  const [viewModalOpen, setViewModalOpen] = useState<any>(null)
-  const [editModalOpen, setEditModalOpen] = useState<any>(null)
-  const [deleteModalOpen, setDeleteModalOpen] = useState<any>(null)
-  const [replyTarget, setReplyTarget] = useState<SendMessagePayload | null>(null)
+  const [viewModalOpen, setViewModalOpen] = useState<FeedbackPayload | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState<FeedbackPayload | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = useState<FeedbackPayload | null>(null)
 
   // Load data
-  const loadData = async () => {
-    if (!teacherId) return
-    setLoading(true)
-    try {
-      const [clsRes, fbRes] = await Promise.all([
-        getClassesByTeacherId(teacherId),
-        getSentFeedback(teacherId)
-      ])
-      if (clsRes.status === 'success') setClasses(clsRes.data)
-      if (fbRes.status === 'success') {
-        setFeedbackList(fbRes.data)
+
+   const loadData = useCallback(async () => {
+      if (!teacherId) return
+      setLoading(true)
+      try {
+        const [clsRes, fbRes] = await Promise.all([
+          getClassesByTeacherId(teacherId),
+          getSentFeedback(teacherId)
+        ])
+        if (clsRes.status === 'success') setClasses(clsRes.data)
+        if (fbRes.status === 'success') {
+          setFeedbackList(fbRes.data)
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Error loading data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+    }, [teacherId])
 
   useEffect(() => {
     loadData()
-  }, [teacherId])
+  }, [teacherId, loadData])
 
   const reloadFeedback = () => {
     loadData()
@@ -87,8 +85,8 @@ const ViewEditFeedbackPage: React.FC = () => {
   // Get unique students from feedback
   const availableStudents = useMemo(() => {
     const students = feedbackList.map(fb => ({
-      id: fb.recipientId || fb.recipient_id,
-      name: fb.recipientName || fb.recipient_name || 'Unknown Student'
+      id: fb.recipientId,
+      name: fb.recipientName || 'Unknown Student'
     }))
     const uniqueStudents = students.filter((student, index, self) => 
       student.id && index === self.findIndex(s => s.id === student.id)
@@ -105,20 +103,15 @@ const ViewEditFeedbackPage: React.FC = () => {
       const selectedOption = availableGradeSubjects.find(gs => gs.value === selectedGradeSubject)
       
       if (selectedOption) {
-        filtered = filtered.filter(fb => {
-          const courseName = (fb.courseName || fb.course_name || '').toLowerCase()
-          const targetSubject = selectedOption.subject.toLowerCase()
-          
-          // Match course name with the selected subject
-          return courseName.includes(targetSubject) || targetSubject.includes(courseName)
-        })
+        const targetSubject = selectedOption.subject.toLowerCase()
+        filtered = filtered.filter(fb => (fb.subject || '').toLowerCase() === targetSubject)
       }
     }
 
     // Filter by student
     if (selectedStudent) {
       filtered = filtered.filter(fb => {
-        const recipientId = fb.recipientId || fb.recipient_id
+        const recipientId = fb.recipientId
         return recipientId === selectedStudent
       })
     }
@@ -129,8 +122,8 @@ const ViewEditFeedbackPage: React.FC = () => {
       filtered = filtered.filter(fb => {
         const subject = (fb.subject || '').toLowerCase()
         const body = (fb.body || '').toLowerCase()
-        const studentName = (fb.recipientName || fb.recipient_name || '').toLowerCase()
-        const assessmentName = (fb.assessmentName || fb.assessment_name || '').toLowerCase()
+        const studentName = (fb.recipientName || '').toLowerCase()
+        const assessmentName = (fb.assessmentName || '').toLowerCase()
         
         return subject.includes(term) || 
                body.includes(term) || 
@@ -141,8 +134,8 @@ const ViewEditFeedbackPage: React.FC = () => {
 
     // Sort by date (newest first)
     return filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.created_at)
-      const dateB = new Date(b.createdAt || b.created_at)
+      const dateA = new Date(a.createdAt)
+      const dateB = new Date(b.createdAt)
       return dateB.getTime() - dateA.getTime()
     })
   }, [feedbackList, selectedGradeSubject, selectedStudent, searchTerm, availableGradeSubjects])
@@ -265,15 +258,15 @@ const ViewEditFeedbackPage: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredFeedback.map((feedback, index) => {
-                    const createdAt = feedback.createdAt || feedback.created_at
-                    const studentName = feedback.studentName || feedback.student_name || 'Unknown Student'
-                    const parentName = feedback.recipientName || feedback.recipient_name || 'Unknown Parent'
-                    const assessmentName = feedback.assessmentName || feedback.assessment_name
+                    const createdAt = feedback.createdAt
+                    const studentName = feedback.studentName || 'Unknown Student'
+                    const parentName = feedback.recipientName || 'Unknown Parent'
+                    const assessmentName = feedback.assessmentName
                     const score = feedback.score
-                    const weightPercentage = feedback.weightPercentage || feedback.weight_percentage
+                    const weightPercentage = feedback.weightPercentage
                     
                     return (
-                      <tr key={feedback.feedbackId || feedback.feedback_id || index} className="hover:bg-gray-50">
+                      <tr key={feedback.feedbackId || index} className="hover:bg-gray-50">
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{studentName}</div>
                           <div className="text-xs text-gray-500 md:hidden">

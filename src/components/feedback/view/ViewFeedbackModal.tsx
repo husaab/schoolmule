@@ -2,12 +2,12 @@
 
 import React from 'react'
 import Modal from '@/components/shared/modal'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { FeedbackPayload } from '@/services/types/feedback'
 
 interface ViewFeedbackModalProps {
   isOpen: boolean
   onClose: () => void
-  feedback: any
+  feedback: FeedbackPayload
 }
 
 const ViewFeedbackModal: React.FC<ViewFeedbackModalProps> = ({
@@ -17,15 +17,15 @@ const ViewFeedbackModal: React.FC<ViewFeedbackModalProps> = ({
 }) => {
   if (!feedback) return null
 
-  const recipientName = feedback.recipientName || feedback.recipient_name || 'Unknown Student'
-  const senderName = feedback.senderName || feedback.sender_name || 'Unknown Teacher'
+  const recipientName = feedback.recipientName|| 'Unknown Student'
+  const senderName = feedback.senderName || 'Unknown Teacher'
   const subject = feedback.subject || 'No Subject'
   const body = feedback.body || 'No message content'
-  const assessmentName = feedback.assessmentName || feedback.assessment_name
+  const assessmentName = feedback.assessmentName
   const score = feedback.score
-  const weightPercentage = feedback.weightPercentage || feedback.weight_percentage
-  const createdAt = feedback.createdAt || feedback.created_at
-  const lastModifiedAt = feedback.lastModifiedAt || feedback.last_modified_at
+  const weightPercentage = feedback.weightPercentage
+  const createdAt = feedback.createdAt
+  const lastModifiedAt = feedback.lastModifiedAt
   const school = feedback.school
 
   const formatDateTime = (dateString: string) => {

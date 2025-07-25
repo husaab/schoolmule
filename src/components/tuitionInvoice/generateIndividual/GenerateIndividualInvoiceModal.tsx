@@ -85,7 +85,7 @@ const GenerateIndividualInvoiceModal: React.FC<GenerateIndividualInvoiceModalPro
     }
 
     loadData()
-  }, [isOpen, user.school])
+  }, [isOpen, user.school, showNotification])
 
   // Load parents when student is selected
   useEffect(() => {
@@ -230,7 +230,7 @@ const GenerateIndividualInvoiceModal: React.FC<GenerateIndividualInvoiceModalPro
         </div>
 
         <p className="text-sm text-gray-600 mb-6">
-          Create a tuition invoice for a specific student based on their grade's tuition plan.
+          Create a tuition invoice for a specific student based on their grade&apos;s tuition plan.
         </p>
 
         {loading ? (

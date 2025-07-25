@@ -6,19 +6,20 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import { getFeedbackByStudentId } from '@/services/feedbackService'
+import { FeedbackPayload } from '@/services/types/feedback'
 import ViewFeedbackModal from '@/components/feedback/view/ViewFeedbackModal'
 import { EyeIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/outline'
 import ReplyMessageModal from '@/components/messages/reply/ReplyMessageModal'
-import { SendMessagePayload, MessagePayload } from '@/services/types/message'
+import { MessagePayload } from '@/services/types/message'
 
 const ParentStudentFeedbackPage: React.FC = () => {
   const params = useParams()
   const studentId = params.studentId as string
 
-  const [feedbackList, setFeedbackList] = useState<any[]>([])
+  const [feedbackList, setFeedbackList] = useState<FeedbackPayload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedFeedback, setSelectedFeedback] = useState<any>(null)
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackPayload | null>(null)
   const [replyTarget, setReplyTarget] = useState<MessagePayload | null>(null)
 
   // Load feedback for the student
@@ -71,7 +72,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
 
   // Get student name from first feedback entry
   const studentName = feedbackList.length > 0 
-    ? (feedbackList[0].studentName || feedbackList[0].student_name || 'Student')
+    ? (feedbackList[0].studentName || 'Student')
     : 'Student'
 
   return (
@@ -131,15 +132,15 @@ const ParentStudentFeedbackPage: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {feedbackList.map((feedback, index) => {
-                    const createdAt = feedback.createdAt || feedback.created_at
-                    const senderName = feedback.senderName || feedback.sender_name || 'Teacher'
-                    const courseName = feedback.courseName || feedback.course_name
-                    const assessmentName = feedback.assessmentName || feedback.assessment_name
+                    const createdAt = feedback.createdAt
+                    const senderName = feedback.senderName || 'Teacher'
+                    const courseName = feedback.subject 
+                    const assessmentName = feedback.assessmentName
                     const score = feedback.score
-                    const weightPercentage = feedback.weightPercentage || feedback.weight_percentage
+                    const weightPercentage = feedback.weightPercentage
                     
                     return (
-                      <tr key={feedback.feedbackId || feedback.feedback_id || index} className="hover:bg-gray-50">
+                      <tr key={feedback.feedbackId || index} className="hover:bg-gray-50">
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {new Date(createdAt).toLocaleDateString()}
@@ -178,16 +179,16 @@ const ParentStudentFeedbackPage: React.FC = () => {
                               e.stopPropagation()
                               // Convert feedback to message format for reply
                               const messageData: MessagePayload = {
-                                message_id: feedback.feedbackId || feedback.feedback_id || '',
-                                sender_id: feedback.senderId || feedback.sender_id,
-                                sender_name: feedback.senderName || feedback.sender_name,
-                                recipient_id: feedback.recipientId || feedback.recipient_id,
-                                recipient_name: feedback.recipientName || feedback.recipient_name,
+                                message_id: feedback.feedbackId || '',
+                                sender_id: feedback.senderId,
+                                sender_name: feedback.senderName,
+                                recipient_id: feedback.recipientId,
+                                recipient_name: feedback.recipientName,
                                 school: feedback.school,
                                 subject: `Feedback for ${studentName} on ${assessmentName} in ${courseName || feedback.subject}`,
                                 body: feedback.body,
-                                created_at: feedback.createdAt || feedback.created_at || new Date().toISOString(),
-                                last_modified_at: feedback.lastModifiedAt || feedback.last_modified_at
+                                created_at: feedback.createdAt || new Date().toISOString(),
+                                last_modified_at: feedback.lastModifiedAt
                               }
                               setReplyTarget(messageData)
                             }}
@@ -225,7 +226,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
             
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-2xl font-bold text-purple-600">
-                {[...new Set(feedbackList.map(f => f.courseName || f.course_name).filter(Boolean))].length}
+                {[...new Set(feedbackList.map(f => f.subject).filter(Boolean))].length}
               </div>
               <div className="text-sm text-gray-500">Different Subjects</div>
             </div>
@@ -247,7 +248,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
             isOpen={!!replyTarget}
             onClose={() => setReplyTarget(null)}
             original={replyTarget}
-            onSent={(newMsg) => {
+            onSent={() => {
               setReplyTarget(null)
             }}
           />

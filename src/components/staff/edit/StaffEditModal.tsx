@@ -27,7 +27,7 @@ const StaffEditModal: React.FC<StaffEditModalProps> = ({
     school: user.school || '',
     fullName: '',
     staffRole: '',
-    teachingAssignments: '',
+    teachingAssignments: [''],
     homeroomGrade: '',
     email: '',
     phone: '',
@@ -45,8 +45,7 @@ const StaffEditModal: React.FC<StaffEditModalProps> = ({
         fullName: staff.fullName || '',
         staffRole: staff.staffRole || '',
         teachingAssignments: Array.isArray(staff.teachingAssignments) 
-          ? staff.teachingAssignments.join(', ') 
-          : staff.teachingAssignments || '',
+          ?  staff.teachingAssignments : [''],
         homeroomGrade: staff.homeroomGrade || '',
         email: staff.email || '',
         phone: staff.phone || '',
@@ -79,7 +78,7 @@ const StaffEditModal: React.FC<StaffEditModalProps> = ({
       const payload: Partial<StaffRequest> & { school: string } = {
         ...formData,
         teachingAssignments: formData.teachingAssignments 
-          ? formData.teachingAssignments.split(',').map((s: string) => s.trim()).filter(Boolean)
+          ? formData.teachingAssignments.map((s: string) => s.trim()).filter(Boolean)
           : undefined,
         homeroomGrade: formData.homeroomGrade || undefined,
         email: formData.email || undefined,

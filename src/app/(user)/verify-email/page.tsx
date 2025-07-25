@@ -25,10 +25,10 @@ export default function VerifyEmailPage() {
     if (!user.email) return
     setLoading(true)
     try {
-      const res = await resendVerificationEmail({ email: user.email })
+      await resendVerificationEmail({ email: user.email })
       notify('Verification email sent!', 'success')
-    } catch (err: any) {
-      notify(err.message || 'Failed to resend email', 'error')
+    } catch {
+      notify('Failed to resend email', 'error')
     } finally {
       setLoading(false)
     }
@@ -62,8 +62,7 @@ export default function VerifyEmailPage() {
                   await logout(); // ✅ Wait for cookies to clear
                   useUserStore.getState().clearUser(); // ✅ Clear Zustand
                   router.replace('/login'); // ✅ Redirect
-                } catch (err) {
-                  console.error('Logout failed', err);
+                } catch {
                   notify('Logout failed. Please try again.', 'error');
                 }
               }}

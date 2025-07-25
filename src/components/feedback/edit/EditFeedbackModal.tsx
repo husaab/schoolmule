@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react'
 import Modal from '@/components/shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { updateFeedback } from '@/services/feedbackService'
+import { FeedbackPayload } from '@/services/types/feedback'
 
 interface EditFeedbackModalProps {
   isOpen: boolean
   onClose: () => void
-  feedback: any
+  feedback: FeedbackPayload
   onUpdated: () => void
 }
 
@@ -33,9 +34,9 @@ const EditFeedbackModal: React.FC<EditFeedbackModalProps> = ({
     if (feedback && isOpen) {
       setSubject(feedback.subject || '')
       setBody(feedback.body || '')
-      setAssessmentName(feedback.assessmentName || feedback.assessment_name || '')
+      setAssessmentName(feedback.assessmentName || '')
       setScore(String(feedback.score || ''))
-      setWeightPercentage(String(feedback.weightPercentage || feedback.weight_percentage || ''))
+      setWeightPercentage(String(feedback.weightPercentage || ''))
     }
   }, [feedback, isOpen])
 
@@ -44,8 +45,8 @@ const EditFeedbackModal: React.FC<EditFeedbackModalProps> = ({
     
     if (!feedback) return
 
-    const feedbackId = feedback.feedbackId || feedback.feedback_id
-    const senderId = feedback.senderId || feedback.sender_id
+    const feedbackId = feedback.feedbackId
+    const senderId = feedback.senderId
 
     if (!feedbackId || !senderId) {
       showNotification('Missing feedback information', 'error')
@@ -106,8 +107,8 @@ const EditFeedbackModal: React.FC<EditFeedbackModalProps> = ({
 
   if (!feedback) return null
 
-  const recipientName = feedback.recipientName || feedback.recipient_name || 'Unknown Student'
-  const createdAt = feedback.createdAt || feedback.created_at
+  const recipientName = feedback.recipientName  || 'Unknown Student'
+  const createdAt = feedback.createdAt
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} style="p-6 max-w-2xl w-11/12">

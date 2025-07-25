@@ -2,7 +2,6 @@
 
 import apiClient from './apiClient';
 import {
-  SchoolPayload,
   CreateSchoolRequest,
   UpdateSchoolRequest,
   SchoolResponse,

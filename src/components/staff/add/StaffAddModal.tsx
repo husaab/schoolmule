@@ -25,7 +25,7 @@ const StaffAddModal: React.FC<StaffAddModalProps> = ({
     school: user.school || '',
     fullName: '',
     staffRole: '',
-    teachingAssignments: '',
+    teachingAssignments: [''],
     homeroomGrade: '',
     email: '',
     phone: '',
@@ -57,7 +57,7 @@ const StaffAddModal: React.FC<StaffAddModalProps> = ({
       const payload: StaffRequest = {
         ...formData,
         teachingAssignments: formData.teachingAssignments 
-          ? formData.teachingAssignments.split(',').map((s: string) => s.trim()).filter(Boolean)
+          ? formData.teachingAssignments.map((s: string) => s.trim()).filter(Boolean)
           : undefined,
         homeroomGrade: formData.homeroomGrade || undefined,
         email: formData.email || undefined,
@@ -77,7 +77,7 @@ const StaffAddModal: React.FC<StaffAddModalProps> = ({
           school: user.school!,
           fullName: '',
           staffRole: '',
-          teachingAssignments: '',
+          teachingAssignments: [''],
           homeroomGrade: '',
           email: '',
           phone: '',

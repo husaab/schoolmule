@@ -1,7 +1,7 @@
 // src/app/teacher/feedback/page.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -26,7 +26,7 @@ const TeacherFeedbackPage: React.FC = () => {
   const [modalOpenFor, setModalOpenFor] = useState<string | null>(null) // studentId
 
   // fetch classes & sent feedback
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!teacherId) return
     setLoading(true)
     try {
@@ -44,11 +44,11 @@ const TeacherFeedbackPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [teacherId])
 
   useEffect(() => {
     loadData()
-  }, [teacherId])
+  }, [teacherId, loadData])
 
   const reloadFeedback = () => {
     loadData()
@@ -68,34 +68,31 @@ const TeacherFeedbackPage: React.FC = () => {
 
   // compute last feedback per student for the current class/subject
   const lastFeedbackByStudent = useMemo(() => {
-    const map: Record<string, any> = {}
+    const map: Record<string, FeedbackPayload> = {}
     
     if (!selectedClass) return map
     
     // Filter feedback for the current class/subject only
-    const relevantFeedback = feedbackList.filter((fb: any) => {
-      const courseName = (fb.courseName || fb.course_name || '').toLowerCase()
+    const relevantFeedback = feedbackList.filter((fb: FeedbackPayload) => {
       const selectedSubject = selectedClass.subject.toLowerCase()
-      
-      // Match feedback by course name with selected class subject
-      return courseName.includes(selectedSubject) || selectedSubject.includes(courseName)
+      return (fb.subject || '').toLowerCase() === selectedSubject
     })
     
     console.log('Computing last feedback for current class:', selectedClass.subject)
     console.log('Relevant feedback for this class:', relevantFeedback)
     
-    relevantFeedback.forEach((fb: any) => {
+    relevantFeedback.forEach((fb: FeedbackPayload) => {
       // Check multiple possible student ID fields
-      const studentId = fb.studentId || fb.student_id
+      const studentId = fb.studentId
       
       // For student feedback, we should match by student_id field
       if (!studentId) {
         return
       }
 
-      const timestamp = new Date(fb.createdAt || fb.created_at)
+      const timestamp = new Date(fb.createdAt)
       
-      if (!map[studentId] || timestamp > new Date(map[studentId].createdAt || map[studentId].created_at)) {
+      if (!map[studentId] || timestamp > new Date(map[studentId].createdAt)) {
         console.log('Setting latest feedback for student', studentId, 'Subject:', fb.subject, 'Date:', timestamp)
         map[studentId] = fb
       }
@@ -160,13 +157,13 @@ const TeacherFeedbackPage: React.FC = () => {
                         <div className="font-medium">{s.name}</div>
                         <div className="text-xs text-gray-600 sm:hidden">
                           {lastFb
-                            ? `${new Date(lastFb.createdAt || lastFb.created_at).toLocaleDateString()}: ${lastFb.subject || 'No subject'}`
+                            ? `${new Date(lastFb.createdAt).toLocaleDateString()}: ${lastFb.subject || 'No subject'}`
                             : 'No feedback sent'}
                         </div>
                       </td>
                       <td className="px-3 sm:px-6 py-4 text-sm text-gray-600 hidden sm:table-cell">
                         {lastFb
-                          ? `${new Date(lastFb.createdAt || lastFb.created_at).toLocaleDateString()}: ${lastFb.subject || 'No subject'}`
+                          ? `${new Date(lastFb.createdAt).toLocaleDateString()}: ${lastFb.subject || 'No subject'}`
                           : '—'}
                       </td>
                       <td className="px-3 sm:px-6 py-4">
@@ -191,7 +188,7 @@ const TeacherFeedbackPage: React.FC = () => {
             onClose={() => setModalOpenFor(null)}
             student={students.find(s => s.studentId === modalOpenFor)!}
             teacherId={teacherId!}
-            school={user?.school!}
+            school={user.school!}
             onSent={() => {
               setModalOpenFor(null)
               reloadFeedback()

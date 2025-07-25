@@ -87,7 +87,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         }
       } catch (err) {
         // This means feedback doesn't exist yet → treat as empty
-        console.warn('Feedback not found — initializing blank form');
+        console.warn('Feedback not found — initializing blank form', err);
         setWorkHabits('');
         setBehavior('');
         setComment('');

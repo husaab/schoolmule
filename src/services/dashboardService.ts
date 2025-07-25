@@ -4,7 +4,6 @@ import apiClient from './apiClient'
 import {
   DashboardSummaryResponse,
   AttendanceRateResponse,
-  AttendanceTrendPoint,
   AttendanceTrendResponse,
   FinancialOverviewResponse
 } from './types/dashboard'

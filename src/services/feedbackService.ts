@@ -2,7 +2,6 @@
 
 import apiClient from './apiClient';
 import {
-  FeedbackPayload,
   SendFeedbackRequest,
   SendFeedbackResponse,
   UpdateFeedbackRequest,

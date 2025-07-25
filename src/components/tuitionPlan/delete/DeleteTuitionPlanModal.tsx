@@ -28,7 +28,7 @@ const DeleteTuitionPlanModal: React.FC<DeleteTuitionPlanModalProps> = ({
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const response = await deleteTuitionPlan(plan.planId, user.school)
+      const response = await deleteTuitionPlan(plan.planId, user.school!)
       if (response.status === 'success') {
         showNotification('Tuition plan deleted successfully', 'success')
         onDeleted()

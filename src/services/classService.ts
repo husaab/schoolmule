@@ -117,7 +117,7 @@ export const updateClass = async (
   >
 ): Promise<ClassResponse> => {
   // Convert our camelCase -> snake_case as expected by backend
-  const body: any = {};
+  const body: Record<string, unknown> = {};
   if (updateData.school !== undefined)     body.school = updateData.school;
   if (updateData.grade !== undefined)      body.grade = updateData.grade;
   if (updateData.subject !== undefined)    body.subject = updateData.subject;

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import StudentAddModal from '@/components/student/add/studentAddModal';
@@ -9,7 +9,6 @@ import StudentDeleteModal from '@/components/student/delete/studentDeleteModal';
 import StudentEditModal from '@/components/student/edit/studentEditModal';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
-import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
@@ -22,13 +21,12 @@ const StudentsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const user = useUserStore((state) => state.user);
     const [gradeFilter, setGradeFilter] = useState<string>('');
-    const router = useRouter();
     const [showAddModal, setShowAddModal] = useState(false);
     const [viewStudent, setViewStudent] = useState<StudentPayload | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<StudentPayload | null>(null);
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null)
 
-    const loadStudents = async () => {
+    const loadStudents = useCallback(async () => {
         if (!user.school) return;
         
         setLoading(true);
@@ -47,11 +45,11 @@ const StudentsPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user.school]);
 
     useEffect(() => {
         loadStudents();
-    }, [user.school]);
+    }, [user.school, loadStudents]);
 
    const grades = Array.from(
     new Set(students.map(s => s.grade)

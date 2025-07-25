@@ -258,9 +258,9 @@ export default function EditClassPage() {
     subject,
     grade,
     teacherName,    // ← renamed
-    teacherId,      // ← new (but not displayed here)
+    // teacherId not displayed in this component
     termName,       // ← term name
-    termId,         // ← term id
+    // termId not displayed in this component
     school,
     createdAt,
     lastModifiedAt,
@@ -304,7 +304,7 @@ export default function EditClassPage() {
       }
       const res = await updateClass(classId, payload)
       if (res.status === 'success') {
-        const updatedRaw = res.data as any
+        const updatedRaw = res.data
         setClassData({
           classId:       updatedRaw.classId,
           school:        updatedRaw.school,

@@ -37,7 +37,7 @@ const ResetPasswordPage: FC = () => {
     }
 
     if (token) checkToken()
-  }, [token, notify])
+  }, [token, notify, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

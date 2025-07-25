@@ -6,20 +6,14 @@ import Footer from '@/components/prefooter/Footer'
 import Link from 'next/link'
 import Image from 'next/image'
 import { 
-  CogIcon, 
   ShieldCheckIcon, 
-  CloudIcon, 
   DocumentTextIcon, 
   ChartBarIcon, 
   UserGroupIcon,
   ClockIcon,
   CurrencyDollarIcon,
   ArrowPathIcon,
-  ComputerDesktopIcon,
-  ServerIcon,
-  GlobeAltIcon,
   CheckCircleIcon,
-  PlayIcon
 } from '@heroicons/react/24/outline'
 
 const ProductPage: FC = () => {
@@ -509,7 +503,7 @@ const ProductPage: FC = () => {
           <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white rounded-2xl p-12">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Ongoing Support & Training</h2>
-              <p className="text-xl opacity-90">We're here to ensure your success</p>
+              <p className="text-xl opacity-90">We&apos;re here to ensure your success</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -567,7 +561,7 @@ const ProductPage: FC = () => {
               Ready to See SchoolMule in Action?
             </h2>
             <p className="text-xl text-gray-600 mb-8">
-              Schedule a personalized demo to see how SchoolMule can transform your school's operations.
+              Schedule a personalized demo to see how SchoolMule can transform your school&apos;s operations.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link 

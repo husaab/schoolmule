@@ -69,10 +69,6 @@ const ScheduleGrid: FC<Props> = ({ schedules, showMilitaryTime, onDeleteClick, o
     return hours * 60 + minutes
   }
 
-  const getTimeSlotIndex = (timeStr: string): number => {
-    return timeSlots.findIndex(slot => slot === timeStr)
-  }
-
   const calculateEntryPosition = (entry: ScheduleEntry) => {
     const startMinutes = timeToMinutes(entry.start_time)
     const endMinutes = timeToMinutes(entry.end_time)

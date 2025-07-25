@@ -8,7 +8,7 @@ export interface StaffPayload {
   school: string;
   fullName: string;
   staffRole: string;
-  teachingAssignments?: any; // JSONB field
+  teachingAssignments?: string[]; 
   homeroomGrade?: string;
   email?: string;
   phone?: string;
@@ -43,7 +43,7 @@ export interface StaffRequest {
   school: string;
   fullName: string;
   staffRole: string;
-  teachingAssignments?: any;
+  teachingAssignments?: string[];
   homeroomGrade?: string;
   email?: string;
   phone?: string;

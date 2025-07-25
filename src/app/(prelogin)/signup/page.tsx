@@ -86,8 +86,8 @@ const SignUpForm: FC = () => {
         setUser(user);
         router.replace('/verify-email');
       }
-    } catch (err: any) {
-      showNotification(err.message || 'Sign up failed', 'error')
+    } catch {
+      showNotification('Sign up failed', 'error')
     }
   }
 

@@ -15,8 +15,7 @@ import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
 import {
   getInboxMessages,
-  getSentMessages,
-  deleteMessage as apiDeleteMessage
+  getSentMessages
 } from '@/services/messageService'
 import ViewMessageModal from '@/components/messages/view/ViewMessageModal'
 import DeleteMessageModal from '@/components/messages/delete/DeleteMessageModal'
@@ -48,18 +47,6 @@ const ParentCommunicationPage: React.FC = () => {
 
     loader.catch(console.error).finally(() => setLoading(false))
   }, [user?.id, activeTab])
-
-  // delete handler
-  const handleDelete = async (id: string) => {
-    if (!user?.id) return
-    try {
-      await apiDeleteMessage(id, { senderId: user.id })
-      setSentMessages((prev) => prev.filter((m) => m.message_id !== id))
-    } catch (err) {
-      console.error(err)
-    }
-    setDeleteTarget(null)
-  }
 
   const messages = activeTab === 'inbox' ? inboxMessages : sentMessages
 

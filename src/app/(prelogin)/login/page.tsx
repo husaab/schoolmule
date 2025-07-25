@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, FC } from 'react';
+import React, { useState, FC } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
@@ -82,7 +82,7 @@ const LoginForm: FC = () => {
           }
         }
       }
-    } catch (err: any) {
+    } catch {
       showNotification('Login failed, invalid email or password', 'error')
     }
   }

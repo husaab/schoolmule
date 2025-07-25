@@ -217,7 +217,7 @@ const WelcomePage: FC = () => {
                 <div className="lg:w-1/3">
                   <h3 className="text-3xl font-bold text-gray-800 mb-4">Executive Dashboard</h3>
                   <p className="text-lg text-gray-600 mb-6">
-                    Get a complete overview of your school's performance with real-time attendance rates, 
+                    Get a complete overview of your school&apos;s performance with real-time attendance rates, 
                     academic trends, and financial insights—all in one beautiful dashboard.
                   </p>
                   <ul className="space-y-2 text-gray-700">
@@ -289,7 +289,7 @@ const WelcomePage: FC = () => {
                 <div className="lg:w-1/3">
                   <h3 className="text-3xl font-bold text-gray-800 mb-4">Parent Engagement Portal</h3>
                   <p className="text-lg text-gray-600 mb-6">
-                    Keep parents connected with dedicated dashboards showing their children's progress, 
+                    Keep parents connected with dedicated dashboards showing their children&apos;s progress, 
                     attendance, and school communications.
                   </p>
                   <ul className="space-y-2 text-gray-700">
@@ -336,9 +336,9 @@ const WelcomePage: FC = () => {
               </div>
             </div>
             <p className="text-xl text-gray-600 mb-8">
-              "SchoolMule has transformed how we operate. What used to take our staff hours 
+&quot;SchoolMule has transformed how we operate. What used to take our staff hours 
               now happens with just a few clicks. Our teachers can focus on teaching, 
-              not administrative work."
+              not administrative work.&quot;
             </p>
             <p className="text-lg text-gray-700 font-semibold">
               — Principal, Private Elementary School
