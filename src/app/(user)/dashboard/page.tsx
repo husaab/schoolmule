@@ -98,9 +98,9 @@ const DashboardPage: React.FC = () => {
               ))}
             </select>
           </div>
-          <div style={{ width: '100%', height: 300 }}>
+          <div style={{ width: '100%', height: 300}}>
             <ResponsiveContainer>
-              <LineChart data={trend} margin={{ left: 0, right: 30, top: 0, bottom: 0 }} >
+              <LineChart data={trend} margin={{ left: 0, right: 30, top: 10, bottom: 0 }} >
                 <XAxis
                   dataKey="date"
                   tickFormatter={(d) => format(new Date(d), 'MM/dd')}

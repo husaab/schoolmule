@@ -18,8 +18,7 @@ const parentLinks = [
   { href: '/parent/dashboard', label: 'Dashboard' },
   { href: '/parent/communication', label: 'Communication' },
   { href: '/parent/feedback', label: 'Feedback' },
-  { href: '/parent/report-cards', label: 'Report Cards'},
-    { href: '/parent/staff-list', label: 'Staff List'},
+  { href: '/parent/report-cards', label: 'Report Cards'}
 ];
 
 const supportLinks = [

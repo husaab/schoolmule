@@ -27,33 +27,53 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
   const [dayOfWeek, setDayOfWeek] = useState('Monday')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
-  const [weekStartDate, setWeekStartDate] = useState<string>(() => format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+  const [weekStartDate, setWeekStartDate] = useState<string>(() => {
+    try {
+      return format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+    } catch (error) {
+      console.error('Error initializing weekStartDate:', error)
+      return format(new Date(), 'yyyy-MM-dd')
+    }
+  })
   const [isLunch, setIsLunch] = useState(false)
   const [lunchSupervisor, setLunchSupervisor] = useState('')
 
   const generateMondays = (): string[] => {
-  const today = new Date()
-  const start = startOfMonth(today)
-  const end = endOfMonth(addDays(today, 40)) // roughly next 2 months
+    try {
+      const today = new Date()
+      const start = startOfMonth(today)
+      const end = endOfMonth(addDays(today, 40)) // roughly next 2 months
 
-  const mondays: string[] = []
-  let current = start
+      const mondays: string[] = []
+      let current = start
 
-  while (current <= end) {
-      if (isMonday(current)) {
-      mondays.push(format(current, 'yyyy-MM-dd'))
+      while (current <= end) {
+        if (isMonday(current)) {
+          const dateStr = format(current, 'yyyy-MM-dd')
+          if (dateStr && dateStr !== 'Invalid Date') {
+            mondays.push(dateStr)
+          }
+        }
+        current = addDays(current, 1)
       }
-      current = addDays(current, 1)
-  }
 
-  return mondays
+      return mondays
+    } catch (error) {
+      console.error('Error generating Mondays:', error)
+      return []
+    }
   }
 
   const mondays = generateMondays()
 
   useEffect(() => {
     if (isOpen) {
-      setWeekStartDate(format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+      try {
+        setWeekStartDate(format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+      } catch (error) {
+        console.error('Error setting weekStartDate:', error)
+        setWeekStartDate(format(new Date(), 'yyyy-MM-dd'))
+      }
     }
   }, [isOpen])
 
@@ -258,13 +278,25 @@ const ScheduleAddModal: React.FC<ScheduleAddModalProps> = ({ isOpen, onClose, on
             <option value="" disabled>Select a Monday</option>
             {mondays.map((date) => (
             <option key={date} value={date}>
-                {format(parse(date, 'yyyy-MM-dd', new Date()), 'MMMM d, yyyy')}
+                {(() => {
+                  try {
+                    return format(parse(date, 'yyyy-MM-dd', new Date()), 'MMMM d, yyyy')
+                  } catch {
+                    return date
+                  }
+                })()}
             </option>
             ))}
         </select>
         <p className="text-sm text-gray-500 mt-1">
           Defaulting to this week’s Monday:{' '}
-          {format(parse(weekStartDate, 'yyyy-MM-dd', new Date()), 'MMMM d, yyyy')}
+{(() => {
+            try {
+              return format(parse(weekStartDate, 'yyyy-MM-dd', new Date()), 'MMMM d, yyyy')
+            } catch {
+              return 'Loading...'
+            }
+          })()}
         </p>
         </div>
 

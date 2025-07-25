@@ -108,7 +108,7 @@ const ContactPage: FC = () => {
               </a>
             </p>
             <p>
-              <strong>Phone:</strong> (555) 123-4567
+              <strong>Phone:</strong> (647) 528-7842
             </p>
             <p>
               <strong>Address:</strong> 123 Education St., Toronto, ON, Canada

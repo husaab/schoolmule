@@ -17,7 +17,7 @@ const NavBar: FC = () => {
   }, []);
 
   return (
-    <nav className={`fixed w-full top-0 z-30 transition border-b border-gray-200 duration-300 ease-in-out ${!atTop ? 'bg-white shadow-lg' : ''}`}>      
+    <nav className={`bg-white fixed w-full top-0 z-30 transition border-b border-gray-200 duration-300 ease-in-out ${!atTop ? 'bg-white shadow-lg' : ''}`}>      
       <div className="flex justify-between items-center py-2 px-4 lg:px-12">
         {/* logo */}
         <Link href="/welcome" scroll={false}>
