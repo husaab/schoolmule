@@ -31,9 +31,9 @@ const Notification: React.FC = () => {
       exit={{ opacity: 0, x: 50 }}
     >
       {type === 'success' ? (
-        <CheckCircleIcon className="w-6 h-6 text-white" />
+        <CheckCircleIcon className="w-6 h-6 text-white cursor-pointer" />
       ) : (
-        <XCircleIcon className="w-6 h-6 text-white" />
+        <XCircleIcon className="w-6 h-6 text-white cursor-pointer" />
       )}
       <span>{message}</span>
       <button onClick={closeNotification} className="ml-4 text-lg">&times;</button>

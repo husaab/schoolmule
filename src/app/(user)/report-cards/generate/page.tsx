@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getAllStudents } from '@/services/studentService';
@@ -27,12 +27,14 @@ export default function GenerateReportCardsPage() {
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const groupedByGrade = students.reduce((acc, student) => {
-    const grade = `Grade ${student.grade ?? '-'}`;
-    acc[grade] = acc[grade] || [];
-    acc[grade].push(student);
-    return acc;
-  }, {} as Record<string, StudentPayload[]>);
+  const groupedByGrade = useMemo(() => {
+    return students.reduce((acc, student) => {
+      const grade = `Grade ${student.grade ?? '-'}`;
+      acc[grade] = acc[grade] || [];
+      acc[grade].push(student);
+      return acc;
+    }, {} as Record<string, StudentPayload[]>);
+  }, [students]);
 
   useEffect(() => {
     if (user.school) {
@@ -72,7 +74,7 @@ export default function GenerateReportCardsPage() {
         setLoadingTerms(false);
       });
     }
-  }, [user.school, user.activeTerm, showNotification, groupedByGrade]);
+  }, [user.school, user.activeTerm, showNotification]);
 
   useEffect(() => {
     if (generateAll) {

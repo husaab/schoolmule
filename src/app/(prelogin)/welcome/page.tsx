@@ -17,44 +17,43 @@ const WelcomePage: FC = () => {
         {/* Hero Section */}
         <section className="flex flex-col items-center justify-center text-center space-y-8 py-36 px-4">
           <div className="max-w-4xl mx-auto space-y-6">
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-800 leading-tight">
+            <h1 className="text-xl lg:text-3xl font-bold text-gray-800 leading-tight">
               The Complete School Management Solution
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Stop juggling multiple systems. SchoolMule streamlines everything from student enrollment 
               to report cards, saving your staff hours each week while improving parent engagement.
             </p>
-            
-            {/* Key Stats */}
-            <div className="flex flex-wrap justify-center gap-8 pt-6 text-sm text-gray-700">
-              <div className="flex items-center space-x-2">
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                <span>10+ Core Features</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ClockIcon className="h-5 w-5 text-blue-500" />
-                <span>Save 20+ Hours/Week</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <UserGroupIcon className="h-5 w-5 text-purple-500" />
-                <span>Built for K-12 Schools</span>
-              </div>
-            </div>
+
           </div>
 
-          {/* Demo Video Placeholder */}
+          {/* Demo Video */}
           <div className="w-full max-w-4xl mx-auto">
             <div className="bg-white rounded-xl shadow-2xl p-8">
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <div className="bg-cyan-100 rounded-full p-4 inline-block mb-4">
-                    <svg className="w-12 h-12 text-cyan-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-600 font-medium">Demo Video Coming Soon</p>
-                  <p className="text-sm text-gray-500">See SchoolMule in action</p>
-                </div>
+              <div 
+                style={{ 
+                  position: 'relative', 
+                  paddingBottom: 'calc(52.60855982505467% + 41px)', 
+                  height: 0, 
+                  width: '100%' 
+                }}
+              >
+                <iframe
+                  src="https://demo.arcade.software/fnLPYXGsuJK8SZ1yxJjH?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
+                  title="Welcome to SchoolMule"
+                  frameBorder="0"
+                  loading="lazy"
+                  allowFullScreen
+                  allow="clipboard-write"
+                  style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    colorScheme: 'light' 
+                  }}
+                />
               </div>
             </div>
           </div>
