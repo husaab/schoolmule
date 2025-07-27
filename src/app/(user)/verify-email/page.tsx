@@ -36,7 +36,6 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
       <main className="flex flex-1 items-center justify-center bg-blue-50 p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center space-y-6">
           <h2 className="text-2xl font-bold text-gray-900">Almost there!</h2>

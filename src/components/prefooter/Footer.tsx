@@ -32,16 +32,6 @@ const Footer: FC = () => {
           <span>{year} SchoolMule — All rights reserved</span>
         </div>
 
-        {/* Links */}
-        <div className="flex space-x-6 mb-4 md:mb-0">
-          <Link href="/info/privacy-policy" className="hover:underline">
-            Privacy Policy
-          </Link>
-          <Link href="/info/terms-and-conditions" className="hover:underline">
-            Terms &amp; Conditions
-          </Link>
-        </div>
-
         {/* Contact */}
         <div className="flex items-center mb-4 md:mb-0">
           <a href={mailto} className="flex items-center hover:underline">
@@ -52,16 +42,16 @@ const Footer: FC = () => {
 
         {/* Social Icons */}
         <div className="flex space-x-4">
-          <a href="https://twitter.com/yourhandle" aria-label="Twitter" className="hover:text-blue-500">
+          <a href="https://twitter.com/yourhandle" aria-label="Twitter" target="_blank" className="hover:text-blue-500">
             <FontAwesomeIcon icon={faXTwitter} className="h-5 w-5" />
           </a>
-          <a href="https://facebook.com/yourpage" aria-label="Facebook" className="hover:text-blue-700">
+          <a href="https://facebook.com/yourpage" aria-label="Facebook" target="_blank" className="hover:text-blue-700">
             <FontAwesomeIcon icon={faFacebook} className="h-5 w-5" />
           </a>
-          <a href="https://linkedin.com/in/yourprofile" aria-label="LinkedIn" className="hover:text-blue-600">
+          <a href="https://linkedin.com/in/yourprofile" aria-label="LinkedIn" target="_blank" className="hover:text-blue-600">
             <FontAwesomeIcon icon={faLinkedin} className="h-5 w-5" />
           </a>
-          <a href="https://instagram.com/yourhandle" aria-label="Instagram" className="hover:text-pink-600">
+          <a href="https://instagram.com/yourhandle" aria-label="Instagram" target="_blank" className="hover:text-pink-600">
             <FontAwesomeIcon icon={faInstagram} className="h-5 w-5" />
           </a>
         </div>
