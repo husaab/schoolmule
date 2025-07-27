@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { resendVerificationEmail } from '@/services/authService'
-import Navbar from '@/components/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import { logout } from '@/services/authService'
 

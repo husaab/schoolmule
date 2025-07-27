@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
-import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/prefooter/Footer';
 import { deleteUserAccount } from '@/services/userService';
 import { logout } from '@/services/authService';
