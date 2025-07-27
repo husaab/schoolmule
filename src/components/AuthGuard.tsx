@@ -24,24 +24,29 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     if (!hasHydrated) return
 
     // Validate session if user appears to be logged in
+    // Add delay to avoid race condition with login process
     if (user.id) {
-      validateSession()
-        .then(response => {
-          if (!response.success) {
-            // Session is invalid, clear user state
+      const timeoutId = setTimeout(() => {
+        validateSession()
+          .then(response => {
+            if (!response.success) {
+              // Session is invalid, clear user state
+              clearUser()
+              if (!PUBLIC_PATHS.includes(path)) {
+                router.replace('/welcome')
+              }
+            }
+          })
+          .catch(() => {
+            // Session validation failed, clear user state
             clearUser()
             if (!PUBLIC_PATHS.includes(path)) {
               router.replace('/welcome')
             }
-          }
-        })
-        .catch(() => {
-          // Session validation failed, clear user state
-          clearUser()
-          if (!PUBLIC_PATHS.includes(path)) {
-            router.replace('/welcome')
-          }
-        })
+          })
+      }, 500) // Wait 500ms to allow login process to complete
+
+      return () => clearTimeout(timeoutId)
     }
 
     // not logged in → /welcome
