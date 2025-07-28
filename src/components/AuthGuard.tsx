@@ -55,7 +55,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
     console.log("Zustand user:", useUserStore.getState().user)
     if(user.id){
-      if (PUBLIC_PATHS.includes(path)) {
+      if (PUBLIC_PATHS.includes(path) || path === '/') {
         router.replace('/dashboard')
       }
 
