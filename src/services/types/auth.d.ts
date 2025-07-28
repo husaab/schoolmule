@@ -36,6 +36,7 @@ export interface RegisterResponse {
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;
+    token: string;
   };
 }
 
@@ -61,5 +62,6 @@ export interface LoginResponse {
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;
+    token: string;
   };
 }

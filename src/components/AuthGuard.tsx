@@ -3,7 +3,7 @@
 import { ReactNode, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
-import { validateSession } from '@/services/authService'
+import { validateSession, getToken, removeToken } from '@/services/authService'
 
 const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
 const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
@@ -23,70 +23,73 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasHydrated) return
 
-    // Validate session if user appears to be logged in
-    // Add delay to avoid race condition with login process
-    if (user.id) {
-      const timeoutId = setTimeout(() => {
-        validateSession()
-          .then(response => {
-            if (!response.success) {
-              // Session is invalid, clear user state
-              clearUser()
-              if (!PUBLIC_PATHS.includes(path)) {
-                router.replace('/welcome')
-              }
-            }
-          })
-          .catch(() => {
-            // Session validation failed, clear user state
-            clearUser()
-            if (!PUBLIC_PATHS.includes(path)) {
-              router.replace('/welcome')
-            }
-          })
-      }, 500) // Wait 500ms to allow login process to complete
+    const token = getToken()
 
-      return () => clearTimeout(timeoutId)
+    // If there's a token but no user data, validate the session
+    if (token && !user.id) {
+      validateSession()
+        .then(response => {
+          if (response.success && response.data) {
+            // Update user store with data from token validation
+            const userData = response.data
+            useUserStore.getState().setUser({
+              id: userData.userId,
+              username: userData.username,
+              email: userData.email,
+              school: userData.school,
+              role: userData.role,
+              isVerifiedEmail: userData.isVerified,
+              isVerifiedSchool: userData.isVerifiedSchool,
+              activeTerm: userData.activeTerm || null
+            })
+          } else {
+            // Token is invalid, clear it
+            removeToken()
+            clearUser()
+          }
+        })
+        .catch(() => {
+          // Token validation failed (expired or invalid), clear everything
+          removeToken()
+          clearUser()
+        })
     }
 
-    // not logged in → /welcome
-    if (!user.id && !PUBLIC_PATHS.includes(path)) {
+    // If there's no token but user data exists, clear user data
+    if (!token && user.id) {
+      clearUser()
+    }
+
+    // Handle routing logic
+    if (!token && !PUBLIC_PATHS.includes(path)) {
       router.replace('/welcome')
     }
-    console.log("Zustand user:", useUserStore.getState().user)
-    if(user.id){
+
+    // Handle root path for non-logged-in users
+    if (!token && path === '/') {
+      router.replace('/welcome')
+    }
+
+    // Handle authenticated user routing
+    if (token && user.id) {
       if (PUBLIC_PATHS.includes(path) || path === '/') {
         router.replace('/dashboard')
-      }
-
-      else if(user.id && !user.isVerifiedEmail && path !== '/verify-email' && path !== '/verify-email-token'){
-        router.replace('/verify-email');
-      }
-
-      else if (
-        user.id &&
-        user.role != "ADMIN" &&
+      } else if (!user.isVerifiedEmail && path !== '/verify-email' && path !== '/verify-email-token') {
+        router.replace('/verify-email')
+      } else if (
+        user.role !== "ADMIN" &&
         user.isVerifiedEmail &&
         !user.isVerifiedSchool &&
         path !== '/school-approval'
       ) {
-        router.replace('/school-approval');
-      }
-
-      else if (
-        user.id && path.startsWith('/admin-panel') && user.role != "ADMIN"
-      ) {
+        router.replace('/school-approval')
+      } else if (path.startsWith('/admin-panel') && user.role !== "ADMIN") {
         router.replace('/dashboard')
-      }
-
-      else if (user.id && user.role == 'PARENT' && !isParentPath(path)){
+      } else if (user.role === 'PARENT' && !isParentPath(path)) {
         router.replace("/parent/dashboard")
       }
     }
-    // logged in on a public page → dashboard
-
-
-  }, [hasHydrated, user.id,  user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser])
+  }, [hasHydrated, user.id, user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

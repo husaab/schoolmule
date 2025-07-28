@@ -4,7 +4,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import Link from 'next/link';
-import { login } from '@/services/authService';
+import { login, setToken } from '@/services/authService';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -56,6 +56,9 @@ const LoginForm: FC = () => {
     try {
       const response = await login(data)
       if(response.success){
+        // Store JWT token in localStorage
+        setToken(response.data.token);
+        
          const user = {
           id: response.data.userId,              // ✅ mapped to `id`
           username: response.data.username,

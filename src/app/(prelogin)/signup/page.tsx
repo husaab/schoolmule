@@ -11,7 +11,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { RegisterRequest, RegisterResponse } from '@/services/types/auth'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { register as registerUser } from '@/services/authService'
+import { register as registerUser, setToken } from '@/services/authService'
 import {
   faEye,
   faEyeSlash
@@ -73,6 +73,9 @@ const SignUpForm: FC = () => {
       console.log(response);
       showNotification(response.success ? "Registration Successful" : "Registration Failed", response.success ? "success" : "error");
       if (response.success) {
+        // Store JWT token in localStorage
+        setToken(response.data.token);
+        
         const user = {
           id: response.data.userId,              // ✅ mapped to `id`
           username: response.data.username,

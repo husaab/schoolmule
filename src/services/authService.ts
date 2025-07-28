@@ -2,6 +2,22 @@
 import apiClient from './apiClient';
 import { LoginResponse, LoginRequest, RegisterRequest, RegisterResponse } from './types/auth';
 
+// Token management functions
+export const getToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
+};
+
+export const setToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('auth_token', token);
+};
+
+export const removeToken = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth_token');
+};
+
 export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
   return apiClient<LoginResponse>('/auth/login', {
     method: 'POST',
@@ -10,9 +26,8 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
 };
 
 export const logout = async (): Promise<void> => {
-  return apiClient<void>('/auth/logout', {
-    method: 'POST'
-  });
+  removeToken();
+  // No need to call backend since JWT tokens are stateless
 };
 
 export const register = async (userData: RegisterRequest): Promise<RegisterResponse> => {
@@ -62,6 +77,7 @@ export interface SessionValidationResponse {
     isVerifiedSchool: boolean;
     createdAt: string;
     lastModifiedAt: string;
+    activeTerm: string;
   };
 }
 
