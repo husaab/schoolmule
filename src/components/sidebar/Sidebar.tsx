@@ -22,8 +22,8 @@ const parentLinks = [
 ];
 
 const supportLinks = [
-  { href: '/help', label: 'Help & Support' },
-  { href: '/contact', label: 'Contact' }
+  { href: '/support', label: 'Help & Support' },
+  { href: '/contact-us', label: 'Contact' }
 ];
 
 const Sidebar = () => {
