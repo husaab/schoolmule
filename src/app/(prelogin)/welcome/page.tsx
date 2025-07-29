@@ -364,7 +364,7 @@ const WelcomePage: FC = () => {
             </div>
             
             <div className="pt-8 text-sm opacity-75">
-              <p>Questions? Contact us at hello@schoolmule.com or call (555) 123-4567</p>
+              <p>Questions? Contact us at schoolmule.official@gmail.com</p>
             </div>
           </div>
         </section>
