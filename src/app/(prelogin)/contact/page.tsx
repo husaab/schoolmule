@@ -103,15 +103,9 @@ const ContactPage: FC = () => {
             <h2 className="text-lg font-semibold">Other ways to reach us</h2>
             <p>
               <strong>Email:</strong>{' '}
-              <a href="mailto:schoolmule@gmail.com" className="text-blue-600 hover:underline">
-                schoolmule@gmail.com
+              <a href="mailto:schoolmule.official@gmail.com" className="text-blue-600 hover:underline">
+                schoolmule.official@gmail.com
               </a>
-            </p>
-            <p>
-              <strong>Phone:</strong> (647) 528-7842
-            </p>
-            <p>
-              <strong>Address:</strong> 123 Education St., Toronto, ON, Canada
             </p>
           </div>
         </section>
