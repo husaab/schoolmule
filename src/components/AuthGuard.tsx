@@ -3,7 +3,7 @@
 import { ReactNode, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
-import { validateSession, getToken, removeToken } from '@/services/authService'
+import { validateSession, getToken } from '@/services/authService'
 
 const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
 const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
@@ -25,8 +25,13 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
     const token = getToken()
 
-    // If there's a token but no user data, validate the session
-    if (token && !user.id) {
+    // If there's no token but user data exists, clear user data
+    if (!token && user.id) {
+      clearUser()
+    }
+
+    // If there's a token but no user data, validate the session only once on app startup
+    if (token && !user.id && hasHydrated) {
       validateSession()
         .then(response => {
           if (response.success && response.data) {
@@ -42,22 +47,12 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
               isVerifiedSchool: userData.isVerifiedSchool,
               activeTerm: userData.activeTerm || null
             })
-          } else {
-            // Token is invalid, clear it
-            removeToken()
-            clearUser()
           }
+          // Note: Don't handle errors here - let apiClient handle 401s automatically
         })
         .catch(() => {
-          // Token validation failed (expired or invalid), clear everything
-          removeToken()
-          clearUser()
+          // Let apiClient handle token expiry - this catch is just to prevent unhandled promise rejection
         })
-    }
-
-    // If there's no token but user data exists, clear user data
-    if (!token && user.id) {
-      clearUser()
     }
 
     // Handle routing logic
