@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import AuthGuard from '@/components/AuthGuard';
 import Notification from '../components/shared/notification';
+import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
 
 const roboto = Roboto({
@@ -27,6 +28,7 @@ export default function RootLayout({
         className={`${roboto.className} antialiased`}
       >
         <Notification />
+        <Analytics />
         <AuthGuard> 
           {children}
         </AuthGuard>
