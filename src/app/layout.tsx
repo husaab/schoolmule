@@ -13,8 +13,32 @@ const roboto = Roboto({
 })
 
 export const metadata: Metadata = {
-  title: "SchoolMule",
-  description: "A student management software",
+  title: {
+    default: 'SchoolMule: Student Management System',
+    template: '%s - SchoolMule'
+  },
+  description: "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+  alternates: { canonical: 'https://schoolmule.ca/' },
+  robots: { index: true, follow: true },
+  applicationName: 'SchoolMule',
+  keywords: ["school management", "student information system", "attendance tracking", "gradebook", "parent portal", "education software"],
+  authors: [{ name: "SchoolMule" }],
+  metadataBase: new URL('https://schoolmule.ca/'),
+  openGraph: {
+    title: "SchoolMule: School Management System",
+    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+    type: "website",
+    siteName: "SchoolMule",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SchoolMule: School Management System",
+    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+  },
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
