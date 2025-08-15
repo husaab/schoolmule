@@ -59,15 +59,15 @@ const DashboardPage: React.FC = () => {
   }
 
   const metrics = [
-    { label: 'Total Students', value: summary.totalStudents },
-    { label: 'Total Teachers', value: summary.totalTeachers },
-    { label: 'Total Classes', value: summary.totalClasses },
-    { label: "Today's Attendance %", value: (summary.todaysAttendance * 100).toFixed(1) + '%' },
-    { label: 'Weekly Attendance %', value: (summary.weeklyAttendance * 100).toFixed(1) + '%' },
-    { label: 'Monthly Attendance %', value: (summary.monthlyAttendance * 100).toFixed(1) + '%' },
-    { label: 'Avg. Student Grade', value: summary.averageStudentGrade.toFixed(2) + '%' },
-    { label: 'Report Cards Generated', value: summary.reportCardsCount },
-    { label: 'Avg. Class Size', value: summary.avgClassSize }
+    { label: 'Total Students', value: summary.totalStudents || 0 },
+    { label: 'Total Teachers', value: summary.totalTeachers || 0 },
+    { label: 'Total Classes', value: summary.totalClasses || 0 },
+    { label: "Today's Attendance %", value: summary.todaysAttendance ? (summary.todaysAttendance * 100).toFixed(1) + '%' : 'N/A' },
+    { label: 'Weekly Attendance %', value: summary.weeklyAttendance ? (summary.weeklyAttendance * 100).toFixed(1) + '%' : 'N/A' },
+    { label: 'Monthly Attendance %', value: summary.monthlyAttendance ? (summary.monthlyAttendance * 100).toFixed(1) + '%' : 'N/A' },
+    { label: 'Avg. Student Grade', value: summary.averageStudentGrade ? summary.averageStudentGrade.toFixed(2) + '%' : 'N/A' },
+    { label: 'Report Cards Generated', value: summary.reportCardsCount || 0 },
+    { label: 'Avg. Class Size', value: summary.avgClassSize || 0 }
   ]
 
   return (
