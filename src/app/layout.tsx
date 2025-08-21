@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     template: '%s - SchoolMule'
   },
   description: "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
-  alternates: { canonical: 'https://schoolmule.ca/' },
+  alternates: { canonical: 'https://schoolmule.ca' },
   robots: { index: true, follow: true },
   applicationName: 'SchoolMule',
   keywords: ["school management", "student information system", "attendance tracking", "gradebook", "parent portal", "education software"],
   authors: [{ name: "SchoolMule" }],
-  metadataBase: new URL('https://schoolmule.ca/'),
+  metadataBase: new URL('https://schoolmule.ca'),
   openGraph: {
     title: "SchoolMule: School Management System",
     description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',

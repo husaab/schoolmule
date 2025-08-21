@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { validateSession, getToken } from '@/services/authService'
 
-const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
 const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
 
 // Check if path matches parent patterns (including dynamic routes)
@@ -57,12 +57,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
     // Handle routing logic
     if (!token && !PUBLIC_PATHS.includes(path)) {
-      router.replace('/welcome')
-    }
-
-    // Handle root path for non-logged-in users
-    if (!token && path === '/') {
-      router.replace('/welcome')
+      router.replace('/')
     }
 
     // Handle authenticated user routing

@@ -49,7 +49,7 @@ async function apiClient<T, B = unknown>(
                 const { useNotificationStore } = await import('@/store/useNotificationStore');
                 useUserStore.getState().clearUser();
                 useNotificationStore.getState().showNotification("Your login session has expired, please login again", "error")
-                window.location.href = '/welcome';
+                window.location.href = '/';
             }
         }
         

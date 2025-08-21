@@ -28,7 +28,7 @@ const ResetPasswordPage: FC = () => {
         setIsValidToken(response.success)
         if (!response.success) {
           notify(response.message || 'Invalid or expired token.', 'error')
-          router.replace('/welcome')
+          router.replace('/')
         }
       } catch {
         setIsValidToken(false)
