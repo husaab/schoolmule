@@ -4,6 +4,7 @@ import AuthGuard from '@/components/AuthGuard';
 import Notification from '../components/shared/notification';
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
+import Script from "next/script";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -36,8 +37,8 @@ export const metadata: Metadata = {
     description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
   },
   icons: {
-    icon: '/favicon.png',
-    apple: '/favicon.png',
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 };
 
@@ -48,6 +49,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+       <head>
+        <Script id="schema-website" type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "SchoolMule",
+            alternateName: ["SchoolMule"],
+            url: "https://schoolmule.ca/"
+          })}
+        </Script>
+      </head>
       <body
         className={`${roboto.className} antialiased`}
       >
