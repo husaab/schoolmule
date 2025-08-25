@@ -87,6 +87,10 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
     // 1) Admin mass → all parents
     if (massAllParents) {
+      if (!subject.trim() || !body.trim()) {
+        showNotification('Please fill in both subject and body fields.', 'error')
+        return
+      }
       setSubmitting(true)
       try {
         const res = await sendToAllParents({
@@ -114,6 +118,10 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
     if (gradeSend) {
       if (selectedGrade === '') {
         showNotification('Please select a grade', 'error')
+        return
+      }
+      if (!subject.trim() || !body.trim()) {
+        showNotification('Please fill in both subject and body fields.', 'error')
         return
       }
       setSubmitting(true)
