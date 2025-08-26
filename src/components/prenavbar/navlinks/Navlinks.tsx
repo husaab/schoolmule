@@ -40,17 +40,21 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
       </Link>
 
       {isLoggedIn ? (
-        // Only logout for authenticated users; settings/navigation handled elsewhere
-        <button
-          onClick={() => {
-            clearUser()
-            notify('Logged out', 'success')
-            localStorage.removeItem('user-storage')
-          }}
-          className={`${linkBase} ${vertical ? 'mt-2 text-red-600 block' : 'text-red-600 inline-block'}`}
-        >
-          Logout
-        </button>
+        <>
+          <Link href="/dashboard" className={buttonBase}>
+            Back to Dashboard
+          </Link>
+          <button
+            onClick={() => {
+              clearUser()
+              notify('Logged out', 'success')
+              localStorage.removeItem('user-storage')
+            }}
+            className={`${linkBase} ${vertical ? 'mt-2 text-red-600 block' : 'text-red-600 inline-block'} cursor-pointer`}
+          >
+            Logout
+          </button>
+        </>
       ) : (
         // For guests, show both Login and Sign Up
         <>

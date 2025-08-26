@@ -1,11 +1,40 @@
 // File: src/app/welcome/page.tsx
-'use client'
 import { FC } from 'react'
+import type { Metadata } from "next";
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
 import { CheckCircleIcon, ChartBarIcon, DocumentTextIcon, UserGroupIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import Image from 'next/image'
+
+export const metadata: Metadata = {
+  title: {
+    default: 'SchoolMule: Student Management System',
+    template: '%s - SchoolMule'
+  },
+  description: "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+  alternates: { canonical: 'https://schoolmule.ca' },
+  robots: { index: true, follow: true },
+  applicationName: 'SchoolMule',
+  keywords: ["school management", "student information system", "attendance tracking", "gradebook", "parent portal", "education software"],
+  authors: [{ name: "SchoolMule" }],
+  metadataBase: new URL('https://schoolmule.ca'),
+  openGraph: {
+    title: "SchoolMule: School Management System",
+    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+    type: "website",
+    siteName: "SchoolMule",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SchoolMule: School Management System",
+    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+};
 
 const WelcomePage: FC = () => {
   return (

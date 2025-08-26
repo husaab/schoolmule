@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
-import AuthGuard from '@/components/AuthGuard';
-import Notification from '../components/shared/notification';
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
 import Script from "next/script";
 
@@ -63,11 +60,7 @@ export default function RootLayout({
       <body
         className={`${roboto.className} antialiased`}
       >
-        <Notification />
-        <Analytics />
-        <AuthGuard> 
           {children}
-        </AuthGuard>
       </body>
     </html>
   );
