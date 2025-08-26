@@ -53,7 +53,7 @@ export default function RootLayout({
             "@type": "WebSite",
             name: "SchoolMule",
             alternateName: ["SchoolMule"],
-            url: "https://schoolmule.ca/"
+            url: "https://schoolmule.ca"
           })}
         </Script>
       </head>
