@@ -10,6 +10,7 @@ import { createParentStudent } from '@/services/parentStudentService';
 import type { ParentStudentPayload, CreateParentStudentRequest } from '@/services/types/parentStudent';
 import type { StudentPayload } from '@/services/types/student';
 import type { ParentPayload } from '@/services/types/parent';
+import { getGradeNumericValue } from '@/lib/schoolUtils';
 
 interface AddRelationModalProps {
   isOpen: boolean;
@@ -67,7 +68,8 @@ const AddRelationModal: React.FC<AddRelationModalProps> = ({ isOpen, onClose, on
   // filter lists
   const grades = useMemo(
     () => Array.from(new Set(students.map(s => s.grade).filter(g => g != null)))
-      .sort((a,b) => (a! - b!)).map(g => g!.toString()),
+      .sort((a,b) => getGradeNumericValue(a!) - getGradeNumericValue(b!))
+      .map(g => g!.toString()),
     [students]
   );
 

@@ -1,5 +1,7 @@
 // File: src/services/types/student.ts
 
+import { GradeValue } from "@/lib/schoolUtils";
+
 /**
  * Represents a single student record as returned by the API
  */
@@ -8,7 +10,7 @@ export interface StudentPayload {
   name: string;
   homeroomTeacherId: string | null;
   school: string;
-  grade: number | null;
+  grade: GradeValue | null;
   oen: string | null;
   mother: {
     name: string | null;

@@ -11,6 +11,7 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
+import { getGradeOptions, GradeValue } from '@/lib/schoolUtils'
 
 interface ClassAddModalProps {
   isOpen: boolean
@@ -27,7 +28,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   const showNotification = useNotificationStore((state) => state.showNotification)
 
   // ------ LOCAL STATE ------
-  const [grade, setGrade] = useState<number | ''>('')
+  const [grade, setGrade] = useState<GradeValue | ''>('')
   const [subject, setSubject] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [termId, setTermId] = useState<string>('')
@@ -173,15 +174,15 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
             <select
               required
               value={grade}
-              onChange={(e) => setGrade(Number(e.target.value))}
+              onChange={(e) => setGrade(e.target.value as GradeValue)}
               className="w-full border rounded px-2 py-1"
             >
               <option value="" disabled>
                 Select grade
               </option>
-              {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-                <option key={g} value={g}>
-                  {g}
+              {getGradeOptions().map((gradeOption) => (
+                <option key={gradeOption.value} value={gradeOption.value}>
+                  {gradeOption.label}
                 </option>
               ))}
             </select>

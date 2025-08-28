@@ -134,7 +134,7 @@ const ParentStudentFeedbackPage: React.FC = () => {
                   {feedbackList.map((feedback, index) => {
                     const createdAt = feedback.createdAt
                     const senderName = feedback.senderName || 'Teacher'
-                    const courseName = feedback.subject 
+                    const courseName = feedback.courseName || feedback.subject 
                     const assessmentName = feedback.assessmentName
                     const score = feedback.score
                     const weightPercentage = feedback.weightPercentage
@@ -146,7 +146,6 @@ const ParentStudentFeedbackPage: React.FC = () => {
                             {new Date(createdAt).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-500 sm:hidden">
-                            {feedback.subject && <div>Subject: {feedback.subject}</div>}
                             {courseName && <div>Course: {courseName}</div>}
                             {senderName && <div>Teacher: {senderName}</div>}
                           </div>

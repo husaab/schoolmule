@@ -13,6 +13,7 @@ import { ParentStudentPayload } from '@/services/types/parentStudent'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { CalendarIcon, UserIcon, DocumentPlusIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import { getGradeNumericValue } from '@/lib/schoolUtils'
 
 interface GenerateIndividualInvoiceModalProps {
   isOpen: boolean
@@ -204,7 +205,8 @@ const GenerateIndividualInvoiceModal: React.FC<GenerateIndividualInvoiceModalPro
   // Get unique grades from students
   const grades = useMemo(
     () => Array.from(new Set(students.map(s => s.grade).filter(g => g != null)))
-      .sort((a, b) => (a! - b!)).map(g => g!.toString()),
+      .sort((a, b) => getGradeNumericValue(a!) - getGradeNumericValue(b!))
+      .map(g => g!.toString()),
     [students]
   )
 

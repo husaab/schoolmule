@@ -27,6 +27,7 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
+import { getGradeOptions, GradeValue } from '@/lib/schoolUtils'
 
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
@@ -52,7 +53,7 @@ export default function EditClassPage() {
 
   const [isEditing, setIsEditing] = useState(false)
   const [editSubject, setEditSubject] = useState('')
-  const [editGrade, setEditGrade] = useState<number | ''>('')
+  const [editGrade, setEditGrade] = useState<GradeValue | ''>('')
   const [editTeacherId, setEditTeacherId] = useState<string>('')    // store selected teacherId
   const [editTermId, setEditTermId] = useState<string>('')         // store selected termId
   const [teachers, setTeachers] = useState<TeacherPayload[]>([])     // list of teacher options
@@ -295,7 +296,7 @@ export default function EditClassPage() {
 
     try {
       const payload = {
-        grade:       editGrade as number,
+        grade:       editGrade as GradeValue,
         subject:     editSubject.trim(),
         teacherName: selectedTeacher.fullName,
         teacherId:   selectedTeacher.userId,
@@ -445,15 +446,15 @@ export default function EditClassPage() {
                   <select
                     required
                     value={editGrade}
-                    onChange={(e) => setEditGrade(Number(e.target.value))}
+                    onChange={(e) => setEditGrade(e.target.value as GradeValue)}
                     className="w-full border rounded px-2 py-1"
                   >
                     <option value="" disabled>
                       Select grade
                     </option>
-                    {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-                      <option key={g} value={g}>
-                        {g}
+                    {getGradeOptions().map((gradeOption) => (
+                      <option key={gradeOption.value} value={gradeOption.value}>
+                        {gradeOption.label}
                       </option>
                     ))}
                   </select>

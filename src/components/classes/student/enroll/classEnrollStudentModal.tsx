@@ -5,6 +5,7 @@ import Modal from '../../../shared/modal' // adjust path if needed
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { bulkEnrollStudentsToClass } from '@/services/classService'
 import { StudentPayload } from '@/services/types/student'
+import { GradeValue, getGradeOptions } from '@/lib/schoolUtils'
 
 interface ClassEnrollStudentModalProps {
   /** Whether the modal is open */
@@ -14,7 +15,7 @@ interface ClassEnrollStudentModalProps {
   /** ID of the class we’re enrolling into */
   classId: string
   /** Grade of this class (used when “enroll all in grade” is checked) */
-  classGrade: number
+  classGrade: GradeValue
   /** Array of all students in the school */
   allStudents: StudentPayload[]
   /** Array of student IDs already enrolled, so we don’t show them */
@@ -182,10 +183,9 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white text-black"
             >
               <option value="">All Grades</option>
-              {/* If your school uses grades 1 through 12, adjust the range */}
-              {Array.from({ length: 8 }, (_, i) => i + 1).map((g) => (
-                <option key={g} value={g.toString()}>
-                  Grade {g}
+              {getGradeOptions().map((gradeOption) => (
+                <option key={gradeOption.value} value={gradeOption.value.toString()}>
+                  Grade {gradeOption.label}
                 </option>
               ))}
             </select>

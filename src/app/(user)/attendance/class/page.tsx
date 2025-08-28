@@ -7,13 +7,14 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService';
 import { useRouter } from 'next/navigation';
 import { ClassPayload } from '@/services/types/class';
+import { getGradeOptions } from '@/lib/schoolUtils';
 
 const ClassAttendanceDashboard = () => {
   const user = useUserStore((state) => state.user);
   const router = useRouter();
   const [classes, setClasses] = useState<ClassPayload[]>([]);
   const [gradeFilter, setGradeFilter] = useState<string>('');
-  const [collapsedGrades, setCollapsedGrades] = useState<Set<number>>(new Set());
+  const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user?.id) return;
@@ -36,22 +37,13 @@ const ClassAttendanceDashboard = () => {
     }
   }, [user?.id, user.role, user.school]);
 
-  const availableGrades = Array.from(
-    new Set(
-      classes
-        .map((c) => c.grade)
-        .filter((g): g is number => g != null && !isNaN(g))
-        .map((g) => Number(g))
-    )
-  )
-    .filter((g) => g >= 1 && g <= 8)
-    .sort((a, b) => a - b);
+  const availableGrades = getGradeOptions();
 
   const filteredClasses = classes.filter((c) => {
     return gradeFilter === '' || String(c.grade) === gradeFilter;
   });
 
-  const toggleGrade = (grade: number) => {
+  const toggleGrade = (grade: string) => {
     setCollapsedGrades((prev) => {
       const next = new Set(prev);
       if (next.has(grade)) next.delete(grade);
@@ -79,28 +71,28 @@ const ClassAttendanceDashboard = () => {
               className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-cyan-400"
             >
               <option value="">All Grades</option>
-              {availableGrades.map((g) => (
-                <option key={g} value={String(g)}>
-                  Grade {g}
+              {availableGrades.map((gradeOption) => (
+                <option key={gradeOption.value} value={String(gradeOption.value)}>
+                  Grade {gradeOption.label}
                 </option>
               ))}
             </select>
           </div>
 
           {/* Class Sections by Grade */}
-          {availableGrades.map((g) => {
-            const classesForGrade = filteredClasses.filter((c) => Number(c.grade) === g);
+          {availableGrades.map((gradeOption) => {
+            const classesForGrade = filteredClasses.filter((c) => String(c.grade) === String(gradeOption.value));
             if (classesForGrade.length === 0) return null;
 
-            const isCollapsed = collapsedGrades.has(g);
+            const isCollapsed = collapsedGrades.has(String(gradeOption.value));
 
             return (
-              <div key={g} className="space-y-2">
+              <div key={gradeOption.value} className="space-y-2">
                 <div
-                  onClick={() => toggleGrade(g)}
+                  onClick={() => toggleGrade(String(gradeOption.value))}
                   className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer select-none"
                 >
-                  <span className="font-semibold text-lg">Grade {g}</span>
+                  <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
                   <svg
                     className={`w-5 h-5 transform transition-transform duration-200 ${
                       isCollapsed ? '-rotate-90' : 'rotate-0'

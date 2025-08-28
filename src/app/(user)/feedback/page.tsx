@@ -13,6 +13,7 @@ import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 import ViewFeedbackModal from '@/components/feedback/view/ViewFeedbackModal'
 import EditFeedbackModal from '@/components/feedback/edit/EditFeedbackModal'
 import DeleteFeedbackModal from '@/components/feedback/delete/DeleteFeedbackModal'
+import { getGradeNumericValue } from '@/lib/schoolUtils'
 
 const ViewEditFeedbackPage: React.FC = () => {
   const user = useUserStore(s => s.user)
@@ -77,7 +78,11 @@ const ViewEditFeedbackPage: React.FC = () => {
     
     // Sort by grade first, then by subject
     return unique.sort((a, b) => {
-      if (a.grade !== b.grade) return a.grade - b.grade
+      if (a.grade !== b.grade) {
+        const gradeA = getGradeNumericValue(a.grade)
+        const gradeB = getGradeNumericValue(b.grade)
+        return gradeA - gradeB
+      }
       return a.subject.localeCompare(b.subject)
     })
   }, [classes])
@@ -104,7 +109,12 @@ const ViewEditFeedbackPage: React.FC = () => {
       
       if (selectedOption) {
         const targetSubject = selectedOption.subject.toLowerCase()
-        filtered = filtered.filter(fb => (fb.subject || '').toLowerCase() === targetSubject)
+        filtered = filtered.filter(fb => {
+          // Check both subject and courseName fields for matches
+          const fbSubject = (fb.subject || '').toLowerCase()
+          const fbCourseName = (fb.courseName || '').toLowerCase()
+          return fbSubject === targetSubject || fbCourseName === targetSubject
+        })
       }
     }
 
@@ -116,7 +126,7 @@ const ViewEditFeedbackPage: React.FC = () => {
       })
     }
 
-    // Filter by search term (subject, body, student name)
+    // Filter by search term (subject, body, student name, course name)
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(fb => {
@@ -124,11 +134,13 @@ const ViewEditFeedbackPage: React.FC = () => {
         const body = (fb.body || '').toLowerCase()
         const studentName = (fb.recipientName || '').toLowerCase()
         const assessmentName = (fb.assessmentName || '').toLowerCase()
+        const courseName = (fb.courseName || '').toLowerCase()
         
         return subject.includes(term) || 
                body.includes(term) || 
                studentName.includes(term) ||
-               assessmentName.includes(term)
+               assessmentName.includes(term) ||
+               courseName.includes(term)
       })
     }
 
@@ -239,6 +251,9 @@ const ViewEditFeedbackPage: React.FC = () => {
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                       Subject
                     </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Course
+                    </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                       Assessment
                     </th>
@@ -272,6 +287,7 @@ const ViewEditFeedbackPage: React.FC = () => {
                           <div className="text-xs text-gray-500 md:hidden">
                             <div>Parent: {parentName}</div>
                             {feedback.subject && <div>Subject: {feedback.subject}</div>}
+                            {feedback.courseName && <div>Course: {feedback.courseName}</div>}
                             <div>Date: {new Date(createdAt).toLocaleDateString()}</div>
                           </div>
                         </td>
@@ -280,6 +296,9 @@ const ViewEditFeedbackPage: React.FC = () => {
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                           {feedback.subject || '—'}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">
+                          {feedback.courseName || '—'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
                           {assessmentName || '—'}

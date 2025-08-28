@@ -1,3 +1,5 @@
+import { GradeValue } from "@/lib/schoolUtils";
+
 export interface ParentStudentPayload {
   parentStudentLinkId: string;
   studentId: string;
@@ -10,7 +12,7 @@ export interface ParentStudentPayload {
   createdAt: string;
   student?: {
     name: string;
-    grade: number;
+    grade: GradeValue;
   };
   parentUser?: {
     firstName: string;

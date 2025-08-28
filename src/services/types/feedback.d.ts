@@ -18,6 +18,7 @@ export interface FeedbackPayload {
   assessmentName: string;
   score: number;
   weightPercentage: number;
+  courseName?: string;
   createdAt: string;
   lastModifiedAt: string;
 }

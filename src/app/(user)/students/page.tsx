@@ -12,6 +12,7 @@ import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
+import { getGradeOptions } from '@/lib/schoolUtils';
 
 const StudentsPage = () => {
 
@@ -51,10 +52,7 @@ const StudentsPage = () => {
         loadStudents();
     }, [user.school, loadStudents]);
 
-   const grades = Array.from(
-    new Set(students.map(s => s.grade)
-        .filter((g): g is number => g != null)
-        .map(g => Number(g)))).filter(g => !isNaN(g)).sort((a, b) => a - b);
+   const grades = getGradeOptions();
 
     const filteredStudents = students.filter(s => {
       const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -115,8 +113,8 @@ const StudentsPage = () => {
                                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                                     >
                                         <option value="">All Grades</option>
-                                        {grades.map(grade => (
-                                            <option key={grade} value={String(grade)}>Grade {grade}</option>
+                                        {grades.map(gradeOption => (
+                                            <option key={gradeOption.value} value={String(gradeOption.value)}>Grade {gradeOption.label}</option>
                                         ))}
                                     </select>
                                 </div>

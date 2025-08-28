@@ -10,6 +10,7 @@ import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
+import { getGradeOptions } from '@/lib/schoolUtils'
 
 const GradebookDashboard: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -20,7 +21,7 @@ const GradebookDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [gradeFilter, setGradeFilter] = useState<string>('')
   const [termFilter, setTermFilter] = useState<string>('active')
-  const [collapsedGrades, setCollapsedGrades] = useState<Set<number>>(new Set())
+  const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
 
   // 1) Fetch all classes taught by this teacher
   useEffect(() => {
@@ -72,16 +73,7 @@ const GradebookDashboard: React.FC = () => {
   }, [user?.id, user?.school, user.role])
 
   // Build the unique list of grades for the classes this teacher teaches
-  const availableGrades = Array.from(
-    new Set(
-      classes
-        .map((c) => c.grade)
-        .filter((g): g is number => g != null && !isNaN(g))
-        .map((g) => Number(g))
-    )
-  )
-    .filter((g) => g >= 1 && g <= 8)
-    .sort((a, b) => a - b)
+  const availableGrades = getGradeOptions()
 
   // Get active term for default filtering
   const activeTerm = terms.find(t => t.isActive);
@@ -102,7 +94,7 @@ const GradebookDashboard: React.FC = () => {
     return matchesGrade && matchesTerm
   })
 
-  const toggleGrade = (grade: number) => {
+  const toggleGrade = (grade: string) => {
     setCollapsedGrades((prev) => {
       const next = new Set(prev)
       if (next.has(grade)) next.delete(grade)
@@ -163,9 +155,9 @@ const GradebookDashboard: React.FC = () => {
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   >
                     <option value="">All Grades</option>
-                    {availableGrades.map((g) => (
-                      <option key={g} value={String(g)}>
-                        Grade {g}
+                    {availableGrades.map((gradeOption) => (
+                      <option key={gradeOption.value} value={String(gradeOption.value)}>
+                        Grade {gradeOption.label}
                       </option>
                     ))}
                   </select>
@@ -206,22 +198,22 @@ const GradebookDashboard: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {/* Collapsible grade sections */}
-                {availableGrades.map((g) => {
+                {availableGrades.map((gradeOption) => {
                   const classesForGrade = filteredClasses.filter(
-                    (c) => Number(c.grade) === g
+                    (c) => String(c.grade) === String(gradeOption.value)
                   )
                   if (classesForGrade.length === 0) return null
 
-                  const isCollapsed = collapsedGrades.has(g)
+                  const isCollapsed = collapsedGrades.has(String(gradeOption.value))
 
                   return (
-                    <div key={g} className="space-y-2">
+                    <div key={gradeOption.value} className="space-y-2">
                       {/* Grade header */}
                       <div
-                        onClick={() => toggleGrade(g)}
+                        onClick={() => toggleGrade(String(gradeOption.value))}
                         className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer select-none"
                       >
-                        <span className="font-semibold text-lg">Grade {g}</span>
+                        <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
                         <svg
                           className={`w-5 h-5 transform transition-transform duration-200 ${
                             isCollapsed ? '-rotate-90' : 'rotate-0'

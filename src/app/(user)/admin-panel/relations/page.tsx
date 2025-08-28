@@ -10,6 +10,7 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import AddRelationModal from '@/components/relation/add/page';
 import DeleteRelationModal from '@/components/relation/delete/page';
 import EditRelationModal from '@/components/relation/edit/page';
+import { getGradeNumericValue } from '@/lib/schoolUtils';
 
 const ParentStudentRelationsPage = () => {
   const user = useUserStore((state) => state.user);
@@ -44,11 +45,18 @@ const ParentStudentRelationsPage = () => {
   }, [user.school, notify]);
 
   const grades = useMemo(() => {
-    const set = new Set<number>();
+    const set = new Set<string>();
     relations.forEach(r => {
-      if (r.student?.grade != null) set.add(r.student.grade);
+      if (r.student?.grade != null) set.add(String(r.student.grade));
     });
-    return Array.from(set).sort((a, b) => a - b);
+    return Array.from(set).sort((a, b) => {
+      // Parse string back to GradeValue for numeric comparison
+      const gradeA = a === 'JK' || a === 'SK' ? a : parseInt(a);
+      const gradeB = b === 'JK' || b === 'SK' ? b : parseInt(b);
+      const numA = getGradeNumericValue(gradeA);
+      const numB = getGradeNumericValue(gradeB);
+      return numA - numB;
+    });
   }, [relations]);
 
    const filteredRelations = relations
@@ -106,7 +114,7 @@ const ParentStudentRelationsPage = () => {
           >
             <option value="">All Grades</option>
             {grades.map(g => (
-              <option key={g} value={String(g)}>
+              <option key={g} value={g}>
                 Grade {g}
               </option>
             ))}

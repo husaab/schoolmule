@@ -1,12 +1,14 @@
 // src/services/types/class.ts
 
+import { GradeValue } from "@/lib/schoolUtils";
+
 /**
  * Represents a single class record as returned by the API
  */
 export interface ClassPayload {
   classId:      string;
   school:       string;
-  grade:        number;
+  grade:        GradeValue;
   subject:      string;
   teacherName:  string;
   teacherId:    string;

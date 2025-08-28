@@ -282,6 +282,15 @@ export const upsertScoresByClass = async (
  */
 
 // src/services/classService.ts
+
+
+// Get token function (avoid circular import)
+const getToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
+};
+
+
 export const downloadGradebookExcel = async (
   classId: string
 ): Promise<Blob> => {
@@ -289,10 +298,13 @@ export const downloadGradebookExcel = async (
   const url = `${baseURL}/studentAssessments/classes/${encodeURIComponent(
     classId
   )}/scores/csv`;
-
+  const token = getToken();
   const response = await fetch(url, {
     method: "GET",
-    credentials: "include",    // ← send cookie
+    headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
   });
 
   if (!response.ok) {
