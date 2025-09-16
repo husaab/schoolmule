@@ -162,7 +162,6 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
         <div>
           <label className="block text-sm">Mother Email</label>
           <input
-            type="email"
             value={motherEmail}
             placeholder='e.g. marydoe@gmail.com'
             onChange={(e) => setMotherEmail(e.target.value)}
@@ -189,7 +188,6 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
         <div>
           <label className="block text-sm">Father Email</label>
           <input
-            type="email"
             value={fatherEmail}
             placeholder='e.g. johndoe@gmail.com'
             onChange={(e) => setFatherEmail(e.target.value)}

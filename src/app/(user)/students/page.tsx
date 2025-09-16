@@ -213,7 +213,9 @@ const StudentsPage = () => {
                                                     {student.homeroomTeacherId ? 'Assigned' : 'Not Assigned'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {student.mother.name || student.father.name || 'No Contact'}
+                                                    {(student.mother.name && student.mother.name.toLowerCase() !== 'n/a' ? student.mother.name : null) || 
+                                                     (student.father.name && student.father.name.toLowerCase() !== 'n/a' ? student.father.name : null) || 
+                                                     'No Contact'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <div className="flex space-x-2">
