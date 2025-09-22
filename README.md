@@ -27,4 +27,6 @@ To launch, follow these steps:
 ## Usage
 Once the application is running, you can access it at `http://localhost:3000`. 
 
+The backend is in a seperate repository
+
 
