@@ -18,6 +18,7 @@ export default function GenerateReportCardsPage() {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [generateAll, setGenerateAll] = useState<boolean>(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const showNotification = useNotificationStore(state => state.showNotification);
 
   const [terms, setTerms] = useState<TermPayload[]>([]);
@@ -35,6 +36,23 @@ export default function GenerateReportCardsPage() {
       return acc;
     }, {} as Record<string, StudentPayload[]>);
   }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm) return students;
+    return students.filter(student => 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [students, searchTerm]);
+
+  const filteredGroupedByGrade = useMemo(() => {
+    if (!searchTerm) return groupedByGrade;
+    return filteredStudents.reduce((acc, student) => {
+      const grade = `Grade ${student.grade ?? '-'}`;
+      acc[grade] = acc[grade] || [];
+      acc[grade].push(student);
+      return acc;
+    }, {} as Record<string, StudentPayload[]>);
+  }, [filteredStudents, groupedByGrade, searchTerm]);
 
   useEffect(() => {
     if (user.school) {
@@ -80,22 +98,38 @@ export default function GenerateReportCardsPage() {
     if (generateAll) {
       const allIds = students.map((s) => s.studentId);
       setSelectedStudents(new Set(allIds));
-    } else if (selectedGrade) {
-      const gradeIds = groupedByGrade[selectedGrade]?.map((s) => s.studentId) || [];
-      setSelectedStudents(new Set(gradeIds));
     } else {
       setSelectedStudents(new Set());
     }
-  }, [generateAll, selectedGrade, students, groupedByGrade]);
+  }, [generateAll, students]);
 
   const handleSelectStudent = (id: string) => {
-    if (generateAll || selectedGrade) return;
+    if (generateAll) return;
     setSelectedStudents((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
       } else {
         newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllInGrade = (grade: string) => {
+    if (generateAll) return;
+    const gradeStudents = filteredGroupedByGrade[grade] || [];
+    const gradeIds = gradeStudents.map(s => s.studentId);
+    const allSelected = gradeIds.every(id => selectedStudents.has(id));
+    
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all in grade
+        gradeIds.forEach(id => newSet.delete(id));
+      } else {
+        // Select all in grade
+        gradeIds.forEach(id => newSet.add(id));
       }
       return newSet;
     });
@@ -143,7 +177,7 @@ export default function GenerateReportCardsPage() {
           {/* Sticky Header */}
           <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
             <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-black">Select term:</label>
                   {loadingTerms ? (
@@ -167,7 +201,7 @@ export default function GenerateReportCardsPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Or select specific grade:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
                   <select
                     disabled={generateAll}
                     value={selectedGrade}
@@ -186,6 +220,18 @@ export default function GenerateReportCardsPage() {
                         </option>
                       ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search students:</label>
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    disabled={generateAll}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100"
+                  />
                 </div>
               </div>
 
@@ -209,16 +255,23 @@ export default function GenerateReportCardsPage() {
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
                   Selected: {selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''}
+                  {searchTerm && (
+                    <span className="ml-2 text-blue-600">
+                      (Filtered by: &ldquo;{searchTerm}&rdquo;)
+                    </span>
+                  )}
                 </p>
-                {(generateAll || selectedGrade) && (
+                {(generateAll || selectedGrade || searchTerm) && (
                   <button
                     onClick={() => {
                       setGenerateAll(false);
                       setSelectedGrade('');
+                      setSearchTerm('');
+                      setSelectedStudents(new Set());
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
-                    Clear selection
+                    Clear all filters
                   </button>
                 )}
               </div>
@@ -228,22 +281,44 @@ export default function GenerateReportCardsPage() {
           {/* Students Content */}
           <div className="p-6 overflow-y-auto max-h-[60vh]">
             <div className="space-y-4">
-              {Object.entries(groupedByGrade)
+              {Object.entries(filteredGroupedByGrade)
                 .sort(([a], [b]) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
-                .map(([grade, students]) => {
+                .map(([grade, gradeStudents]) => {
                   const collapsed = selectedGrade && grade !== selectedGrade;
                   if (generateAll || !selectedGrade || !collapsed) {
+                    const gradeIds = gradeStudents.map(s => s.studentId);
+                    const allInGradeSelected = gradeIds.length > 0 && gradeIds.every(id => selectedStudents.has(id));
+                    const someInGradeSelected = gradeIds.some(id => selectedStudents.has(id));
+                    
                     return (
                       <div key={grade} className="space-y-2">
-                        {/* Grade header */}
+                        {/* Grade header with select all */}
                         <div className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg">
-                          <span className="font-semibold text-lg">{grade}</span>
-                          <span className="text-sm">{students.length} students</span>
+                          <div className="flex items-center space-x-3">
+                            <span className="font-semibold text-lg">{grade}</span>
+                            <span className="text-sm">({gradeStudents.length} student{gradeStudents.length !== 1 ? 's' : ''})</span>
+                          </div>
+                          {!generateAll && gradeStudents.length > 0 && (
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={allInGradeSelected}
+                                ref={(el) => {
+                                  if (el) el.indeterminate = someInGradeSelected && !allInGradeSelected;
+                                }}
+                                onChange={() => handleSelectAllInGrade(grade)}
+                                className="w-4 h-4 text-blue-200 bg-white/20 border-white/40 rounded focus:ring-blue-300 focus:ring-2"
+                              />
+                              <span className="text-sm font-medium">
+                                {allInGradeSelected ? 'Deselect All' : 'Select All'}
+                              </span>
+                            </label>
+                          )}
                         </div>
 
                         {/* Student cards */}
                         <div className="space-y-2">
-                          {students.map((student) => (
+                          {gradeStudents.map((student) => (
                             <div
                               key={student.studentId}
                               className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
@@ -254,7 +329,7 @@ export default function GenerateReportCardsPage() {
                               </div>
                               <input
                                 type="checkbox"
-                                disabled={generateAll || !!selectedGrade}
+                                disabled={generateAll}
                                 checked={selectedStudents.has(student.studentId)}
                                 onChange={() => handleSelectStudent(student.studentId)}
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
@@ -268,6 +343,23 @@ export default function GenerateReportCardsPage() {
                   return null;
                 })}
             </div>
+            
+            {/* No results message */}
+            {Object.keys(filteredGroupedByGrade).length === 0 && !generateAll && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">
+                  {searchTerm ? `No students found matching "${searchTerm}"` : 'No students found'}
+                </p>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -294,8 +386,8 @@ export default function GenerateReportCardsPage() {
       <GenerateReportCardModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        studentIds={[...selectedStudents]}
-        term={term}
+        isLoading={isLoading}
+        resultMessage={resultMessage || ''}
       />
 
       <style jsx global>{`

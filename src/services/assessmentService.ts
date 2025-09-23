@@ -5,6 +5,8 @@ import {
   AssessmentPayload,
   AssessmentResponse,
   AllAssessmentsResponse,
+  CreateAssessmentRequest,
+  ParentAssessmentCreateResponse,
 } from './types/assessment'
 
 /**
@@ -30,18 +32,15 @@ export const getAssessmentsByClass = async (
 }
 
 /**
- * Create a new assessment
+ * Create a new assessment (can be standalone, parent, or child)
  * POST /assessments
  *
- * @param payload  Must include:
- *   - classId:        string
- *   - name:           string
- *   - weightPercent:  number
+ * @param payload  Assessment creation payload with optional parent-child fields
  */
 export const createAssessment = async (
-  payload: Omit<AssessmentPayload, 'assessmentId' | 'createdAt' | 'lastModifiedAt'>
-): Promise<AssessmentResponse> => {
-  return apiClient<AssessmentResponse>(`/assessments`, {
+  payload: CreateAssessmentRequest
+): Promise<AssessmentResponse | ParentAssessmentCreateResponse> => {
+  return apiClient<AssessmentResponse | ParentAssessmentCreateResponse>(`/assessments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: payload,

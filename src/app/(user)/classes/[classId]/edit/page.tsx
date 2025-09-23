@@ -342,8 +342,10 @@ export default function EditClassPage() {
         : b.weightPercent - a.weightPercent
     )
 
-  // ─── Compute total weight ───
-  const totalWeight = assessments.reduce((sum, a) => sum + a.weightPercent, 0)
+  // ─── Compute total weight (only parent and standalone assessments) ───
+  const totalWeight = assessments
+    .filter(a => !a.parentAssessmentId) // Only include parent and standalone assessments
+    .reduce((sum, a) => sum + a.weightPercent, 0)
 
   // ─── Remove a student (opens confirm modal) ───
   const handleRemoveClick = (stu: StudentPayload) => {
@@ -675,34 +677,108 @@ export default function EditClassPage() {
                   ) : filteredAssessments.length === 0 ? (
                     <p className="text-gray-600">No assessments found.</p>
                   ) : (
-                    filteredAssessments.map((a) => (
-                      <div
-                        key={a.assessmentId}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded shadow-sm"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-800">{a.name}</p>
-                          <p className="text-sm text-gray-600">Weight: {a.weightPercent}%</p>
-                          <p className="text-xs text-gray-500">
-                            Created: {new Date(a.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <button
-                            onClick={() => setEditingAssessment(a)}
-                            className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
+                    filteredAssessments.map((a) => {
+                      // Check if this is a child assessment that should be grouped under its parent
+                      if (a.parentAssessmentId) {
+                        // Skip rendering child assessments individually - they'll be shown under parent
+                        return null;
+                      }
+
+                      // Get child assessments for this parent (if any)
+                      const childAssessments = a.isParent 
+                        ? filteredAssessments.filter(child => child.parentAssessmentId === a.assessmentId)
+                        : [];
+
+                      return (
+                        <div key={a.assessmentId} className="space-y-2">
+                          {/* Parent/Standalone Assessment */}
+                          <div
+                            className={`flex items-center justify-between p-4 border rounded shadow-sm ${
+                              a.isParent 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-white border-gray-200'
+                            }`}
                           >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeleteAssessmentTarget(a)}
-                            className="text-2xl text-red-600 hover:text-red-800 font-bold px-2 cursor-pointer"
-                          >
-                            ×
-                          </button>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <p className="font-medium text-gray-800">{a.name}</p>
+                                {a.isParent && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Parent
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">Weight: {a.weightPercent}%</p>
+                              <p className="text-xs text-gray-500">
+                                Created: {new Date(a.createdAt).toLocaleDateString()}
+                              </p>
+                              {a.isParent && childAssessments.length > 0 && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                  Contains {childAssessments.length} child assessment{childAssessments.length !== 1 ? 's' : ''}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={() => setEditingAssessment(a)}
+                                className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setDeleteAssessmentTarget(a)}
+                                className="text-2xl text-red-600 hover:text-red-800 font-bold px-2 cursor-pointer"
+                                title={a.isParent ? "Delete parent and all child assessments" : "Delete assessment"}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Child Assessments (indented) */}
+                          {a.isParent && childAssessments.length > 0 && (
+                            <div className="ml-6 space-y-1">
+                              {childAssessments.map((child) => (
+                                <div
+                                  key={child.assessmentId}
+                                  className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded"
+                                >
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-gray-400">└─</span>
+                                      <p className="font-medium text-gray-700 text-sm">{child.name}</p>
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                        Child
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-4 ml-4">
+                                      <p className="text-xs text-gray-500">Weight: {child.weightPercent}%</p>
+                                      <p className="text-xs text-gray-400">
+                                        Order: {child.sortOrder || '-'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => setEditingAssessment(child)}
+                                      className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 cursor-pointer"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteAssessmentTarget(child)}
+                                      className="text-lg text-red-500 hover:text-red-700 font-bold px-1 cursor-pointer"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))
+                      );
+                    }).filter(Boolean) // Remove null entries
                   )}
                 </div>
               </div>

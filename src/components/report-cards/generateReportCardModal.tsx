@@ -1,49 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { generateBulkReportCards } from '@/services/reportCardService';
+import { useEffect } from 'react';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  studentIds: string[];
-  term: string;
+  isLoading: boolean;
+  resultMessage: string;
 };
 
-export default function GenerateReportCardModal({ isOpen, onClose, studentIds, term }: Props) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [resultMessage, setResultMessage] = useState('');
-
+export default function GenerateReportCardModal({ isOpen, onClose, isLoading, resultMessage }: Props) {
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        if (isLoading) {
+      if (isLoading) {
         e.preventDefault();
         e.returnValue = ''; // Required for Chrome to show confirmation dialog
-        }
+      }
     };
 
-    if (isOpen) {
-      setIsLoading(true);
+    if (isOpen && isLoading) {
       window.addEventListener('beforeunload', handleBeforeUnload);
-      setResultMessage('');
-
-      generateBulkReportCards({ studentIds, term })
-        .then((res) => {
-          const successCount = res.generated.length;
-          setResultMessage(`Generated ${successCount} report card(s).`);
-        })
-        .catch(() => {
-          setResultMessage('An error occurred while generating report cards.');
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
     }
 
     return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-    } ;
-  }, [isOpen, studentIds, term, isLoading]);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isOpen, isLoading]);
 
   if (!isOpen) return null;
 

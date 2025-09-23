@@ -69,7 +69,7 @@ export default function ViewReportCardsPage() {
   // Fetch report cards when term is selected
   useEffect(() => {
     if (user.school && term) {
-      getGeneratedReportCards(term).then((res) => {
+      getGeneratedReportCards(term, user.school).then((res) => {
         if (res.status === 'success') {
           setReportCards(res.data);
         }

@@ -58,27 +58,29 @@ export const generateBulkReportCards = async (
 };
 
 /**
- * GET /report-cards/view?term=...
- * → Get all generated report cards for a specific term
+ * GET /report-cards/view?term=...&school=...
+ * → Get all generated report cards for a specific term and school
  */
 export const getGeneratedReportCards = async (
-  term: string
+  term: string,
+  school: string
 ): Promise<ReportCardStatusResponse> => {
   return apiClient<ReportCardStatusResponse>(
-    `/report-cards/view?term=${encodeURIComponent(term)}`
+    `/report-cards/view?term=${encodeURIComponent(term)}&school=${encodeURIComponent(school)}`
   );
 };
 
 /**
- * GET /report-cards/view?term=...
- * → Get all generated report cards for a specific term
+ * GET /report-cards/view/student?studentId=...&term=...&school=...
+ * → Get all generated report cards for a specific student, term, and school
  */
 export const getGeneratedReportCardsByStudentId = async (
   studentId: string,
-  term: string
+  term: string,
+  school: string
 ): Promise<ReportCardStatusResponse> => {
   return apiClient<ReportCardStatusResponse>(
-    `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`
+    `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}&school=${encodeURIComponent(school)}`
   );
 };
 

@@ -20,6 +20,7 @@ import type { AssessmentPayload } from '@/services/types/assessment'
 import { getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
 import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
+import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 
 interface ScoreRow {
   student_id: string
@@ -43,6 +44,10 @@ const GradebookClass = () => {
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+
+  // Child assessments modal state
+  const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
+  const [isChildAssessmentsModalOpen, setIsChildAssessmentsModalOpen] = useState(false);
 
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means “no entry yet”)
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
@@ -135,6 +140,27 @@ const GradebookClass = () => {
 
   if (!classData) return null
 
+  // Filter assessments to show only parent and standalone (hide children)
+  console.log('=== DEBUGGING ASSESSMENTS ===')
+  console.log('Total assessments:', assessments.length)
+  assessments.forEach((a, index) => {
+    console.log(`Assessment ${index}:`, {
+      name: a.name,
+      assessmentId: a.assessmentId,
+      parentAssessmentId: a.parentAssessmentId,
+      isParent: a.isParent,
+      typeof_parentAssessmentId: typeof a.parentAssessmentId,
+      typeof_isParent: typeof a.isParent,
+      parentAssessmentId_is_null: a.parentAssessmentId === null,
+      parentAssessmentId_is_undefined: a.parentAssessmentId === undefined,
+      should_be_displayed: !a.parentAssessmentId
+    })
+  })
+  
+  const displayedAssessments = assessments.filter(a => !a.parentAssessmentId)
+  console.log('Displayed assessments count:', displayedAssessments.length)
+  console.log('Displayed assessment names:', displayedAssessments.map(a => a.name))
+
   // 1) Build a quick lookup: "studentId|assessmentId" → existing score (or null)
   const existingScoreMap: Record<string, number | null> = {}
   scoresMatrix.forEach((row) => {
@@ -198,22 +224,47 @@ const GradebookClass = () => {
   // 3) Sum up each assessment’s contribution for a given student (score × weight/100)
   const computeTotalForStudent = (studentId: string) => {
     let total = 0
-    assessments.forEach((a) => {
-      const key = `${studentId}|${a.assessmentId}`
+    displayedAssessments.forEach((a) => {
+      let scoreToUse = 0
 
-      // If the teacher has typed something, use editedScores[key]; otherwise fall back to existingScoreMap
-      const rawValue =
-        editedScores[key] !== undefined
+      if (a.isParent) {
+        // For parent assessments, calculate weighted average of child scores
+        const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
+        if (childAssessments.length > 0) {
+          let weightedSum = 0
+          let totalChildWeight = 0
+          childAssessments.forEach(child => {
+            const childKey = `${studentId}|${child.assessmentId}`
+            const childRawValue = editedScores[childKey] !== undefined
+              ? editedScores[childKey]
+              : existingScoreMap[childKey] ?? null
+            
+            const childScore = typeof childRawValue === 'number'
+              ? childRawValue
+              : childRawValue !== null && childRawValue !== undefined
+              ? parseFloat(String(childRawValue)) || 0
+              : 0
+            
+            weightedSum += (childScore * child.weightPercent)
+            totalChildWeight += child.weightPercent
+          })
+          scoreToUse = totalChildWeight > 0 ? weightedSum / totalChildWeight : 0
+        }
+      } else {
+        // For standalone assessments, use direct score
+        const key = `${studentId}|${a.assessmentId}`
+        const rawValue = editedScores[key] !== undefined
           ? editedScores[key]
           : existingScoreMap[key] ?? null
 
-      const scoreNumber =
-        typeof rawValue === 'number'
-            ? rawValue
-            : rawValue !== null && rawValue !== undefined
-            ? parseFloat(String(rawValue)) || 0
-            : 0
-      total += (scoreNumber * a.weightPercent) / 100
+        scoreToUse = typeof rawValue === 'number'
+          ? rawValue
+          : rawValue !== null && rawValue !== undefined
+          ? parseFloat(String(rawValue)) || 0
+          : 0
+      }
+      
+      total += (scoreToUse * a.weightPercent) / 100
     })
     return total
   }
@@ -261,6 +312,12 @@ const GradebookClass = () => {
     }
   }
 
+  // Handler for opening child assessments modal
+  const handleParentAssessmentClick = (parentAssessment: AssessmentPayload) => {
+    setSelectedParentAssessment(parentAssessment)
+    setIsChildAssessmentsModalOpen(true)
+  }
+
   return (
     <>
       <Navbar />
@@ -272,8 +329,8 @@ const GradebookClass = () => {
             Gradebook: {classData.subject} – Grade {classData.grade}
           </h1>
           <p className="text-gray-600 mt-1">
-            {students.length} students &ndash; {assessments.length}{' '}
-            {assessments.length === 1 ? 'assessment' : 'assessments'}
+            {students.length} students &ndash; {displayedAssessments.length}{' '}
+            {displayedAssessments.length === 1 ? 'assessment' : 'assessments'}
           </p>
           {classData.termName && (
             <p className="text-gray-600 mt-1">
@@ -302,12 +359,23 @@ const GradebookClass = () => {
                 <th className="px-4 py-2 text-left text-gray-700">
                   Student Name
                 </th>
-                {assessments.map((a: AssessmentPayload) => (
+                {displayedAssessments.map((a: AssessmentPayload) => (
                   <th
                     key={a.assessmentId}
-                    className="px-4 py-2 text-center text-gray-700 whitespace-nowrap"
+                    className={`px-4 py-2 text-center text-gray-700 whitespace-nowrap ${
+                      a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-200' : ''
+                    }`}
+                    onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
+                    title={a.isParent ? 'Click to edit child assessments' : undefined}
                   >
-                    <div className="truncate">{a.name}</div>
+                    <div className="truncate">
+                      {a.name}
+                    </div>
+                    <div>
+                        {a.isParent && (
+                          <span className="ml-1 text-xs text-blue-600 font-medium">(Parent)</span>
+                        )}
+                    </div>
                     <div className="text-xs text-gray-500">
                       ({a.weightPercent}%)
                     </div>
@@ -322,7 +390,7 @@ const GradebookClass = () => {
               {students.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={2 + assessments.length}
+                    colSpan={2 + displayedAssessments.length}
                     className="px-4 py-6 text-center text-gray-600"
                   >
                     No students are currently enrolled in this class.
@@ -340,35 +408,75 @@ const GradebookClass = () => {
                         {stu.name}
                       </td>
 
-                      {assessments.map((a: AssessmentPayload) => {
-                        const key = `${stu.studentId}|${a.assessmentId}`
-                        const currentValue =
-                          editedScores[key] !== undefined
-                            ? editedScores[key]
-                            : existingScoreMap[key] ?? ''
+                      {displayedAssessments.map((a: AssessmentPayload) => {
+                        if (a.isParent) {
+                          // For parent assessments, show calculated score (read-only)
+                          const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
+                          let calculatedScore = 0
+                          if (childAssessments.length > 0) {
+                            let weightedSum = 0
+                            let totalChildWeight = 0
+                            childAssessments.forEach(child => {
+                              const childKey = `${stu.studentId}|${child.assessmentId}`
+                              const childRawValue = editedScores[childKey] !== undefined
+                                ? editedScores[childKey]
+                                : existingScoreMap[childKey] ?? null
+                              
+                              const childScore = typeof childRawValue === 'number'
+                                ? childRawValue
+                                : childRawValue !== null && childRawValue !== undefined
+                                ? parseFloat(String(childRawValue)) || 0
+                                : 0
+                              
+                              weightedSum += (childScore * child.weightPercent)
+                              totalChildWeight += child.weightPercent
+                            })
+                            calculatedScore = totalChildWeight > 0 ? weightedSum / totalChildWeight : 0
+                          }
 
-                        return (
-                          <td
-                            key={a.assessmentId}
-                            className="px-1 py-1 text-center text-gray-800"
-                          >
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="1"
-                              className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                              value={currentValue}
-                              onChange={(e) =>
-                                handleScoreChange(
-                                  stu.studentId,
-                                  a.assessmentId,
-                                  e
-                                )
-                              }
-                            />
-                          </td>
-                        )
+                          return (
+                            <td
+                              key={a.assessmentId}
+                              className="px-1 py-1 text-center text-gray-800 bg-blue-50 cursor-pointer hover:bg-blue-100"
+                              title="Click to edit child assessments"
+                              onClick={() => handleParentAssessmentClick(a)}
+                            >
+                              <div className="w-16 mx-auto border border-blue-200 rounded p-1 text-center bg-blue-50 text-blue-800 font-medium">
+                                {calculatedScore.toFixed(1)}
+                              </div>
+                            </td>
+                          )
+                        } else {
+                          // For standalone assessments, show editable input
+                          const key = `${stu.studentId}|${a.assessmentId}`
+                          const currentValue =
+                            editedScores[key] !== undefined
+                              ? editedScores[key]
+                              : existingScoreMap[key] ?? ''
+
+                          return (
+                            <td
+                              key={a.assessmentId}
+                              className="px-1 py-1 text-center text-gray-800"
+                            >
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                value={currentValue}
+                                onChange={(e) =>
+                                  handleScoreChange(
+                                    stu.studentId,
+                                    a.assessmentId,
+                                    e
+                                  )
+                                }
+                              />
+                            </td>
+                          )
+                        }
                       })}
 
                       <td className="px-4 py-2 text-center text-gray-800">
@@ -430,6 +538,22 @@ const GradebookClass = () => {
           onClose={() => setIsFeedbackModalOpen(false)}
           studentId={selectedStudentId}
           classId={classId}
+        />
+      )}
+
+      {selectedParentAssessment && (
+        <ChildAssessmentsModal
+          isOpen={isChildAssessmentsModalOpen}
+          onClose={() => {
+            setSelectedParentAssessment(null)
+            setIsChildAssessmentsModalOpen(false)
+          }}
+          parentAssessment={selectedParentAssessment}
+          childAssessments={assessments.filter(a => a.parentAssessmentId === selectedParentAssessment.assessmentId)}
+          students={students}
+          scoresMatrix={scoresMatrix}
+          editedScores={editedScores}
+          onScoreChange={handleScoreChange}
         />
       )}
     </>

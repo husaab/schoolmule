@@ -4,12 +4,15 @@
  * Represents a single assessment (marking-scheme item) as returned by the API
  */
 export interface AssessmentPayload {
-  assessmentId:   string
-  classId:        string
-  name:           string
-  weightPercent:  number
-  createdAt:      string
-  lastModifiedAt: string
+  assessmentId:       string
+  classId:            string
+  name:               string
+  weightPercent:      number
+  createdAt:          string
+  lastModifiedAt:     string
+  parentAssessmentId?: string | null
+  isParent:           boolean
+  sortOrder?:         number | null
 }
 
 /**
@@ -28,4 +31,34 @@ export interface AllAssessmentsResponse {
   status: string
   data:   AssessmentPayload[]
   message?: string
+}
+
+/**
+ * Response for creating parent assessment with children
+ */
+export interface ParentAssessmentCreateResponse {
+  status: string
+  data: {
+    parent: AssessmentPayload
+    children: AssessmentPayload[]
+  }
+  message?: string
+}
+
+/**
+ * Request payload for creating assessments (including parent-child)
+ */
+export interface CreateAssessmentRequest {
+  classId: string
+  name: string
+  weightPercent: number
+  isParent: boolean
+  childCount?: number
+  parentAssessmentId?: string | null
+  sortOrder?: number | null
+  childrenData?: Array<{
+    name: string
+    weightPercent: number
+    sortOrder: number
+  }>
 }
