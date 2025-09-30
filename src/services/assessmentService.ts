@@ -109,3 +109,28 @@ export const getStudentAssessment = async (
     `/studentAssessments/${encodeURIComponent(studentId)}/${encodeURIComponent(assessmentId)}`
   )
 }
+
+/**
+ * Batch update multiple assessments
+ * PATCH /assessments/batch
+ */
+export interface BatchUpdateRequest {
+  updates: Array<{
+    assessmentId: string
+    name?: string
+    weightPercent?: number
+    weightPoints?: number
+    maxScore?: number
+    sortOrder?: number
+  }>
+}
+
+export const batchUpdateAssessments = async (
+  payload: BatchUpdateRequest
+): Promise<AllAssessmentsResponse> => {
+  return apiClient<AllAssessmentsResponse>(`/assessments/batch`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+  })
+}

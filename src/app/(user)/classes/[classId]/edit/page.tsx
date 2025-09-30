@@ -336,16 +336,16 @@ export default function EditClassPage() {
   // ─── Filter & Sort Assessments ───
   const filteredAssessments = assessments
     .filter((a) => a.name.toLowerCase().includes(searchAssess.toLowerCase()))
-    .sort((a, b) =>
-      weightSort === 'asc'
-        ? a.weightPercent - b.weightPercent
-        : b.weightPercent - a.weightPercent
-    )
+    .sort((a, b) => {
+      const aPoints = a.weightPoints || a.weightPercent || 0
+      const bPoints = b.weightPoints || b.weightPercent || 0
+      return weightSort === 'asc' ? aPoints - bPoints : bPoints - aPoints
+    })
 
-  // ─── Compute total weight (only parent and standalone assessments) ───
-  const totalWeight = assessments
+  // ─── Compute total points (only parent and standalone assessments) ───
+  const totalPoints = assessments
     .filter(a => !a.parentAssessmentId) // Only include parent and standalone assessments
-    .reduce((sum, a) => sum + a.weightPercent, 0)
+    .reduce((sum, a) => sum + Number(a.weightPoints || a.weightPercent || 0), 0)
 
   // ─── Remove a student (opens confirm modal) ───
   const handleRemoveClick = (stu: StudentPayload) => {
@@ -641,14 +641,14 @@ export default function EditClassPage() {
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
                   />
 
-                  {/* Sort by weight */}
+                  {/* Sort by points */}
                   <select
                     value={weightSort}
                     onChange={(e) => setWeightSort(e.target.value as 'asc' | 'desc')}
                     className="w-full bg-white sm:w-48 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   >
-                    <option value="asc">Weight ↑</option>
-                    <option value="desc">Weight ↓</option>
+                    <option value="asc">Points ↑</option>
+                    <option value="desc">Points ↓</option>
                   </select>
 
                   {/* + Add Assessment button */}
@@ -660,11 +660,20 @@ export default function EditClassPage() {
                   </button>
                 </div>
 
-                {/* total‐weight warning if not exactly 100 */}
-                {totalWeight !== 100 && (
+                {/* total‐points info */}
+                {totalPoints !== 100 ? (
                   <div className="px-6 py-3 bg-red-100 border border-red-300 text-red-700">
-                    ⚠️ Sum of all assessment weights is <strong>{totalWeight}%</strong>; it
-                    must equal <strong>100%</strong>.
+                    ⚠️ Total assessment points: <strong>{totalPoints.toFixed(1)} points</strong>
+                    <span className="text-sm block mt-1">
+                      Assessments should total <strong>100 points</strong> for proper grade calculation.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="px-6 py-3 bg-green-50 border border-green-200 text-green-700">
+                    ✅ Total assessment points: <strong>{totalPoints.toFixed(1)} points</strong>
+                    <span className="text-sm text-gray-600 ml-2">
+                      (Perfect! This equals 100% for grade calculation)
+                    </span>
                   </div>
                 )}
 
@@ -708,7 +717,12 @@ export default function EditClassPage() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-600">Weight: {a.weightPercent}%</p>
+                              <p className="text-sm text-gray-600">
+                                Worth: {a.weightPoints || a.weightPercent || 0} points
+                                {a.maxScore && !a.isParent && (
+                                  <span className="text-gray-500"> (out of {a.maxScore})</span>
+                                )}
+                              </p>
                               <p className="text-xs text-gray-500">
                                 Created: {new Date(a.createdAt).toLocaleDateString()}
                               </p>
@@ -752,22 +766,23 @@ export default function EditClassPage() {
                                       </span>
                                     </div>
                                     <div className="flex items-center space-x-4 ml-4">
-                                      <p className="text-xs text-gray-500">Weight: {child.weightPercent}%</p>
+                                      <p className="text-xs text-gray-500">
+                                        Worth: {child.weightPoints || child.weightPercent || 0} points
+                                        {child.maxScore && (
+                                          <span className="text-gray-400"> (out of {child.maxScore})</span>
+                                        )}
+                                      </p>
                                       <p className="text-xs text-gray-400">
                                         Order: {child.sortOrder || '-'}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => setEditingAssessment(child)}
-                                      className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 cursor-pointer"
-                                    >
-                                      Edit
-                                    </button>
+                                    <span className="text-xs text-gray-500 italic">Edit via parent</span>
                                     <button
                                       onClick={() => setDeleteAssessmentTarget(child)}
                                       className="text-lg text-red-500 hover:text-red-700 font-bold px-1 cursor-pointer"
+                                      title="Delete this child assessment"
                                     >
                                       ×
                                     </button>
@@ -793,6 +808,7 @@ export default function EditClassPage() {
         <AssessmentEditModal
           isOpen={!!editingAssessment}
           assessment={editingAssessment}
+          allAssessments={assessments}
           onClose={() => setEditingAssessment(null)}
           onUpdate={(updated) => {
             setAssessments((prev) =>

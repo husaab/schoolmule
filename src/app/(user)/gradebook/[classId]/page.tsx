@@ -207,8 +207,18 @@ const GradebookClass = () => {
     if (raw !== '') {
       const parsed = parseFloat(raw)
       if (!isNaN(parsed)) {
-        // Clamp between 0 and 100
-        val = Math.min(Math.max(parsed, 0), 100)
+        // Find the assessment to get its max score
+        const assessment = assessments.find(a => a.assessmentId === assessmentId)
+        if (assessment) {
+          // Smart max score detection: use weightPoints if maxScore seems wrong
+          const childPoints = Number(assessment.weightPoints || assessment.weightPercent || 0)
+          const storedMaxScore = Number(assessment.maxScore || 100)
+          const smartMaxScore = (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+          // Clamp between 0 and the smart max score
+          val = Math.min(Math.max(parsed, 0), smartMaxScore)
+        } else {
+          val = Math.min(Math.max(parsed, 0), 100)
+        }
       } else {
         val = ''
       }
@@ -231,40 +241,53 @@ const GradebookClass = () => {
         // For parent assessments, calculate weighted average of child scores
         const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
         if (childAssessments.length > 0) {
-          let weightedSum = 0
-          let totalChildWeight = 0
+          let totalPoints = 0
+          let maxPossiblePoints = 0
           childAssessments.forEach(child => {
             const childKey = `${studentId}|${child.assessmentId}`
             const childRawValue = editedScores[childKey] !== undefined
               ? editedScores[childKey]
               : existingScoreMap[childKey] ?? null
             
-            const childScore = typeof childRawValue === 'number'
+            const rawScore = typeof childRawValue === 'number'
               ? childRawValue
               : childRawValue !== null && childRawValue !== undefined
               ? parseFloat(String(childRawValue)) || 0
               : 0
             
-            weightedSum += (childScore * child.weightPercent)
-            totalChildWeight += child.weightPercent
+            // Get max score for this child assessment (what the assessment is "out of")
+            const maxScore = Number(child.maxScore || 100)
+            // Get weight points (how many points this assessment contributes to parent)
+            const childPoints = Number(child.weightPoints || child.weightPercent || 0)
+            
+            // Convert raw score to percentage, then multiply by weight points
+            const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0 // Cap at 100%
+            const earnedPoints = percentage * childPoints
+            
+            totalPoints += earnedPoints
+            maxPossiblePoints += childPoints
           })
-          scoreToUse = totalChildWeight > 0 ? weightedSum / totalChildWeight : 0
+          scoreToUse = maxPossiblePoints > 0 ? (totalPoints / maxPossiblePoints) * 100 : 0
         }
       } else {
-        // For standalone assessments, use direct score
+        // For standalone assessments, convert raw score to percentage
         const key = `${studentId}|${a.assessmentId}`
         const rawValue = editedScores[key] !== undefined
           ? editedScores[key]
           : existingScoreMap[key] ?? null
 
-        scoreToUse = typeof rawValue === 'number'
+        const rawScore = typeof rawValue === 'number'
           ? rawValue
           : rawValue !== null && rawValue !== undefined
           ? parseFloat(String(rawValue)) || 0
           : 0
+
+        // Convert raw score to percentage using maxScore
+        const maxScore = Number(a.maxScore || 100)
+        scoreToUse = maxScore > 0 ? (rawScore / maxScore) * 100 : 0
       }
       
-      total += (scoreToUse * a.weightPercent) / 100
+      total += (scoreToUse * (a.weightPoints || a.weightPercent || 0)) / 100
     })
     return total
   }
@@ -377,7 +400,7 @@ const GradebookClass = () => {
                         )}
                     </div>
                     <div className="text-xs text-gray-500">
-                      ({a.weightPercent}%)
+                      ({a.weightPoints || a.weightPercent || 0} pts)
                     </div>
                   </th>
                 ))}
@@ -412,27 +435,6 @@ const GradebookClass = () => {
                         if (a.isParent) {
                           // For parent assessments, show calculated score (read-only)
                           const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
-                          let calculatedScore = 0
-                          if (childAssessments.length > 0) {
-                            let weightedSum = 0
-                            let totalChildWeight = 0
-                            childAssessments.forEach(child => {
-                              const childKey = `${stu.studentId}|${child.assessmentId}`
-                              const childRawValue = editedScores[childKey] !== undefined
-                                ? editedScores[childKey]
-                                : existingScoreMap[childKey] ?? null
-                              
-                              const childScore = typeof childRawValue === 'number'
-                                ? childRawValue
-                                : childRawValue !== null && childRawValue !== undefined
-                                ? parseFloat(String(childRawValue)) || 0
-                                : 0
-                              
-                              weightedSum += (childScore * child.weightPercent)
-                              totalChildWeight += child.weightPercent
-                            })
-                            calculatedScore = totalChildWeight > 0 ? weightedSum / totalChildWeight : 0
-                          }
 
                           return (
                             <td
@@ -442,7 +444,33 @@ const GradebookClass = () => {
                               onClick={() => handleParentAssessmentClick(a)}
                             >
                               <div className="w-16 mx-auto border border-blue-200 rounded p-1 text-center bg-blue-50 text-blue-800 font-medium">
-                                {calculatedScore.toFixed(1)}
+                                {(() => {
+                                  // Calculate earned points for display
+                                  let totalEarned = 0
+                                  let totalPossible = 0
+                                  childAssessments.forEach(child => {
+                                    const childKey = `${stu.studentId}|${child.assessmentId}`
+                                    const childRawValue = editedScores[childKey] !== undefined
+                                      ? editedScores[childKey]
+                                      : existingScoreMap[childKey] ?? null
+                                    
+                                    const rawScore = typeof childRawValue === 'number'
+                                      ? childRawValue
+                                      : childRawValue !== null && childRawValue !== undefined
+                                      ? parseFloat(String(childRawValue)) || 0
+                                      : 0
+                                    
+                                    const maxScore = Number(child.maxScore || 100)
+                                    const childPoints = Number(child.weightPoints || child.weightPercent || 0)
+                                    
+                                    const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
+                                    const earnedPoints = percentage * childPoints
+                                    
+                                    totalEarned += earnedPoints
+                                    totalPossible += childPoints
+                                  })
+                                  return `${totalEarned.toFixed(1)}/${totalPossible}`
+                                })()}
                               </div>
                             </td>
                           )
@@ -462,10 +490,19 @@ const GradebookClass = () => {
                               <input
                                 type="number"
                                 min="0"
-                                max="100"
+                                max={(() => {
+                                  const childPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                  const storedMaxScore = Number(a.maxScore || 100)
+                                  return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+                                })()}
                                 step="1"
                                 className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
                                 value={currentValue}
+                                placeholder={`/${(() => {
+                                  const childPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                  const storedMaxScore = Number(a.maxScore || 100)
+                                  return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+                                })()}`}
                                 onChange={(e) =>
                                   handleScoreChange(
                                     stu.studentId,

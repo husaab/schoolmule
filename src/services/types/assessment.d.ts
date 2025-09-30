@@ -13,6 +13,8 @@ export interface AssessmentPayload {
   parentAssessmentId?: string | null
   isParent:           boolean
   sortOrder?:         number | null
+  maxScore?:          number | null
+  weightPoints?:      number | null
 }
 
 /**
@@ -56,9 +58,13 @@ export interface CreateAssessmentRequest {
   childCount?: number
   parentAssessmentId?: string | null
   sortOrder?: number | null
+  maxScore?: number | null
+  weightPoints?: number | null
   childrenData?: Array<{
     name: string
     weightPercent: number
     sortOrder: number
+    maxScore?: number | null
+    weightPoints?: number | null
   }>
 }

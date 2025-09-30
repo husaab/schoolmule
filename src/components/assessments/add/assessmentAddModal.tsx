@@ -22,11 +22,14 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
 }) => {
   const [name, setName] = useState('')
   // Keep weight as a string so that when the user clears it, it doesn’t immediately default to zero
-  const [weight, setWeight] = useState<string>('')
+  // Points this assessment is worth toward final grade
+  const [weightPoints, setWeightPoints] = useState<string>('')
+  // Maximum possible score for this assessment (e.g., 40 for a test out of 40)
+  const [maxScore, setMaxScore] = useState<string>('')
   const [isParent, setIsParent] = useState(false)
   const [childCount, setChildCount] = useState<number>(3)
-  const [childrenData, setChildrenData] = useState<Array<{name: string, weight: string}>>([])
-  const [childWeightError, setChildWeightError] = useState<string>('')
+  const [childrenData, setChildrenData] = useState<Array<{name: string, weightPoints: string, maxScore: string}>>([])
+  const [childPointsError, setChildPointsError] = useState<string>('')
 
   const showNotification = useNotificationStore((state) => state.showNotification)
 
@@ -34,60 +37,76 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setName('')
-      setWeight('')
+      setWeightPoints('')
+      setMaxScore('')
       setIsParent(false)
       setChildCount(3)
       setChildrenData([])
-      setChildWeightError('')
+      setChildPointsError('')
     }
   }, [isOpen])
 
   // Initialize children data when isParent changes or childCount changes
   useEffect(() => {
-    if (isParent) {
-      const equalWeight = (100 / childCount).toFixed(2)
+    if (isParent && weightPoints) {
+      const parentPoints = parseFloat(weightPoints) || 0
+      const equalPoints = (parentPoints / childCount).toFixed(2)
       const newChildrenData = Array.from({ length: childCount }, (_, i) => ({
         name: `${name.trim() || 'Assessment'} ${i + 1}`,
-        weight: equalWeight
+        weightPoints: equalPoints,
+        maxScore: '100' // Default max score
       }))
       setChildrenData(newChildrenData)
     }
-  }, [isParent, childCount, name])
+  }, [isParent, childCount, name, weightPoints])
 
-  // Validate child weights
+  // Validate child points
   useEffect(() => {
-    if (isParent && childrenData.length > 0) {
-      const totalChildWeight = childrenData.reduce((sum, child) => {
-        const childWeight = parseFloat(child.weight) || 0
-        return sum + childWeight
+    if (isParent && childrenData.length > 0 && weightPoints) {
+      const parentPoints = parseFloat(weightPoints) || 0
+      const totalChildPoints = childrenData.reduce((sum, child) => {
+        const childPoints = parseFloat(child.weightPoints) || 0
+        return sum + childPoints
       }, 0)
       
-      if (totalChildWeight > 100) {
-        setChildWeightError(`Child weights total ${totalChildWeight.toFixed(1)}% (must not exceed 100%)`)
-      } else if (totalChildWeight < 99.99) {
-        setChildWeightError(`Child weights total ${totalChildWeight.toFixed(1)}% (should equal 100%)`)
+      if (totalChildPoints > parentPoints) {
+        setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (must not exceed parent ${parentPoints})`)
+      } else if (Math.abs(totalChildPoints - parentPoints) > 0.01) {
+        setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (should equal parent ${parentPoints})`)
       } else {
-        setChildWeightError('')
+        setChildPointsError('')
       }
     } else {
-      setChildWeightError('')
+      setChildPointsError('')
     }
-  }, [isParent, childrenData])
+  }, [isParent, childrenData, weightPoints])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     const trimmedName = name.trim()
-    const parsedWeight = Number(weight)
+    const parsedWeightPoints = Number(weightPoints)
+    const parsedMaxScore = Number(maxScore)
 
-    if (!trimmedName || weight === '' || isNaN(parsedWeight)) {
-      showNotification('Name and weight% are required', 'error')
+    if (!trimmedName || weightPoints === '' || isNaN(parsedWeightPoints)) {
+      showNotification('Name and points are required', 'error')
       return
     }
 
-    // Ensure weight is between 0 and 100
-    if (parsedWeight < 0 || parsedWeight > 100) {
-      showNotification('Weight must be between 0 and 100', 'error')
+    if (!isParent && (maxScore === '' || isNaN(parsedMaxScore))) {
+      showNotification('Maximum score is required for standalone assessments', 'error')
+      return
+    }
+
+    // Ensure points is positive
+    if (parsedWeightPoints <= 0) {
+      showNotification('Points must be greater than 0', 'error')
+      return
+    }
+
+    // Ensure max score is positive for standalone assessments
+    if (!isParent && parsedMaxScore <= 0) {
+      showNotification('Maximum score must be greater than 0', 'error')
       return
     }
 
@@ -104,9 +123,15 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
         return
       }
 
-      // Check child weight validation
-      if (childWeightError) {
-        showNotification(childWeightError, 'error')
+      // Check child max scores are valid
+      if (childrenData.some(child => !child.maxScore.trim() || isNaN(Number(child.maxScore)) || Number(child.maxScore) <= 0)) {
+        showNotification('All child assessments must have valid maximum scores', 'error')
+        return
+      }
+
+      // Check child points validation
+      if (childPointsError) {
+        showNotification(childPointsError, 'error')
         return
       }
     }
@@ -116,13 +141,17 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
       const payload: CreateAssessmentRequest = {
         classId,
         name: trimmedName,
-        weightPercent: parsedWeight,
+        weightPercent: 0, // Keep for backwards compatibility, but use points primarily
+        weightPoints: parsedWeightPoints,
+        maxScore: isParent ? null : parsedMaxScore,
         isParent,
         ...(isParent && { 
           childCount: childrenData.length,
           childrenData: childrenData.map((child, index) => ({
             name: child.name.trim(),
-            weightPercent: parseFloat(child.weight),
+            weightPercent: 0, // Keep for backwards compatibility
+            weightPoints: parseFloat(child.weightPoints),
+            maxScore: parseFloat(child.maxScore),
             sortOrder: index + 1
           }))
         }),
@@ -169,21 +198,39 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
           />
         </div>
 
-        {/* Weight percentage field */}
+        {/* Points toward final grade */}
         <div>
-          <label className="block text-sm">Weight Percentage</label>
+          <label className="block text-sm font-medium">Points toward final grade</label>
           <input
             type="number"
             required
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
+            value={weightPoints}
+            onChange={(e) => setWeightPoints(e.target.value)}
             className="w-full border rounded px-2 py-1"
-            placeholder="e.g. 25"
+            placeholder="e.g. 15"
             min={0}
-            max={100}
             step={0.01}
           />
+          <p className="text-xs text-gray-500 mt-1">How many points this assessment contributes to the final grade</p>
         </div>
+
+        {/* Maximum score field - only for standalone assessments */}
+        {!isParent && (
+          <div>
+            <label className="block text-sm font-medium">Maximum score</label>
+            <input
+              type="number"
+              required
+              value={maxScore}
+              onChange={(e) => setMaxScore(e.target.value)}
+              className="w-full border rounded px-2 py-1"
+              placeholder="e.g. 40"
+              min={0}
+              step={0.01}
+            />
+            <p className="text-xs text-gray-500 mt-1">Total points possible (e.g., 40 for a test out of 40)</p>
+          </div>
+        )}
 
         {/* Parent assessment checkbox */}
         <div className="flex items-center space-x-2">
@@ -224,16 +271,30 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const equalWeight = (100 / childCount).toFixed(2)
-                  setChildrenData(prev => prev.map(child => ({ ...child, weight: equalWeight })))
+                  const parentPoints = parseFloat(weightPoints) || 0
+                  const equalPoints = (parentPoints / childCount).toFixed(2)
+                  setChildrenData(prev => prev.map(child => ({ 
+                    ...child, 
+                    weightPoints: equalPoints 
+                  })))
                 }}
                 className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
               >
-                Distribute equally
+                Distribute points equally
               </button>
             </div>
             
             <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
+              {/* Header row */}
+              <div className="flex space-x-2 items-center text-xs text-gray-600 font-medium border-b pb-1">
+                <div className="w-8 text-center">#</div>
+                <div className="flex-1">Assessment Name</div>
+                <div className="w-20 text-center">Points</div>
+                <div className="w-12"></div>
+                <div className="w-20 text-center">Out of</div>
+                <div className="w-12"></div>
+              </div>
+              
               {childrenData.map((child, index) => (
                 <div key={index} className="flex space-x-2 items-center bg-white p-2 rounded border">
                   <div className="w-8 text-center text-sm text-gray-500 font-medium">
@@ -256,36 +317,52 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
                   <div className="w-20">
                     <input
                       type="number"
-                      value={child.weight}
+                      value={child.weightPoints}
                       onChange={(e) => {
                         const newChildren = [...childrenData]
-                        newChildren[index].weight = e.target.value
+                        newChildren[index].weightPoints = e.target.value
                         setChildrenData(newChildren)
                       }}
                       className="w-full border rounded px-2 py-1 text-sm text-center"
                       placeholder="0"
                       min="0"
-                      max="100"
                       step="0.01"
                       required
                     />
                   </div>
-                  <div className="text-xs text-gray-500 w-6">%</div>
+                  <div className="text-xs text-gray-500 w-12">pts</div>
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      value={child.maxScore}
+                      onChange={(e) => {
+                        const newChildren = [...childrenData]
+                        newChildren[index].maxScore = e.target.value
+                        setChildrenData(newChildren)
+                      }}
+                      className="w-full border rounded px-2 py-1 text-sm text-center"
+                      placeholder="100"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 w-12">max</div>
                 </div>
               ))}
             </div>
 
-            {/* Child weight validation message */}
-            {childWeightError && (
+            {/* Child points validation message */}
+            {childPointsError && (
               <p className={`text-xs mt-1 ${
-                childWeightError.includes('must not exceed') ? 'text-red-600' : 'text-yellow-600'
+                childPointsError.includes('must not exceed') ? 'text-red-600' : 'text-yellow-600'
               }`}>
-                {childWeightError}
+                {childPointsError}
               </p>
             )}
             
             <p className="text-xs text-gray-500">
-              Child weights should total 100% and represent relative importance within this parent assessment.
+              Child points should total the parent points. Each child also needs a maximum score (how many points the assessment is out of).
             </p>
           </div>
         )}

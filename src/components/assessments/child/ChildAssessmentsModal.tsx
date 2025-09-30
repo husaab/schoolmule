@@ -44,8 +44,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
   // Calculate parent score for a student based on child scores
   const calculateParentScore = (studentId: string) => {
-    let weightedSum = 0
-    let totalWeight = 0
+    let totalPoints = 0
+    let maxPossiblePoints = 0
     
     childAssessments.forEach(child => {
       const key = `${studentId}|${child.assessmentId}`
@@ -53,22 +53,37 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         ? editedScores[key]
         : existingScoreMap[key] ?? null
       
-      const score = typeof rawValue === 'number'
+      const rawScore = typeof rawValue === 'number'
         ? rawValue
         : rawValue !== null && rawValue !== undefined
         ? parseFloat(String(rawValue)) || 0
         : 0
       
-      weightedSum += (score * child.weightPercent)
-      totalWeight += child.weightPercent
+      // Get weight points (how many points this assessment contributes to parent)
+      const childPoints = Number(child.weightPoints || child.weightPercent || 0)
+      // Get max score for this child assessment (use weightPoints if maxScore seems wrong)
+      const storedMaxScore = Number(child.maxScore || 100)
+      const maxScore = (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+      
+      // Convert raw score to percentage, then multiply by weight points
+      const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0 // Cap at 100%
+      const earnedPoints = percentage * childPoints
+      
+      totalPoints += earnedPoints
+      maxPossiblePoints += childPoints
     })
     
-    return totalWeight > 0 ? weightedSum / totalWeight : 0
+    // Return earned/total format for display
+    return { earned: totalPoints, total: maxPossiblePoints }
   }
 
-  // Check if all child weights add up to 100%
-  const totalChildWeight = childAssessments.reduce((sum, child) => sum + child.weightPercent, 0)
-  const weightWarning = Math.abs(totalChildWeight - 100) > 0.01
+  // Check if all child points add up to parent points
+  const totalChildPoints = childAssessments.reduce((sum, child) => {
+    const points = Number(child.weightPoints || child.weightPercent || 0)
+    return sum + points
+  }, 0)
+  const parentPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
+  const pointsWarning = Math.abs(totalChildPoints - parentPoints) > 0.01
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-6xl w-11/12 max-h-[90vh] overflow-y-auto">
@@ -79,11 +94,11 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
               {parentAssessment.name} - Child Assessments
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Parent weight: {parentAssessment.weightPercent}% | Child assessments: {childAssessments.length}
+              Parent worth: {parentAssessment.weightPoints || parentAssessment.weightPercent || 0} points | Child assessments: {childAssessments.length}
             </p>
-            {weightWarning && (
+            {pointsWarning && (
               <p className="text-sm text-red-600 mt-1">
-                ⚠️ Child weights total {totalChildWeight.toFixed(1)}% (should equal 100%)
+                ⚠️ Child points total {totalChildPoints} (should equal parent {parentPoints})
               </p>
             )}
           </div>
@@ -108,7 +123,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                     >
                       <div className="truncate">{child.name}</div>
                       <div className="text-xs text-gray-500">
-                        ({child.weightPercent}%)
+                        ({child.weightPoints || child.weightPercent || 0} pts)
                       </div>
                       <div className="text-xs text-gray-400">
                         Order: {child.sortOrder || '-'}
@@ -149,27 +164,32 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                             ? editedScores[key]
                             : existingScoreMap[key] ?? ''
 
+                          const maxScore = Number(child.maxScore || 100)
+
                           return (
                             <td
                               key={child.assessmentId}
                               className="px-1 py-1 text-center text-gray-800"
                             >
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="1"
-                                className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                                value={currentValue}
-                                onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
-                                placeholder="0"
-                              />
+                              <div className="flex items-center justify-center space-x-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={maxScore}
+                                  step="1"
+                                  className="w-12 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  value={currentValue}
+                                  onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                                  placeholder="0"
+                                />
+                                <span className="text-sm text-gray-600">/{maxScore}</span>
+                              </div>
                             </td>
                           )
                         })}
 
                         <td className="px-4 py-2 text-center text-blue-800 font-medium bg-blue-50">
-                          {parentScore.toFixed(1)}%
+                          {parentScore.earned.toFixed(1)}/{parentScore.total}
                         </td>
                       </tr>
                     )
@@ -181,7 +201,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         )}
 
         <div className="mt-4 text-xs text-gray-500">
-          <p>• Child assessment scores are weighted and averaged to calculate the parent score</p>
+          <p>• Child assessment scores are weighted by their point values to calculate the parent score</p>
           <p>• Changes are automatically reflected in the main gradebook</p>
           <p>• Remember to save changes in the main gradebook when finished</p>
         </div>
