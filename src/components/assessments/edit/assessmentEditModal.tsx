@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Modal from '../../shared/modal'
-import { updateAssessment, batchUpdateAssessments } from '@/services/assessmentService'
+import { updateAssessment, batchUpdateAssessments, deleteAssessment, createAssessment } from '@/services/assessmentService'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
@@ -13,6 +13,7 @@ interface AssessmentEditModalProps {
   assessment: AssessmentPayload
   allAssessments: AssessmentPayload[] // To get children for parent assessments
   onUpdate: (updated: AssessmentPayload) => void
+  onBatchUpdate?: (updated: AssessmentPayload[], deleted: string[]) => void
 }
 
 const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
@@ -21,6 +22,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
   assessment,
   allAssessments,
   onUpdate,
+  onBatchUpdate,
 }) => {
   const [name, setName] = useState('')
   const [weightPoints, setWeightPoints] = useState<string>('')
@@ -31,6 +33,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
     weightPoints: string
     maxScore: string
     sortOrder: number
+    isNew?: boolean
+    toDelete?: boolean
   }>>([])
   const [childPointsError, setChildPointsError] = useState<string>('')
 
@@ -71,14 +75,16 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
   useEffect(() => {
     if (assessment.isParent && childrenData.length > 0 && weightPoints) {
       const parentPoints = parseFloat(weightPoints) || 0
-      const totalChildPoints = childrenData.reduce((sum, child) => {
-        const childPoints = parseFloat(child.weightPoints) || 0
-        return sum + childPoints
-      }, 0)
+      const totalChildPoints = childrenData
+        .filter(child => !child.toDelete)
+        .reduce((sum, child) => {
+          const childPoints = parseFloat(child.weightPoints) || 0
+          return sum + childPoints
+        }, 0)
       
-      if (totalChildPoints > parentPoints) {
+      if (totalChildPoints - parentPoints > 0.02) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (must not exceed parent ${parentPoints})`)
-      } else if (Math.abs(totalChildPoints - parentPoints) > 0.01) {
+      } else if (Math.abs(totalChildPoints - parentPoints) > 0.02) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (should equal parent ${parentPoints})`)
       } else {
         setChildPointsError('')
@@ -117,12 +123,14 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
 
     // Validate parent assessments
     if (assessment.isParent) {
-      if (childrenData.some(child => !child.name.trim())) {
+      const activeChildren = childrenData.filter(child => !child.toDelete)
+      
+      if (activeChildren.some(child => !child.name.trim())) {
         showNotification('All child assessment names are required', 'error')
         return
       }
 
-      if (childrenData.some(child => !child.maxScore.trim() || isNaN(Number(child.maxScore)) || Number(child.maxScore) <= 0)) {
+      if (activeChildren.some(child => !child.maxScore.trim() || isNaN(Number(child.maxScore)) || Number(child.maxScore) <= 0)) {
         showNotification('All child assessments must have valid maximum scores', 'error')
         return
       }
@@ -135,7 +143,51 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
 
     try {
       if (assessment.isParent && childrenData.length > 0) {
-        // Batch update parent and all child assessments
+        const activeChildren = childrenData.filter(child => !child.toDelete)
+        const childrenToDelete = childrenData.filter(child => child.toDelete && !child.isNew)
+        const newChildren = childrenData.filter(child => child.isNew && !child.toDelete)
+        
+        // Step 1: Delete marked children
+        for (const child of childrenToDelete) {
+          try {
+            await deleteAssessment(child.assessmentId)
+          } catch (err) {
+            console.error('Error deleting child assessment:', err)
+            showNotification(`Failed to delete assessment "${child.name}"`, 'error')
+            return
+          }
+        }
+        
+        // Step 2: Create new children
+        const createdChildren: AssessmentPayload[] = []
+        for (const newChild of newChildren) {
+          try {
+            const createPayload = {
+              classId: assessment.classId,
+              name: newChild.name.trim(),
+              weightPercent: 0, // Keep for backwards compatibility
+              weightPoints: parseFloat(newChild.weightPoints),
+              maxScore: parseFloat(newChild.maxScore),
+              parentAssessmentId: assessment.assessmentId,
+              sortOrder: newChild.sortOrder,
+              isParent: false,
+            }
+            const createRes = await createAssessment(createPayload)
+            if (createRes.status === 'success') {
+              createdChildren.push(createRes.data as AssessmentPayload)
+            } else {
+              showNotification(`Failed to create assessment "${newChild.name}"`, 'error')
+              return
+            }
+          } catch (err) {
+            console.error('Error creating child assessment:', err)
+            showNotification(`Failed to create assessment "${newChild.name}"`, 'error')
+            return
+          }
+        }
+        
+        // Step 3: Batch update parent and remaining existing children
+        const existingChildren = activeChildren.filter(child => !child.isNew)
         const updates = [
           // Parent assessment update
           {
@@ -145,8 +197,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             weightPoints: parsedWeightPoints,
             maxScore: undefined, // Parent assessments don't have max score
           },
-          // Child assessments updates
-          ...childrenData.map(child => ({
+          // Existing child assessments updates
+          ...existingChildren.map(child => ({
             assessmentId: child.assessmentId,
             name: child.name.trim(),
             weightPercent: 0, // Keep for backwards compatibility
@@ -159,11 +211,23 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
         const res = await batchUpdateAssessments({ updates })
 
         if (res.status === 'success') {
-          // Update all assessments in the parent component
-          res.data.forEach(updatedAssessment => {
-            onUpdate(updatedAssessment)
-          })
-          showNotification(`Parent assessment and ${childrenData.length} child assessments updated successfully`, 'success')
+          // Use batch update if available, otherwise fall back to individual updates
+          if (onBatchUpdate) {
+            const allUpdated = [...res.data, ...createdChildren]
+            const deletedIds = childrenToDelete.map(child => child.assessmentId)
+            onBatchUpdate(allUpdated, deletedIds)
+          } else {
+            // Fallback: Update assessments individually
+            res.data.forEach(updatedAssessment => {
+              onUpdate(updatedAssessment)
+            })
+            createdChildren.forEach(newAssessment => {
+              onUpdate(newAssessment)
+            })
+          }
+          
+          const totalUpdated = res.data.length + createdChildren.length - childrenToDelete.length
+          showNotification(`Assessment updated successfully (${totalUpdated} total assessments)`, 'success')
           onClose()
         } else {
           showNotification(res.message || 'Failed to update assessments', 'error')
@@ -247,24 +311,44 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
         )}
 
         {/* Child assessments editing - only for parent assessments */}
-        {assessment.isParent && childrenData.length > 0 && (
+        {assessment.isParent && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Child Assessments</label>
-              <button
-                type="button"
-                onClick={() => {
-                  const parentPoints = parseFloat(weightPoints) || 0
-                  const equalPoints = (parentPoints / childrenData.length).toFixed(2)
-                  setChildrenData(prev => prev.map(child => ({ 
-                    ...child, 
-                    weightPoints: equalPoints 
-                  })))
-                }}
-                className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
-              >
-                Distribute points equally
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newChild = {
+                      assessmentId: `temp-${Date.now()}`, // Temporary ID for new assessment
+                      name: '',
+                      weightPoints: '0',
+                      maxScore: '100',
+                      sortOrder: childrenData.length + 1,
+                      isNew: true
+                    }
+                    setChildrenData(prev => [...prev, newChild])
+                  }}
+                  className="text-xs text-white hover:text-green-800 cursor-pointer px-2 py-1 border bg-green-500 rounded"
+                >
+                  + Add Child
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeChildren = childrenData.filter(child => !child.toDelete)
+                    const parentPoints = parseFloat(weightPoints) || 0
+                    const equalPoints = activeChildren.length > 0 ? (parentPoints / activeChildren.length).toFixed(2) : '0'
+                    setChildrenData(prev => prev.map(child => child.toDelete ? child : ({ 
+                      ...child, 
+                      weightPoints: equalPoints 
+                    })))
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
+                >
+                  Distribute points equally
+                </button>
+              </div>
             </div>
             
             <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
@@ -275,11 +359,19 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                 <div className="w-20 text-center">Points</div>
                 <div className="w-12"></div>
                 <div className="w-20 text-center">Out of</div>
-                <div className="w-12"></div>
+                <div className="w-16 text-center">Actions</div>
               </div>
               
-              {childrenData.map((child, index) => (
-                <div key={child.assessmentId} className="flex space-x-2 items-center bg-white p-2 rounded border">
+              {childrenData.filter(child => !child.toDelete).length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <p className="text-sm">No child assessments yet.</p>
+                  <p className="text-xs mt-1">Click &quot;+ Add Child&quot; to create sub-assessments.</p>
+                </div>
+              ) : (
+                childrenData.filter(child => !child.toDelete).map((child, index) => (
+                <div key={child.assessmentId} className={`flex space-x-2 items-center p-2 rounded border ${
+                  child.isNew ? 'bg-green-50 border-green-200' : 'bg-white'
+                }`}>
                   <div className="w-8 text-center text-sm text-gray-500 font-medium">
                     {index + 1}
                   </div>
@@ -289,7 +381,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       value={child.name}
                       onChange={(e) => {
                         const newChildren = [...childrenData]
-                        newChildren[index].name = e.target.value
+                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                        newChildren[actualIndex].name = e.target.value
                         setChildrenData(newChildren)
                       }}
                       className="w-full border rounded px-2 py-1 text-sm"
@@ -303,7 +396,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       value={child.weightPoints}
                       onChange={(e) => {
                         const newChildren = [...childrenData]
-                        newChildren[index].weightPoints = e.target.value
+                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                        newChildren[actualIndex].weightPoints = e.target.value
                         setChildrenData(newChildren)
                       }}
                       className="w-full border rounded px-2 py-1 text-sm text-center"
@@ -320,7 +414,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       value={child.maxScore}
                       onChange={(e) => {
                         const newChildren = [...childrenData]
-                        newChildren[index].maxScore = e.target.value
+                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                        newChildren[actualIndex].maxScore = e.target.value
                         setChildrenData(newChildren)
                       }}
                       className="w-full border rounded px-2 py-1 text-sm text-center"
@@ -330,9 +425,30 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       required
                     />
                   </div>
-                  <div className="text-xs text-gray-500 w-12">max</div>
+                  <div className="w-16 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (child.isNew) {
+                          // Remove new assessment from array
+                          setChildrenData(prev => prev.filter(c => c.assessmentId !== child.assessmentId))
+                        } else {
+                          // Mark existing assessment for deletion
+                          const newChildren = [...childrenData]
+                          const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                          newChildren[actualIndex].toDelete = true
+                          setChildrenData(newChildren)
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-800 font-bold text-lg px-1 cursor-pointer"
+                      title="Delete this child assessment"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* Child points validation message */}

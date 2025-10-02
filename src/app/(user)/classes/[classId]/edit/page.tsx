@@ -779,13 +779,6 @@ export default function EditClassPage() {
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <span className="text-xs text-gray-500 italic">Edit via parent</span>
-                                    <button
-                                      onClick={() => setDeleteAssessmentTarget(child)}
-                                      className="text-lg text-red-500 hover:text-red-700 font-bold px-1 cursor-pointer"
-                                      title="Delete this child assessment"
-                                    >
-                                      ×
-                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -814,6 +807,26 @@ export default function EditClassPage() {
             setAssessments((prev) =>
               prev.map((a) => (a.assessmentId === updated.assessmentId ? updated : a))
             )
+            setEditingAssessment(null)
+          }}
+          onBatchUpdate={(updated, deleted) => {
+            setAssessments((prev) => {
+              // Remove deleted assessments
+              const filteredAssessments = prev.filter(a => !deleted.includes(a.assessmentId))
+              
+              // Update existing assessments and add new ones
+              const updatedAssessments = [...filteredAssessments]
+              updated.forEach(updatedAssessment => {
+                const existingIndex = updatedAssessments.findIndex(a => a.assessmentId === updatedAssessment.assessmentId)
+                if (existingIndex >= 0) {
+                  updatedAssessments[existingIndex] = updatedAssessment
+                } else {
+                  updatedAssessments.push(updatedAssessment)
+                }
+              })
+              
+              return updatedAssessments
+            })
             setEditingAssessment(null)
           }}
         />
