@@ -12,6 +12,7 @@ interface AssessmentAddModalProps {
   onClose: () => void
   classId: string
   onAdd: (newAssessment: AssessmentPayload) => void
+  onBatchAdd?: (newAssessments: AssessmentPayload[]) => void
 }
 
 const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
@@ -19,6 +20,7 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
   onClose,
   classId,
   onAdd,
+  onBatchAdd,
 }) => {
   const [name, setName] = useState('')
   // Keep weight as a string so that when the user clears it, it doesn’t immediately default to zero
@@ -26,9 +28,9 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
   const [weightPoints, setWeightPoints] = useState<string>('')
   // Maximum possible score for this assessment (e.g., 40 for a test out of 40)
   const [maxScore, setMaxScore] = useState<string>('')
+  const [date, setDate] = useState<string>('')
   const [isParent, setIsParent] = useState(false)
-  const [childCount, setChildCount] = useState<number>(3)
-  const [childrenData, setChildrenData] = useState<Array<{name: string, weightPoints: string, maxScore: string}>>([])
+  const [childrenData, setChildrenData] = useState<Array<{name: string, weightPoints: string, maxScore: string, date: string}>>([])
   const [childPointsError, setChildPointsError] = useState<string>('')
 
   const showNotification = useNotificationStore((state) => state.showNotification)
@@ -39,26 +41,19 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
       setName('')
       setWeightPoints('')
       setMaxScore('')
+      setDate('')
       setIsParent(false)
-      setChildCount(3)
       setChildrenData([])
       setChildPointsError('')
     }
   }, [isOpen])
 
-  // Initialize children data when isParent changes or childCount changes
+  // Clear children data when switching away from multiple assessment
   useEffect(() => {
-    if (isParent && weightPoints) {
-      const parentPoints = parseFloat(weightPoints) || 0
-      const equalPoints = (parentPoints / childCount).toFixed(2)
-      const newChildrenData = Array.from({ length: childCount }, (_, i) => ({
-        name: `${name.trim() || 'Assessment'} ${i + 1}`,
-        weightPoints: equalPoints,
-        maxScore: '100' // Default max score
-      }))
-      setChildrenData(newChildrenData)
+    if (!isParent) {
+      setChildrenData([])
     }
-  }, [isParent, childCount, name, weightPoints])
+  }, [isParent])
 
   // Validate child points
   useEffect(() => {
@@ -69,9 +64,9 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
         return sum + childPoints
       }, 0)
       
-      if (totalChildPoints > parentPoints) {
+      if (totalChildPoints - parentPoints > 0.02) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (must not exceed parent ${parentPoints})`)
-      } else if (Math.abs(totalChildPoints - parentPoints) > 0.01) {
+      } else if (Math.abs(totalChildPoints - parentPoints) > 0.02) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (should equal parent ${parentPoints})`)
       } else {
         setChildPointsError('')
@@ -110,26 +105,26 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
       return
     }
 
-    // Validate parent assessments
+    // Validate multiple assessments
     if (isParent) {
       if (childrenData.length === 0) {
-        showNotification('Parent assessments must have child assessments', 'error')
+        showNotification('Multiple assessments must have individual assessments', 'error')
         return
       }
 
-      // Check child names are not empty
+      // Check individual assessment names are not empty
       if (childrenData.some(child => !child.name.trim())) {
-        showNotification('All child assessment names are required', 'error')
+        showNotification('All individual assessment names are required', 'error')
         return
       }
 
-      // Check child max scores are valid
+      // Check individual assessment max scores are valid
       if (childrenData.some(child => !child.maxScore.trim() || isNaN(Number(child.maxScore)) || Number(child.maxScore) <= 0)) {
-        showNotification('All child assessments must have valid maximum scores', 'error')
+        showNotification('All individual assessments must have valid maximum scores', 'error')
         return
       }
 
-      // Check child points validation
+      // Check individual points validation
       if (childPointsError) {
         showNotification(childPointsError, 'error')
         return
@@ -144,6 +139,7 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
         weightPercent: 0, // Keep for backwards compatibility, but use points primarily
         weightPoints: parsedWeightPoints,
         maxScore: isParent ? null : parsedMaxScore,
+        date: date || null,
         isParent,
         ...(isParent && { 
           childCount: childrenData.length,
@@ -152,7 +148,8 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
             weightPercent: 0, // Keep for backwards compatibility
             weightPoints: parseFloat(child.weightPoints),
             maxScore: parseFloat(child.maxScore),
-            sortOrder: index + 1
+            sortOrder: index + 1,
+            date: child.date || null
           }))
         }),
       }
@@ -164,9 +161,18 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
         if (isParent && 'parent' in res.data) {
           // Parent assessment created with children
           const parentChildRes = res.data as { parent: AssessmentPayload; children: AssessmentPayload[] }
-          onAdd(parentChildRes.parent)
-          parentChildRes.children.forEach(child => onAdd(child))
-          showNotification(`Parent assessment "${trimmedName}" created with ${childrenData.length} child assessments`, 'success')
+          
+          // Use batch add if available for better performance and state management
+          if (onBatchAdd) {
+            const allAssessments = [parentChildRes.parent, ...parentChildRes.children]
+            onBatchAdd(allAssessments)
+          } else {
+            // Fallback to individual adds
+            onAdd(parentChildRes.parent)
+            parentChildRes.children.forEach(child => onAdd(child))
+          }
+          
+          showNotification(`Multiple assessment "${trimmedName}" created with ${childrenData.length} individual assessments`, 'success')
         } else {
           // Regular assessment created
           onAdd(res.data as AssessmentPayload)
@@ -232,7 +238,19 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
           </div>
         )}
 
-        {/* Parent assessment checkbox */}
+        {/* Date field */}
+        <div>
+          <label className="block text-sm font-medium">Assessment Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">When was this assessment conducted? (optional)</p>
+        </div>
+
+        {/* Multiple assessment checkbox */}
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -242,117 +260,159 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="isParent" className="text-sm font-medium text-gray-700">
-            Make this a parent assessment
+            Make this a multiple assessment
           </label>
         </div>
 
-        {/* Child count dropdown - only show if parent is checked */}
-        {isParent && (
-          <div>
-            <label className="block text-sm">Number of child assessments</label>
-            <select
-              value={childCount}
-              onChange={(e) => setChildCount(Number(e.target.value))}
-              className="w-full border rounded px-2 py-1"
-              required
-            >
-              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                <option key={num} value={num}>{num} assessments</option>
-              ))}
-            </select>
+        {/* Warning if points not filled for multiple assessment */}
+        {isParent && (!weightPoints || parseFloat(weightPoints) <= 0) && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-sm text-yellow-800">
+              ⚠️ Please fill in the &quot;Points toward final grade&quot; field above before adding individual assessments.
+            </p>
           </div>
         )}
 
-        {/* Individual child assessment inputs */}
-        {isParent && childrenData.length > 0 && (
+        {/* Individual assessment management - only show if multiple is checked and points are filled */}
+        {isParent && weightPoints && parseFloat(weightPoints) > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Child Assessments</label>
-              <button
-                type="button"
-                onClick={() => {
-                  const parentPoints = parseFloat(weightPoints) || 0
-                  const equalPoints = (parentPoints / childCount).toFixed(2)
-                  setChildrenData(prev => prev.map(child => ({ 
-                    ...child, 
-                    weightPoints: equalPoints 
-                  })))
-                }}
-                className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
-              >
-                Distribute points equally
-              </button>
+              <label className="text-sm font-medium">Individual Assessments</label>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newChild = {
+                      name: `${name.trim() || 'Assessment'} ${childrenData.length + 1}`,
+                      weightPoints: '0',
+                      maxScore: '100',
+                      date: date // Use parent's date as default
+                    }
+                    setChildrenData(prev => [...prev, newChild])
+                  }}
+                  className="text-xs text-white hover:bg-green-700 cursor-pointer px-3 py-1 bg-green-600 rounded"
+                >
+                  + Add Individual Assessment
+                </button>
+                {childrenData.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const parentPoints = parseFloat(weightPoints) || 0
+                      const equalPoints = childrenData.length > 0 ? (parentPoints / childrenData.length).toFixed(2) : '0'
+                      setChildrenData(prev => prev.map(child => ({ 
+                        ...child, 
+                        weightPoints: equalPoints 
+                      })))
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer px-2 py-1 border border-blue-300 rounded"
+                  >
+                    Distribute Points Equally
+                  </button>
+                )}
+              </div>
             </div>
             
-            <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-              {/* Header row */}
-              <div className="flex space-x-2 items-center text-xs text-gray-600 font-medium border-b pb-1">
-                <div className="w-8 text-center">#</div>
-                <div className="flex-1">Assessment Name</div>
-                <div className="w-20 text-center">Points</div>
-                <div className="w-12"></div>
-                <div className="w-20 text-center">Out of</div>
-                <div className="w-12"></div>
+            {childrenData.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                <p className="text-sm">No individual assessments yet.</p>
+                <p className="text-xs mt-1">Click &quot;+ Add Individual Assessment&quot; to create sub-assessments.</p>
               </div>
-              
-              {childrenData.map((child, index) => (
-                <div key={index} className="flex space-x-2 items-center bg-white p-2 rounded border">
-                  <div className="w-8 text-center text-sm text-gray-500 font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={child.name}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        newChildren[index].name = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                      placeholder={`Assessment ${index + 1}`}
-                      required
-                    />
-                  </div>
-                  <div className="w-20">
-                    <input
-                      type="number"
-                      value={child.weightPoints}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        newChildren[index].weightPoints = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm text-center"
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500 w-12">pts</div>
-                  <div className="w-20">
-                    <input
-                      type="number"
-                      value={child.maxScore}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        newChildren[index].maxScore = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm text-center"
-                      placeholder="100"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500 w-12">max</div>
+            ) : (
+              <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
+                {/* Header row */}
+                <div className="flex space-x-2 items-center text-xs text-gray-600 font-medium border-b pb-1">
+                  <div className="w-8 text-center">#</div>
+                  <div className="flex-1">Assessment Name</div>
+                  <div className="w-20 text-center">Points</div>
+                  <div className="w-12"></div>
+                  <div className="w-20 text-center">Out of</div>
+                  <div className="w-24 text-center">Date</div>
+                  <div className="w-16 text-center">Actions</div>
                 </div>
-              ))}
-            </div>
+                
+                {childrenData.map((child, index) => (
+                  <div key={index} className="flex space-x-2 items-center bg-white p-2 rounded border">
+                    <div className="w-8 text-center text-sm text-gray-500 font-medium">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={child.name}
+                        onChange={(e) => {
+                          const newChildren = [...childrenData]
+                          newChildren[index].name = e.target.value
+                          setChildrenData(newChildren)
+                        }}
+                        className="w-full border rounded px-2 py-1 text-sm"
+                        placeholder={`Assessment ${index + 1}`}
+                        required
+                      />
+                    </div>
+                    <div className="w-20">
+                      <input
+                        type="number"
+                        value={child.weightPoints}
+                        onChange={(e) => {
+                          const newChildren = [...childrenData]
+                          newChildren[index].weightPoints = e.target.value
+                          setChildrenData(newChildren)
+                        }}
+                        className="w-full border rounded px-2 py-1 text-sm text-center"
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 w-12">pts</div>
+                    <div className="w-20">
+                      <input
+                        type="number"
+                        value={child.maxScore}
+                        onChange={(e) => {
+                          const newChildren = [...childrenData]
+                          newChildren[index].maxScore = e.target.value
+                          setChildrenData(newChildren)
+                        }}
+                        className="w-full border rounded px-2 py-1 text-sm text-center"
+                        placeholder="100"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                    <div className="w-24">
+                      <input
+                        type="date"
+                        value={child.date}
+                        onChange={(e) => {
+                          const newChildren = [...childrenData]
+                          newChildren[index].date = e.target.value
+                          setChildrenData(newChildren)
+                        }}
+                        className="w-full border rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="w-16 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChildrenData(prev => prev.filter((_, i) => i !== index))
+                        }}
+                        className="text-red-600 hover:text-red-800 font-bold text-lg px-1 cursor-pointer"
+                        title="Remove this individual assessment"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* Child points validation message */}
+            {/* Individual points validation message */}
             {childPointsError && (
               <p className={`text-xs mt-1 ${
                 childPointsError.includes('must not exceed') ? 'text-red-600' : 'text-yellow-600'
@@ -362,7 +422,7 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
             )}
             
             <p className="text-xs text-gray-500">
-              Child points should total the parent points. Each child also needs a maximum score (how many points the assessment is out of).
+              Individual points should total the multiple assessment points. Each individual assessment also needs a maximum score (how many points the assessment is out of).
             </p>
           </div>
         )}

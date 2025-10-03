@@ -122,6 +122,7 @@ export interface BatchUpdateRequest {
     weightPoints?: number
     maxScore?: number
     sortOrder?: number
+    date?: string | null
   }>
 }
 

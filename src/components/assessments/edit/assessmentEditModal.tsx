@@ -27,12 +27,14 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
   const [name, setName] = useState('')
   const [weightPoints, setWeightPoints] = useState<string>('')
   const [maxScore, setMaxScore] = useState<string>('')
+  const [date, setDate] = useState<string>('')
   const [childrenData, setChildrenData] = useState<Array<{
     assessmentId: string
     name: string
     weightPoints: string
     maxScore: string
     sortOrder: number
+    date: string
     isNew?: boolean
     toDelete?: boolean
   }>>([])
@@ -46,6 +48,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
       setName(assessment.name)
       setWeightPoints(String(assessment.weightPoints || assessment.weightPercent || 0))
       setMaxScore(String(assessment.maxScore || ''))
+      setDate(assessment.date ? assessment.date.split('T')[0] : '')
       
       // Initialize children data for parent assessments
       if (assessment.isParent) {
@@ -58,7 +61,8 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
               name: child.name,
               weightPoints: String(child.weightPoints || child.weightPercent || 0),
               maxScore: String(child.maxScore || 100),
-              sortOrder: child.sortOrder || 0
+              sortOrder: child.sortOrder || 0,
+              date: child.date ? child.date.split('T')[0] : ''
             }))
           setChildrenData(childData)
         } else {
@@ -126,12 +130,12 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
       const activeChildren = childrenData.filter(child => !child.toDelete)
       
       if (activeChildren.some(child => !child.name.trim())) {
-        showNotification('All child assessment names are required', 'error')
+        showNotification('All individual assessment names are required', 'error')
         return
       }
 
       if (activeChildren.some(child => !child.maxScore.trim() || isNaN(Number(child.maxScore)) || Number(child.maxScore) <= 0)) {
-        showNotification('All child assessments must have valid maximum scores', 'error')
+        showNotification('All individual assessments must have valid maximum scores', 'error')
         return
       }
 
@@ -171,6 +175,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
               parentAssessmentId: assessment.assessmentId,
               sortOrder: newChild.sortOrder,
               isParent: false,
+              date: newChild.date || null,
             }
             const createRes = await createAssessment(createPayload)
             if (createRes.status === 'success') {
@@ -196,6 +201,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             weightPercent: 0, // Keep for backwards compatibility
             weightPoints: parsedWeightPoints,
             maxScore: undefined, // Parent assessments don't have max score
+            date: date || null,
           },
           // Existing child assessments updates
           ...existingChildren.map(child => ({
@@ -205,6 +211,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             weightPoints: parseFloat(child.weightPoints),
             maxScore: parseFloat(child.maxScore),
             sortOrder: child.sortOrder,
+            date: child.date || null,
           }))
         ]
 
@@ -239,6 +246,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
           weightPercent: 0, // Keep for backwards compatibility
           weightPoints: parsedWeightPoints,
           maxScore: parsedMaxScore,
+          date: date || null,
         }
 
         const res = await updateAssessment(assessment.assessmentId, payload)
@@ -260,7 +268,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto">
       <h2 className="text-xl mb-4 text-black">
-        Edit {assessment.isParent ? 'Parent ' : ''}Assessment
+        Edit {assessment.isParent ? 'Multiple ' : ''}Assessment
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-4 text-black">
@@ -310,11 +318,23 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
           </div>
         )}
 
-        {/* Child assessments editing - only for parent assessments */}
+        {/* Date field */}
+        <div>
+          <label className="block text-sm font-medium">Assessment Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">When was this assessment conducted? (optional)</p>
+        </div>
+
+        {/* Individual assessments editing - only for multiple assessments */}
         {assessment.isParent && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Child Assessments</label>
+              <label className="text-sm font-medium">Individual Assessments</label>
               <div className="flex space-x-2">
                 <button
                   type="button"
@@ -325,13 +345,14 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       weightPoints: '0',
                       maxScore: '100',
                       sortOrder: childrenData.length + 1,
+                      date: date, // Use parent's date as default
                       isNew: true
                     }
                     setChildrenData(prev => [...prev, newChild])
                   }}
                   className="text-xs text-white hover:text-green-800 cursor-pointer px-2 py-1 border bg-green-500 rounded"
                 >
-                  + Add Child
+                  + Add Individual
                 </button>
                 <button
                   type="button"
@@ -359,13 +380,14 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                 <div className="w-20 text-center">Points</div>
                 <div className="w-12"></div>
                 <div className="w-20 text-center">Out of</div>
+                <div className="w-24 text-center">Date</div>
                 <div className="w-16 text-center">Actions</div>
               </div>
               
               {childrenData.filter(child => !child.toDelete).length === 0 ? (
                 <div className="text-center py-6 text-gray-500">
-                  <p className="text-sm">No child assessments yet.</p>
-                  <p className="text-xs mt-1">Click &quot;+ Add Child&quot; to create sub-assessments.</p>
+                  <p className="text-sm">No individual assessments yet.</p>
+                  <p className="text-xs mt-1">Click &quot;+ Add Individual&quot; to create sub-assessments.</p>
                 </div>
               ) : (
                 childrenData.filter(child => !child.toDelete).map((child, index) => (
@@ -425,6 +447,19 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                       required
                     />
                   </div>
+                  <div className="w-24">
+                    <input
+                      type="date"
+                      value={child.date}
+                      onChange={(e) => {
+                        const newChildren = [...childrenData]
+                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                        newChildren[actualIndex].date = e.target.value
+                        setChildrenData(newChildren)
+                      }}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    />
+                  </div>
                   <div className="w-16 text-center">
                     <button
                       type="button"
@@ -441,7 +476,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
                         }
                       }}
                       className="text-red-600 hover:text-red-800 font-bold text-lg px-1 cursor-pointer"
-                      title="Delete this child assessment"
+                      title="Delete this individual assessment"
                     >
                       ×
                     </button>
@@ -461,7 +496,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             )}
             
             <p className="text-xs text-gray-500">
-              Child points should total the parent points. Each child also needs a maximum score (how many points the assessment is out of).
+              Individual points should total the multiple assessment points. Each individual assessment also needs a maximum score (how many points the assessment is out of).
             </p>
             
           </div>

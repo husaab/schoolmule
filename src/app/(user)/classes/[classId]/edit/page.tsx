@@ -164,6 +164,7 @@ export default function EditClassPage() {
       try {
         const res = await getAssessmentsByClass(classId)
         if (res.status === 'success') {
+          console.log(res.data);
           setAssessments(res.data)
         } else {
           setAssessError(res.message || 'Failed to load assessments')
@@ -671,9 +672,6 @@ export default function EditClassPage() {
                 ) : (
                   <div className="px-6 py-3 bg-green-50 border border-green-200 text-green-700">
                     ✅ Total assessment points: <strong>{totalPoints.toFixed(1)} points</strong>
-                    <span className="text-sm text-gray-600 ml-2">
-                      (Perfect! This equals 100% for grade calculation)
-                    </span>
                   </div>
                 )}
 
@@ -713,7 +711,7 @@ export default function EditClassPage() {
                                 <p className="font-medium text-gray-800">{a.name}</p>
                                 {a.isParent && (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    Parent
+                                    Multiple
                                   </span>
                                 )}
                               </div>
@@ -724,7 +722,7 @@ export default function EditClassPage() {
                                 )}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Created: {new Date(a.createdAt).toLocaleDateString()}
+                                Date: {a.date ? new Date(a.date).toLocaleDateString() : "No date assigned"}
                               </p>
                               {a.isParent && childAssessments.length > 0 && (
                                 <p className="text-xs text-blue-600 mt-1">
@@ -762,7 +760,7 @@ export default function EditClassPage() {
                                       <span className="text-gray-400">└─</span>
                                       <p className="font-medium text-gray-700 text-sm">{child.name}</p>
                                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                        Child
+                                        Individual
                                       </span>
                                     </div>
                                     <div className="flex items-center space-x-4 ml-4">
@@ -774,6 +772,9 @@ export default function EditClassPage() {
                                       </p>
                                       <p className="text-xs text-gray-400">
                                         Order: {child.sortOrder || '-'}
+                                      </p>
+                                      <p className="text-xs text-gray-400">
+                                        Date: {child.date ? new Date(child.date).toLocaleDateString() : "No date assigned"}
                                       </p>
                                     </div>
                                   </div>
@@ -855,6 +856,10 @@ export default function EditClassPage() {
           onClose={() => setShowAddAssessmentModal(false)}
           onAdd={(newA) => {
             setAssessments((prev) => [newA, ...prev])
+            setShowAddAssessmentModal(false)
+          }}
+          onBatchAdd={(newAssessments) => {
+            setAssessments((prev) => [...newAssessments, ...prev])
             setShowAddAssessmentModal(false)
           }}
         />

@@ -389,14 +389,14 @@ const GradebookClass = () => {
                       a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-200' : ''
                     }`}
                     onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
-                    title={a.isParent ? 'Click to edit child assessments' : undefined}
+                    title={a.isParent ? 'Click to edit individual assessments' : undefined}
                   >
                     <div className="truncate">
                       {a.name}
                     </div>
                     <div>
                         {a.isParent && (
-                          <span className="ml-1 text-xs text-blue-600 font-medium">(Parent)</span>
+                          <span className="ml-1 text-xs text-blue-600 font-medium">(Multiple)</span>
                         )}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -440,14 +440,13 @@ const GradebookClass = () => {
                             <td
                               key={a.assessmentId}
                               className="px-1 py-1 text-center text-gray-800 bg-blue-50 cursor-pointer hover:bg-blue-100"
-                              title="Click to edit child assessments"
+                              title="Click to edit individual assessments"
                               onClick={() => handleParentAssessmentClick(a)}
                             >
                               <div className="w-16 mx-auto border border-blue-200 rounded p-1 text-center bg-blue-50 text-blue-800 font-medium">
                                 {(() => {
                                   // Calculate earned points for display
                                   let totalEarned = 0
-                                  let totalPossible = 0
                                   childAssessments.forEach(child => {
                                     const childKey = `${stu.studentId}|${child.assessmentId}`
                                     const childRawValue = editedScores[childKey] !== undefined
@@ -467,9 +466,8 @@ const GradebookClass = () => {
                                     const earnedPoints = percentage * childPoints
                                     
                                     totalEarned += earnedPoints
-                                    totalPossible += childPoints
                                   })
-                                  return `${totalEarned.toFixed(1)}/${totalPossible}`
+                                  return `${totalEarned.toFixed(1)}/${a.weightPoints || a.weightPercent || 0}`
                                 })()}
                               </div>
                             </td>

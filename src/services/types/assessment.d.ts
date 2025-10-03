@@ -15,6 +15,7 @@ export interface AssessmentPayload {
   sortOrder?:         number | null
   maxScore?:          number | null
   weightPoints?:      number | null
+  date?:              string | null
 }
 
 /**
@@ -60,11 +61,13 @@ export interface CreateAssessmentRequest {
   sortOrder?: number | null
   maxScore?: number | null
   weightPoints?: number | null
+  date?: string | null
   childrenData?: Array<{
     name: string
     weightPercent: number
     sortOrder: number
     maxScore?: number | null
     weightPoints?: number | null
+    date?: string | null
   }>
 }

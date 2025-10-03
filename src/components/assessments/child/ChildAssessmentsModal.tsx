@@ -91,14 +91,14 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-semibold">
-              {parentAssessment.name} - Child Assessments
+              {parentAssessment.name} - Individual Assessments
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Parent worth: {parentAssessment.weightPoints || parentAssessment.weightPercent || 0} points | Child assessments: {childAssessments.length}
+              Total worth: {parentAssessment.weightPoints || parentAssessment.weightPercent || 0} points | Individual assessments: {childAssessments.length}
             </p>
             {pointsWarning && (
               <p className="text-sm text-red-600 mt-1">
-                ⚠️ Child points total {totalChildPoints} (should equal parent {parentPoints})
+                ⚠️ Individual points total {totalChildPoints} (should equal multiple assessment {parentPoints})
               </p>
             )}
           </div>
@@ -106,7 +106,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
         {childAssessments.length === 0 ? (
           <p className="text-gray-600 text-center py-8">
-            This parent assessment has no child assessments.
+            This multiple assessment has no individual assessments.
           </p>
         ) : (
           <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -131,7 +131,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                     </th>
                   ))}
                   <th className="px-4 py-2 text-center text-gray-700 bg-blue-50">
-                    Parent Score
+                    Multiple Score
                   </th>
                 </tr>
               </thead>
@@ -189,7 +189,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         })}
 
                         <td className="px-4 py-2 text-center text-blue-800 font-medium bg-blue-50">
-                          {parentScore.earned.toFixed(1)}/{parentScore.total}
+                          {parentScore.earned.toFixed(1)}/{parentAssessment.weightPoints || parentAssessment.weightPercent || 0}
                         </td>
                       </tr>
                     )
@@ -201,7 +201,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         )}
 
         <div className="mt-4 text-xs text-gray-500">
-          <p>• Child assessment scores are weighted by their point values to calculate the parent score</p>
+          <p>• Individual assessment scores are weighted by their point values to calculate the total score</p>
           <p>• Changes are automatically reflected in the main gradebook</p>
           <p>• Remember to save changes in the main gradebook when finished</p>
         </div>

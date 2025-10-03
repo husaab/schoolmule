@@ -12,7 +12,7 @@ import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
-import { getGradeOptions } from '@/lib/schoolUtils';
+import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
 
 const StudentsPage = () => {
 
@@ -54,11 +54,27 @@ const StudentsPage = () => {
 
    const grades = getGradeOptions();
 
-    const filteredStudents = students.filter(s => {
-      const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = gradeFilter === '' || String(s.grade) === gradeFilter;
-      return matchesName && matchesGrade;
-    });
+    const filteredStudents = students
+      .filter(s => {
+        const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesGrade = gradeFilter === '' || String(s.grade) === gradeFilter;
+        return matchesName && matchesGrade;
+      })
+      .sort((a, b) => {
+        // Sort by grade first (JK, SK, 1, 2, 3...8)
+        const gradeA = getGradeNumericValue(a.grade);
+        const gradeB = getGradeNumericValue(b.grade);
+        
+        // Debug logging to see what we're getting
+        console.log(`Student ${a.name}: grade=${a.grade}, numericValue=${gradeA}`);
+        console.log(`Student ${b.name}: grade=${b.grade}, numericValue=${gradeB}`);
+        
+        if (gradeA !== gradeB) {
+          return gradeA - gradeB;
+        }
+        // Then sort by name alphabetically within the same grade
+        return a.name.localeCompare(b.name);
+      });
 
     return (
         <>

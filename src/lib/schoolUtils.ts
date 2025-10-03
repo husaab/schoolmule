@@ -64,9 +64,19 @@ export function getGradeLabel(grade: GradeValue | number | null | undefined): st
 /**
  * Convert a grade value to its numeric equivalent for sorting/comparison
  */
-export function getGradeNumericValue(grade: GradeValue | number | null | undefined): number {
+export function getGradeNumericValue(grade: GradeValue | number | string | null | undefined): number {
   if (grade === null || grade === undefined) return -999;
   
-  const option = GRADE_OPTIONS.find(opt => opt.value === grade);
+  // First try exact match
+  let option = GRADE_OPTIONS.find(opt => opt.value === grade);
+  
+  // If no exact match and it's a string, try converting to number and matching again
+  if (!option && typeof grade === 'string') {
+    const numericGrade = parseInt(grade, 10);
+    if (!isNaN(numericGrade)) {
+      option = GRADE_OPTIONS.find(opt => opt.value === numericGrade);
+    }
+  }
+  
   return option ? option.numericValue! : typeof grade === 'number' ? grade : -999;
 }
