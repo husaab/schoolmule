@@ -18,6 +18,7 @@ import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { AssessmentPayload } from '@/services/types/assessment'
 import { getTermByNameAndSchool } from '@/services/termService'
+import StudentAssessmentsModal from '@/components/assessments/student/studentAssessmentsModal'
 import type { TermPayload } from '@/services/types/term'
 import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
@@ -48,6 +49,10 @@ const GradebookClass = () => {
   // Child assessments modal state
   const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
   const [isChildAssessmentsModalOpen, setIsChildAssessmentsModalOpen] = useState(false);
+  
+  // Student assessments modal state
+  const [selectedStudent, setSelectedStudent] = useState<{ studentId: string; name: string } | null>(null);
+  const [isStudentAssessmentsModalOpen, setIsStudentAssessmentsModalOpen] = useState(false);
 
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means “no entry yet”)
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
@@ -210,12 +215,10 @@ const GradebookClass = () => {
         // Find the assessment to get its max score
         const assessment = assessments.find(a => a.assessmentId === assessmentId)
         if (assessment) {
-          // Smart max score detection: use weightPoints if maxScore seems wrong
-          const childPoints = Number(assessment.weightPoints || assessment.weightPercent || 0)
-          const storedMaxScore = Number(assessment.maxScore || 100)
-          const smartMaxScore = (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
-          // Clamp between 0 and the smart max score
-          val = Math.min(Math.max(parsed, 0), smartMaxScore)
+          // Use the actual maxScore for validation, not smart logic
+          const maxScore = Number(assessment.maxScore || 100)
+          // Clamp between 0 and the actual max score
+          val = Math.min(Math.max(parsed, 0), maxScore)
         } else {
           val = Math.min(Math.max(parsed, 0), 100)
         }
@@ -341,6 +344,20 @@ const GradebookClass = () => {
     setIsChildAssessmentsModalOpen(true)
   }
 
+  // Handler for refreshing data after student modal saves
+  const handleScoreUpdateFromModal = async () => {
+    // Refresh the scores matrix to show updated values from database
+    try {
+      const refreshed = await getScoresByClass(classId)
+      if (refreshed.status === 'success') {
+        setScoresMatrix(refreshed.data)
+        // Don't update editedScores - keep only unsaved gradebook changes
+      }
+    } catch (error) {
+      console.error('Error refreshing scores:', error)
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -428,7 +445,16 @@ const GradebookClass = () => {
                       className="border-t border-gray-100 hover:bg-gray-50"
                     >
                       <td className="px-4 py-2 text-gray-800">
-                        {stu.name}
+                        <button
+                          onClick={() => {
+                            setSelectedStudent({ studentId: stu.studentId, name: stu.name })
+                            setIsStudentAssessmentsModalOpen(true)
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                          title="Click to view/edit all assessments for this student"
+                        >
+                          {stu.name}
+                        </button>
                       </td>
 
                       {displayedAssessments.map((a: AssessmentPayload) => {
@@ -591,6 +617,25 @@ const GradebookClass = () => {
           onScoreChange={handleScoreChange}
         />
       )}
+
+      {/* Student Assessments Modal */}
+      <StudentAssessmentsModal
+        isOpen={isStudentAssessmentsModalOpen}
+        onClose={() => {
+          setSelectedStudent(null)
+          setIsStudentAssessmentsModalOpen(false)
+        }}
+        student={selectedStudent}
+        classId={classId as string}
+        assessments={assessments}
+        existingScores={scoresMatrix.map(score => ({
+          studentId: score.student_id,
+          assessmentId: score.assessment_id,
+          score: score.score
+        }))}
+        currentEditedScores={editedScores}
+        onRefreshScores={handleScoreUpdateFromModal}
+      />
     </>
   )
 }

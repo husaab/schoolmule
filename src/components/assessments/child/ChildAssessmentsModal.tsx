@@ -53,20 +53,15 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         ? editedScores[key]
         : existingScoreMap[key] ?? null
       
-      const rawScore = typeof rawValue === 'number'
-        ? rawValue
-        : rawValue !== null && rawValue !== undefined
-        ? parseFloat(String(rawValue)) || 0
-        : 0
+      const rawScore = typeof rawValue === 'number' ? rawValue : (rawValue ? parseFloat(String(rawValue)) : 0)
       
       // Get weight points (how many points this assessment contributes to parent)
       const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-      // Get max score for this child assessment (use weightPoints if maxScore seems wrong)
-      const storedMaxScore = Number(child.maxScore || 100)
-      const maxScore = (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+      // Use the actual maxScore, not the convoluted logic
+      const maxScore = Number(child.maxScore || 100)
       
       // Convert raw score to percentage, then multiply by weight points
-      const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0 // Cap at 100%
+      const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
       const earnedPoints = percentage * childPoints
       
       totalPoints += earnedPoints
