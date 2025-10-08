@@ -130,48 +130,14 @@ const Sidebar = () => {
                 )}
               </div>
 
-              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Schedule
-              </Link>
 
-              {/* Feedback Dropdown */}
-              <div>
-                <button
-                  onClick={() => setFeedbackOpen(!feedbackOpen)}
-                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
-                >
-                  <span>Feedback</span>
-                  {feedbackOpen ? (
-                    <ChevronUpIcon className="h-5 w-5" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5" />
-                  )}
-                </button>
-                {feedbackOpen && (
-                  <div className="ml-6 mt-2 space-y-2">
-                   <Link href="/feedback/send"
-                     className={`block px-2 py-1 rounded transform transition duration-200
-                      ${pathname === '/feedback/send'
-                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
-                          : 'hover:bg-gray-100'}`}
-                   >
-                     Send Feedback
-                   </Link>
-              
-                   <Link href="/feedback"
-                     className={`block px-2 py-1 rounded transform transition duration-200
-                       ${pathname.startsWith('/teacher/feedback') && pathname !== '/teacher/feedback/send'
-                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
-                          : 'hover:bg-gray-100'}`}
-                   >
-                     View / Edit Feedback
-                   </Link>
-                  </div>
-                )}
-              </div>
-
-              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Parent Communication
+              <Link 
+                href="/reports" 
+                className={`transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100 ${
+                  pathname.startsWith('/reports') ? 'bg-gray-200 font-semibold' : ''
+                }`}
+              >
+                Reports
               </Link>
 
               {/* Report Cards Dropdown */}
@@ -243,6 +209,50 @@ const Sidebar = () => {
               )}
             </div>
 
+              {/* ── Moved sections (less priority) ── */}
+              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+                Schedule
+              </Link>
+
+              {/* Feedback Dropdown */}
+              <div>
+                <button
+                  onClick={() => setFeedbackOpen(!feedbackOpen)}
+                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
+                >
+                  <span>Feedback</span>
+                  {feedbackOpen ? (
+                    <ChevronUpIcon className="h-5 w-5" />
+                  ) : (
+                    <ChevronDownIcon className="h-5 w-5" />
+                  )}
+                </button>
+                {feedbackOpen && (
+                  <div className="ml-6 mt-2 space-y-2">
+                   <Link href="/feedback/send"
+                     className={`block px-2 py-1 rounded transform transition duration-200
+                      ${pathname === '/feedback/send'
+                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
+                          : 'hover:bg-gray-100'}`}
+                   >
+                     Send Feedback
+                   </Link>
+              
+                   <Link href="/feedback"
+                     className={`block px-2 py-1 rounded transform transition duration-200
+                       ${pathname.startsWith('/teacher/feedback') && pathname !== '/teacher/feedback/send'
+                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
+                          : 'hover:bg-gray-100'}`}
+                   >
+                     View / Edit Feedback
+                   </Link>
+                  </div>
+                )}
+              </div>
+
+              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
+                Parent Communication
+              </Link>
               
               {/* Admin-only link */}
               {user?.role === 'ADMIN' && (
