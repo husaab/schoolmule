@@ -11,8 +11,10 @@ import { getTermsBySchool } from '@/services/termService'
 import { ClassPayload } from '@/services/types/class'
 import { StudentPayload } from '@/services/types/student'
 import { TermPayload } from '@/services/types/term'
-import { ArrowLeftIcon, DocumentArrowDownIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import StudentSummaryReportModal from '@/components/studentreport/studentsummary/StudentSummaryReportModal'
+import { generateStudentSummaryReport } from '@/services/reportService'
 
 const StudentSummaryPage = () => {
   const user = useUserStore((state) => state.user)
@@ -28,6 +30,8 @@ const StudentSummaryPage = () => {
   const [selectedTerm, setSelectedTerm] = useState<string>('active')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
 
   const loadClasses = useCallback(async () => {
     if (!user?.school || !user?.id) return
@@ -114,14 +118,35 @@ const StudentSummaryPage = () => {
 
     setGenerating(true)
     try {
-      // TODO: Call backend API to generate PDF report
-      showNotification('Report generation coming soon!', 'error')
+      console.log('Generating report for student:', selectedStudent, 'class:', selectedClass)
+      
+      const pdfBlob = await generateStudentSummaryReport(selectedStudent, selectedClass)
+      setPdfBlob(pdfBlob)
+      setShowPdfModal(true)
+      showNotification('Report generated successfully!', 'success')
     } catch (error) {
       console.error('Error generating report:', error)
-      showNotification('Error generating report', 'error')
+      showNotification(`Error generating report: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
     } finally {
       setGenerating(false)
     }
+  }
+
+  const handleDownloadPdf = () => {
+    if (!pdfBlob) return
+    
+    const selectedStudentData = students.find(s => s.studentId === selectedStudent)
+    const selectedClassData = classes.find(c => c.classId === selectedClass)
+    const termData = selectedTerm === 'active' ? activeTerm : terms.find(t => t.name === selectedTerm)
+    
+    const filename = `${selectedStudentData?.name || 'Student'}_${selectedClassData?.subject || 'Report'}_${termData?.name || 'Term'}.pdf`
+    
+    const url = URL.createObjectURL(pdfBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const selectedStudentData = students.find(s => s.studentId === selectedStudent)
@@ -286,31 +311,18 @@ const StudentSummaryPage = () => {
 
           {/* Generate Report Buttons */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex justify-center">
               <button
                 onClick={handleGenerateReport}
                 disabled={!selectedStudent || !selectedClass || generating}
-                className={`flex-1 flex items-center justify-center px-6 py-3 rounded-md text-white font-medium transition-colors duration-200 ${
+                className={`cursor-pointer w-full max-w-md flex items-center justify-center px-6 py-3 rounded-md text-white font-medium transition-colors duration-200 ${
                   !selectedStudent || !selectedClass || generating
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-                {generating ? 'Generating...' : 'Download PDF Report'}
-              </button>
-              
-              <button
-                onClick={handleGenerateReport}
-                disabled={!selectedStudent || !selectedClass || generating}
-                className={`flex-1 flex items-center justify-center px-6 py-3 rounded-md font-medium border transition-colors duration-200 ${
-                  !selectedStudent || !selectedClass || generating
-                    ? 'border-gray-300 text-gray-400 cursor-not-allowed'
-                    : 'border-blue-600 text-blue-600 hover:bg-blue-50'
-                }`}
-              >
-                <EyeIcon className="h-5 w-5 mr-2" />
-                Preview Report
+                {generating ? 'Generating...' : 'Generate Report'}
               </button>
             </div>
             
@@ -322,6 +334,23 @@ const StudentSummaryPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Student Summary Report Modal */}
+      <StudentSummaryReportModal
+        isOpen={showPdfModal}
+        onClose={() => setShowPdfModal(false)}
+        pdfBlob={pdfBlob}
+        studentName={selectedStudentData?.name || 'Unknown Student'}
+        className={selectedClassData?.subject || 'Unknown Class'}
+        termName={
+          selectedTerm === 'active' 
+            ? `${activeTerm?.name} (Active)` 
+            : selectedTerm === 'all' 
+              ? 'All Terms' 
+              : selectedTerm
+        }
+        onDownload={handleDownloadPdf}
+      />
     </>
   )
 }
