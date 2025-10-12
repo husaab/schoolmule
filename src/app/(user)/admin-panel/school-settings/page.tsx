@@ -18,6 +18,7 @@ import TermDeleteModal from '@/components/terms/delete/termDeleteModal'
 const SchoolSettingsPage = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
+  const hasHydrated = useUserStore((state) => state.hasHydrated)
   const showNotification = useNotificationStore((state) => state.showNotification)
 
   const [terms, setTerms] = useState<TermPayload[]>([])
@@ -83,6 +84,11 @@ const SchoolSettingsPage = () => {
   }, [user.school]);
 
   useEffect(() => {
+    // Wait for hydration before checking user
+    if (!hasHydrated) {
+      return
+    }
+
     if (!user?.school) {
       setError('Unable to determine your school')
       setLoading(false)
@@ -106,7 +112,7 @@ const SchoolSettingsPage = () => {
     }
 
     fetchData()
-  }, [user?.school, fetchSchoolData, fetchTerms])
+  }, [hasHydrated, user?.school, fetchSchoolData, fetchTerms])
 
   const handleSchoolSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

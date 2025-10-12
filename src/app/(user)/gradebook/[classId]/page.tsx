@@ -22,6 +22,7 @@ import StudentAssessmentsModal from '@/components/assessments/student/studentAss
 import type { TermPayload } from '@/services/types/term'
 import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
+import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 
 interface ScoreRow {
   student_id: string
@@ -45,6 +46,7 @@ const GradebookClass = () => {
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
 
   // Child assessments modal state
   const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
@@ -60,6 +62,9 @@ const GradebookClass = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = Object.keys(editedScores).length > 0
 
   useEffect(() => {
     if (!classId) return
@@ -121,6 +126,42 @@ const GradebookClass = () => {
     fetchTermData()
   }, [classData?.termName, classData?.school])
 
+  // Warn user about unsaved changes when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have not saved your grade changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    const handlePopState = () => {
+      if (hasUnsavedChanges) {
+        const confirmLeave = window.confirm('You have not saved your grade changes. Are you sure you want to leave?')
+        if (!confirmLeave) {
+          // Push the current state back to prevent navigation
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('popstate', handlePopState)
+
+    // Push a state to handle back button
+    if (hasUnsavedChanges) {
+      window.history.pushState(null, '', window.location.href)
+    }
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [hasUnsavedChanges])
+
   if (error) {
     return (
       <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
@@ -146,25 +187,7 @@ const GradebookClass = () => {
   if (!classData) return null
 
   // Filter assessments to show only parent and standalone (hide children)
-  console.log('=== DEBUGGING ASSESSMENTS ===')
-  console.log('Total assessments:', assessments.length)
-  assessments.forEach((a, index) => {
-    console.log(`Assessment ${index}:`, {
-      name: a.name,
-      assessmentId: a.assessmentId,
-      parentAssessmentId: a.parentAssessmentId,
-      isParent: a.isParent,
-      typeof_parentAssessmentId: typeof a.parentAssessmentId,
-      typeof_isParent: typeof a.isParent,
-      parentAssessmentId_is_null: a.parentAssessmentId === null,
-      parentAssessmentId_is_undefined: a.parentAssessmentId === undefined,
-      should_be_displayed: !a.parentAssessmentId
-    })
-  })
-  
   const displayedAssessments = assessments.filter(a => !a.parentAssessmentId)
-  console.log('Displayed assessments count:', displayedAssessments.length)
-  console.log('Displayed assessment names:', displayedAssessments.map(a => a.name))
 
   // 1) Build a quick lookup: "studentId|assessmentId" → existing score (or null)
   const existingScoreMap: Record<string, number | null> = {}
@@ -423,6 +446,7 @@ const GradebookClass = () => {
                 ))}
                 <th className="px-4 py-2 text-center text-gray-700">Total</th>
                 <th className="px-4 py-2 text-center text-gray-700">Feedback</th>
+                <th className="px-4 py-2 text-center text-gray-700 w-20">Progress</th>
               </tr>
             </thead>
 
@@ -430,7 +454,7 @@ const GradebookClass = () => {
               {students.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={2 + displayedAssessments.length}
+                    colSpan={3 + displayedAssessments.length}
                     className="px-4 py-6 text-center text-gray-600"
                   >
                     No students are currently enrolled in this class.
@@ -556,6 +580,18 @@ const GradebookClass = () => {
                           Feedback
                         </button>
                       </td>
+
+                      <td className="px-2 py-2 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedStudentId(stu.studentId);
+                            setIsProgressReportModalOpen(true);
+                          }}
+                          className="text-sm px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded cursor-pointer"
+                        >
+                          Progress
+                        </button>
+                      </td>
                     </tr>
                   )
                 })
@@ -566,7 +602,16 @@ const GradebookClass = () => {
 
         <div className="mt-6 flex ml-20 space-x-4">
           <button
-            onClick={() => router.push('/gradebook')}
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?')
+                if (confirmLeave) {
+                  router.push('/gradebook')
+                }
+              } else {
+                router.push('/gradebook')
+              }
+            }}
             className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"
           >
             Back
@@ -597,6 +642,15 @@ const GradebookClass = () => {
         <OpenFeedBackModal
           isOpen={isFeedbackModalOpen}
           onClose={() => setIsFeedbackModalOpen(false)}
+          studentId={selectedStudentId}
+          classId={classId}
+        />
+      )}
+
+      {selectedStudentId && (
+        <ProgressReportModal
+          isOpen={isProgressReportModalOpen}
+          onClose={() => setIsProgressReportModalOpen(false)}
           studentId={selectedStudentId}
           classId={classId}
         />

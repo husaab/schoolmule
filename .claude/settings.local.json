@@ -10,7 +10,8 @@
       "Bash(rm:*)",
       "Bash(cp:*)",
       "Bash(npm run dev:*)",
-      "Bash(git -C \"/mnt/c/Users/husse/OneDrive/Desktop/Github/schoolmule-backend\" status)"
+      "Bash(git -C \"/mnt/c/Users/husse/OneDrive/Desktop/Github/schoolmule-backend\" status)",
+      "Bash(wc:*)"
     ],
     "deny": []
   }
