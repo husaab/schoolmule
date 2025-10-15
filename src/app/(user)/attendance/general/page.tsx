@@ -12,7 +12,7 @@ import {
   getGeneralAttendanceByDate,
   submitGeneralAttendance,
 } from '@/services/attendanceService';
-import { getGradeOptions } from '@/lib/schoolUtils';
+import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
@@ -27,11 +27,23 @@ export default function GeneralAttendancePage() {
 
   const grades = getGradeOptions();
 
-  const filteredStudents = students.filter(s => {
-    const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGrade = gradeFilter === '' || String(s.grade) === gradeFilter;
-    return matchesName && matchesGrade;
-  });
+  const filteredStudents = students
+    .filter(s => {
+      const matchesName = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGrade = gradeFilter === '' || String(s.grade) === gradeFilter;
+      return matchesName && matchesGrade;
+    })
+    .sort((a, b) => {
+      // Sort by grade first (JK, SK, 1, 2, 3...8)
+      const gradeA = getGradeNumericValue(a.grade);
+      const gradeB = getGradeNumericValue(b.grade);
+      
+      if (gradeA !== gradeB) {
+        return gradeA - gradeB;
+      }
+      // Then sort by name alphabetically within the same grade
+      return a.name.localeCompare(b.name);
+    });
 
  const [selectedDate, setSelectedDate] = useState(() => {
   return format(new Date(), 'yyyy-MM-dd'); // Uses user’s browser local time
@@ -71,12 +83,75 @@ export default function GeneralAttendancePage() {
     }));
   };
 
+  const markAllPresent = () => {
+    const newAttendance: Record<string, AttendanceStatus | null> = {};
+    filteredStudents.forEach(student => {
+      newAttendance[student.studentId] = 'PRESENT';
+    });
+    setAttendance(newAttendance);
+    showNotification('All students marked as present', 'success');
+  };
+
   const groupedByGrade = filteredStudents.reduce((acc, student) => {
     const grade = `Grade ${student.grade ?? '-'}`;
     acc[grade] = acc[grade] || [];
     acc[grade].push(student);
     return acc;
   }, {} as Record<string, StudentPayload[]>);
+
+  // Calculate attendance statistics
+  const totalStudents = filteredStudents.length;
+  const presentCount = filteredStudents.filter(student => 
+    attendance[student.studentId] === 'PRESENT'
+  ).length;
+  const lateCount = filteredStudents.filter(student => 
+    attendance[student.studentId] === 'LATE'
+  ).length;
+  const absentCount = filteredStudents.filter(student => 
+    attendance[student.studentId] === 'ABSENT'
+  ).length;
+  const unmarkedCount = totalStudents - presentCount - lateCount - absentCount;
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = Object.keys(attendance).some(studentId => 
+    attendance[studentId] !== null
+  );
+
+  // Warn user about unsaved changes when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have not saved your attendance changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    const handlePopState = () => {
+      if (hasUnsavedChanges) {
+        const confirmLeave = window.confirm('You have not saved your attendance changes. Are you sure you want to leave?')
+        if (!confirmLeave) {
+          // Push the current state back to prevent navigation
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('popstate', handlePopState)
+
+    // Push a state to handle back button
+    if (hasUnsavedChanges) {
+      window.history.pushState(null, '', window.location.href)
+    }
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [hasUnsavedChanges])
 
   return (
     <>
@@ -97,6 +172,34 @@ export default function GeneralAttendancePage() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">Student Attendance</h2>
                   <p className="text-sm text-gray-600">Mark attendance for {format(new Date(selectedDate), 'MMM dd, yyyy')}</p>
+                  
+                  {/* Attendance Statistics */}
+                  <div className="mt-2 flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-700">Progress:</span>
+                      <span className="font-semibold text-green-600">
+                        {presentCount}/{totalStudents} Present
+                      </span>
+                    </div>
+                    {lateCount > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                        <span className="text-yellow-700">{lateCount} Late</span>
+                      </div>
+                    )}
+                    {absentCount > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span className="text-red-700">{absentCount} Absent</span>
+                      </div>
+                    )}
+                    {unmarkedCount > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span className="text-gray-600">{unmarkedCount} Unmarked</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <label htmlFor="attendance-date" className="text-sm font-medium text-gray-700">
@@ -220,9 +323,15 @@ export default function GeneralAttendancePage() {
           </div>
         </div>
 
-        {/* Sticky Save Button at Bottom */}
+        {/* Sticky Action Buttons at Bottom */}
         <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-20 p-4 bg-white border-t border-gray-200 shadow-lg">
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={markAllPresent}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer font-semibold shadow-md"
+            >
+              All Present
+            </button>
             <button
               onClick={async () => {
                 const entries = Object.entries(attendance)

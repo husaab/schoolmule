@@ -65,9 +65,6 @@ const StudentsPage = () => {
         const gradeA = getGradeNumericValue(a.grade);
         const gradeB = getGradeNumericValue(b.grade);
         
-        // Debug logging to see what we're getting
-        console.log(`Student ${a.name}: grade=${a.grade}, numericValue=${gradeA}`);
-        console.log(`Student ${b.name}: grade=${b.grade}, numericValue=${gradeB}`);
         
         if (gradeA !== gradeB) {
           return gradeA - gradeB;
