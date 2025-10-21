@@ -86,9 +86,9 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
           return sum + childPoints
         }, 0)
       
-      if (totalChildPoints - parentPoints > 0.02) {
+      if (totalChildPoints - parentPoints > 0.03) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (must not exceed parent ${parentPoints})`)
-      } else if (Math.abs(totalChildPoints - parentPoints) > 0.02) {
+      } else if (Math.abs(totalChildPoints - parentPoints) > 0.03) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (should equal parent ${parentPoints})`)
       } else {
         setChildPointsError('')
