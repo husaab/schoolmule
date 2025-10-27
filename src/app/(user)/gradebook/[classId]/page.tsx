@@ -25,7 +25,7 @@ import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmen
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
 import { getExclusionsByStudentAndClass } from '@/services/excludedAssessmentService';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { MinusCircleIcon } from '@heroicons/react/24/outline';
 
 interface ScoreRow {
   student_id: string
@@ -584,7 +584,7 @@ const GradebookClass = () => {
                             className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 cursor-pointer"
                             title={`Manage exclusions (${exclusionsData[stu.studentId] || 0} excluded)`}
                           >
-                            <XMarkIcon className="h-4 w-4" />
+                            <MinusCircleIcon className="h-4 w-4" />
                             {(exclusionsData[stu.studentId] || 0) > 0 && (
                               <span className="text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full font-medium">
                                 {exclusionsData[stu.studentId]}
