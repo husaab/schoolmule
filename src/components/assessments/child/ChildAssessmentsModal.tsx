@@ -11,7 +11,12 @@ interface ScoreRow {
   assessment_id: string
   assessment_name: string
   weight_percent: number
+  weight_points: number
+  max_score: number
+  is_parent: boolean
+  parent_assessment_id: string | null
   score: number | null
+  is_excluded: boolean
 }
 
 interface ChildAssessmentsModalProps {
@@ -35,20 +40,29 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   editedScores,
   onScoreChange,
 }) => {
-  // Build lookup for existing scores
+  // Build lookups for existing scores and exclusions
   const existingScoreMap: Record<string, number | null> = {}
+  const exclusionMap: Record<string, boolean> = {}
   scoresMatrix.forEach((row) => {
     const key = `${row.student_id}|${row.assessment_id}`
     existingScoreMap[key] = row.score
+    exclusionMap[key] = row.is_excluded
   })
 
-  // Calculate parent score for a student based on child scores
+  // Calculate parent score for a student based on child scores (excluding excluded children)
   const calculateParentScore = (studentId: string) => {
     let totalPoints = 0
     let maxPossiblePoints = 0
     
     childAssessments.forEach(child => {
       const key = `${studentId}|${child.assessmentId}`
+      const isExcluded = exclusionMap[key] || false
+      
+      if (isExcluded) {
+        // Skip excluded child assessments
+        return
+      }
+      
       const rawValue = editedScores[key] !== undefined
         ? editedScores[key]
         : existingScoreMap[key] ?? null
@@ -155,6 +169,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
                         {childAssessments.map((child) => {
                           const key = `${student.studentId}|${child.assessmentId}`
+                          const isExcluded = exclusionMap[key] || false
                           const currentValue = editedScores[key] !== undefined
                             ? editedScores[key]
                             : existingScoreMap[key] ?? ''
@@ -164,21 +179,31 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           return (
                             <td
                               key={child.assessmentId}
-                              className="px-1 py-1 text-center text-gray-800"
+                              className={`px-1 py-1 text-center ${
+                                isExcluded ? 'text-gray-400' : 'text-gray-800'
+                              }`}
                             >
-                              <div className="flex items-center justify-center space-x-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={maxScore}
-                                  step="1"
-                                  className="w-12 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                                  value={currentValue}
-                                  onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
-                                  placeholder="0"
-                                />
-                                <span className="text-sm text-gray-600">/{maxScore}</span>
-                              </div>
+                              {isExcluded ? (
+                                <div className="flex items-center justify-center">
+                                  <div className="w-16 border border-gray-300 rounded p-1 text-center bg-gray-100 text-gray-500 text-xs">
+                                    Excluded
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center space-x-1">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={maxScore}
+                                    step="1"
+                                    className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                    value={currentValue}
+                                    onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                                    placeholder="0"
+                                  />
+                                  <span className="text-sm text-gray-600">/{maxScore}</span>
+                                </div>
+                              )}
                             </td>
                           )
                         })}
