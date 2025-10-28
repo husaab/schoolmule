@@ -727,6 +727,7 @@ const GradebookClass = () => {
                         <button
                           onClick={() => {
                             setSelectedStudentId(stu.studentId);
+                            setSelectedStudentName(stu.name);
                             setIsFeedbackModalOpen(true);
                           }}
                           className="text-sm px-2 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded cursor-pointer"
@@ -793,11 +794,12 @@ const GradebookClass = () => {
         {error && <p className="mt-4 text-center text-red-600">{error}</p>}
       </main>
 
-      {selectedStudentId && (
+      {selectedStudentId && selectedStudentName && (
         <OpenFeedBackModal
           isOpen={isFeedbackModalOpen}
           onClose={() => setIsFeedbackModalOpen(false)}
           studentId={selectedStudentId}
+          studentName={selectedStudentName}
           classId={classId}
         />
       )}

@@ -133,7 +133,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
             <table className="w-full table-auto whitespace-nowrap">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-4 py-2 text-left text-gray-700 sticky left-0 bg-gray-100 z-10">
+                  <th className="sticky top-0 z-30 px-4 py-2 text-left text-gray-700 sticky left-0 bg-gray-100 z-10">
                     Student Name
                   </th>
                   {childAssessments.map((child) => (
@@ -174,7 +174,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         key={student.studentId}
                         className="border-t border-gray-100 hover:bg-gray-50"
                       >
-                        <td className="px-4 py-2 text-gray-800 font-medium sticky left-0 bg-white z-10">
+                        <td className="sticky top-0 z-30 px-4 py-2 text-gray-800 font-medium sticky left-0 bg-white z-10">
                           {student.name}
                         </td>
 

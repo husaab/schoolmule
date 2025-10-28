@@ -21,7 +21,7 @@ const NavBar: FC = () => {
   }, []);
 
   return (
-    <nav className={`fixed w-full top-0 z-30 transition bg-white shadow-xs duration-300 ease-in-out ${!atTop ? 'bg-white shadow-lg' : ''}`}>      
+    <nav className={`fixed w-full top-0 z-50 transition bg-white shadow-xs duration-300 ease-in-out ${!atTop ? 'bg-white shadow-lg' : ''}`}>      
       <div className="flex justify-between items-center py-2 px-4 lg:px-12">
         {/* Mobile sidebar button */}
         <button 

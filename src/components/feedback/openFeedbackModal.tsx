@@ -12,6 +12,7 @@ interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
+  studentName: string;
   classId: string;
 }
 
@@ -19,6 +20,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   isOpen,
   onClose,
   studentId,
+  studentName,
   classId
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
@@ -137,7 +139,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-lg w-11/12">
-      <h2 className="text-xl mb-4 text-black">Report Card Feedback</h2>
+      <h2 className="text-xl mb-4 text-black">{studentName} Report Card Feedback</h2>
       <form onSubmit={handleSubmit} className="space-y-4 text-black">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Term</label>
