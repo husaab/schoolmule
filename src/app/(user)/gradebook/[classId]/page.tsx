@@ -53,6 +53,7 @@ const GradebookClass = () => {
   const [termData, setTermData] = useState<TermPayload | null>(null)
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
 
@@ -511,7 +512,7 @@ const GradebookClass = () => {
           <table className="w-full table-auto whitespace-nowrap">
             <thead className="bg-gray-100">
               <tr>
-                <th className="px-4 py-2 text-left text-gray-700">
+                <th className="sticky left-0 top-0 z-40 bg-gray-100 px-4 py-2 text-left text-gray-700">
                   Student Name
                 </th>
                 {displayedAssessments.map((a: AssessmentPayload) => (
@@ -562,7 +563,7 @@ const GradebookClass = () => {
                       key={stu.studentId}
                       className="border-t border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-4 py-2 text-gray-800">
+                      <td className="sticky left-0 z-30 bg-white px-4 py-2 text-gray-800">
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => {
@@ -622,10 +623,19 @@ const GradebookClass = () => {
                                   'Excluded'
                                 ) : (
                                   (() => {
-                                    // Calculate earned points for display
+                                    // Calculate earned points for display (excluding excluded children)
                                     let totalEarned = 0
+                                    let totalActiveWeight = 0
+                                    
                                     childAssessments.forEach(child => {
                                       const childKey = `${stu.studentId}|${child.assessmentId}`
+                                      const isChildExcluded = exclusionMap[childKey] || false
+                                      
+                                      if (isChildExcluded) {
+                                        // Skip excluded child assessments
+                                        return
+                                      }
+                                      
                                       const childRawValue = editedScores[childKey] !== undefined
                                         ? editedScores[childKey]
                                         : existingScoreMap[childKey] ?? null
@@ -643,8 +653,17 @@ const GradebookClass = () => {
                                       const earnedPoints = percentage * childPoints
                                       
                                       totalEarned += earnedPoints
+                                      totalActiveWeight += childPoints
                                     })
-                                    return `${totalEarned.toFixed(1)}/${a.weightPoints || a.weightPercent || 0}`
+                                    
+                                    // If some children are excluded, scale up proportionally
+                                    const parentTotalPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                    if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
+                                      const scaleFactor = parentTotalPoints / totalActiveWeight
+                                      totalEarned = totalEarned * scaleFactor
+                                    }
+                                    
+                                    return `${totalEarned.toFixed(1)}/${parentTotalPoints}`
                                   })()
                                 )}
                               </div>
@@ -720,6 +739,7 @@ const GradebookClass = () => {
                         <button
                           onClick={() => {
                             setSelectedStudentId(stu.studentId);
+                            setSelectedStudentName(stu.name);
                             setIsProgressReportModalOpen(true);
                           }}
                           className="text-sm px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded cursor-pointer"
@@ -782,11 +802,12 @@ const GradebookClass = () => {
         />
       )}
 
-      {selectedStudentId && (
+      {selectedStudentId && selectedStudentName && (
         <ProgressReportModal
           isOpen={isProgressReportModalOpen}
           onClose={() => setIsProgressReportModalOpen(false)}
           studentId={selectedStudentId}
+          studentName={selectedStudentName}
           classId={classId}
         />
       )}
@@ -820,7 +841,8 @@ const GradebookClass = () => {
         existingScores={scoresMatrix.map(score => ({
           studentId: score.student_id,
           assessmentId: score.assessment_id,
-          score: score.score
+          score: score.score,
+          isExcluded: score.is_excluded
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}

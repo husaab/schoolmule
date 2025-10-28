@@ -53,6 +53,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   const calculateParentScore = (studentId: string) => {
     let totalPoints = 0
     let maxPossiblePoints = 0
+    let totalActiveWeight = 0
     
     childAssessments.forEach(child => {
       const key = `${studentId}|${child.assessmentId}`
@@ -80,7 +81,17 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
       
       totalPoints += earnedPoints
       maxPossiblePoints += childPoints
+      totalActiveWeight += childPoints
     })
+    
+    // If some assessments are excluded, redistribute proportionally
+    const parentTotalPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
+    if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
+      // Scale up proportionally to account for excluded assessments
+      const scaleFactor = parentTotalPoints / totalActiveWeight
+      totalPoints = totalPoints * scaleFactor
+      maxPossiblePoints = parentTotalPoints
+    }
     
     // Return earned/total format for display
     return { earned: totalPoints, total: maxPossiblePoints }

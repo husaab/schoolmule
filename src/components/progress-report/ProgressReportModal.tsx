@@ -9,6 +9,7 @@ interface ProgressReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
+  studentName: string;
   classId: string;
 }
 
@@ -16,6 +17,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   isOpen,
   onClose,
   studentId,
+  studentName,
   classId
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
@@ -99,8 +101,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-lg w-11/12">
-      <h2 className="text-xl mb-4 text-black font-semibold">Progress Report Feedback</h2>
-      
+      <h2 className="text-xl mb-4 text-black font-semibold">{studentName} Progress Report Feedback</h2>
       {loading && !coreStandards && !workHabit && !behavior && !comment ? (
         <div className="text-center py-4">
           <p className="text-gray-600">Loading feedback...</p>

@@ -20,6 +20,7 @@ interface StudentScore {
   studentId: string
   assessmentId: string
   score: number | null
+  isExcluded?: boolean
 }
 
 interface StudentAssessmentsModalProps {
@@ -51,6 +52,22 @@ export default function StudentAssessmentsModal({
   const [saving, setSaving] = useState(false)
   
   const showNotification = useNotificationStore((state) => state.showNotification)
+
+  // Build exclusion map from existing scores
+  const exclusionMap: Record<string, boolean> = {}
+  existingScores.forEach(score => {
+    if (score.studentId === student?.studentId) {
+      const key = `${score.studentId}|${score.assessmentId}`
+      exclusionMap[key] = score.isExcluded || false
+    }
+  })
+
+  // Check if an assessment is excluded
+  const isAssessmentExcluded = (assessmentId: string) => {
+    if (!student) return false
+    const key = `${student.studentId}|${assessmentId}`
+    return exclusionMap[key] || false
+  }
 
   // Initialize edited scores when modal opens
   useEffect(() => {
@@ -259,9 +276,10 @@ export default function StudentAssessmentsModal({
                       const scoreValue = getScoreDisplay(assessment.assessmentId)
                       const numScore = scoreValue ? parseFloat(scoreValue) : null
                       const percentage = calculatePercentage(numScore, assessment.maxScore)
+                      const isExcluded = isAssessmentExcluded(assessment.assessmentId)
                       
                       return (
-                        <div key={assessment.assessmentId} className="flex items-center justify-between p-3 text-black bg-white rounded border">
+                        <div key={assessment.assessmentId} className={`flex items-center justify-between p-3 bg-white rounded border ${isExcluded ? 'text-gray-400' : 'text-black'}`}>
                           <div className="flex-1">
                             <div className="font-medium">{assessment.name}</div>
                             <div className="text-sm text-gray-600">
@@ -272,29 +290,43 @@ export default function StudentAssessmentsModal({
                                 Date: {new Date(assessment.date).toLocaleDateString()}
                               </div>
                             )}
+                            {isExcluded && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                ⚠️ This assessment is excluded from grade calculations
+                              </div>
+                            )}
                           </div>
                           
                           <div className="flex items-center space-x-5">
                             <div className="text-right">
-                              <input
-                                type="number"
-                                value={scoreValue}
-                                onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
-                                className="w-20 px-2 py-1 border rounded text-center"
-                                placeholder="0"
-                                min="0"
-                                max={assessment.maxScore || 100}
-                                step="0.1"
-                              />
+                              {isExcluded ? (
+                                <div className="w-20 px-2 py-1 border border-gray-300 rounded text-center bg-gray-100 text-gray-500 text-xs">
+                                  Excluded
+                                </div>
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={scoreValue}
+                                  onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
+                                  className="w-20 px-2 py-1 border rounded text-center"
+                                  placeholder="0"
+                                  min="0"
+                                  max={assessment.maxScore || 100}
+                                  step="0.1"
+                                />
+                              )}
                               <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
                             </div>
                             
                             <div className="text-right min-w-16">
-                              {percentage !== null && (
+                              {!isExcluded && percentage !== null && (
                                 <>
                                   <div className="text-sm font-medium">{percentage}%</div>
                                   <div className="text-xs text-gray-600">{getLetterGrade(parseFloat(percentage))}</div>
                                 </>
+                              )}
+                              {isExcluded && (
+                                <div className="text-xs text-gray-500">Excluded</div>
                               )}
                             </div>
                           </div>
@@ -309,9 +341,10 @@ export default function StudentAssessmentsModal({
                   const scoreValue = getScoreDisplay(assessment.assessmentId)
                   const numScore = scoreValue ? parseFloat(scoreValue) : null
                   const percentage = calculatePercentage(numScore, assessment.maxScore)
+                  const isExcluded = isAssessmentExcluded(assessment.assessmentId)
                   
                   return (
-                    <div key={assessment.assessmentId} className="flex text-black items-center justify-between p-3 bg-white rounded border">
+                    <div key={assessment.assessmentId} className={`flex items-center justify-between p-3 bg-white rounded border ${isExcluded ? 'text-gray-400' : 'text-black'}`}>
                       <div className="flex-1">
                         <div className="font-medium">{assessment.name}</div>
                         <div className="text-sm text-gray-600">
@@ -322,29 +355,43 @@ export default function StudentAssessmentsModal({
                             Date: {new Date(assessment.date).toLocaleDateString()}
                           </div>
                         )}
+                        {isExcluded && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            ⚠️ This assessment is excluded from grade calculations
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center space-x-1">
                         <div className="text-right">
-                          <input
-                            type="number"
-                            value={scoreValue}
-                            onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
-                            className="w-20 px-3 py-1 border rounded text-center"
-                            placeholder="0"
-                            min="0"
-                            max={assessment.maxScore || undefined}
-                            step="0.1"
-                          />
+                          {isExcluded ? (
+                            <div className="w-20 px-3 py-1 border border-gray-300 rounded text-center bg-gray-100 text-gray-500 text-xs">
+                              Excluded
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={scoreValue}
+                              onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
+                              className="w-20 px-3 py-1 border rounded text-center"
+                              placeholder="0"
+                              min="0"
+                              max={assessment.maxScore || undefined}
+                              step="0.1"
+                            />
+                          )}
                           <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
                         </div>
                         
                         <div className="text-right min-w-16">
-                          {percentage !== null && (
+                          {!isExcluded && percentage !== null && (
                             <>
                               <div className="text-sm font-medium">{percentage}%</div>
                               <div className="text-xs text-gray-600">{getLetterGrade(parseFloat(percentage))}</div>
                             </>
+                          )}
+                          {isExcluded && (
+                            <div className="text-xs text-gray-500">Excluded</div>
                           )}
                         </div>
                       </div>
