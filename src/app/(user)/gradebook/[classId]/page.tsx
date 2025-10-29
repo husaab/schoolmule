@@ -24,7 +24,7 @@ import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
-import { getExclusionsByClass } from '@/services/excludedAssessmentService';
+import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import { MinusCircleIcon } from '@heroicons/react/24/outline';
 
 interface ScoreRow {
@@ -626,7 +626,7 @@ const GradebookClass = () => {
                           return (
                             <td
                               key={a.assessmentId}
-                              className={`px-1 py-1 text-center cursor-pointer hover:bg-blue-100 ${
+                              className={`px-1 py-1 text-center cursor-pointer hover:bg-blue-100 relative group ${
                                 isExcluded 
                                   ? 'bg-gray-100 text-gray-400' 
                                   : 'text-gray-800 bg-blue-50'
@@ -634,13 +634,47 @@ const GradebookClass = () => {
                               title={isExcluded ? 'Assessment excluded from grade calculation' : 'Click to edit individual assessments'}
                               onClick={() => handleParentAssessmentClick(a)}
                             >
+                              {/* Hover-triggered exclusion toggle button for parent assessments */}
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation() // Prevent triggering parent assessment modal
+                                  try {
+                                    if (isExcluded) {
+                                      // Include the assessment
+                                      await deleteExclusion(stu.studentId, classId, a.assessmentId)
+                                      showNotification('Assessment included', 'success')
+                                    } else {
+                                      // Exclude the assessment
+                                      await createExclusion({
+                                        studentId: stu.studentId,
+                                        classId: classId,
+                                        assessmentId: a.assessmentId
+                                      })
+                                      showNotification('Assessment excluded', 'success')
+                                    }
+                                    // Refresh exclusions and scores
+                                    await refreshExclusionsData()
+                                  } catch (error) {
+                                    console.error('Error toggling exclusion:', error)
+                                    showNotification('Failed to update exclusion', 'error')
+                                  }
+                                }}
+                                className={`absolute top-0 right-0 w-3 h-3 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
+                                  isExcluded 
+                                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                                    : 'bg-red-500 text-white hover:bg-red-600'
+                                }`}
+                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                              >
+                                {isExcluded ? '✓' : '×'}
+                              </button>
                               <div className={`w-16 mx-auto border rounded p-1 text-center font-medium ${
                                 isExcluded 
-                                  ? 'border-gray-300 bg-gray-100 text-gray-500' 
+                                  ? 'border-gray-300 bg-gray-100 text-gray-500 text-xs' 
                                   : 'border-blue-200 bg-blue-50 text-blue-800'
                               }`}>
                                 {isExcluded ? (
-                                  'Excluded'
+                                  'Excl.'
                                 ) : (
                                   (() => {
                                     // Calculate earned points for display (excluding excluded children)
@@ -699,10 +733,44 @@ const GradebookClass = () => {
                           return (
                             <td
                               key={a.assessmentId}
-                              className={`px-1 py-1 text-center ${
+                              className={`px-1 py-1 text-center relative group ${
                                 isExcluded ? 'text-gray-400' : 'text-gray-800'
                               }`}
                             >
+                              {/* Hover-triggered exclusion toggle button */}
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    if (isExcluded) {
+                                      // Include the assessment
+                                      await deleteExclusion(stu.studentId, classId, a.assessmentId)
+                                      showNotification('Assessment included', 'success')
+                                    } else {
+                                      // Exclude the assessment
+                                      await createExclusion({
+                                        studentId: stu.studentId,
+                                        classId: classId,
+                                        assessmentId: a.assessmentId
+                                      })
+                                      showNotification('Assessment excluded', 'success')
+                                    }
+                                    // Refresh exclusions and scores
+                                    await refreshExclusionsData()
+                                  } catch (error) {
+                                    console.error('Error toggling exclusion:', error)
+                                    showNotification('Failed to update exclusion', 'error')
+                                  }
+                                }}
+                                className={`absolute top-0 right-0 w-3 h-3 cursor-pointer rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
+                                  isExcluded 
+                                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                                    : 'bg-red-500 text-white hover:bg-red-600'
+                                }`}
+                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                              >
+                                {isExcluded ? '✓' : '×'}
+                              </button>
+
                               {isExcluded ? (
                                 <div className="w-16 mx-auto border border-gray-300 rounded p-1 text-center bg-gray-100 text-gray-500 text-sm">
                                   Excluded
@@ -847,6 +915,8 @@ const GradebookClass = () => {
           scoresMatrix={scoresMatrix}
           editedScores={editedScores}
           onScoreChange={handleScoreChange}
+          classId={classId}
+          onRefreshExclusions={refreshExclusionsData}
         />
       )}
 

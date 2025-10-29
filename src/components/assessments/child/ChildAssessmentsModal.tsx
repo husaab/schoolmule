@@ -4,6 +4,8 @@ import React, { ChangeEvent } from 'react'
 import Modal from '../../shared/modal'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
+import { createExclusion, deleteExclusion } from '@/services/excludedAssessmentService'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 interface ScoreRow {
   student_id: string
@@ -28,6 +30,8 @@ interface ChildAssessmentsModalProps {
   scoresMatrix: ScoreRow[]
   editedScores: { [key: string]: number | '' }
   onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
+  classId: string
+  onRefreshExclusions: () => Promise<void>
 }
 
 const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
@@ -39,7 +43,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   scoresMatrix,
   editedScores,
   onScoreChange,
+  classId,
+  onRefreshExclusions,
 }) => {
+  const showNotification = useNotificationStore((s) => s.showNotification)
   // Build lookups for existing scores and exclusions
   const existingScoreMap: Record<string, number | null> = {}
   const exclusionMap: Record<string, boolean> = {}
@@ -190,13 +197,47 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           return (
                             <td
                               key={child.assessmentId}
-                              className={`px-1 py-1 text-center ${
+                              className={`px-1 py-1 text-center relative group ${
                                 isExcluded ? 'text-gray-400' : 'text-gray-800'
                               }`}
                             >
+                              {/* Hover-triggered exclusion toggle button */}
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    if (isExcluded) {
+                                      // Include the assessment
+                                      await deleteExclusion(student.studentId, classId, child.assessmentId)
+                                      showNotification('Assessment included', 'success')
+                                    } else {
+                                      // Exclude the assessment
+                                      await createExclusion({
+                                        studentId: student.studentId,
+                                        classId: classId,
+                                        assessmentId: child.assessmentId
+                                      })
+                                      showNotification('Assessment excluded', 'success')
+                                    }
+                                    // Refresh exclusions and scores
+                                    await onRefreshExclusions()
+                                  } catch (error) {
+                                    console.error('Error toggling exclusion:', error)
+                                    showNotification('Failed to update exclusion', 'error')
+                                  }
+                                }}
+                                className={`absolute top-0 right-0 w-3 h-3 cursor-pointer rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
+                                  isExcluded 
+                                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                                    : 'bg-red-500 text-white hover:bg-red-600'
+                                }`}
+                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                              >
+                                {isExcluded ? '✓' : '×'}
+                              </button>
+
                               {isExcluded ? (
                                 <div className="flex items-center justify-center">
-                                  <div className="w-16 border border-gray-300 rounded p-1 text-center bg-gray-100 text-gray-500 text-xs">
+                                  <div className="min-w-16 px-2 border border-gray-300 rounded py-1 text-center bg-gray-100 text-gray-500 text-xs whitespace-nowrap">
                                     Excluded
                                   </div>
                                 </div>
