@@ -266,7 +266,7 @@ export const getScoresByClass = async (
 
 export const upsertScoresByClass = async (
   classId: string,
-  scores: Array<{ studentId: string; assessmentId: string; score: number }>
+  scores: Array<{ studentId: string; assessmentId: string; score: number | null }>
 ) => {
   return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`, {
     method: 'POST',

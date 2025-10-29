@@ -207,7 +207,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                                     min="0"
                                     max={maxScore}
                                     step="1"
-                                    className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                    className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     value={currentValue}
                                     onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
                                     placeholder="0"

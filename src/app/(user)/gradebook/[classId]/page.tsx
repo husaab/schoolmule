@@ -24,7 +24,7 @@ import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
-import { getExclusionsByStudentAndClass } from '@/services/excludedAssessmentService';
+import { getExclusionsByClass } from '@/services/excludedAssessmentService';
 import { MinusCircleIcon } from '@heroicons/react/24/outline';
 
 interface ScoreRow {
@@ -80,31 +80,23 @@ const GradebookClass = () => {
   // Check if there are unsaved changes
   const hasUnsavedChanges = Object.keys(editedScores).length > 0
 
-  // Load exclusions data for all students
-  const loadExclusionsData = useCallback(async (studentsData: StudentPayload[]) => {
+  // Load exclusions data for all students in one efficient API call
+  const loadExclusionsData = useCallback(async () => {
     try {
-      const exclusionCounts: { [studentId: string]: number } = {}
-      
-      // Load exclusions for each student
-      await Promise.all(
-        studentsData.map(async (student) => {
-          try {
-            const res = await getExclusionsByStudentAndClass(student.studentId, classId)
-            if (res.status === 'success') {
-              exclusionCounts[student.studentId] = res.data.length
-            } else {
-              exclusionCounts[student.studentId] = 0
-            }
-          } catch (error) {
-            console.error(`Error loading exclusions for student ${student.studentId}:`, error)
-            exclusionCounts[student.studentId] = 0
-          }
+      const res = await getExclusionsByClass(classId)
+      if (res.status === 'success') {
+        // Count exclusions per student
+        const exclusionCounts: { [studentId: string]: number } = {}
+        res.data.forEach(exclusion => {
+          exclusionCounts[exclusion.studentId] = (exclusionCounts[exclusion.studentId] || 0) + 1
         })
-      )
-      
-      setExclusionsData(exclusionCounts)
+        setExclusionsData(exclusionCounts)
+      } else {
+        setExclusionsData({})
+      }
     } catch (error) {
       console.error('Error loading exclusions data:', error)
+      setExclusionsData({})
     }
   }, [classId])
 
@@ -112,7 +104,7 @@ const GradebookClass = () => {
   const refreshExclusionsData = async () => {
     // Reload both exclusion counts and scores matrix to get updated is_excluded flags
     await Promise.all([
-      loadExclusionsData(students),
+      loadExclusionsData(),
       refreshScoresMatrix()
     ])
   }
@@ -163,7 +155,7 @@ const GradebookClass = () => {
         setScoresMatrix(scoreRes.data as ScoreRow[])
         
         // Load exclusions data for all students
-        loadExclusionsData(stuRes.data)
+        loadExclusionsData()
       })
       .catch((err) => {
         console.error(err)
@@ -319,10 +311,27 @@ const GradebookClass = () => {
     }
 
     const compositeKey = `${studentId}|${assessmentId}`
-    setEditedScores((prev) => ({
-      ...prev,
-      [compositeKey]: val,
-    }))
+    const existingValue = existingScoreMap[compositeKey] ?? null
+
+    setEditedScores((prev) => {
+      const newState = { ...prev }
+      
+      // Check if the new value is the same as the original value
+      const isBackToOriginal = (
+        (val === '' && existingValue === null) || // Empty string and originally null
+        (typeof val === 'number' && val === existingValue) // Same number as original
+      )
+      
+      if (isBackToOriginal) {
+        // Remove from editedScores if it's back to original state
+        delete newState[compositeKey]
+      } else {
+        // Add/update the change
+        newState[compositeKey] = val
+      }
+      
+      return newState
+    })
   }
 
   // 3) Sum up each assessment’s contribution for a given student (score × weight/100)
@@ -416,23 +425,32 @@ const GradebookClass = () => {
     setSaving(true)
     setError(null)
 
-    const toUpsert: Array<{ studentId: string; assessmentId: string; score: number }> = []
+    const toUpsert: Array<{ studentId: string; assessmentId: string; score: number | null }> = []
 
     Object.entries(editedScores).forEach(([compositeKey, newScore]) => {
       const [stuId, assessId] = compositeKey.split('|')
       const existing = existingScoreMap[compositeKey] ?? null
 
+      // Handle both numbers and empty strings (deletions)
       if (typeof newScore === 'number' && newScore !== existing) {
         toUpsert.push({
           studentId: stuId,
           assessmentId: assessId,
           score: newScore,
         })
+      } else if (newScore === '' && existing !== null) {
+        // User deleted a score - send null to delete it
+        toUpsert.push({
+          studentId: stuId,
+          assessmentId: assessId,
+          score: null,
+        })
       }
     })
 
     if (toUpsert.length === 0) {
       setSaving(false)
+      showNotification('No changes to save', 'success')
       return
     }
 
@@ -445,7 +463,9 @@ const GradebookClass = () => {
       } else {
         throw new Error(refreshed.message || 'Failed to refresh scores')
       }
+      console.log('About to show success notification')
       showNotification('Grades successfully saved', 'success')
+      console.log('Success notification called')
     } catch (err) {
       console.error(err)
       setError('Error saving scores')
@@ -697,7 +717,7 @@ const GradebookClass = () => {
                                     return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
                                   })()}
                                   step="1"
-                                  className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   value={currentValue}
                                   placeholder={`/${(() => {
                                     const childPoints = Number(a.weightPoints || a.weightPercent || 0)

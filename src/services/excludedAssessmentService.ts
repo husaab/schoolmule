@@ -95,3 +95,15 @@ export const checkExclusion = async (
     `/excluded-assessments/${encodeURIComponent(studentId)}/${encodeURIComponent(classId)}/${encodeURIComponent(assessmentId)}/check`
   )
 }
+
+/**
+ * Get all excluded assessments for an entire class
+ * GET /excluded-assessments/class/:classId
+ */
+export const getExclusionsByClass = async (
+  classId: string
+): Promise<AllExcludedAssessmentsResponse> => {
+  return apiClient<AllExcludedAssessmentsResponse>(
+    `/excluded-assessments/class/${encodeURIComponent(classId)}`
+  )
+}

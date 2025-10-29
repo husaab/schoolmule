@@ -21,7 +21,7 @@ const Notification: React.FC = () => {
 
   return (
     <motion.div
-      className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-50 text-white flex items-center space-x-2 ${
+      className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-100 text-white flex items-center space-x-2 ${
         type === 'success' ? 'bg-green-500' : 'bg-red-500'
       }`}
       role="alert"
