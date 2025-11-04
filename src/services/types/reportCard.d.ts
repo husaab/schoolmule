@@ -44,5 +44,27 @@ export type ReportCardStatusResponse = {
     file_path: string;
     generated_at: string;
     grade: string;
+    email_sent?: boolean;
+    email_sent_at?: string;
+    email_sent_by?: string;
   }[];
 };
+
+export interface ReportEmailPayload {
+  reportType: 'progress_report' | 'report_card';
+  studentId: string;
+  term: string;
+  emailAddresses: string[];
+  ccAddresses?: string[];
+  customHeader?: string;
+  customMessage?: string;
+}
+
+export interface ReportEmailResponse {
+  status: string;
+  message: string;
+  data?: {
+    id: string;
+    sentAt: string;
+  };
+}

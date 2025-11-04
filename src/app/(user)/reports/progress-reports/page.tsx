@@ -12,10 +12,11 @@ import { getProgressReportsByTermAndSchool, generateBulkProgressReports, getSign
 import type { TermPayload } from '@/services/types/term'
 import type { StudentPayload } from '@/services/types/student'
 import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils'
-import { ArrowLeftIcon, DocumentArrowDownIcon, CalendarIcon, UserIcon, MagnifyingGlassIcon, FunnelIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, DocumentArrowDownIcon, CalendarIcon, UserIcon, MagnifyingGlassIcon, FunnelIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import GenerateProgressReportModal from '@/components/progress-report/generate/generateProgressReportModal'
 import ViewProgressReportModal from '@/components/progress-report/view/viewProgressReportModal'
 import DeleteProgressReportModal from '@/components/progress-report/delete/deleteProgressReportModal'
+import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
 
 interface ProgressReportRecord {
   student_id?: string
@@ -29,6 +30,9 @@ interface ProgressReportRecord {
   generated_at?: string
   generatedAt?: string
   school?: string
+  email_sent?: boolean
+  email_sent_at?: string
+  email_sent_by?: string
 }
 
 const ProgressReportsPage = () => {
@@ -57,6 +61,8 @@ const ProgressReportsPage = () => {
   const [viewingUrl, setViewingUrl] = useState<string | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [selectedForDelete, setSelectedForDelete] = useState<ProgressReportRecord | null>(null)
+  const [selectedForEmail, setSelectedForEmail] = useState<ProgressReportRecord | null>(null)
+  const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false)
 
   // Fetch initial data
   const fetchData = useCallback(async () => {
@@ -253,6 +259,36 @@ const ProgressReportsPage = () => {
   const handleDeleteReport = (report: ProgressReportRecord) => {
     setSelectedForDelete(report)
     setDeleteModalOpen(true)
+  }
+
+  const handleEmailClick = (report: ProgressReportRecord) => {
+    setSelectedForEmail(report)
+    if (report.email_sent) {
+      // Show email details modal if already sent
+      setEmailDetailsModalOpen(true)
+    } else {
+      // TODO: Open send email modal
+      console.log('Open send email modal for:', report.student_name || report.studentName)
+    }
+  }
+
+  const getEmailIcon = (report: ProgressReportRecord) => {
+    if (report.email_sent) {
+      return (
+        <CheckCircleIcon 
+          className="h-5 w-5" 
+          title={`Email sent on ${report.email_sent_at ? new Date(report.email_sent_at).toLocaleDateString() : 'Unknown date'}`}
+        />
+      )
+    }
+    return <EnvelopeIcon className="h-5 w-5" title="Send email" />
+  }
+
+  const getEmailButtonClasses = (report: ProgressReportRecord) => {
+    if (report.email_sent) {
+      return "p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
+    }
+    return "p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
   }
 
   if (loading) {
@@ -529,6 +565,13 @@ const ProgressReportsPage = () => {
                         </div>
                         <div className="flex items-center space-x-3">
                           <button
+                            onClick={() => handleEmailClick(report)}
+                            title={report.email_sent ? 'View email details' : 'Send email'}
+                            className={getEmailButtonClasses(report)}
+                          >
+                            {getEmailIcon(report)}
+                          </button>
+                          <button
                             onClick={() => handlePreviewReport(report)}
                             title="View PDF"
                             className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
@@ -585,6 +628,19 @@ const ProgressReportsPage = () => {
             setDeleteModalOpen(false);
             setSelectedForDelete(null);
           }}
+        />
+      )}
+
+      {emailDetailsModalOpen && selectedForEmail && (
+        <SentEmailProgressReportModal
+          isOpen={emailDetailsModalOpen}
+          onClose={() => {
+            setEmailDetailsModalOpen(false);
+            setSelectedForEmail(null);
+          }}
+          studentId={selectedForEmail.student_id || selectedForEmail.studentId || ''}
+          studentName={selectedForEmail.student_name || selectedForEmail.studentName || ''}
+          term={selectedForEmail.term}
         />
       )}
     </>

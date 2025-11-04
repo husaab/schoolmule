@@ -40,6 +40,9 @@ export interface ProgressReportRecord {
   filePath?: string
   school?: string
   generatedAt?: string
+  emailSent?: boolean
+  emailSentAt?: string
+  emailSentBy?: string
 }
 
 export interface ProgressReportRecordResponse {
