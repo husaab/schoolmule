@@ -690,19 +690,21 @@ const ProgressReportsPage = () => {
         />
       )}
 
-      {bulkEmailModalOpen && (
-        <BulkEmailProgressReportModal
-          isOpen={bulkEmailModalOpen}
-          onClose={() => setBulkEmailModalOpen(false)}
-          studentIds={filteredReports.map(r => r.student_id || r.studentId || '')}
-          studentNames={filteredReports.map(r => r.student_name || r.studentName || '')}
-          term={selectedTerm}
-          onEmailsSent={() => {
-            // Refresh the reports list to update email status
-            fetchGeneratedReports();
-          }}
-        />
-      )}
+      {bulkEmailModalOpen && (() => {
+        const unemailedReports = generatedReports.filter(report => !report.email_sent);
+        return (
+          <BulkEmailProgressReportModal
+            isOpen={bulkEmailModalOpen}
+            onClose={() => setBulkEmailModalOpen(false)}
+            availableReports={unemailedReports}
+            term={selectedTerm}
+            onEmailsSent={() => {
+              // Refresh the reports list to update email status
+              fetchGeneratedReports();
+            }}
+          />
+        );
+      })()}
     </>
   )
 }

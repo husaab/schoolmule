@@ -2,16 +2,33 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/modal';
-import { PaperAirplaneIcon, UsersIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PaperAirplaneIcon, UsersIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { sendBulkReportEmails, generateDefaultSubject } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendBulkReportEmailPayload, BulkReportEmailResponse, BulkReportEmailResult } from '@/services/types/reportEmails';
+import { getGradeNumericValue } from '@/lib/schoolUtils';
+
+interface ProgressReportRecord {
+  student_id?: string;
+  studentId?: string;
+  term: string;
+  student_name?: string;
+  studentName?: string;
+  grade?: string;
+  file_path?: string;
+  filePath?: string;
+  generated_at?: string;
+  generatedAt?: string;
+  school?: string;
+  email_sent?: boolean;
+  email_sent_at?: string;
+  email_sent_by?: string;
+}
 
 interface BulkEmailProgressReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  studentIds: string[];
-  studentNames: string[]; // Array of student names for display
+  availableReports: ProgressReportRecord[];
   term: string;
   onEmailsSent?: () => void;
 }
@@ -19,8 +36,7 @@ interface BulkEmailProgressReportModalProps {
 export default function BulkEmailProgressReportModal({
   isOpen,
   onClose,
-  studentIds,
-  studentNames,
+  availableReports,
   term,
   onEmailsSent
 }: BulkEmailProgressReportModalProps) {
@@ -31,9 +47,8 @@ export default function BulkEmailProgressReportModal({
   const [customHeader, setCustomHeader] = useState('');
   const [customMessage, setCustomMessage] = useState('');
   
-  // Selected students state (allows deselection)
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>(studentIds);
-  const [selectedStudentNames, setSelectedStudentNames] = useState<string[]>(studentNames);
+  // Selection state
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   
   // UI state
   const [loading, setLoading] = useState(false);
@@ -42,6 +57,19 @@ export default function BulkEmailProgressReportModal({
   
   // Input states
   const [ccInput, setCcInput] = useState('');
+
+  const reportsByGrade = availableReports.reduce((acc, report) => {
+    const grade = report.grade || 'Unknown';
+    if (!acc[grade]) acc[grade] = [];
+    acc[grade].push(report);
+    return acc;
+  }, {} as Record<string, ProgressReportRecord[]>);
+
+  const availableGrades = Object.keys(reportsByGrade).sort((a, b) => {
+    if (a === 'Unknown') return 1;
+    if (b === 'Unknown') return -1;
+    return getGradeNumericValue(a) - getGradeNumericValue(b);
+  });
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -53,11 +81,10 @@ export default function BulkEmailProgressReportModal({
       setCcInput('');
       setResults(null);
       setSummary(null);
-      // Reset selected students to original list
-      setSelectedStudentIds(studentIds);
-      setSelectedStudentNames(studentNames);
+      // Reset selections
+      setSelectedStudentIds([]);
     }
-  }, [isOpen, term, studentIds, studentNames]);
+  }, [isOpen, term]);
 
   const handleCcInputChange = (value: string) => {
     setCcInput(value);
@@ -69,9 +96,51 @@ export default function BulkEmailProgressReportModal({
     setCcAddresses(emails);
   };
 
-  const handleRemoveStudent = (indexToRemove: number) => {
-    setSelectedStudentIds(prev => prev.filter((_, index) => index !== indexToRemove));
-    setSelectedStudentNames(prev => prev.filter((_, index) => index !== indexToRemove));
+  // Selection handlers
+  const handleGradeToggle = (grade: string) => {
+    const gradeReports = reportsByGrade[grade] || [];
+    const gradeStudentIds = gradeReports.map(r => r.student_id || r.studentId || '');
+    
+    const allSelected = gradeStudentIds.every(id => selectedStudentIds.includes(id));
+    
+    if (allSelected) {
+      // Deselect all students in this grade
+      setSelectedStudentIds(prev => prev.filter(id => !gradeStudentIds.includes(id)));
+    } else {
+      // Select all students in this grade
+      setSelectedStudentIds(prev => [...new Set([...prev, ...gradeStudentIds])]);
+    }
+  };
+
+  const handleStudentToggle = (studentId: string) => {
+    setSelectedStudentIds(prev => {
+      const newSelected = prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId];
+      
+      // Update selected grades based on student selection
+      const newSelectedGrades = [];
+      for (const grade of availableGrades) {
+        const gradeReports = reportsByGrade[grade] || [];
+        const gradeStudentIds = gradeReports.map(r => r.student_id || r.studentId || '');
+        const allSelected = gradeStudentIds.every(id => newSelected.includes(id));
+        
+        if (allSelected && gradeStudentIds.length > 0) {
+          newSelectedGrades.push(grade);
+        }
+      }
+      
+      return newSelected;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allStudentIds = availableReports.map(r => r.student_id || r.studentId || '');
+    setSelectedStudentIds(allStudentIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedStudentIds([]);
   };
 
   const validateForm = () => {
@@ -168,7 +237,7 @@ export default function BulkEmailProgressReportModal({
               Send Bulk Progress Report Emails
             </h3>
             <p className="text-sm text-gray-600">
-              Email progress reports for {selectedStudentIds.length} student{selectedStudentIds.length !== 1 ? 's' : ''} - {term}
+              Select students to email progress reports for {term}
             </p>
           </div>
         </div>
@@ -253,43 +322,110 @@ export default function BulkEmailProgressReportModal({
           ) : (
             /* Form View */
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Selected Students */}
+              {/* Grade-Based Selection */}
+              <div className="space-y-4">
+                {/* Grade Selection Header */}
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    <FunnelIcon className="h-4 w-4 inline mr-1" />
+                    Select by Grade
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAll}
+                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeselectAll}
+                      className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors cursor-pointer"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grade Checkboxes */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {availableGrades.map(grade => {
+                    const gradeReports = reportsByGrade[grade] || [];
+                    const gradeStudentIds = gradeReports.map(r => r.student_id || r.studentId || '');
+                    const selectedInGrade = gradeStudentIds.filter(id => selectedStudentIds.includes(id)).length;
+                    const allSelected = selectedInGrade === gradeStudentIds.length && gradeStudentIds.length > 0;
+                    
+                    return (
+                      <label
+                        key={grade}
+                        className="flex items-center p-2 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={() => handleGradeToggle(grade)}
+                          className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm">
+                          Grade {grade} ({selectedInGrade}/{gradeStudentIds.length})
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Student Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <UsersIcon className="h-4 w-4 inline mr-1" />
-                  Selected Students ({selectedStudentIds.length})
+                  Students ({selectedStudentIds.length} selected)
                 </label>
-                <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-3 bg-gray-50">
-                  {selectedStudentNames.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-2">
-                      No students selected. Please select students from the progress reports page.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedStudentNames.map((name, index) => (
-                        <span
-                          key={index}
-                          className="group px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center gap-1 hover:bg-blue-200 transition-colors"
-                        >
-                          {name}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStudent(index)}
-                            className="ml-1 p-0.5 rounded-full hover:bg-blue-300 transition-colors group-hover:opacity-100 opacity-70"
-                            title={`Remove ${name}`}
-                          >
-                            <XMarkIcon className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
+                <div className="max-h-64 overflow-y-auto border border-gray-300 rounded-md">
+                  {availableGrades.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      No progress reports available for bulk email
                     </div>
+                  ) : (
+                    availableGrades.map(grade => {
+                      const gradeReports = reportsByGrade[grade] || [];
+                      const selectedInGrade = gradeReports.filter(r => 
+                        selectedStudentIds.includes(r.student_id || r.studentId || '')
+                      ).length;
+
+                      return (
+                        <div key={grade} className="border-b border-gray-100 last:border-b-0">
+                          <div className="p-3 bg-gray-50 font-medium text-sm text-gray-700">
+                            Grade {grade} ({selectedInGrade}/{gradeReports.length} selected)
+                          </div>
+                          <div className="p-3 space-y-2">
+                            {gradeReports.map(report => {
+                              const studentId = report.student_id || report.studentId || '';
+                              const studentName = report.student_name || report.studentName || '';
+                              const isSelected = selectedStudentIds.includes(studentId);
+
+                              return (
+                                <label
+                                  key={studentId}
+                                  className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleStudentToggle(studentId)}
+                                    className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm">{studentName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
-                {selectedStudentNames.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Click the ✕ next to a student&apos;s name to remove them from the email list.
-                  </p>
-                )}
               </div>
 
               {/* Individual Parent Emails Notice */}

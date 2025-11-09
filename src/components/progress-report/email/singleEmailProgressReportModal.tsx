@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/components/shared/modal';
 import { EnvelopeIcon, PaperAirplaneIcon, UserIcon, ChatBubbleLeftRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { sendReportEmail, generateDefaultSubject, validateEmailAddresses } from '@/services/reportEmailService';
@@ -50,7 +50,7 @@ export default function SingleEmailProgressReportModal({
     }
   }, [isOpen]);
 
-  const fetchStudentData = async () => {
+  const fetchStudentData = useCallback(async () => {
     try {
       setFetchingStudent(true);
       const response = await getStudentById(studentId);
@@ -82,7 +82,7 @@ export default function SingleEmailProgressReportModal({
     } finally {
       setFetchingStudent(false);
     }
-  };
+  }, [studentId, studentName, term, showNotification]);
 
     // Fetch student data when modal opens
   useEffect(() => {
