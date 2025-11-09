@@ -31,11 +31,10 @@ export interface SendBulkReportEmailPayload {
   reportType: 'progress_report' | 'report_card';
   studentIds: string[];
   term: string;
-  emailConfig: {
-    emailAddresses: string[];
-    ccAddresses?: string[];
+  bulkConfig?: {
     customHeader?: string;
     customMessage?: string;
+    ccAddresses?: string[];
   };
 }
 
@@ -49,23 +48,25 @@ export interface ReportEmailResponse {
   };
 }
 
+export interface BulkReportEmailResult {
+  studentId: string;
+  studentName: string;
+  status: 'success' | 'failed';
+  sentTo?: string[];
+  error?: string;
+}
+
 export interface BulkReportEmailResponse {
   status: 'completed';
   term: string;
   reportType: 'progress_report' | 'report_card';
-  sent: {
-    studentId: string;
-    message: string;
-    data?: {
-      id: string;
-      sentAt: string;
-      emailId?: string;
-    };
-  }[];
-  failed: {
-    studentId: string;
-    error: string;
-  }[];
+  summary: {
+    total: number;
+    sent: number;
+    failed: number;
+    duration: string;
+  };
+  results: BulkReportEmailResult[];
 }
 
 export interface ReportEmailHistoryResponse {

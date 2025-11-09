@@ -17,6 +17,8 @@ import GenerateProgressReportModal from '@/components/progress-report/generate/g
 import ViewProgressReportModal from '@/components/progress-report/view/viewProgressReportModal'
 import DeleteProgressReportModal from '@/components/progress-report/delete/deleteProgressReportModal'
 import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
+import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
+import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
 
 interface ProgressReportRecord {
   student_id?: string
@@ -63,6 +65,8 @@ const ProgressReportsPage = () => {
   const [selectedForDelete, setSelectedForDelete] = useState<ProgressReportRecord | null>(null)
   const [selectedForEmail, setSelectedForEmail] = useState<ProgressReportRecord | null>(null)
   const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false)
+  const [sendEmailModalOpen, setSendEmailModalOpen] = useState(false)
+  const [bulkEmailModalOpen, setBulkEmailModalOpen] = useState(false)
 
   // Fetch initial data
   const fetchData = useCallback(async () => {
@@ -267,8 +271,8 @@ const ProgressReportsPage = () => {
       // Show email details modal if already sent
       setEmailDetailsModalOpen(true)
     } else {
-      // TODO: Open send email modal
-      console.log('Open send email modal for:', report.student_name || report.studentName)
+      // Open send email modal
+      setSendEmailModalOpen(true)
     }
   }
 
@@ -289,6 +293,17 @@ const ProgressReportsPage = () => {
       return "p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
     }
     return "p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+  }
+
+  const handleBulkEmail = () => {
+    // Filter out reports that have already been emailed
+    const unemailedReports = generatedReports.filter(report => !report.email_sent)
+    
+    if (unemailedReports.length === 0) {
+      showNotification('No progress reports available for bulk email (all reports have been sent)', 'error')
+      return
+    }
+    setBulkEmailModalOpen(true)
   }
 
   if (loading) {
@@ -487,7 +502,7 @@ const ProgressReportsPage = () => {
               <div className="p-6 space-y-6">
                 {/* Report Filters */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <MagnifyingGlassIcon className="h-4 w-4 inline mr-1" />
@@ -518,6 +533,20 @@ const ProgressReportsPage = () => {
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <button
+                        onClick={handleBulkEmail}
+                        disabled={generatedReports.filter(report => !report.email_sent).length === 0}
+                        className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                          generatedReports.filter(report => !report.email_sent).length === 0
+                            ? 'bg-gray-300 text-gray-500'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        <EnvelopeIcon className="h-4 w-4" />
+                        Bulk Email
+                      </button>
                     </div>
                   </div>
                   
@@ -641,6 +670,37 @@ const ProgressReportsPage = () => {
           studentId={selectedForEmail.student_id || selectedForEmail.studentId || ''}
           studentName={selectedForEmail.student_name || selectedForEmail.studentName || ''}
           term={selectedForEmail.term}
+        />
+      )}
+
+      {sendEmailModalOpen && selectedForEmail && (
+        <SingleEmailProgressReportModal
+          isOpen={sendEmailModalOpen}
+          onClose={() => {
+            setSendEmailModalOpen(false);
+            setSelectedForEmail(null);
+          }}
+          studentId={selectedForEmail.student_id || selectedForEmail.studentId || ''}
+          studentName={selectedForEmail.student_name || selectedForEmail.studentName || ''}
+          term={selectedForEmail.term}
+          onEmailSent={() => {
+            // Refresh the reports list to update email status
+            fetchGeneratedReports();
+          }}
+        />
+      )}
+
+      {bulkEmailModalOpen && (
+        <BulkEmailProgressReportModal
+          isOpen={bulkEmailModalOpen}
+          onClose={() => setBulkEmailModalOpen(false)}
+          studentIds={filteredReports.map(r => r.student_id || r.studentId || '')}
+          studentNames={filteredReports.map(r => r.student_name || r.studentName || '')}
+          term={selectedTerm}
+          onEmailsSent={() => {
+            // Refresh the reports list to update email status
+            fetchGeneratedReports();
+          }}
         />
       )}
     </>
