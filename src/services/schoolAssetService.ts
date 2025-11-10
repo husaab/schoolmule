@@ -22,6 +22,13 @@ interface UrlCache {
 const urlCache = new Map<string, UrlCache>();
 
 /**
+ * Clear URL cache for a specific school (used after upload/delete operations)
+ */
+export const clearSchoolUrlCache = (schoolCode: string) => {
+  urlCache.delete(schoolCode);
+};
+
+/**
  * GET /school-assets/school-code/:schoolCode
  * Get school assets by school code
  */
@@ -171,7 +178,10 @@ export const buildAssetUrl = async (
 
     // Extract filename from full path
     const fileName = assetPath.split('/').pop();
-    return `${folderUrl.baseUrl}/${folderUrl.schoolFolder}/${fileName}`;
+    
+    // Add cache busting parameter to prevent browser caching of old images
+    const timestamp = Date.now();
+    return `${folderUrl.baseUrl}/${folderUrl.schoolFolder}/${fileName}?v=${timestamp}`;
   } catch (error) {
     console.error('Error building asset URL:', error);
     return null;

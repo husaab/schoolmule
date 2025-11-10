@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -10,7 +10,8 @@ import {
   uploadAssetForCurrentSchool, 
   deleteSchoolAsset,
   buildAssetUrl,
-  getCurrentUserSchoolCode
+  getCurrentUserSchoolCode,
+  clearSchoolUrlCache
 } from '@/services/schoolAssetService';
 import type { AssetType, SchoolAsset } from '@/services/types/schoolAsset';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -40,19 +41,71 @@ const SchoolAssetsPage = () => {
   const stampInputRef = useRef<HTMLInputElement>(null);
 
   // Load existing assets on component mount
-  const loadSchoolAssets = useCallback(async () => {
+  useEffect(() => {
+    const loadSchoolAssets = async () => {
+      try {
+        setLoading(true);
+        const response = await getCurrentUserSchoolAssets();
+        const schoolAssetData = response.data;
+        setSchoolAssets(schoolAssetData);
+
+        if (schoolAssetData) {
+          // Load existing asset URLs using cached folder URL
+          const schoolCode = getCurrentUserSchoolCode();
+          
+          if (schoolCode) {
+            const updatedAssets = {
+              logo: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+              principal_signature: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+              school_stamp: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+            };
+            
+            if (schoolAssetData.logoPath) {
+              const logoUrl = await buildAssetUrl(schoolCode, schoolAssetData.logoPath);
+              updatedAssets.logo.existingUrl = logoUrl;
+            }
+            
+            if (schoolAssetData.principalSignaturePath) {
+              const signatureUrl = await buildAssetUrl(schoolCode, schoolAssetData.principalSignaturePath);
+              updatedAssets.principal_signature.existingUrl = signatureUrl;
+            }
+            
+            if (schoolAssetData.schoolStampPath) {
+              const stampUrl = await buildAssetUrl(schoolCode, schoolAssetData.schoolStampPath);
+              updatedAssets.school_stamp.existingUrl = stampUrl;
+            }
+
+            setAssets(updatedAssets);
+          }
+        }
+      } catch (error) {
+        showNotification('Failed to load school assets', 'error');
+        console.error('Error loading school assets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSchoolAssets();
+  }, [showNotification]);
+
+  // Separate function to reload assets after upload/delete
+  const reloadAssets = async () => {
     try {
-      setLoading(true);
       const response = await getCurrentUserSchoolAssets();
       const schoolAssetData = response.data;
       setSchoolAssets(schoolAssetData);
 
       if (schoolAssetData) {
-        // Load existing asset URLs using cached folder URL
-        const updatedAssets = { ...assets };
         const schoolCode = getCurrentUserSchoolCode();
         
         if (schoolCode) {
+          const updatedAssets = {
+            logo: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+            principal_signature: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+            school_stamp: { file: null, preview: null, uploading: false, error: null, success: false, existingUrl: null } as AssetUpload,
+          };
+          
           if (schoolAssetData.logoPath) {
             const logoUrl = await buildAssetUrl(schoolCode, schoolAssetData.logoPath);
             updatedAssets.logo.existingUrl = logoUrl;
@@ -67,21 +120,14 @@ const SchoolAssetsPage = () => {
             const stampUrl = await buildAssetUrl(schoolCode, schoolAssetData.schoolStampPath);
             updatedAssets.school_stamp.existingUrl = stampUrl;
           }
-        }
 
-        setAssets(updatedAssets);
+          setAssets(updatedAssets);
+        }
       }
     } catch (error) {
-      showNotification('Failed to load school assets', 'error');
-      console.error('Error loading school assets:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error reloading assets:', error);
     }
-  }, [assets, showNotification]);
-  
-  useEffect(() => {
-    loadSchoolAssets();
-  }, [loadSchoolAssets]);
+  };
 
   const assetConfigs = [
     {
@@ -175,6 +221,12 @@ const SchoolAssetsPage = () => {
     try {
       await uploadAssetForCurrentSchool(assetType as AssetType, asset.file);
       
+      // Clear URL cache to force fresh URLs
+      const schoolCode = getCurrentUserSchoolCode();
+      if (schoolCode) {
+        clearSchoolUrlCache(schoolCode);
+      }
+      
       setAssets(prev => ({
         ...prev,
         [assetType]: {
@@ -196,7 +248,7 @@ const SchoolAssetsPage = () => {
       showNotification(`${assetConfigs.find(c => c.key === assetType)?.title} uploaded successfully!`, 'success');
       
       // Reload assets to get the new uploaded file
-      await loadSchoolAssets();
+      await reloadAssets();
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -226,6 +278,7 @@ const SchoolAssetsPage = () => {
     }));
 
     // Clear file input
+    
     const inputRef = assetConfigs.find(config => config.key === assetType)?.inputRef;
     if (inputRef?.current) {
       inputRef.current.value = '';
@@ -240,10 +293,17 @@ const SchoolAssetsPage = () => {
 
     try {
       await deleteSchoolAsset(schoolAssets.schoolId, assetType as AssetType);
+      
+      // Clear URL cache to force fresh URLs
+      const schoolCode = getCurrentUserSchoolCode();
+      if (schoolCode) {
+        clearSchoolUrlCache(schoolCode);
+      }
+      
       showNotification(`${assetConfigs.find(c => c.key === assetType)?.title} deleted successfully!`, 'success');
       
       // Reload assets to reflect the deletion
-      await loadSchoolAssets();
+      await reloadAssets();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Delete failed';
       showNotification(`Failed to delete ${assetConfigs.find(c => c.key === assetType)?.title}: ${errorMessage}`, 'error');
