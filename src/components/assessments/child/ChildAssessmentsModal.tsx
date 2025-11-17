@@ -112,6 +112,55 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   const parentPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
   const pointsWarning = Math.abs(totalChildPoints - parentPoints) > 0.01
 
+  const handleArrowNav = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    const maxRow = students.length - 1
+    const maxCol = childAssessments.length - 1
+
+    let nextRow = rowIndex
+    let nextCol = colIndex
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        nextRow = Math.max(0, rowIndex - 1)
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        nextRow = Math.min(maxRow, rowIndex + 1)
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        nextCol = Math.max(0, colIndex - 1)
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        nextCol = Math.min(maxCol, colIndex + 1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        nextRow = Math.min(maxRow, rowIndex + 1)
+        break
+      default:
+        return // let other keys behave normally
+    }
+
+    // If nothing changed, don't do anything
+    if (nextRow === rowIndex && nextCol === colIndex) return
+
+    const nextInput = document.getElementById(
+      `child-grade-${nextRow}-${nextCol}`
+    ) as HTMLInputElement | null
+
+    if (nextInput) {
+      nextInput.focus()
+      nextInput.select() // optional: highlight value
+    }
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-6xl w-11/12 max-h-[90vh] overflow-y-auto">
       <div className="text-black">
@@ -174,7 +223,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  students.map((student) => {
+                  students.map((student, rowIndex) => {
                     const parentScore = calculateParentScore(student.studentId)
                     return (
                       <tr
@@ -185,7 +234,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           {student.name}
                         </td>
 
-                        {childAssessments.map((child) => {
+                        {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
                           const isExcluded = exclusionMap[key] || false
                           const currentValue = editedScores[key] !== undefined
@@ -244,6 +293,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               ) : (
                                 <div className="flex items-center justify-center space-x-1">
                                   <input
+                                    id={`child-grade-${rowIndex}-${colIndex}`}
                                     type="number"
                                     min="0"
                                     max={maxScore}
@@ -251,6 +301,13 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                                     className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     value={currentValue}
                                     onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                                    onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
+                                    onKeyPress={(e) => {
+                                      // Only allow numbers, decimal point, and navigation keys
+                                      if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                                        e.preventDefault()
+                                      }
+                                    }}
                                     placeholder="0"
                                   />
                                   <span className="text-sm text-gray-600">/{maxScore}</span>
@@ -273,6 +330,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         )}
 
         <div className="mt-4 text-xs text-gray-500">
+          <p>• Use arrow keys (↑↓←→) to navigate between grade cells, Enter to move down</p>
           <p>• Individual assessment scores are weighted by their point values to calculate the total score</p>
           <p>• Changes are automatically reflected in the main gradebook</p>
           <p>• Remember to save changes in the main gradebook when finished</p>

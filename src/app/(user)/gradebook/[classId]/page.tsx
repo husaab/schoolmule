@@ -494,6 +494,51 @@ const GradebookClass = () => {
     }
   }
 
+  const handleArrowNav = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    colIndex: number
+  ) => {
+    const maxRow = students.length - 1
+    const maxCol = displayedAssessments.length - 1
+
+    let nextRow = rowIndex
+    let nextCol = colIndex
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        nextRow = Math.max(0, rowIndex - 1)
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        nextRow = Math.min(maxRow, rowIndex + 1)
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        nextCol = Math.max(0, colIndex - 1)
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        nextCol = Math.min(maxCol, colIndex + 1)
+        break
+      default:
+        return // let other keys behave normally
+    }
+
+    // If nothing changed, don't do anything
+    if (nextRow === rowIndex && nextCol === colIndex) return
+
+    const nextInput = document.getElementById(
+      `grade-${nextRow}-${nextCol}`
+    ) as HTMLInputElement | null
+
+    if (nextInput) {
+      nextInput.focus()
+      nextInput.select() // optional: highlight value
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -576,7 +621,7 @@ const GradebookClass = () => {
               ) : (
                 students
                   .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((stu) => {
+                  .map((stu, rowIndex) => {
                   const total = computeTotalForStudent(stu.studentId)
                   return (
                     <tr
@@ -615,7 +660,7 @@ const GradebookClass = () => {
                         </div>
                       </td>
 
-                      {displayedAssessments.map((a: AssessmentPayload) => {
+                      {displayedAssessments.map((a: AssessmentPayload, colIndex) => {
                         const key = `${stu.studentId}|${a.assessmentId}`
                         const isExcluded = exclusionMap[key] || false
                         
@@ -777,6 +822,7 @@ const GradebookClass = () => {
                                 </div>
                               ) : (
                                 <input
+                                  id={`grade-${rowIndex}-${colIndex}`}
                                   type="number"
                                   min="0"
                                   max={(() => {
@@ -799,6 +845,13 @@ const GradebookClass = () => {
                                       e
                                     )
                                   }
+                                  onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
+                                  onKeyPress={(e) => {
+                                    // Only allow numbers, decimal point, and backspace/delete
+                                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                                      e.preventDefault()
+                                    }
+                                  }}
                                 />
                               )}
                             </td>
