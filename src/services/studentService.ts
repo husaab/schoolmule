@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { StudentResponse, AllStudentsResponse, StudentPayload } from './types/student';
+import { StudentResponse, AllStudentsResponse, StudentPayload, ArchiveStudentResponse } from './types/student';
 
 export const getAllStudents = async (
   school: string
@@ -56,5 +56,49 @@ export const deleteStudent = async (
 ): Promise<{ status: string; message: string }> => {
   return apiClient<{ status: string; message: string }>(`/students/${id}`, {
     method: 'DELETE',
+  });
+};
+
+/**
+ * Get all archived students for a school
+ * @param school The school identifier
+ */
+export const getArchivedStudents = async (
+  school: string
+): Promise<AllStudentsResponse> => {
+  return apiClient<AllStudentsResponse>(`/students/archived?school=${encodeURIComponent(school)}`);
+};
+
+/**
+ * Get all students including archived ones for a school
+ * @param school The school identifier
+ */
+export const getAllStudentsWithArchived = async (
+  school: string
+): Promise<AllStudentsResponse> => {
+  return apiClient<AllStudentsResponse>(`/students/all?school=${encodeURIComponent(school)}`);
+};
+
+/**
+ * Archive a student
+ * @param id The student ID to archive
+ */
+export const archiveStudent = async (
+  id: string
+): Promise<ArchiveStudentResponse> => {
+  return apiClient<ArchiveStudentResponse>(`/students/${id}/archive`, {
+    method: 'POST',
+  });
+};
+
+/**
+ * Unarchive (restore) a student
+ * @param id The student ID to unarchive
+ */
+export const unarchiveStudent = async (
+  id: string
+): Promise<ArchiveStudentResponse> => {
+  return apiClient<ArchiveStudentResponse>(`/students/${id}/unarchive`, {
+    method: 'POST',
   });
 };

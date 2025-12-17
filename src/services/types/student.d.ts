@@ -25,6 +25,10 @@ export interface StudentPayload {
   emergencyContact: string | null;
   createdAt: string;
   lastModifiedAt: string;
+  // Archive fields - optional to maintain backward compatibility
+  isArchived?: boolean;
+  archivedAt?: string | null;
+  archivedBy?: string | null;
 }
 
 /**
@@ -66,5 +70,14 @@ export interface EnrollStudentResponse {
  */
 export interface UnenrollStudentResponse {
   status: string;
+  message: string;
+}
+
+/**
+ * Response returned by POST /students/:id/archive and /students/:id/unarchive
+ */
+export interface ArchiveStudentResponse {
+  status: string;
+  data: StudentPayload;
   message: string;
 }
