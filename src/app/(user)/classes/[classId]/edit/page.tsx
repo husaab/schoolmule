@@ -722,7 +722,7 @@ export default function EditClassPage() {
                                 )}
                               </p>
                               <p className="text-xs text-gray-500">
-                                Date: {a.date ? new Date(a.date).toLocaleDateString() : "No date assigned"}
+                                Date: {a.date ? a.date.split('T')[0] : "No date assigned"}
                               </p>
                               {a.isParent && childAssessments.length > 0 && (
                                 <p className="text-xs text-blue-600 mt-1">
@@ -774,7 +774,7 @@ export default function EditClassPage() {
                                         Order: {child.sortOrder || '-'}
                                       </p>
                                       <p className="text-xs text-gray-400">
-                                        Date: {child.date ? new Date(child.date).toLocaleDateString() : "No date assigned"}
+                                        Date: {child.date ? child.date.split('T')[0] : "No date assigned"}
                                       </p>
                                     </div>
                                   </div>
