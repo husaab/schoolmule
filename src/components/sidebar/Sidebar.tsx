@@ -1,29 +1,64 @@
 'use client'
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import LogoutModal from '../logout/logoutModal';
-import { Cog6ToothIcon, ChevronDownIcon, ChevronUpIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  Cog6ToothIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  XMarkIcon,
+  HomeIcon,
+  UserGroupIcon,
+  AcademicCapIcon,
+  BookOpenIcon,
+  ClipboardDocumentCheckIcon,
+  CalendarDaysIcon,
+  DocumentTextIcon,
+  ChatBubbleLeftRightIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  ClipboardDocumentListIcon,
+  QuestionMarkCircleIcon,
+  EnvelopeIcon,
+  ShieldCheckIcon,
+  DocumentChartBarIcon,
+  PencilSquareIcon,
+  EyeIcon,
+  BanknotesIcon,
+  PresentationChartLineIcon
+} from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
 
-const teacherLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/students', label: 'Students' },
-  { href: '/classes', label: 'Classes' },
-  { href: '/gradebook', label: 'Gradebook' },
+interface NavLink {
+  href: string;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
+
+interface DropdownLink extends NavLink {
+  subLinks?: NavLink[];
+}
+
+const teacherLinks: NavLink[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
+  { href: '/students', label: 'Students', icon: UserGroupIcon },
+  { href: '/classes', label: 'Classes', icon: AcademicCapIcon },
+  { href: '/gradebook', label: 'Gradebook', icon: BookOpenIcon },
 ];
 
-const parentLinks = [
-  { href: '/parent/dashboard', label: 'Dashboard' },
-  { href: '/parent/communication', label: 'Communication' },
-  { href: '/parent/feedback', label: 'Feedback' },
-  { href: '/parent/report-cards', label: 'Report Cards'}
+const parentLinks: NavLink[] = [
+  { href: '/parent/dashboard', label: 'Dashboard', icon: HomeIcon },
+  { href: '/parent/communication', label: 'Communication', icon: ChatBubbleLeftRightIcon },
+  { href: '/parent/feedback', label: 'Feedback', icon: DocumentTextIcon },
+  { href: '/parent/report-cards', label: 'Report Cards', icon: DocumentChartBarIcon }
 ];
 
-const supportLinks = [
-  { href: '/support', label: 'Help & Support' },
-  { href: '/contact-us', label: 'Contact' }
+const supportLinks: NavLink[] = [
+  { href: '/support', label: 'Help & Support', icon: QuestionMarkCircleIcon },
+  { href: '/contact-us', label: 'Contact', icon: EnvelopeIcon }
 ];
 
 const Sidebar = () => {
@@ -39,7 +74,7 @@ const Sidebar = () => {
   const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
-  const [financialOpen, setFinancialOpen]   = useState(isFinancialPath);
+  const [financialOpen, setFinancialOpen] = useState(isFinancialPath);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -63,236 +98,261 @@ const Sidebar = () => {
 
   if (!user) return null
 
+  const NavItem = ({ href, label, icon: Icon, isActive }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean }) => (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
+        isActive
+          ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 font-medium border border-cyan-100'
+          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      }`}
+    >
+      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+      <span className="text-sm">{label}</span>
+    </Link>
+  );
+
+  const DropdownSection = ({
+    label,
+    icon: Icon,
+    isOpen,
+    onToggle,
+    children,
+    isActive
+  }: {
+    label: string;
+    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+    isOpen: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+    isActive: boolean;
+  }) => (
+    <div>
+      <button
+        onClick={onToggle}
+        className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+          isActive
+            ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 font-medium border border-cyan-100'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <Icon className={`w-5 h-5 ${isActive ? 'text-cyan-600' : 'text-slate-400'}`} />
+          <span className="text-sm">{label}</span>
+        </div>
+        {isOpen ? (
+          <ChevronDownIcon className="w-4 h-4 text-slate-400" />
+        ) : (
+          <ChevronRightIcon className="w-4 h-4 text-slate-400" />
+        )}
+      </button>
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="ml-4 mt-1 pl-4 border-l-2 border-slate-100 space-y-1">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+
+  const SubNavItem = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) => {
+    const isActive = pathname === href || pathname.startsWith(href + '/');
+    return (
+      <Link
+        href={href}
+        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+          isActive
+            ? 'bg-cyan-50 text-cyan-700 font-medium'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+        }`}
+      >
+        <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-600' : 'text-slate-400'}`} />
+        {label}
+      </Link>
+    );
+  };
+
   return (
-    <aside 
+    <aside
       id="mobile-sidebar"
       className={`
-        w-64 fixed -top-10 bottom-0 lg:top-10 left-0 px-4 pt-20 bg-white text-black shadow-lg z-40 transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        lg:translate-x-0 lg:z-20
+        w-72 fixed top-0 bottom-0 left-0 bg-white border-r border-slate-200 z-40
+        transform transition-transform duration-300 ease-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
       `}
     >
-      {/* Mobile close button */}
-      <button
-        onClick={closeSidebar}
-        className="lg:hidden absolute top-15 right-4 p-2 text-gray-600 hover:text-gray-800"
-      >
-        <XMarkIcon className="h-6 w-6" />
-      </button>
-
-      <nav className="space-y-3 text-sm lg:text-lg xl:text-lg overflow-y-auto h-full pb-20 mt-8 lg:mt-4">
-        {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
-            pathname === link.href ? 'bg-gray-200 font-semibold' : ''
-          }`}
-        >
-          {link.label}
+      {/* Header */}
+      <div className="h-20 flex items-center justify-center px-6 relative">
+        <Link href={user?.role === 'PARENT' ? '/parent/dashboard' : '/dashboard'} className="group">
+          <Image
+            src="/logo/trimmedlogo.png"
+            alt="SchoolMule"
+            width={140}
+            height={44}
+            className="h-18 w-auto transition-transform duration-200 group-hover:scale-105 pr-4"
+          />
         </Link>
-      ))}
+        <button
+          onClick={closeSidebar}
+          className="lg:hidden absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        >
+          <XMarkIcon className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5">
+        {/* Main Links */}
+        {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
+          <NavItem
+            key={link.href}
+            href={link.href}
+            label={link.label}
+            icon={link.icon}
+            isActive={pathname === link.href}
+          />
+        ))}
 
         {user?.role !== 'PARENT' && (
-            <>
-              {/* Attendance Dropdown */}
-              <div>
-                <button
-                  onClick={() => setAttendanceOpen(!attendanceOpen)}
-                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
-                >
-                  <span>Attendance</span>
-                  {attendanceOpen ? (
-                    <ChevronUpIcon className="h-5 w-5" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5" />
-                  )}
-                </button>
-                {attendanceOpen && (
-                  <div className="ml-6 mt-2 space-y-2">
-                    <Link
-                      href="/attendance/general"
-                      className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                        pathname === '/attendance/general' ? 'bg-gray-200 font-semibold' : ''
-                      }`}
-                    >
-                      General Attendance
-                    </Link>
-                    <Link
-                      href="/attendance/class"
-                      className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                        pathname === '/attendance/class' ? 'bg-gray-200 font-semibold' : ''
-                      }`}
-                    >
-                      Class Attendance
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-
-              <Link 
-                href="/reports" 
-                className={`transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100 ${
-                  pathname.startsWith('/reports') ? 'bg-gray-200 font-semibold' : ''
-                }`}
-              >
-                Reports
-              </Link>
-
-              {/* Report Cards Dropdown */}
-              <div>
-                <button
-                  onClick={() => setReportCardOpen(!reportCardOpen)}
-                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
-                >
-                  <span>Report Cards</span>
-                  {reportCardOpen ? (
-                    <ChevronUpIcon className="h-5 w-5" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5" />
-                  )}
-                </button>
-                {reportCardOpen && (
-                  <div className="ml-6 mt-2 space-y-2">
-                    <Link
-                      href="/report-cards/generate"
-                      className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                        pathname === '/report-cards/generate' ? 'bg-gray-200 font-semibold' : ''
-                      }`}
-                    >
-                      Generate Report Cards
-                    </Link>
-                    <Link
-                      href="/report-cards/view"
-                      className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                        pathname === '/report-cards/view' ? 'bg-gray-200 font-semibold' : ''
-                      }`}
-                    >
-                      View/Download Report Cards
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {/* ─── Financials ───────────────────────── */}
-            <div>
-              <button
-                onClick={() => setFinancialOpen(o => !o)}
-                className="flex items-center justify-between w-full px-4 py-2 hover:bg-gray-100 rounded cursor-pointer"
-              >
-                <span>Financials</span>
-                {financialOpen
-                  ? <ChevronUpIcon className="h-5 w-5"/>
-                  : <ChevronDownIcon className="h-5 w-5"/>
-                }
-              </button>
-              {financialOpen && (
-                <div className="ml-6 mt-2 space-y-2">
-                  <Link
-                    href="/financials/tuition"
-                    className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                      pathname.startsWith('/financials/tuition') ? 'bg-gray-200 font-semibold' : ''
-                    }`}
-                  >
-                    Tuition & Invoices
-                  </Link>
-                  <Link
-                    href="/financials/overview"
-                    className={`transform transition duration-200 hover:scale-110 block px-2 py-1 rounded hover:bg-gray-100 ${
-                      pathname.startsWith('/financials/overview') ? 'bg-gray-200 font-semibold' : ''
-                    }`}
-                  >
-                    Financial Overview
-                  </Link>
-                </div>
-              )}
+          <>
+            {/* Divider */}
+            <div className="py-3">
+              <div className="border-t border-slate-100" />
             </div>
 
-              {/* ── Moved sections (less priority) ── */}
-              <Link href="/schedule" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Schedule
-              </Link>
+            {/* Attendance Dropdown */}
+            <DropdownSection
+              label="Attendance"
+              icon={ClipboardDocumentCheckIcon}
+              isOpen={attendanceOpen}
+              onToggle={() => setAttendanceOpen(!attendanceOpen)}
+              isActive={isAttendancePath}
+            >
+              <SubNavItem href="/attendance/general" label="General Attendance" icon={ClipboardDocumentListIcon} />
+              <SubNavItem href="/attendance/class" label="Class Attendance" icon={AcademicCapIcon} />
+            </DropdownSection>
 
-              {/* Feedback Dropdown */}
-              <div>
-                <button
-                  onClick={() => setFeedbackOpen(!feedbackOpen)}
-                  className="flex items-center justify-between w-full px-4 py-2 rounded hover:bg-gray-100 cursor-pointer"
-                >
-                  <span>Feedback</span>
-                  {feedbackOpen ? (
-                    <ChevronUpIcon className="h-5 w-5" />
-                  ) : (
-                    <ChevronDownIcon className="h-5 w-5" />
-                  )}
-                </button>
-                {feedbackOpen && (
-                  <div className="ml-6 mt-2 space-y-2">
-                   <Link href="/feedback/send"
-                     className={`block px-2 py-1 rounded transform transition duration-200
-                      ${pathname === '/feedback/send'
-                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
-                          : 'hover:bg-gray-100'}`}
-                   >
-                     Send Feedback
-                   </Link>
-              
-                   <Link href="/feedback"
-                     className={`block px-2 py-1 rounded transform transition duration-200
-                       ${pathname.startsWith('/teacher/feedback') && pathname !== '/teacher/feedback/send'
-                          ? 'bg-gray-200 font-semibold hover:bg-gray-300'
-                          : 'hover:bg-gray-100'}`}
-                   >
-                     View / Edit Feedback
-                   </Link>
-                  </div>
-                )}
-              </div>
+            {/* Reports */}
+            <NavItem
+              href="/reports"
+              label="Reports"
+              icon={ChartBarIcon}
+              isActive={pathname.startsWith('/reports')}
+            />
 
-              <Link href="/communication" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100">
-                Parent Communication
-              </Link>
-              
-              {/* Admin-only link */}
-              {user?.role === 'ADMIN' && (
-                <Link
-                  href="/admin-panel"
-                  className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
-                    pathname === '/admin-panel/approvals' ? 'bg-gray-200 font-semibold' : ''
-                  }`}
-                >
-                  Admin Panel
-                </Link>
-              )}
+            {/* Report Cards Dropdown */}
+            <DropdownSection
+              label="Report Cards"
+              icon={DocumentChartBarIcon}
+              isOpen={reportCardOpen}
+              onToggle={() => setReportCardOpen(!reportCardOpen)}
+              isActive={isReportCardPath}
+            >
+              <SubNavItem href="/report-cards/generate" label="Generate" icon={PencilSquareIcon} />
+              <SubNavItem href="/report-cards/view" label="View & Download" icon={EyeIcon} />
+            </DropdownSection>
 
-            </>
-          )}
+            {/* Financials Dropdown */}
+            <DropdownSection
+              label="Financials"
+              icon={CurrencyDollarIcon}
+              isOpen={financialOpen}
+              onToggle={() => setFinancialOpen(o => !o)}
+              isActive={isFinancialPath}
+            >
+              <SubNavItem href="/financials/tuition" label="Tuition & Invoices" icon={BanknotesIcon} />
+              <SubNavItem href="/financials/overview" label="Financial Overview" icon={PresentationChartLineIcon} />
+            </DropdownSection>
 
-        <Link href="/settings" className="transform transition duration-200 hover:scale-110 flex items-center px-4 py-2 rounded hover:bg-gray-100 text-gray-700">
-          <Cog6ToothIcon className="h-5 w-5 mr-2" />
-          <span>Settings</span>
-        </Link>
+            {/* Divider */}
+            <div className="py-3">
+              <div className="border-t border-slate-100" />
+            </div>
 
-        {/* Support Links */}
-        <div className="lg:hidden xl:hidden border-t pt-3 mt-3">
+            {/* Schedule */}
+            <NavItem
+              href="/schedule"
+              label="Schedule"
+              icon={CalendarDaysIcon}
+              isActive={pathname === '/schedule'}
+            />
+
+            {/* Feedback Dropdown */}
+            <DropdownSection
+              label="Feedback"
+              icon={ChatBubbleLeftRightIcon}
+              isOpen={feedbackOpen}
+              onToggle={() => setFeedbackOpen(!feedbackOpen)}
+              isActive={isFeedbackPath}
+            >
+              <SubNavItem href="/feedback/send" label="Send Feedback" icon={PencilSquareIcon} />
+              <SubNavItem href="/feedback" label="View & Edit" icon={EyeIcon} />
+            </DropdownSection>
+
+            {/* Communication */}
+            <NavItem
+              href="/communication"
+              label="Parent Communication"
+              icon={EnvelopeIcon}
+              isActive={pathname === '/communication'}
+            />
+
+            {/* Admin Panel */}
+            {user?.role === 'ADMIN' && (
+              <NavItem
+                href="/admin-panel"
+                label="Admin Panel"
+                icon={ShieldCheckIcon}
+                isActive={pathname.startsWith('/admin-panel')}
+              />
+            )}
+          </>
+        )}
+
+        {/* Divider */}
+        <div className="py-3">
+          <div className="border-t border-slate-100" />
+        </div>
+
+        {/* Settings */}
+        <NavItem
+          href="/settings"
+          label="Settings"
+          icon={Cog6ToothIcon}
+          isActive={pathname === '/settings'}
+        />
+
+        {/* Support Links (Mobile) */}
+        <div className="lg:hidden space-y-1.5">
           {supportLinks.map(link => (
-            <Link
+            <NavItem
               key={link.href}
               href={link.href}
-              className={`transform transition duration-200 hover:scale-110 block px-4 py-2 rounded hover:bg-gray-100 ${
-                pathname === link.href ? 'bg-gray-200 font-semibold' : ''
-              }`}
-            >
-              {link.label}
-            </Link>
+              label={link.label}
+              icon={link.icon}
+              isActive={pathname === link.href}
+            />
           ))}
         </div>
 
-        <div className="transform transition duration-200 hover:scale-110 text-red-600 hover:text-red-800 cursor-pointer">
+        {/* Logout */}
+        <div className="pt-2">
           <LogoutModal />
         </div>
       </nav>
+
+      {/* User Info Footer */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm">
+            {user.username?.charAt(0).toUpperCase() || 'U'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
+            <p className="text-xs text-slate-500 truncate">{user.role}</p>
+          </div>
+        </div>
+      </div>
     </aside>
   )
 }

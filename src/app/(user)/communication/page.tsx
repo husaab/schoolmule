@@ -53,92 +53,144 @@ const CommunicationPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6 ml-6">
-          <h1 className="text-2xl font-semibold text-gray-800">Communication</h1>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition cursor-pointer"
-          >
-            <PaperAirplaneIcon className="h-5 w-5" />
-            New Message
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b mb-4 ml-6">
-          <button
-            onClick={() => setActiveTab('inbox')}
-            className={`px-4 py-2 -mb-px border-b-2 font-medium cursor-pointer ${
-              activeTab === 'inbox' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-            }`}
-          >
-            <InboxIcon className="inline h-5 w-5 mr-1 ml-3" />
-            Inbox
-          </button>
-          <button
-            onClick={() => setActiveTab('sent')}
-            className={`ml-6 px-4 py-2 -mb-px border-b-2 font-medium cursor-pointer ${
-              activeTab === 'sent' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-            }`}
-          >
-            <ArrowUpTrayIcon className="inline h-5 w-5 mr-1" />
-            Sent
-          </button>
-        </div>
-
-        {/* Message List */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner />
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Communication</h1>
+                <p className="text-slate-500 mt-1">Send and receive messages with parents and staff</p>
+              </div>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium cursor-pointer shadow-sm"
+              >
+                <PaperAirplaneIcon className="h-5 w-5" />
+                New Message
+              </button>
+            </div>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500">No {activeTab} messages yet.</div>
-        ) : (
-          <div className="space-y-4 overflow-y-auto max-h-[60vh] overflow-x-hidden pr-4 p-5 pt-1">
-            {messages.map(msg => (
-              <div key={msg.message_id} onClick={() => setSelectedMessage(msg)} className="bg-white p-4 rounded-2xl shadow flex justify-between items-start cursor-pointer transform transition duration-200 hover:scale-102">
-                <div>
-                  <p className="font-semibold text-gray-800">{msg.subject || <em>No subject</em>}</p>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{msg.body}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {activeTab === 'inbox'
-                      ? `From: ${msg.sender_name || msg.sender_id}`
-                      : `To: ${msg.recipient_name || msg.recipient_id}`
-                    } • {new Date(msg.created_at).toLocaleString()}
+
+          {/* Main Content Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+            {/* Tabs */}
+            <div className="border-b border-slate-100 px-6">
+              <div className="flex gap-6">
+                <button
+                  onClick={() => setActiveTab('inbox')}
+                  className={`flex items-center gap-2 px-1 py-4 border-b-2 font-medium transition-colors cursor-pointer ${
+                    activeTab === 'inbox'
+                      ? 'border-cyan-500 text-cyan-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <InboxIcon className="h-5 w-5" />
+                  Inbox
+                  {inboxMessages.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-cyan-50 text-cyan-600 rounded-full">
+                      {inboxMessages.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('sent')}
+                  className={`flex items-center gap-2 px-1 py-4 border-b-2 font-medium transition-colors cursor-pointer ${
+                    activeTab === 'sent'
+                      ? 'border-cyan-500 text-cyan-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5" />
+                  Sent
+                  {sentMessages.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full">
+                      {sentMessages.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Message List */}
+            <div className="p-6">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Spinner size="lg" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                    {activeTab === 'inbox' ? (
+                      <InboxIcon className="h-8 w-8 text-slate-400" />
+                    ) : (
+                      <ArrowUpTrayIcon className="h-8 w-8 text-slate-400" />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Messages Yet</h3>
+                  <p className="text-sm text-slate-500">
+                    {activeTab === 'inbox' ? 'Your inbox is empty.' : 'You haven\'t sent any messages yet.'}
                   </p>
                 </div>
-                 <div className="flex space-x-1">
-                  {activeTab === 'sent' && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditTarget(msg)
-                        }}
-                         className="text-gray-500 hover:text-gray-600 cursor-pointer transform transition duration-200 hover:scale-130"
-                        title="Edit"
-                      >
-                        <PencilSquareIcon className="h-6 w-6" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteTarget(msg)
-                        }}
-                        className="text-red-600 hover:text-red-800 ml-4 cursor-pointer transform transition duration-200 hover:scale-130"
-                        title="Delete"
-                      >
-                        <XMarkIcon className="h-6 w-6" />
-                      </button>
-                    </>
-                  )}
+              ) : (
+                <div className="space-y-3">
+                  {messages.map(msg => (
+                    <div
+                      key={msg.message_id}
+                      onClick={() => setSelectedMessage(msg)}
+                      className="group p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors truncate">
+                            {msg.subject || <em className="text-slate-400">No subject</em>}
+                          </p>
+                          <p className="text-sm text-slate-600 mt-1 line-clamp-2">{msg.body}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-slate-500">
+                              {activeTab === 'inbox'
+                                ? `From: ${msg.sender_name || msg.sender_id}`
+                                : `To: ${msg.recipient_name || msg.recipient_id}`
+                              }
+                            </span>
+                            <span className="text-xs text-slate-300">•</span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(msg.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        {activeTab === 'sent' && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditTarget(msg)
+                              }}
+                              className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                              title="Edit"
+                            >
+                              <PencilSquareIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget(msg)
+                              }}
+                              className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                              title="Delete"
+                            >
+                              <XMarkIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Send Message Modal */}
         <SendMessageModal

@@ -25,7 +25,17 @@ import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmen
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
-import { MinusCircleIcon } from '@heroicons/react/24/outline';
+import {
+  MinusCircleIcon,
+  AcademicCapIcon,
+  UserGroupIcon,
+  ClipboardDocumentListIcon,
+  ArrowDownTrayIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  CalendarDaysIcon
+} from '@heroicons/react/24/outline';
+import Spinner from '@/components/Spinner';
 
 interface ScoreRow {
   student_id: string
@@ -60,7 +70,7 @@ const GradebookClass = () => {
   // Child assessments modal state
   const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
   const [isChildAssessmentsModalOpen, setIsChildAssessmentsModalOpen] = useState(false);
-  
+
   // Student assessments modal state
   const [selectedStudent, setSelectedStudent] = useState<{ studentId: string; name: string } | null>(null);
   const [isStudentAssessmentsModalOpen, setIsStudentAssessmentsModalOpen] = useState(false);
@@ -68,9 +78,9 @@ const GradebookClass = () => {
   // Exclusions modal state
   const [selectedExclusionStudent, setSelectedExclusionStudent] = useState<{ studentId: string; name: string } | null>(null);
   const [isExclusionsModalOpen, setIsExclusionsModalOpen] = useState(false);
-  const [exclusionsData, setExclusionsData] = useState<{ [studentId: string]: number }>({}); // studentId -> count
+  const [exclusionsData, setExclusionsData] = useState<{ [studentId: string]: number }>({});
 
-  // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means “no entry yet”)
+  // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means "no entry yet")
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
 
   const [loading, setLoading] = useState(true)
@@ -85,7 +95,6 @@ const GradebookClass = () => {
     try {
       const res = await getExclusionsByClass(classId)
       if (res.status === 'success') {
-        // Count exclusions per student
         const exclusionCounts: { [studentId: string]: number } = {}
         res.data.forEach(exclusion => {
           exclusionCounts[exclusion.studentId] = (exclusionCounts[exclusion.studentId] || 0) + 1
@@ -102,7 +111,6 @@ const GradebookClass = () => {
 
   // Refresh exclusions data AND scores matrix to update visual indicators
   const refreshExclusionsData = async () => {
-    // Reload both exclusion counts and scores matrix to get updated is_excluded flags
     await Promise.all([
       loadExclusionsData(),
       refreshScoresMatrix()
@@ -153,8 +161,7 @@ const GradebookClass = () => {
           throw new Error(scoreRes.message || 'Failed to load scores')
         }
         setScoresMatrix(scoreRes.data as ScoreRow[])
-        
-        // Load exclusions data for all students
+
         loadExclusionsData()
       })
       .catch((err) => {
@@ -198,47 +205,62 @@ const GradebookClass = () => {
       if (hasUnsavedChanges) {
         const confirmLeave = window.confirm('You have not saved your grade changes. Are you sure you want to leave?')
         if (!confirmLeave) {
-          // Push the current state back to prevent navigation
           window.history.pushState(null, '', window.location.href)
         }
       }
     }
 
-    // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload)
     window.addEventListener('popstate', handlePopState)
 
-    // Push a state to handle back button
     if (hasUnsavedChanges) {
       window.history.pushState(null, '', window.location.href)
     }
 
-    // Cleanup
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('popstate', handlePopState)
     }
   }, [hasUnsavedChanges])
 
-  if (error) {
+  if (loading) {
     return (
-      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
-        <p className="text-red-600">{error}</p>
-        <button
-          onClick={() => router.push('/gradebook')}
-          className="mt-4 px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
-        >
-          Back to Gradebook
-        </button>
-      </div>
+      <>
+        <Navbar />
+        <Sidebar />
+        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+          <div className="flex justify-center items-center py-32">
+            <Spinner size="lg" />
+          </div>
+        </main>
+      </>
     )
   }
 
-  if (loading) {
+  if (error) {
     return (
-      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
-        <p className="text-gray-600">Loading gradebook data…</p>
-      </div>
+      <>
+        <Navbar />
+        <Sidebar />
+        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+          <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                <AcademicCapIcon className="h-8 w-8 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Gradebook</h3>
+              <p className="text-red-600 mb-6">{error}</p>
+              <button
+                onClick={() => router.push('/gradebook')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
+              >
+                <ArrowLeftIcon className="h-4 w-4" />
+                Back to Gradebook
+              </button>
+            </div>
+          </div>
+        </main>
+      </>
     )
   }
 
@@ -247,7 +269,7 @@ const GradebookClass = () => {
   // Filter assessments to show only parent and standalone (hide children)
   const displayedAssessments = assessments.filter(a => !a.parentAssessmentId)
 
-  // 1) Build quick lookups: "studentId|assessmentId" → existing score (or null) and exclusion status
+  // Build quick lookups
   const existingScoreMap: Record<string, number | null> = {}
   const exclusionMap: Record<string, boolean> = {}
   scoresMatrix.forEach((row) => {
@@ -258,16 +280,12 @@ const GradebookClass = () => {
 
   const handleExportExcel = async () => {
     try {
-      // 1) Call our “downloadGradebookExcel” service which returns a Blob
       const blob = await downloadGradebookExcel(classId);
-
-      // 2) Compose a filename of the form: gradebook_{grade}_{subject}.xlsx
       const safeSubject = String(classData.subject)
         .trim()
-        .replace(/\s+/g, '_'); // e.g. "Science 101" → "Science_101"
+        .replace(/\s+/g, '_');
       const fileName = `Gradebook_Grade_${classData.grade}_${safeSubject}.xlsx`;
 
-      // 3) Create an object URL and force a download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -282,7 +300,6 @@ const GradebookClass = () => {
     }
   };
 
-  // 2) Whenever the teacher types into a cell, store it in editedScores
   const handleScoreChange = (
     studentId: string,
     assessmentId: string,
@@ -290,17 +307,13 @@ const GradebookClass = () => {
   ) => {
     const raw = e.target.value
 
-    // If blank, keep it as '' so we don’t force a zero right away
     let val: number | '' = ''
     if (raw !== '') {
       const parsed = parseFloat(raw)
       if (!isNaN(parsed)) {
-        // Find the assessment to get its max score
         const assessment = assessments.find(a => a.assessmentId === assessmentId)
         if (assessment) {
-          // Use the actual maxScore for validation, not smart logic
           const maxScore = Number(assessment.maxScore || 100)
-          // Clamp between 0 and the actual max score
           val = Math.min(Math.max(parsed, 0), maxScore)
         } else {
           val = Math.min(Math.max(parsed, 0), 100)
@@ -315,37 +328,31 @@ const GradebookClass = () => {
 
     setEditedScores((prev) => {
       const newState = { ...prev }
-      
-      // Check if the new value is the same as the original value
+
       const isBackToOriginal = (
-        (val === '' && existingValue === null) || // Empty string and originally null
-        (typeof val === 'number' && val === existingValue) // Same number as original
+        (val === '' && existingValue === null) ||
+        (typeof val === 'number' && val === existingValue)
       )
-      
+
       if (isBackToOriginal) {
-        // Remove from editedScores if it's back to original state
         delete newState[compositeKey]
       } else {
-        // Add/update the change
         newState[compositeKey] = val
       }
-      
+
       return newState
     })
   }
 
-  // 3) Sum up each assessment’s contribution for a given student (score × weight/100)
   const computeTotalForStudent = (studentId: string) => {
     let total = 0
     let totalActiveWeight = 0
-    
+
     displayedAssessments.forEach((a) => {
-      // Check if this assessment is excluded for this student
       const key = `${studentId}|${a.assessmentId}`
       const isExcluded = exclusionMap[key] || false
-      
+
       if (isExcluded) {
-        // Skip excluded assessments entirely
         return
       }
       let scoreToUse = 0
@@ -353,46 +360,40 @@ const GradebookClass = () => {
       totalActiveWeight += assessmentWeight
 
       if (a.isParent) {
-        // For parent assessments, calculate weighted average of child scores (excluding excluded children)
         const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
         if (childAssessments.length > 0) {
           let totalPoints = 0
           let maxPossiblePoints = 0
-          
+
           childAssessments.forEach(child => {
             const childKey = `${studentId}|${child.assessmentId}`
             const isChildExcluded = exclusionMap[childKey] || false
-            
+
             if (isChildExcluded) {
-              // Skip excluded child assessments
               return
             }
             const childRawValue = editedScores[childKey] !== undefined
               ? editedScores[childKey]
               : existingScoreMap[childKey] ?? null
-            
+
             const rawScore = typeof childRawValue === 'number'
               ? childRawValue
               : childRawValue !== null && childRawValue !== undefined
               ? parseFloat(String(childRawValue)) || 0
               : 0
-            
-            // Get max score for this child assessment (what the assessment is "out of")
+
             const maxScore = Number(child.maxScore || 100)
-            // Get weight points (how many points this assessment contributes to parent)
             const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-            
-            // Convert raw score to percentage, then multiply by weight points
-            const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0 // Cap at 100%
+
+            const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
             const earnedPoints = percentage * childPoints
-            
+
             totalPoints += earnedPoints
             maxPossiblePoints += childPoints
           })
           scoreToUse = maxPossiblePoints > 0 ? (totalPoints / maxPossiblePoints) * 100 : 0
         }
       } else {
-        // For standalone assessments, convert raw score to percentage
         const key = `${studentId}|${a.assessmentId}`
         const rawValue = editedScores[key] !== undefined
           ? editedScores[key]
@@ -404,23 +405,20 @@ const GradebookClass = () => {
           ? parseFloat(String(rawValue)) || 0
           : 0
 
-        // Convert raw score to percentage using maxScore
         const maxScore = Number(a.maxScore || 100)
         scoreToUse = maxScore > 0 ? (rawScore / maxScore) * 100 : 0
       }
-      
+
       total += (scoreToUse * assessmentWeight) / 100
     })
-    
-    // Redistribute weights proportionally if some assessments are excluded
+
     if (totalActiveWeight > 0 && totalActiveWeight < 100) {
       total = (total / totalActiveWeight) * 100
     }
-    
+
     return total
   }
 
-  // 4) When “Save All Changes” is clicked, only upsert the cells that actually changed
   const handleSaveAll = async () => {
     setSaving(true)
     setError(null)
@@ -431,7 +429,6 @@ const GradebookClass = () => {
       const [stuId, assessId] = compositeKey.split('|')
       const existing = existingScoreMap[compositeKey] ?? null
 
-      // Handle both numbers and empty strings (deletions)
       if (typeof newScore === 'number' && newScore !== existing) {
         toUpsert.push({
           studentId: stuId,
@@ -439,7 +436,6 @@ const GradebookClass = () => {
           score: newScore,
         })
       } else if (newScore === '' && existing !== null) {
-        // User deleted a score - send null to delete it
         toUpsert.push({
           studentId: stuId,
           assessmentId: assessId,
@@ -463,9 +459,7 @@ const GradebookClass = () => {
       } else {
         throw new Error(refreshed.message || 'Failed to refresh scores')
       }
-      console.log('About to show success notification')
       showNotification('Grades successfully saved', 'success')
-      console.log('Success notification called')
     } catch (err) {
       console.error(err)
       setError('Error saving scores')
@@ -474,20 +468,16 @@ const GradebookClass = () => {
     }
   }
 
-  // Handler for opening child assessments modal
   const handleParentAssessmentClick = (parentAssessment: AssessmentPayload) => {
     setSelectedParentAssessment(parentAssessment)
     setIsChildAssessmentsModalOpen(true)
   }
 
-  // Handler for refreshing data after student modal saves
   const handleScoreUpdateFromModal = async () => {
-    // Refresh the scores matrix to show updated values from database
     try {
       const refreshed = await getScoresByClass(classId)
       if (refreshed.status === 'success') {
         setScoresMatrix(refreshed.data as ScoreRow[])
-        // Don't update editedScores - keep only unsaved gradebook changes
       }
     } catch (error) {
       console.error('Error refreshing scores:', error)
@@ -523,10 +513,9 @@ const GradebookClass = () => {
         nextCol = Math.min(maxCol, colIndex + 1)
         break
       default:
-        return // let other keys behave normally
+        return
     }
 
-    // If nothing changed, don't do anything
     if (nextRow === rowIndex && nextCol === colIndex) return
 
     const nextInput = document.getElementById(
@@ -535,404 +524,493 @@ const GradebookClass = () => {
 
     if (nextInput) {
       nextInput.focus()
-      nextInput.select() // optional: highlight value
+      nextInput.select()
     }
   }
+
+  // Calculate class statistics
+  const classAverage = students.length > 0
+    ? students.reduce((sum, stu) => sum + computeTotalForStudent(stu.studentId), 0) / students.length
+    : 0
 
   return (
     <>
       <Navbar />
       <Sidebar />
 
-      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
-        <div className="pt-40 mb-8 text-black text-center">
-          <h1 className="text-3xl font-semibold">
-            Gradebook: {classData.subject} – Grade {classData.grade}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {students.length} students &ndash; {displayedAssessments.length}{' '}
-            {displayedAssessments.length === 1 ? 'assessment' : 'assessments'}
-          </p>
-          {classData.termName && (
-            <p className="text-gray-600 mt-1">
-              <strong>Term:</strong> {classData.termName}
-              {termData && (
-                <span className="ml-2">
-                  ({new Date(termData.startDate).toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })} - {new Date(termData.endDate).toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })})
-                </span>
-              )}
-            </p>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50 pb-28">
+        <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <button
+                    onClick={() => {
+                      if (hasUnsavedChanges) {
+                        const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?')
+                        if (confirmLeave) {
+                          router.push('/gradebook')
+                        }
+                      } else {
+                        router.push('/gradebook')
+                      }
+                    }}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeftIcon className="h-5 w-5" />
+                  </button>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                    {classData.subject}
+                  </h1>
+                  <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium">
+                    Grade {classData.grade}
+                  </span>
+                </div>
+                <p className="text-slate-500">
+                  {classData.termName && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDaysIcon className="h-4 w-4" />
+                      {classData.termName}
+                      {termData && (
+                        <span className="text-slate-400">
+                          ({new Date(termData.startDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })} - {new Date(termData.endDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })})
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportExcel}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" />
+                  Export
+                </button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={saving || Object.keys(editedScores).length === 0}
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm cursor-pointer ${
+                    saving || Object.keys(editedScores).length === 0
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-lg hover:shadow-xl'
+                  }`}
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-50 flex items-center justify-center">
+                    <UserGroupIcon className="w-5 h-5 text-cyan-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{students.length}</p>
+                    <p className="text-xs text-slate-500">Students</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
+                    <ClipboardDocumentListIcon className="w-5 h-5 text-teal-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{displayedAssessments.length}</p>
+                    <p className="text-xs text-slate-500">Assessments</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <AcademicCapIcon className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{classAverage.toFixed(1)}%</p>
+                    <p className="text-xs text-slate-500">Class Average</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    hasUnsavedChanges ? 'bg-amber-50' : 'bg-slate-50'
+                  }`}>
+                    <CheckCircleIcon className={`w-5 h-5 ${
+                      hasUnsavedChanges ? 'text-amber-500' : 'text-slate-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{Object.keys(editedScores).length}</p>
+                    <p className="text-xs text-slate-500">Unsaved Changes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Card - Gradebook Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[200px]">
+                      Student Name
+                    </th>
+                    {displayedAssessments.map((a: AssessmentPayload) => (
+                      <th
+                        key={a.assessmentId}
+                        className={`px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[100px] ${
+                          a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors' : ''
+                        }`}
+                        onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
+                        title={a.isParent ? 'Click to edit individual assessments' : undefined}
+                      >
+                        <div className="truncate max-w-[120px] mx-auto">
+                          {a.name}
+                        </div>
+                        {a.isParent && (
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-600 rounded">
+                            Multiple
+                          </span>
+                        )}
+                        <div className="text-xs font-normal text-slate-400 mt-0.5">
+                          {a.weightPoints || a.weightPercent || 0} pts
+                        </div>
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700 min-w-[80px] bg-emerald-50">
+                      Total
+                    </th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[90px]">
+                      Feedback
+                    </th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[90px]">
+                      Progress
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {students.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={3 + displayedAssessments.length}
+                        className="px-4 py-12 text-center"
+                      >
+                        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                          <UserGroupIcon className="h-8 w-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Students Enrolled</h3>
+                        <p className="text-sm text-slate-500">No students are currently enrolled in this class.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    students
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((stu, rowIndex) => {
+                      const total = computeTotalForStudent(stu.studentId)
+                      return (
+                        <tr
+                          key={stu.studentId}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
+                          <td className="sticky left-0 z-10 bg-white px-4 py-3 border-r border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedStudent({ studentId: stu.studentId, name: stu.name })
+                                  setIsStudentAssessmentsModalOpen(true)
+                                }}
+                                className="font-medium text-slate-900 hover:text-cyan-600 transition-colors cursor-pointer"
+                                title="Click to view/edit all assessments for this student"
+                              >
+                                {stu.name}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setSelectedExclusionStudent({ studentId: stu.studentId, name: stu.name })
+                                  setIsExclusionsModalOpen(true)
+                                }}
+                                className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                title={`Manage exclusions (${exclusionsData[stu.studentId] || 0} excluded)`}
+                              >
+                                <MinusCircleIcon className="h-4 w-4" />
+                                {(exclusionsData[stu.studentId] || 0) > 0 && (
+                                  <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">
+                                    {exclusionsData[stu.studentId]}
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+
+                          {displayedAssessments.map((a: AssessmentPayload, colIndex) => {
+                            const key = `${stu.studentId}|${a.assessmentId}`
+                            const isExcluded = exclusionMap[key] || false
+
+                            if (a.isParent) {
+                              const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
+
+                              return (
+                                <td
+                                  key={a.assessmentId}
+                                  className={`px-2 py-2 text-center cursor-pointer hover:bg-blue-100 relative group transition-colors ${
+                                    isExcluded
+                                      ? 'bg-slate-50 text-slate-400'
+                                      : 'bg-blue-50/50'
+                                  }`}
+                                  title={isExcluded ? 'Assessment excluded from grade calculation' : 'Click to edit individual assessments'}
+                                  onClick={() => handleParentAssessmentClick(a)}
+                                >
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      try {
+                                        if (isExcluded) {
+                                          await deleteExclusion(stu.studentId, classId, a.assessmentId)
+                                          showNotification('Assessment included', 'success')
+                                        } else {
+                                          await createExclusion({
+                                            studentId: stu.studentId,
+                                            classId: classId,
+                                            assessmentId: a.assessmentId
+                                          })
+                                          showNotification('Assessment excluded', 'success')
+                                        }
+                                        await refreshExclusionsData()
+                                      } catch (error) {
+                                        console.error('Error toggling exclusion:', error)
+                                        showNotification('Failed to update exclusion', 'error')
+                                      }
+                                    }}
+                                    className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0 group-hover:opacity-100 cursor-pointer ${
+                                      isExcluded
+                                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                        : 'bg-red-500 text-white hover:bg-red-600'
+                                    }`}
+                                    title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                                  >
+                                    {isExcluded ? '✓' : '×'}
+                                  </button>
+                                  <div className={`inline-block px-2 py-1 rounded-lg text-sm font-medium ${
+                                    isExcluded
+                                      ? 'bg-slate-100 text-slate-400'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {isExcluded ? (
+                                      'Excl.'
+                                    ) : (
+                                      (() => {
+                                        let totalEarned = 0
+                                        let totalActiveWeight = 0
+
+                                        childAssessments.forEach(child => {
+                                          const childKey = `${stu.studentId}|${child.assessmentId}`
+                                          const isChildExcluded = exclusionMap[childKey] || false
+
+                                          if (isChildExcluded) {
+                                            return
+                                          }
+
+                                          const childRawValue = editedScores[childKey] !== undefined
+                                            ? editedScores[childKey]
+                                            : existingScoreMap[childKey] ?? null
+
+                                          const rawScore = typeof childRawValue === 'number'
+                                            ? childRawValue
+                                            : childRawValue !== null && childRawValue !== undefined
+                                            ? parseFloat(String(childRawValue)) || 0
+                                            : 0
+
+                                          const maxScore = Number(child.maxScore || 100)
+                                          const childPoints = Number(child.weightPoints || child.weightPercent || 0)
+
+                                          const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
+                                          const earnedPoints = percentage * childPoints
+
+                                          totalEarned += earnedPoints
+                                          totalActiveWeight += childPoints
+                                        })
+
+                                        const parentTotalPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                        if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
+                                          const scaleFactor = parentTotalPoints / totalActiveWeight
+                                          totalEarned = totalEarned * scaleFactor
+                                        }
+
+                                        return `${totalEarned.toFixed(1)}/${parentTotalPoints}`
+                                      })()
+                                    )}
+                                  </div>
+                                </td>
+                              )
+                            } else {
+                              const currentValue =
+                                editedScores[key] !== undefined
+                                  ? editedScores[key]
+                                  : existingScoreMap[key] ?? ''
+
+                              return (
+                                <td
+                                  key={a.assessmentId}
+                                  className={`px-2 py-2 text-center relative group ${
+                                    isExcluded ? 'bg-slate-50' : ''
+                                  }`}
+                                >
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        if (isExcluded) {
+                                          await deleteExclusion(stu.studentId, classId, a.assessmentId)
+                                          showNotification('Assessment included', 'success')
+                                        } else {
+                                          await createExclusion({
+                                            studentId: stu.studentId,
+                                            classId: classId,
+                                            assessmentId: a.assessmentId
+                                          })
+                                          showNotification('Assessment excluded', 'success')
+                                        }
+                                        await refreshExclusionsData()
+                                      } catch (error) {
+                                        console.error('Error toggling exclusion:', error)
+                                        showNotification('Failed to update exclusion', 'error')
+                                      }
+                                    }}
+                                    className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0 group-hover:opacity-100 cursor-pointer ${
+                                      isExcluded
+                                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                        : 'bg-red-500 text-white hover:bg-red-600'
+                                    }`}
+                                    title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                                  >
+                                    {isExcluded ? '✓' : '×'}
+                                  </button>
+
+                                  {isExcluded ? (
+                                    <div className="inline-block px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-400">
+                                      Excluded
+                                    </div>
+                                  ) : (
+                                    <input
+                                      id={`grade-${rowIndex}-${colIndex}`}
+                                      type="number"
+                                      min="0"
+                                      max={(() => {
+                                        const childPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                        const storedMaxScore = Number(a.maxScore || 100)
+                                        return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+                                      })()}
+                                      step="1"
+                                      className="w-16 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm text-black focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
+                                      value={currentValue}
+                                      placeholder={`/${(() => {
+                                        const childPoints = Number(a.weightPoints || a.weightPercent || 0)
+                                        const storedMaxScore = Number(a.maxScore || 100)
+                                        return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
+                                      })()}`}
+                                      onChange={(e) =>
+                                        handleScoreChange(
+                                          stu.studentId,
+                                          a.assessmentId,
+                                          e
+                                        )
+                                      }
+                                      onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
+                                      onKeyPress={(e) => {
+                                        if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                                          e.preventDefault()
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                </td>
+                              )
+                            }
+                          })}
+
+                          <td className="px-4 py-2 text-center bg-emerald-50/50 font-semibold text-slate-900">
+                            {total.toFixed(1)}%
+                          </td>
+
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => {
+                                setSelectedStudentId(stu.studentId);
+                                setSelectedStudentName(stu.name);
+                                setIsFeedbackModalOpen(true);
+                              }}
+                              className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                            >
+                              Feedback
+                            </button>
+                          </td>
+
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => {
+                                setSelectedStudentId(stu.studentId);
+                                setSelectedStudentName(stu.name);
+                                setIsProgressReportModalOpen(true);
+                              }}
+                              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                            >
+                              Progress
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-center">
+              <p className="text-red-600">{error}</p>
+            </div>
           )}
         </div>
 
-        <div className="mx-auto w-[90%] overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-          <table className="w-full table-auto whitespace-nowrap">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="sticky left-0 top-0 z-40 bg-gray-100 px-4 py-2 text-left text-gray-700">
-                  Student Name
-                </th>
-                {displayedAssessments.map((a: AssessmentPayload) => (
-                  <th
-                    key={a.assessmentId}
-                    className={`px-4 py-2 text-center text-gray-700 whitespace-nowrap ${
-                      a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-200' : ''
-                    }`}
-                    onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
-                    title={a.isParent ? 'Click to edit individual assessments' : undefined}
-                  >
-                    <div className="truncate">
-                      {a.name}
-                    </div>
-                    <div>
-                        {a.isParent && (
-                          <span className="ml-1 text-xs text-blue-600 font-medium">(Multiple)</span>
-                        )}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      ({a.weightPoints || a.weightPercent || 0} pts)
-                    </div>
-                  </th>
-                ))}
-                <th className="px-4 py-2 text-center text-gray-700">Total</th>
-                <th className="px-4 py-2 text-center text-gray-700">Feedback</th>
-                <th className="px-4 py-2 text-center text-gray-700 w-20">Progress</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {students.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={3 + displayedAssessments.length}
-                    className="px-4 py-6 text-center text-gray-600"
-                  >
-                    No students are currently enrolled in this class.
-                  </td>
-                </tr>
-              ) : (
-                students
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((stu, rowIndex) => {
-                  const total = computeTotalForStudent(stu.studentId)
-                  return (
-                    <tr
-                      key={stu.studentId}
-                      className="border-t border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="sticky left-0 z-30 bg-white px-4 py-2 text-gray-800">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedStudent({ studentId: stu.studentId, name: stu.name })
-                              setIsStudentAssessmentsModalOpen(true)
-                            }}
-                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
-                            title="Click to view/edit all assessments for this student"
-                          >
-                            {stu.name}
-                          </button>
-                          
-                          {/* Exclusions icon + count */}
-                          <button
-                            onClick={() => {
-                              setSelectedExclusionStudent({ studentId: stu.studentId, name: stu.name })
-                              setIsExclusionsModalOpen(true)
-                            }}
-                            className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 cursor-pointer"
-                            title={`Manage exclusions (${exclusionsData[stu.studentId] || 0} excluded)`}
-                          >
-                            <MinusCircleIcon className="h-4 w-4" />
-                            {(exclusionsData[stu.studentId] || 0) > 0 && (
-                              <span className="text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full font-medium">
-                                {exclusionsData[stu.studentId]}
-                              </span>
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      {displayedAssessments.map((a: AssessmentPayload, colIndex) => {
-                        const key = `${stu.studentId}|${a.assessmentId}`
-                        const isExcluded = exclusionMap[key] || false
-                        
-                        if (a.isParent) {
-                          // For parent assessments, show calculated score (read-only)
-                          const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
-
-                          return (
-                            <td
-                              key={a.assessmentId}
-                              className={`px-1 py-1 text-center cursor-pointer hover:bg-blue-100 relative group ${
-                                isExcluded 
-                                  ? 'bg-gray-100 text-gray-400' 
-                                  : 'text-gray-800 bg-blue-50'
-                              }`}
-                              title={isExcluded ? 'Assessment excluded from grade calculation' : 'Click to edit individual assessments'}
-                              onClick={() => handleParentAssessmentClick(a)}
-                            >
-                              {/* Hover-triggered exclusion toggle button for parent assessments */}
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation() // Prevent triggering parent assessment modal
-                                  try {
-                                    if (isExcluded) {
-                                      // Include the assessment
-                                      await deleteExclusion(stu.studentId, classId, a.assessmentId)
-                                      showNotification('Assessment included', 'success')
-                                    } else {
-                                      // Exclude the assessment
-                                      await createExclusion({
-                                        studentId: stu.studentId,
-                                        classId: classId,
-                                        assessmentId: a.assessmentId
-                                      })
-                                      showNotification('Assessment excluded', 'success')
-                                    }
-                                    // Refresh exclusions and scores
-                                    await refreshExclusionsData()
-                                  } catch (error) {
-                                    console.error('Error toggling exclusion:', error)
-                                    showNotification('Failed to update exclusion', 'error')
-                                  }
-                                }}
-                                className={`absolute top-0 right-0 w-3 h-3 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
-                                  isExcluded 
-                                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                                    : 'bg-red-500 text-white hover:bg-red-600'
-                                }`}
-                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
-                              >
-                                {isExcluded ? '✓' : '×'}
-                              </button>
-                              <div className={`w-16 mx-auto border rounded p-1 text-center font-medium ${
-                                isExcluded 
-                                  ? 'border-gray-300 bg-gray-100 text-gray-500 text-xs' 
-                                  : 'border-blue-200 bg-blue-50 text-blue-800'
-                              }`}>
-                                {isExcluded ? (
-                                  'Excl.'
-                                ) : (
-                                  (() => {
-                                    // Calculate earned points for display (excluding excluded children)
-                                    let totalEarned = 0
-                                    let totalActiveWeight = 0
-                                    
-                                    childAssessments.forEach(child => {
-                                      const childKey = `${stu.studentId}|${child.assessmentId}`
-                                      const isChildExcluded = exclusionMap[childKey] || false
-                                      
-                                      if (isChildExcluded) {
-                                        // Skip excluded child assessments
-                                        return
-                                      }
-                                      
-                                      const childRawValue = editedScores[childKey] !== undefined
-                                        ? editedScores[childKey]
-                                        : existingScoreMap[childKey] ?? null
-                                      
-                                      const rawScore = typeof childRawValue === 'number'
-                                        ? childRawValue
-                                        : childRawValue !== null && childRawValue !== undefined
-                                        ? parseFloat(String(childRawValue)) || 0
-                                        : 0
-                                      
-                                      const maxScore = Number(child.maxScore || 100)
-                                      const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-                                      
-                                      const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
-                                      const earnedPoints = percentage * childPoints
-                                      
-                                      totalEarned += earnedPoints
-                                      totalActiveWeight += childPoints
-                                    })
-                                    
-                                    // If some children are excluded, scale up proportionally
-                                    const parentTotalPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                    if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
-                                      const scaleFactor = parentTotalPoints / totalActiveWeight
-                                      totalEarned = totalEarned * scaleFactor
-                                    }
-                                    
-                                    return `${totalEarned.toFixed(1)}/${parentTotalPoints}`
-                                  })()
-                                )}
-                              </div>
-                            </td>
-                          )
-                        } else {
-                          // For standalone assessments, show editable input
-                          const currentValue =
-                            editedScores[key] !== undefined
-                              ? editedScores[key]
-                              : existingScoreMap[key] ?? ''
-
-                          return (
-                            <td
-                              key={a.assessmentId}
-                              className={`px-1 py-1 text-center relative group ${
-                                isExcluded ? 'text-gray-400' : 'text-gray-800'
-                              }`}
-                            >
-                              {/* Hover-triggered exclusion toggle button */}
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    if (isExcluded) {
-                                      // Include the assessment
-                                      await deleteExclusion(stu.studentId, classId, a.assessmentId)
-                                      showNotification('Assessment included', 'success')
-                                    } else {
-                                      // Exclude the assessment
-                                      await createExclusion({
-                                        studentId: stu.studentId,
-                                        classId: classId,
-                                        assessmentId: a.assessmentId
-                                      })
-                                      showNotification('Assessment excluded', 'success')
-                                    }
-                                    // Refresh exclusions and scores
-                                    await refreshExclusionsData()
-                                  } catch (error) {
-                                    console.error('Error toggling exclusion:', error)
-                                    showNotification('Failed to update exclusion', 'error')
-                                  }
-                                }}
-                                className={`absolute top-0 right-0 w-3 h-3 cursor-pointer rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
-                                  isExcluded 
-                                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                                    : 'bg-red-500 text-white hover:bg-red-600'
-                                }`}
-                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
-                              >
-                                {isExcluded ? '✓' : '×'}
-                              </button>
-
-                              {isExcluded ? (
-                                <div className="w-16 mx-auto border border-gray-300 rounded p-1 text-center bg-gray-100 text-gray-500 text-sm">
-                                  Excluded
-                                </div>
-                              ) : (
-                                <input
-                                  id={`grade-${rowIndex}-${colIndex}`}
-                                  type="number"
-                                  min="0"
-                                  max={(() => {
-                                    const childPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                    const storedMaxScore = Number(a.maxScore || 100)
-                                    return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
-                                  })()}
-                                  step="1"
-                                  className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  value={currentValue}
-                                  placeholder={`/${(() => {
-                                    const childPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                    const storedMaxScore = Number(a.maxScore || 100)
-                                    return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
-                                  })()}`}
-                                  onChange={(e) =>
-                                    handleScoreChange(
-                                      stu.studentId,
-                                      a.assessmentId,
-                                      e
-                                    )
-                                  }
-                                  onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
-                                  onKeyPress={(e) => {
-                                    // Only allow numbers, decimal point, and backspace/delete
-                                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                                      e.preventDefault()
-                                    }
-                                  }}
-                                />
-                              )}
-                            </td>
-                          )
-                        }
-                      })}
-
-                      <td className="px-4 py-2 text-center text-gray-800">
-                        {/* Show the weighted total with one decimal place: */}
-                        {total.toFixed(1)}%
-                      </td>
-
-                      <td className="px-4 py-2 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedStudentId(stu.studentId);
-                            setSelectedStudentName(stu.name);
-                            setIsFeedbackModalOpen(true);
-                          }}
-                          className="text-sm px-2 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded cursor-pointer"
-                        >
-                          Feedback
-                        </button>
-                      </td>
-
-                      <td className="px-2 py-2 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedStudentId(stu.studentId);
-                            setSelectedStudentName(stu.name);
-                            setIsProgressReportModalOpen(true);
-                          }}
-                          className="text-sm px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded cursor-pointer"
-                        >
-                          Progress
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex ml-20 space-x-4">
-          <button
-            onClick={() => {
-              if (hasUnsavedChanges) {
-                const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?')
-                if (confirmLeave) {
-                  router.push('/gradebook')
-                }
-              } else {
-                router.push('/gradebook')
-              }
-            }}
-            className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"
-          >
-            Back
-          </button>
-          <button
-            onClick={handleSaveAll}
-            disabled={saving || Object.keys(editedScores).length === 0}
-            className={`px-4 py-2 rounded text-white cursor-pointer ${
-              saving || Object.keys(editedScores).length === 0
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600'
-            }`}
-          >
-            {saving ? 'Saving…' : 'Save All Changes'}
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
-          >
-            Export as CSV
-          </button>
-        </div>
-
-        {error && <p className="mt-4 text-center text-red-600">{error}</p>}
+        {/* Sticky Action Bar at Bottom */}
+        {hasUnsavedChanges && (
+          <div className="fixed bottom-0 left-0 right-0 lg:left-72 z-20 p-4 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
+            <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
+              <span className="text-sm text-amber-600 font-medium">
+                You have {Object.keys(editedScores).length} unsaved changes
+              </span>
+              <button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer shadow-lg"
+              >
+                <CheckCircleIcon className="h-4 w-4" />
+                {saving ? 'Saving...' : 'Save All Changes'}
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {selectedStudentId && selectedStudentName && (
@@ -973,7 +1051,6 @@ const GradebookClass = () => {
         />
       )}
 
-      {/* Student Assessments Modal */}
       <StudentAssessmentsModal
         isOpen={isStudentAssessmentsModalOpen}
         onClose={() => {
@@ -993,7 +1070,6 @@ const GradebookClass = () => {
         onRefreshScores={handleScoreUpdateFromModal}
       />
 
-      {/* Exclusions Modal */}
       {selectedExclusionStudent && (
         <ExcludedAssessmentsModal
           isOpen={isExclusionsModalOpen}

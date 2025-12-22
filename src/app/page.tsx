@@ -108,7 +108,7 @@ const WelcomePage: FC = () => {
 
       <main className="w-full overflow-hidden">
         {/* Hero Section */}
-        <section className="relative min-h-screen flex items-center pt-24 pb-16 lg:pt-32 lg:pb-24">
+        <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-32 lg:pb-24">
           {/* Background */}
           <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-slate-50" />
 

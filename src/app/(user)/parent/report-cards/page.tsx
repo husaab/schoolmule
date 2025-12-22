@@ -8,7 +8,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { getStudentsByParentId } from '@/services/parentStudentService'
 import { ParentStudentPayload } from '@/services/types/parentStudent'
 import Spinner from '@/components/Spinner'
-import { DocumentTextIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { DocumentTextIcon, UserCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 
 const ParentReportCardsPage: React.FC = () => {
   const router = useRouter()
@@ -39,75 +39,95 @@ const ParentReportCardsPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        <div className="text-black text-center mb-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold">Report Cards</h1>
-          <p className="text-gray-600 mt-2">View and download report cards for your children</p>
-        </div>
-
-        {/* Loading/Error States */}
-        {loading && (
-          <div className="flex justify-center items-center h-32">
-            <Spinner />
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center text-red-600 font-medium bg-red-50 p-4 rounded-lg max-w-md mx-auto">
-            {error}
-          </div>
-        )}
-
-        {/* Main Content Card */}
-        {!loading && !error && (
-          <div className="bg-white rounded-2xl shadow-md max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <DocumentTextIcon className="h-8 w-8 text-cyan-600" />
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">Your Children&apos;s Report Cards</h2>
-                  <p className="text-sm text-gray-600">Select a child to view their report cards</p>
-                </div>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Report Cards</h1>
+                <p className="text-slate-500 mt-1">View and download report cards for your children</p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">Report Cards</span>
               </div>
             </div>
-
-            {/* Children List */}
-            <div className="p-6">
-              {children.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                    <DocumentTextIcon className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-lg font-medium text-gray-800">No children found</p>
-                  <p className="text-sm text-gray-600">No children are linked to your account yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {children.map((childLink) => (
-                    <div
-                      key={childLink.studentId}
-                      className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-800">{childLink!.student!.name}</h3>
-                        <p className="text-sm text-gray-600">Grade {childLink!.student!.grade}</p>
-                      </div>
-                      
-                      <button
-                        onClick={() => handleViewReportCards(childLink.studentId)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors cursor-pointer"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                        <span>View Report Cards</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
-        )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex justify-center items-center py-12">
+              <Spinner size="lg" />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                <DocumentTextIcon className="h-8 w-8 text-red-400" />
+              </div>
+              <p className="text-red-600 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Main Content Card */}
+          {!loading && !error && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+              <div className="p-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                    <DocumentTextIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Your Children&apos;s Report Cards</h2>
+                    <p className="text-sm text-slate-500">Select a child to view their report cards</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {children.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                      <UserCircleIcon className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">No Children Found</h3>
+                    <p className="text-sm text-slate-500">No children are linked to your account yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {children.map((childLink) => (
+                      <div
+                        key={childLink.studentId}
+                        onClick={() => handleViewReportCards(childLink.studentId)}
+                        className="group flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+                            <UserCircleIcon className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors">
+                              {childLink!.student!.name}
+                            </h3>
+                            <p className="text-sm text-slate-500">Grade {childLink!.student!.grade}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl text-sm font-medium group-hover:from-cyan-600 group-hover:to-teal-600 transition-all">
+                          View Report Cards
+                          <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </main>
     </>
   )

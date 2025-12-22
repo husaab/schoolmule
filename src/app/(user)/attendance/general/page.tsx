@@ -13,6 +13,8 @@ import {
   submitGeneralAttendance,
 } from '@/services/attendanceService';
 import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
+import { ClipboardDocumentCheckIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import Spinner from '@/components/Spinner';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
@@ -157,180 +159,225 @@ export default function GeneralAttendancePage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10 pb-24">
-        <div className="text-black text-center mb-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold">General Attendance</h1>
-          <p className="text-gray-600 mt-2">Track daily attendance for all students</p>
-        </div>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50 pb-28">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">General Attendance</h1>
+                <p className="text-slate-500 mt-1">Track daily attendance for all students</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-slate-400" />
+                <input
+                  id="attendance-date"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-white cursor-pointer"
+                />
+              </div>
+            </div>
 
-        {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-md">
-          {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
-            <div className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">Student Attendance</h2>
-                  <p className="text-sm text-gray-600">Mark attendance for {format(new Date(selectedDate), 'MMM dd, yyyy')}</p>
-                  
-                  {/* Attendance Statistics */}
-                  <div className="mt-2 flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700">Progress:</span>
-                      <span className="font-semibold text-green-600">
-                        {presentCount}/{totalStudents} Present
-                      </span>
-                    </div>
-                    {lateCount > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                        <span className="text-yellow-700">{lateCount} Late</span>
-                      </div>
-                    )}
-                    {absentCount > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                        <span className="text-red-700">{absentCount} Absent</span>
-                      </div>
-                    )}
-                    {unmarkedCount > 0 && (
-                      <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                        <span className="text-gray-600">{unmarkedCount} Unmarked</span>
-                      </div>
-                    )}
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <CheckCircleIcon className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{presentCount}</p>
+                    <p className="text-xs text-slate-500">Present</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="attendance-date" className="text-sm font-medium text-gray-700">
-                    Date:
-                  </label>
-                  <input
-                    id="attendance-date"
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                  />
+              </div>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <ClockIcon className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{lateCount}</p>
+                    <p className="text-xs text-slate-500">Late</p>
+                  </div>
                 </div>
               </div>
-
-              {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Search Students
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Search by name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Grade
-                  </label>
-                  <select
-                    value={gradeFilter}
-                    onChange={(e) => setGradeFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                  >
-                    <option value="">All Grades</option>
-                    {grades.map((gradeOption) => (
-                      <option key={gradeOption.value} value={String(gradeOption.value)}>
-                        Grade {gradeOption.label}
-                      </option>
-                    ))}
-                  </select>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                    <XCircleIcon className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{absentCount}</p>
+                    <p className="text-xs text-slate-500">Absent</p>
+                  </div>
                 </div>
               </div>
-              
-              {(searchTerm || gradeFilter) && (
-                <div className="mt-4 flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    Showing {filteredStudents.length} of {students.length} students
-                  </span>
-                  <button
-                    onClick={() => {
-                      setSearchTerm('')
-                      setGradeFilter('')
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                  >
-                    Clear filters
-                  </button>
+              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                    <UserGroupIcon className="w-5 h-5 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900">{unmarkedCount}</p>
+                    <p className="text-xs text-slate-500">Unmarked</p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Students Content */}
-          <div className="p-6 overflow-y-auto max-h-[60vh]">
-            <div className="space-y-4">
-              {Object.entries(groupedByGrade)
-                .sort(([a], [b]) => {
-                  const numA = parseInt(a.replace(/\D/g, ''), 10);
-                  const numB = parseInt(b.replace(/\D/g, ''), 10);
-                  return numA - numB;
-                })
-                .map(([grade, students]) => (
-                  <div key={grade} className="space-y-2">
-                    {/* Grade header */}
-                    <div className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg">
-                      <span className="font-semibold text-lg">{grade}</span>
-                      <span className="text-sm">{students.length} students</span>
-                    </div>
-
-                    {/* Student cards */}
-                    <div className="space-y-2">
-                      {students.map(student => (
-                        <div
-                          key={student.studentId}
-                          className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-800">{student.name}</p>
-                            <p className="text-gray-600 text-sm">Grade {student.grade}</p>
-                          </div>
-                          <div className="flex space-x-4 items-center">
-                            {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map(status => (
-                              <label key={status} className="flex items-center space-x-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={attendance[student.studentId] === status}
-                                  onChange={() => handleSelect(student.studentId, status)}
-                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className={`text-sm ${
-                                  status === 'PRESENT' ? 'text-green-700' :
-                                  status === 'LATE' ? 'text-yellow-700' :
-                                  'text-red-700'
-                                }`}>
-                                  {status}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+          {/* Main Content Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+            {/* Sticky Header */}
+            <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
+              <div className="p-6">
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Search Students
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search by name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Grade
+                    </label>
+                    <select
+                      value={gradeFilter}
+                      onChange={(e) => setGradeFilter(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
+                    >
+                      <option value="">All Grades</option>
+                      {grades.map((gradeOption) => (
+                        <option key={gradeOption.value} value={String(gradeOption.value)}>
+                          Grade {gradeOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {(searchTerm || gradeFilter) && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <span className="text-sm text-slate-500">
+                      Showing {filteredStudents.length} of {students.length} students
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSearchTerm('')
+                        setGradeFilter('')
+                      }}
+                      className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Students Content */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {Object.entries(groupedByGrade)
+                  .sort(([a], [b]) => {
+                    const numA = parseInt(a.replace(/\D/g, ''), 10);
+                    const numB = parseInt(b.replace(/\D/g, ''), 10);
+                    return numA - numB;
+                  })
+                  .map(([grade, gradeStudents]) => (
+                    <div key={grade} className="space-y-2">
+                      {/* Grade header */}
+                      <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                            <ClipboardDocumentCheckIcon className="w-5 h-5" />
+                          </div>
+                          <span className="font-semibold text-lg">{grade}</span>
+                        </div>
+                        <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                          {gradeStudents.length} students
+                        </span>
+                      </div>
+
+                      {/* Student cards */}
+                      <div className="space-y-2 pl-2">
+                        {gradeStudents.map(student => (
+                          <div
+                            key={student.studentId}
+                            className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                              attendance[student.studentId] === 'PRESENT'
+                                ? 'bg-emerald-50 border-emerald-200'
+                                : attendance[student.studentId] === 'LATE'
+                                ? 'bg-amber-50 border-amber-200'
+                                : attendance[student.studentId] === 'ABSENT'
+                                ? 'bg-red-50 border-red-200'
+                                : 'bg-slate-50 border-slate-100 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                                <span className="text-sm font-medium text-cyan-700">
+                                  {student.name.charAt(0)}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{student.name}</p>
+                                <p className="text-slate-500 text-sm">Grade {student.grade}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {(['PRESENT', 'LATE', 'ABSENT'] as AttendanceStatus[]).map(status => (
+                                <button
+                                  key={status}
+                                  onClick={() => handleSelect(student.studentId, status)}
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                                    attendance[student.studentId] === status
+                                      ? status === 'PRESENT'
+                                        ? 'bg-emerald-500 text-white'
+                                        : status === 'LATE'
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-red-500 text-white'
+                                      : status === 'PRESENT'
+                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                        : status === 'LATE'
+                                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  }`}
+                                >
+                                  {status === 'PRESENT' ? 'Present' : status === 'LATE' ? 'Late' : 'Absent'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sticky Action Buttons at Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-20 p-4 bg-white border-t border-gray-200 shadow-lg">
-          <div className="flex justify-center gap-4">
+        <div className="fixed bottom-0 left-0 right-0 lg:left-72 z-20 p-4 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
+          <div className="flex justify-center gap-4 max-w-7xl mx-auto">
             <button
               onClick={markAllPresent}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer font-semibold shadow-md"
+              className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all cursor-pointer font-medium shadow-md hover:shadow-lg flex items-center gap-2"
             >
-              All Present
+              <CheckCircleIcon className="w-5 h-5" />
+              Mark All Present
             </button>
             <button
               onClick={async () => {
@@ -354,31 +401,14 @@ export default function GeneralAttendancePage() {
                   showNotification('Unexpected error saving attendance, contact support if persists', "error");
                 }
               }}
-              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer font-semibold shadow-md"
+              className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all cursor-pointer font-medium shadow-md hover:shadow-lg flex items-center gap-2"
             >
-              Save All Changes
+              <ClipboardDocumentCheckIcon className="w-5 h-5" />
+              Save Attendance
             </button>
           </div>
         </div>
       </main>
-
-      <style jsx global>{`
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0,0,0,0.2) transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(0, 0, 0, 0.2);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(0, 0, 0, 0.4);
-        }
-      `}</style>
     </>
   );
 }

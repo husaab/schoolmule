@@ -54,103 +54,157 @@ const ParentCommunicationPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        <div className="flex justify-between items-center mb-6 ml-6">
-          <h1 className="text-2xl font-semibold text-gray-800">Parent Communication</h1>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b mb-4 ml-6">
-          <button
-            onClick={() => setActiveTab('inbox')}
-            className={`px-4 py-2 -mb-px border-b-2 font-medium cursor-pointer ${
-              activeTab === 'inbox' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-            }`}
-          >
-            <InboxIcon className="inline h-5 w-5 mr-1" />
-            Inbox
-          </button>
-          <button
-            onClick={() => setActiveTab('sent')}
-            className={`ml-6 px-4 py-2 -mb-px border-b-2 font-medium cursor-pointer ${
-              activeTab === 'sent' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-            }`}
-          >
-            <ArrowUpTrayIcon className="inline h-5 w-5 mr-1" />
-            Sent
-          </button>
-        </div>
-
-        {/* Message List */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner />
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Parent Communication</h1>
+                <p className="text-slate-500 mt-1">View and manage messages from the school</p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-xl border border-cyan-100">
+                <InboxIcon className="w-5 h-5 text-cyan-600" />
+                <span className="text-sm font-medium text-cyan-700">Messages</span>
+              </div>
+            </div>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500">No {activeTab} messages yet.</div>
-        ) : (
-          <div className="space-y-4 overflow-y-auto max-h-[60vh] overflow-x-hidden pr-4 p-5 pt-1">
-            {messages.map((msg) => (
-              <div
-                key={msg.message_id}
-                onClick={() => setViewTarget(msg)}
-                className="bg-white p-4 rounded-2xl shadow flex justify-between items-start cursor-pointer transform transition duration-200 hover:scale-102"
-              >
-                <div>
-                  <p className="font-semibold text-gray-800">{msg.subject || <em>No subject</em>}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {activeTab === 'inbox'
-                      ? `From: ${msg.sender_name || msg.sender_id}`
-                      : `To: ${msg.recipient_name || msg.recipient_id}`}{' '}
-                    • {new Date(msg.created_at).toLocaleString()}
+
+          {/* Main Content Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+            {/* Tabs */}
+            <div className="border-b border-slate-100 px-6">
+              <div className="flex gap-6">
+                <button
+                  onClick={() => setActiveTab('inbox')}
+                  className={`flex items-center gap-2 px-1 py-4 border-b-2 font-medium transition-colors cursor-pointer ${
+                    activeTab === 'inbox'
+                      ? 'border-cyan-500 text-cyan-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <InboxIcon className="h-5 w-5" />
+                  Inbox
+                  {inboxMessages.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-cyan-50 text-cyan-600 rounded-full">
+                      {inboxMessages.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('sent')}
+                  className={`flex items-center gap-2 px-1 py-4 border-b-2 font-medium transition-colors cursor-pointer ${
+                    activeTab === 'sent'
+                      ? 'border-cyan-500 text-cyan-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5" />
+                  Sent
+                  {sentMessages.length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full">
+                      {sentMessages.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Message List */}
+            <div className="p-6">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Spinner size="lg" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                    {activeTab === 'inbox' ? (
+                      <InboxIcon className="h-8 w-8 text-slate-400" />
+                    ) : (
+                      <ArrowUpTrayIcon className="h-8 w-8 text-slate-400" />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Messages Yet</h3>
+                  <p className="text-sm text-slate-500">
+                    {activeTab === 'inbox' ? 'Your inbox is empty.' : 'You haven\'t sent any messages yet.'}
                   </p>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  {/* only inbox gets Reply */}
-                  {activeTab === 'inbox' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setReplyTarget(msg)
-                      }}
-                      title="Reply"
-                      className="text-cyan-600 hover:text-cyan-700 cursor-pointer transform transition duration-200 hover:scale-130"
+              ) : (
+                <div className="space-y-3">
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.message_id}
+                      onClick={() => setViewTarget(msg)}
+                      className="group p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all cursor-pointer"
                     >
-                      <ChatBubbleLeftEllipsisIcon className="h-6 w-6" />
-                    </button>
-                  )}
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors truncate">
+                            {msg.subject || <em className="text-slate-400">No subject</em>}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-slate-500">
+                              {activeTab === 'inbox'
+                                ? `From: ${msg.sender_name || msg.sender_id}`
+                                : `To: ${msg.recipient_name || msg.recipient_id}`}
+                            </span>
+                            <span className="text-xs text-slate-300">•</span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(msg.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
 
-                  {/* sent gets Edit/Delete */}
-                  {activeTab === 'sent' && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditTarget(msg)
-                        }}
-                        title="Edit"
-                        className="text-gray-500 hover:text-gray-600 cursor-pointer transform transition duration-200 hover:scale-130"
-                      >
-                        <PencilSquareIcon className="h-6 w-6" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteTarget(msg)
-                        }}
-                        title="Delete"
-                        className="text-red-600 hover:text-red-800 cursor-pointer transform transition duration-200 hover:scale-130"
-                      >
-                        <XMarkIcon className="h-6 w-6" />
-                      </button>
-                    </>
-                  )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* only inbox gets Reply */}
+                          {activeTab === 'inbox' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setReplyTarget(msg)
+                              }}
+                              title="Reply"
+                              className="p-2 rounded-lg text-cyan-500 hover:text-cyan-700 hover:bg-cyan-50 transition-colors cursor-pointer"
+                            >
+                              <ChatBubbleLeftEllipsisIcon className="h-5 w-5" />
+                            </button>
+                          )}
+
+                          {/* sent gets Edit/Delete */}
+                          {activeTab === 'sent' && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditTarget(msg)
+                                }}
+                                title="Edit"
+                                className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                              >
+                                <PencilSquareIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteTarget(msg)
+                                }}
+                                title="Delete"
+                                className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                              >
+                                <XMarkIcon className="h-5 w-5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
-        )}
+        </div>
 
         {/* View */}
         {viewTarget && (

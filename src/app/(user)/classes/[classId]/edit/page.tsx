@@ -28,6 +28,19 @@ import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
 import { getGradeOptions, GradeValue } from '@/lib/schoolUtils'
+import Spinner from '@/components/Spinner'
+import {
+  ArrowLeftIcon,
+  AcademicCapIcon,
+  UserGroupIcon,
+  ClipboardDocumentListIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  ChevronDownIcon,
+  CalendarDaysIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline'
 
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
@@ -235,24 +248,45 @@ export default function EditClassPage() {
 
   if (loading) {
     return (
-      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
-        <p className="text-black">Loading class data…</p>
-      </div>
+      <>
+        <Navbar />
+        <Sidebar />
+        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+          <div className="flex justify-center items-center py-32">
+            <Spinner size="lg" />
+          </div>
+        </main>
+      </>
     )
   }
+
   if (error) {
     return (
-      <div className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10 text-center">
-        <p className="text-red-600">{error}</p>
-        <button
-          onClick={() => router.push('/classes')}
-          className="mt-4 px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
-        >
-          Back to Classes
-        </button>
-      </div>
+      <>
+        <Navbar />
+        <Sidebar />
+        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+          <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                <AcademicCapIcon className="h-8 w-8 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Class</h3>
+              <p className="text-red-600 mb-6">{error}</p>
+              <button
+                onClick={() => router.push('/classes')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
+              >
+                <ArrowLeftIcon className="h-4 w-4" />
+                Back to Classes
+              </button>
+            </div>
+          </div>
+        </main>
+      </>
     )
   }
+
   if (!classData) return null
 
   // Destructure using new fields
@@ -358,442 +392,476 @@ export default function EditClassPage() {
       <Navbar />
       <Sidebar />
 
-      <main className="lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
-        {/* Page header */}
-        <div className="pt-30 pb-10 text-black">
-          <h1 className="text-3xl text-center">Edit Class</h1>
-        </div>
-
-        {/* Container for class details + sections */}
-        <div className="w-[90%] lg:w-[75%] mx-auto space-y-8">
-          {/* ---------------- Class Details Box ---------------- */}
-          <div className="border border-gray-300 rounded-lg shadow-lg p-6 bg-gray-50 relative">
-            {!isEditing ? (
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
               <button
-                onClick={() => setIsEditing(true)}
-                className="absolute top-4 right-4 px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 transition cursor-pointer"
+                onClick={() => router.push('/classes')}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                Edit
+                <ArrowLeftIcon className="h-5 w-5" />
               </button>
-            ) : (
-              <div className="absolute top-4 right-4 flex space-x-2">
-                <button
-                  onClick={handleCancel}
-                  className="cursor-pointer px-3 py-1 bg-gray-300 text-black rounded hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="cursor-pointer px-3 py-1 bg-green-400 text-white rounded hover:bg-green-500 transition"
-                >
-                  Save
-                </button>
-              </div>
-            )}
-
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Class Details</h2>
-
-            {!isEditing ? (
-              <div className="space-y-3 text-gray-800">
-                <div>
-                  <strong>Subject:</strong> {subject}
-                </div>
-                <div>
-                  <strong>Grade:</strong> {grade}
-                </div>
-                <div>
-                  <strong>Teacher:</strong> {teacherName || '-'}
-                </div>
-                <div>
-                  <strong>School:</strong> {school}
-                </div>
-                <div>
-                  <strong>Term:</strong> {termName || 'Not assigned'}
-                  {currentTermData && (
-                    <span className="ml-2 text-sm text-gray-600">
-                      ({new Date(currentTermData.startDate).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        day: 'numeric', 
-                        year: 'numeric' 
-                      })} - {new Date(currentTermData.endDate).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        day: 'numeric', 
-                        year: 'numeric' 
-                      })})
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <strong>Created At:</strong> {new Date(createdAt).toLocaleString()}
-                </div>
-                <div>
-                  <strong>Last Modified:</strong>{' '}
-                  {lastModifiedAt ? new Date(lastModifiedAt).toLocaleString() : '-'}
-                </div>
-              </div>
-            ) : (
-              <form className="space-y-4 text-gray-800" onSubmit={handleSave}>
-                <div>
-                  <label className="block text-sm mb-1">Subject</label>
-                  <input
-                    required
-                    value={editSubject}
-                    onChange={(e) => setEditSubject(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Grade</label>
-                  <select
-                    required
-                    value={editGrade}
-                    onChange={(e) => setEditGrade(e.target.value as GradeValue)}
-                    className="w-full border rounded px-2 py-1"
-                  >
-                    <option value="" disabled>
-                      Select grade
-                    </option>
-                    {getGradeOptions().map((gradeOption) => (
-                      <option key={gradeOption.value} value={gradeOption.value}>
-                        {gradeOption.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Teacher Dropdown */}
-                <div>
-                  <label className="block text-sm mb-1">Teacher</label>
-                  {loadingTeachers ? (
-                    <p className="text-gray-600">Loading teachers…</p>
-                  ) : (
-                    <select
-                      required
-                      value={editTeacherId}
-                      onChange={(e) => setEditTeacherId(e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                    >
-                      <option value="" disabled>
-                        Select teacher
-                      </option>
-                      {teachers.map((t) => (
-                        <option key={t.userId} value={t.userId}>
-                          {t.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* Term Dropdown */}
-                <div>
-                  <label className="block text-sm mb-1">Term</label>
-                  {loadingTerms ? (
-                    <p className="text-gray-600">Loading terms…</p>
-                  ) : (
-                    <select
-                      required
-                      value={editTermId}
-                      onChange={(e) => setEditTermId(e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                    >
-                      <option value="" disabled>
-                        Select term
-                      </option>
-                      {terms.map((t) => (
-                        <option key={t.termId} value={t.termId}>
-                          {t.name} ({t.academicYear})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </form>
-            )}
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                Edit Class
+              </h1>
+              <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium">
+                Grade {grade}
+              </span>
+            </div>
+            <p className="text-slate-500 ml-12">{subject} • {teacherName}</p>
           </div>
 
-          {/* ─────────────── Manage Students Section ─────────────── */}
-          <div>
-            {/* Header: click to expand/collapse */}
-            <div
-              onClick={() => setIsStudentsCollapsed((prev) => !prev)}
-              className={`flex items-center justify-between cursor-pointer px-4 py-2 bg-cyan-600 ${
-                isStudentsCollapsed ? 'rounded-lg' : 'rounded-t-lg'
-              }`}
-            >
-              <span className="text-2xl font-semibold text-white">Manage Students</span>
-              <svg
-                className={`w-6 h-6 transform transition-transform ${
-                  isStudentsCollapsed ? '-rotate-90' : 'rotate-0'
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+          {/* Container for class details + sections */}
+          <div className="space-y-6">
+            {/* ---------------- Class Details Card ---------------- */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              {/* Card Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">
+                    <AcademicCapIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-900">Class Details</h2>
+                </div>
+                {!isEditing ? (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCancel}
+                      className="cursor-pointer px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="cursor-pointer px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium text-sm"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Card Content */}
+              <div className="p-6">
+                {!isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Subject</p>
+                      <p className="text-slate-900 font-medium">{subject}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Grade</p>
+                      <p className="text-slate-900 font-medium">Grade {grade}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Teacher</p>
+                      <p className="text-slate-900 font-medium">{teacherName || '-'}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">School</p>
+                      <p className="text-slate-900 font-medium">{school}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl md:col-span-2">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Term</p>
+                      <div className="flex items-center gap-2">
+                        <CalendarDaysIcon className="h-4 w-4 text-slate-400" />
+                        <p className="text-slate-900 font-medium">{termName || 'Not assigned'}</p>
+                        {currentTermData && (
+                          <span className="text-sm text-slate-500">
+                            ({new Date(currentTermData.startDate).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })} - {new Date(currentTermData.endDate).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Created</p>
+                      <p className="text-slate-900 font-medium">{new Date(createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Last Modified</p>
+                      <p className="text-slate-900 font-medium">{lastModifiedAt ? new Date(lastModifiedAt).toLocaleDateString() : '-'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <form className="space-y-4" onSubmit={handleSave}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Subject</label>
+                        <input
+                          required
+                          value={editSubject}
+                          onChange={(e) => setEditSubject(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Grade</label>
+                        <select
+                          required
+                          value={editGrade}
+                          onChange={(e) => setEditGrade(e.target.value as GradeValue)}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all cursor-pointer"
+                        >
+                          <option value="" disabled>
+                            Select grade
+                          </option>
+                          {getGradeOptions().map((gradeOption) => (
+                            <option key={gradeOption.value} value={gradeOption.value}>
+                              {gradeOption.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Teacher Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Teacher</label>
+                        {loadingTeachers ? (
+                          <p className="text-slate-500 py-2">Loading teachers…</p>
+                        ) : (
+                          <select
+                            required
+                            value={editTeacherId}
+                            onChange={(e) => setEditTeacherId(e.target.value)}
+                            className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all cursor-pointer"
+                          >
+                            <option value="" disabled>
+                              Select teacher
+                            </option>
+                            {teachers.map((t) => (
+                              <option key={t.userId} value={t.userId}>
+                                {t.fullName}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {/* Term Dropdown */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Term</label>
+                        {loadingTerms ? (
+                          <p className="text-slate-500 py-2">Loading terms…</p>
+                        ) : (
+                          <select
+                            required
+                            value={editTermId}
+                            onChange={(e) => setEditTermId(e.target.value)}
+                            className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all cursor-pointer"
+                          >
+                            <option value="" disabled>
+                              Select term
+                            </option>
+                            {terms.map((t) => (
+                              <option key={t.termId} value={t.termId}>
+                                {t.name} ({t.academicYear})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
 
-            {!isStudentsCollapsed && (
-              <div className="border border-t-0 border-gray-300 rounded-b-lg shadow-lg bg-gray-50 text-black">
-                {/* ─ Currently Enrolled ─ */}
-                <div className="px-6 py-4 space-y-2">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                    Currently Enrolled
-                  </h3>
+            {/* ─────────────── Manage Students Section ─────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              {/* Section Header */}
+              <button
+                onClick={() => setIsStudentsCollapsed((prev) => !prev)}
+                className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white cursor-pointer hover:from-cyan-600 hover:to-teal-600 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                    <UserGroupIcon className="w-5 h-5" />
+                  </div>
+                  <span className="text-lg font-semibold">Manage Students</span>
+                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                    {enrolledStudents.length} enrolled
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`w-5 h-5 transform transition-transform duration-200 ${
+                    isStudentsCollapsed ? '-rotate-90' : 'rotate-0'
+                  }`}
+                />
+              </button>
 
-                  {/* Scrollable list */}
-                  <div className="max-h-80 overflow-y-auto space-y-2">
-                    {studentsLoading ? (
-                      <p className="text-gray-600">Loading students…</p>
-                    ) : studentsError ? (
-                      <p className="text-red-600">{studentsError}</p>
-                    ) : enrolledStudents.length === 0 ? (
-                      <p className="text-gray-600">No students enrolled yet.</p>
-                    ) : (
-                      enrolledStudents.map((stu) => (
-                        <div
-                          key={stu.studentId}
-                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
-                        >
-                          <div>
-                            <p className="font-medium text-gray-800">{stu.name}</p>
-                            <p className="text-sm text-gray-600">Grade {stu.grade}</p>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveClick(stu)}
-                            className="px-2 py-1 bg-cyan-700 text-white rounded hover:bg-cyan-800 cursor-pointer"
-                          >
-                            Unenroll
-                          </button>
+              {!isStudentsCollapsed && (
+                <div className="p-6">
+                  {/* Currently Enrolled */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-3">
+                      Currently Enrolled
+                    </h3>
+
+                    {/* Scrollable list */}
+                    <div className="max-h-80 overflow-y-auto space-y-2">
+                      {studentsLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Spinner size="md" />
                         </div>
-                      ))
+                      ) : studentsError ? (
+                        <p className="text-red-600 text-center py-4">{studentsError}</p>
+                      ) : enrolledStudents.length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                            <UserGroupIcon className="h-6 w-6 text-slate-400" />
+                          </div>
+                          <p className="text-slate-500">No students enrolled yet.</p>
+                        </div>
+                      ) : (
+                        enrolledStudents.map((stu) => (
+                          <div
+                            key={stu.studentId}
+                            className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all"
+                          >
+                            <div>
+                              <p className="font-medium text-slate-900">{stu.name}</p>
+                              <p className="text-sm text-slate-500">Grade {stu.grade}</p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveClick(stu)}
+                              className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors cursor-pointer text-sm font-medium"
+                            >
+                              Unenroll
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => setShowEnrollModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      Enroll Students
+                    </button>
+
+                    <button
+                      onClick={() => setShowUnenrollAllModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer text-sm"
+                    >
+                      Unenroll All
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* ───────────── End Manage Students ───────────── */}
+
+            {/* ─────────────── Assessments Section ─────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              {/* Section Header */}
+              <button
+                onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
+                className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white cursor-pointer hover:from-cyan-600 hover:to-teal-600 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                    <ClipboardDocumentListIcon className="w-5 h-5" />
+                  </div>
+                  <span className="text-lg font-semibold">Assessments</span>
+                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                    {assessments.filter(a => !a.parentAssessmentId).length} total
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`w-5 h-5 transform transition-transform duration-200 ${
+                    isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
+                  }`}
+                />
+              </button>
+
+              {!isAssessmentsCollapsed && (
+                <div>
+                  {/* Controls: Search / Sort / Add */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <input
+                      type="text"
+                      placeholder="Search assessments…"
+                      value={searchAssess}
+                      onChange={(e) => setSearchAssess(e.target.value)}
+                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black"
+                    />
+
+                    <select
+                      value={weightSort}
+                      onChange={(e) => setWeightSort(e.target.value as 'asc' | 'desc')}
+                      className="w-full sm:w-40 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black cursor-pointer"
+                    >
+                      <option value="asc">Points ↑</option>
+                      <option value="desc">Points ↓</option>
+                    </select>
+
+                    <button
+                      onClick={() => setShowAddAssessmentModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm whitespace-nowrap"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                      Add Assessment
+                    </button>
+                  </div>
+
+                  {/* Total Points Banner */}
+                  {totalPoints !== 100 ? (
+                    <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 border-b border-amber-100">
+                      <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                      <div>
+                        <p className="text-amber-700 font-medium">
+                          Total: <strong>{totalPoints.toFixed(1)} points</strong>
+                        </p>
+                        <p className="text-amber-600 text-sm">
+                          Assessments should total 100 points for proper grade calculation.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border-b border-emerald-100">
+                      <CheckCircleIcon className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                      <p className="text-emerald-700 font-medium">
+                        Total: <strong>{totalPoints.toFixed(1)} points</strong>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Assessment List */}
+                  <div className="p-6 max-h-[500px] overflow-y-auto space-y-3">
+                    {assessLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Spinner size="md" />
+                      </div>
+                    ) : assessError ? (
+                      <p className="text-red-600 text-center py-4">{assessError}</p>
+                    ) : filteredAssessments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                          <ClipboardDocumentListIcon className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p className="text-slate-500">No assessments found.</p>
+                      </div>
+                    ) : (
+                      filteredAssessments.map((a) => {
+                        if (a.parentAssessmentId) return null;
+
+                        const childAssessments = a.isParent
+                          ? filteredAssessments.filter(child => child.parentAssessmentId === a.assessmentId)
+                          : [];
+
+                        return (
+                          <div key={a.assessmentId} className="space-y-2">
+                            {/* Parent/Standalone Assessment */}
+                            <div
+                              className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                                a.isParent
+                                  ? 'bg-blue-50 border-blue-100 hover:bg-blue-100'
+                                  : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                              }`}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium text-slate-900">{a.name}</p>
+                                  {a.isParent && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
+                                      Multiple
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                                  <span className="font-medium text-slate-700">
+                                    {a.weightPoints || a.weightPercent || 0} pts
+                                  </span>
+                                  {a.maxScore && !a.isParent && (
+                                    <span>Max: {a.maxScore}</span>
+                                  )}
+                                  <span>{a.date ? a.date.split('T')[0] : "No date"}</span>
+                                  {a.isParent && childAssessments.length > 0 && (
+                                    <span className="text-blue-600">
+                                      {childAssessments.length} sub-assessment{childAssessments.length !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setEditingAssessment(a)}
+                                  className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors cursor-pointer text-sm font-medium"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => setDeleteAssessmentTarget(a)}
+                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                  title={a.isParent ? "Delete parent and all child assessments" : "Delete assessment"}
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Child Assessments */}
+                            {a.isParent && childAssessments.length > 0 && (
+                              <div className="ml-6 space-y-1">
+                                {childAssessments.map((child) => (
+                                  <div
+                                    key={child.assessmentId}
+                                    className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-slate-300">└─</span>
+                                        <p className="font-medium text-slate-700 text-sm">{child.name}</p>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+                                          Individual
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-4 ml-6 mt-1 text-xs text-slate-400">
+                                        <span>{child.weightPoints || child.weightPercent || 0} pts</span>
+                                        {child.maxScore && <span>Max: {child.maxScore}</span>}
+                                        <span>{child.date ? child.date.split('T')[0] : "No date"}</span>
+                                      </div>
+                                    </div>
+                                    <span className="text-xs text-slate-400 italic">Edit via parent</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }).filter(Boolean)
                     )}
                   </div>
                 </div>
-
-                {/* ─ Enroll / Unenroll All Buttons ─ */}
-                <div className="px-6 py-4 flex space-x-4">
-                  <button
-                    onClick={() => setShowEnrollModal(true)}
-                    className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 cursor-pointer"
-                  >
-                    + Enroll Students
-                  </button>
-
-                  <button
-                    onClick={() => setShowUnenrollAllModal(true)}
-                    className="px-4 py-2 bg-cyan-700 text-white rounded-lg hover:bg-cyan-800 cursor-pointer"
-                  >
-                    Unenroll All
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          {/* ───────────── End Manage Students ───────────── */}
-
-          {/* ─────────────── Toggleable Assessments Section ─────────────── */}
-          <div>
-            {/* Header: click to expand/collapse */}
-            <div
-              onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
-              className={`flex items-center justify-between cursor-pointer px-4 py-2 bg-cyan-600 ${
-                isAssessmentsCollapsed ? 'rounded-lg' : 'rounded-t-lg'
-              }`}
-            >
-              <span className="text-2xl font-semibold text-white">Assessments</span>
-              <svg
-                className={`w-6 h-6 transform transition-transform ${
-                  isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              )}
             </div>
-
-            {!isAssessmentsCollapsed && (
-              <div className="border border-t-0 border-gray-300 rounded-b-lg shadow-lg bg-gray-50 text-black">
-                {/* ─ Top controls: Search / Sort / +Add ─ */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 pt-4 pb-4 border-b border-gray-200 gap-2">
-                  {/* Search by name */}
-                  <input
-                    type="text"
-                    placeholder="Search assessments…"
-                    value={searchAssess}
-                    onChange={(e) => setSearchAssess(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white"
-                  />
-
-                  {/* Sort by points */}
-                  <select
-                    value={weightSort}
-                    onChange={(e) => setWeightSort(e.target.value as 'asc' | 'desc')}
-                    className="w-full bg-white sm:w-48 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                  >
-                    <option value="asc">Points ↑</option>
-                    <option value="desc">Points ↓</option>
-                  </select>
-
-                  {/* + Add Assessment button */}
-                  <button
-                    onClick={() => setShowAddAssessmentModal(true)}
-                    className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-500 cursor-pointer"
-                  >
-                    + Add Assessment
-                  </button>
-                </div>
-
-                {/* total‐points info */}
-                {totalPoints !== 100 ? (
-                  <div className="px-6 py-3 bg-red-100 border border-red-300 text-red-700">
-                    ⚠️ Total assessment points: <strong>{totalPoints.toFixed(1)} points</strong>
-                    <span className="text-sm block mt-1">
-                      Assessments should total <strong>100 points</strong> for proper grade calculation.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="px-6 py-3 bg-green-50 border border-green-200 text-green-700">
-                    ✅ Total assessment points: <strong>{totalPoints.toFixed(1)} points</strong>
-                  </div>
-                )}
-
-                {/* Scrollable list area */}
-                <div className="p-6 max-h-96 overflow-y-auto space-y-4 text-black">
-                  {assessLoading ? (
-                    <p className="text-gray-600">Loading assessments…</p>
-                  ) : assessError ? (
-                    <p className="text-red-600">{assessError}</p>
-                  ) : filteredAssessments.length === 0 ? (
-                    <p className="text-gray-600">No assessments found.</p>
-                  ) : (
-                    filteredAssessments.map((a) => {
-                      // Check if this is a child assessment that should be grouped under its parent
-                      if (a.parentAssessmentId) {
-                        // Skip rendering child assessments individually - they'll be shown under parent
-                        return null;
-                      }
-
-                      // Get child assessments for this parent (if any)
-                      const childAssessments = a.isParent 
-                        ? filteredAssessments.filter(child => child.parentAssessmentId === a.assessmentId)
-                        : [];
-
-                      return (
-                        <div key={a.assessmentId} className="space-y-2">
-                          {/* Parent/Standalone Assessment */}
-                          <div
-                            className={`flex items-center justify-between p-4 border rounded shadow-sm ${
-                              a.isParent 
-                                ? 'bg-blue-50 border-blue-200' 
-                                : 'bg-white border-gray-200'
-                            }`}
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium text-gray-800">{a.name}</p>
-                                {a.isParent && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    Multiple
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                Worth: {a.weightPoints || a.weightPercent || 0} points
-                                {a.maxScore && !a.isParent && (
-                                  <span className="text-gray-500"> (out of {a.maxScore})</span>
-                                )}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Date: {a.date ? a.date.split('T')[0] : "No date assigned"}
-                              </p>
-                              {a.isParent && childAssessments.length > 0 && (
-                                <p className="text-xs text-blue-600 mt-1">
-                                  Contains {childAssessments.length} child assessment{childAssessments.length !== 1 ? 's' : ''}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <button
-                                onClick={() => setEditingAssessment(a)}
-                                className="px-3 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setDeleteAssessmentTarget(a)}
-                                className="text-2xl text-red-600 hover:text-red-800 font-bold px-2 cursor-pointer"
-                                title={a.isParent ? "Delete parent and all child assessments" : "Delete assessment"}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Child Assessments (indented) */}
-                          {a.isParent && childAssessments.length > 0 && (
-                            <div className="ml-6 space-y-1">
-                              {childAssessments.map((child) => (
-                                <div
-                                  key={child.assessmentId}
-                                  className="flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded"
-                                >
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2">
-                                      <span className="text-gray-400">└─</span>
-                                      <p className="font-medium text-gray-700 text-sm">{child.name}</p>
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                        Individual
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-4 ml-4">
-                                      <p className="text-xs text-gray-500">
-                                        Worth: {child.weightPoints || child.weightPercent || 0} points
-                                        {child.maxScore && (
-                                          <span className="text-gray-400"> (out of {child.maxScore})</span>
-                                        )}
-                                      </p>
-                                      <p className="text-xs text-gray-400">
-                                        Order: {child.sortOrder || '-'}
-                                      </p>
-                                      <p className="text-xs text-gray-400">
-                                        Date: {child.date ? child.date.split('T')[0] : "No date assigned"}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-gray-500 italic">Edit via parent</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }).filter(Boolean) // Remove null entries
-                  )}
-                </div>
-              </div>
-            )}
+            {/* ───────────── End Assessments ───────────── */}
           </div>
-          {/* ───────────── End Toggleable Assessments ───────────── */}
         </div>
       </main>
 

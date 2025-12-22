@@ -7,10 +7,8 @@ import { getInitials } from '@/lib/utility';
 import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { updatePassword, updateUser } from '@/services/userService';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye , faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { EyeIcon, EyeSlashIcon, UserCircleIcon, KeyIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import DeleteUserModal from '@/components/user/delete/DeleteUserModal';
-
 
 const Settings = () => {
   const user = useUserStore((state) => state.user);
@@ -83,123 +81,157 @@ const Settings = () => {
   };
 
   return (
-  <>
-    <Navbar/>
-    <Sidebar />
-    <main className = "lg:ml-64 bg-white min-h-screen p-4 lg:p-10">
-        <div className="pt-10 xl:pt-30 lg:pt-30 text-black">
-            {/* User Block */}
-                <div className="flex items-center space-x-4 mb-8">
-                    <div className="bg-gray-300 text-black rounded-full h-14 w-14 flex items-center justify-center font-bold">
-                        {userInitials || '??'}
-                        </div>
-                    <div>
-                    <h1 className="text-2xl font-semibold">{user.username}</h1>
+    <>
+      <Navbar />
+      <Sidebar />
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Settings</h1>
+            <p className="text-slate-500 mt-1">Manage your account preferences and security</p>
+          </div>
+
+          {/* Profile Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white text-xl font-bold">
+                {userInitials || '??'}
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">{user.username}</h2>
+                <p className="text-slate-500 text-sm">{user.email}</p>
+                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">
+                  {user.role}
+                </span>
+              </div>
+            </div>
+
+            {/* Change Username */}
+            <div className="flex items-center gap-3 mb-4">
+              <UserCircleIcon className="w-5 h-5 text-slate-400" />
+              <h3 className="text-lg font-semibold text-slate-900">Change Username</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="New username"
+                className="flex-1 max-w-md border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50"
+              />
+              <button
+                onClick={handleSaveChanges}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium cursor-pointer"
+              >
+                <CheckIcon className="w-4 h-4" />
+                Save
+              </button>
+            </div>
+          </div>
+
+          {/* Password Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <KeyIcon className="w-5 h-5 text-slate-400" />
+              <h3 className="text-lg font-semibold text-slate-900">Change Password</h3>
+            </div>
+
+            <div className="space-y-4 max-w-md">
+              {/* Current Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showOld ? 'text' : 'password'}
+                    value={oldPassword}
+                    onChange={e => setOldPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOld(o => !o)}
+                    className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showOld ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
+                  </button>
                 </div>
-            </div>
+              </div>
 
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 pr-12 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(n => !n)}
+                    className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showNew ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
 
-            <h2 className="text-xl font-semibold mb-4">Change Username</h2>
-            <div className="flex items-center space-x-4 mb-8">
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Confirm New Password</label>
                 <input
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    placeholder="New username"
-                    className="w-full sm:w-1/2 lg:w-1/4 border border-gray-300 p-3 rounded-lg"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50"
                 />
-                <button
-                    onClick={handleSaveChanges}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
-                    Save
-                </button>
+              </div>
+
+              <button
+                onClick={handlePasswordSave}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium cursor-pointer mt-2"
+              >
+                <CheckIcon className="w-4 h-4" />
+                Update Password
+              </button>
             </div>
-            {/* Password Block */}
-            {/* Change Password */}
-          {/* Change Password */}
-        <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+          </div>
 
-        {/* Current Password */}
-        <div className="mb-4">
-        <div className="relative w-full sm:w-1/2 lg:w-1/4">
-            <input
-            type={showOld ? 'text' : 'password'}
-            value={oldPassword}
-            onChange={e => setOldPassword(e.target.value)}
-            placeholder="Current password"
-            className="w-full border border-gray-300 p-3 pr-10 rounded-lg"
-            />
-            <button
-            type="button"
-            onClick={() => setShowOld(o => !o)}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
-            >
-            <FontAwesomeIcon icon={showOld ? faEye : faEyeSlash} />
-            </button>
+          {/* Danger Zone */}
+          {user.school !== 'PLAYGROUND' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <TrashIcon className="w-5 h-5 text-red-400" />
+                <h3 className="text-lg font-semibold text-slate-900">Danger Zone</h3>
+              </div>
+              <p className="text-sm text-slate-500 mb-4">
+                Once you delete your account, there is no going back. Please be certain.
+              </p>
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-medium cursor-pointer"
+              >
+                <TrashIcon className="w-4 h-4" />
+                Delete Account
+              </button>
+            </div>
+          )}
         </div>
-        </div>
+      </main>
 
-        {/* New Password */}
-        <div className="mb-4">
-        <div className="relative w-full sm:w-1/2 lg:w-1/4">
-            <input
-            type={showNew ? 'text' : 'password'}
-            value={newPassword}
-            onChange={e => setNewPassword(e.target.value)}
-            placeholder="New password"
-            className="w-full border border-gray-300 p-3 pr-10 rounded-lg"
-            />
-            <button
-            type="button"
-            onClick={() => setShowNew(n => !n)}
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
-            >
-            <FontAwesomeIcon icon={showNew ? faEye : faEyeSlash} />
-            </button>
-        </div>
-        </div>
-
-        {/* Confirm + Save */}
-        <div className="flex items-center space-x-4 mb-8">
-        <div className="w-full sm:w-1/2 lg:w-1/4">
-            <input
-            type="password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
-            className="w-full border border-gray-300 p-3 rounded-lg"
-            />
-        </div>
-        <button
-            onClick={handlePasswordSave}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg"
-        >
-            Save
-        </button>
-        </div>
-
-        <div className="mt-8">
-          {user.school !== 'PLAYGROUND' && 
-          (        <button
-            onClick={() => setDeleteModalOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg cursor-pointer"
-          >
-            Delete Account
-          </button>)}
-        </div>
-
-        </div>
-    </main>
-
-    <DeleteUserModal
-      isOpen={deleteModalOpen}
-      onClose={() => setDeleteModalOpen(false)}
-      onDeleted={() => {
-        // optional: show a final toast, redirect, etc.
-      }}
-    />
-  
-  </>
+      <DeleteUserModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onDeleted={() => {
+          // optional: show a final toast, redirect, etc.
+        }}
+      />
+    </>
   );
 };
 

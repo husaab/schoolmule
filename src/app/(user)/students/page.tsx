@@ -85,258 +85,269 @@ const StudentsPage = () => {
         <>
             <Navbar />
             <Sidebar />
-            <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-                <div className="text-black text-center mb-6">
-                    <h1 className="text-2xl lg:text-3xl font-semibold">Students Management</h1>
-                    <p className="text-gray-600 mt-2">Manage student records and information for your school.</p>
-                </div>
-
-                {/* Main Content Card */}
-                <div className="bg-white rounded-2xl shadow-md">
-                    {/* Sticky Header */}
-                    <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
-                        <div className="p-6">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                                <div>
-                                    <h2 className="text-xl font-semibold text-gray-800">Student Directory</h2>
-                                    <p className="text-sm text-gray-600">View and manage all student records</p>
-                                </div>
-                                {!showArchived && (
-                                    <button
-                                        onClick={() => setShowAddModal(true)}
-                                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
-                                    >
-                                        <PlusIcon className="h-5 w-5 mr-2" />
-                                        Add Student
-                                    </button>
-                                )}
+            <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+                <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+                    {/* Header */}
+                    <div className="mb-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Students</h1>
+                                <p className="text-slate-500 mt-1">Manage student records and information</p>
                             </div>
-
-                            {/* Tabs for Active/Archived */}
-                            <div className="flex space-x-1 mb-6">
+                            {!showArchived && (
                                 <button
-                                    onClick={() => setShowArchived(false)}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                                        !showArchived
-                                            ? 'bg-blue-100 text-blue-700'
-                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                    }`}
+                                    onClick={() => setShowAddModal(true)}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl font-medium cursor-pointer"
                                 >
-                                    Active Students
+                                    <PlusIcon className="h-5 w-5" />
+                                    Add Student
                                 </button>
-                                <button
-                                    onClick={() => setShowArchived(true)}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
-                                        showArchived
-                                            ? 'bg-amber-100 text-amber-700'
-                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    <ArchiveBoxIcon className="h-4 w-4 inline mr-1" />
-                                    Archived Students
-                                </button>
-                            </div>
-
-                            {/* Filters */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Search Students
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Search by name..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Filter by Grade
-                                    </label>
-                                    <select
-                                        value={gradeFilter}
-                                        onChange={(e) => setGradeFilter(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                                    >
-                                        <option value="">All Grades</option>
-                                        {grades.map(gradeOption => (
-                                            <option key={gradeOption.value} value={String(gradeOption.value)}>Grade {gradeOption.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            {(searchTerm || gradeFilter) && (
-                                <div className="mt-4 flex items-center space-x-2">
-                                    <span className="text-sm text-gray-600">
-                                        Showing {filteredStudents.length} of {students.length} students
-                                    </span>
-                                    <button
-                                        onClick={() => {
-                                            setSearchTerm('')
-                                            setGradeFilter('')
-                                        }}
-                                        className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                                    >
-                                        Clear filters
-                                    </button>
-                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Students Content */}
-                    <div className="p-6">
-                        {loading ? (
-                            <div className="flex justify-center py-8">
-                                <Spinner />
-                            </div>
-                        ) : error ? (
-                            <div className="text-center text-red-600 py-8">
-                                {error}
-                            </div>
-                        ) : filteredStudents.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">
-                                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <UserIcon className="h-8 w-8 text-gray-400" />
+                    {/* Main Content Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+                        {/* Sticky Header */}
+                        <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
+                            <div className="p-6">
+                                {/* Tabs for Active/Archived */}
+                                <div className="flex gap-2 mb-6">
+                                    <button
+                                        onClick={() => setShowArchived(false)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
+                                            !showArchived
+                                                ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 border border-cyan-100'
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        Active Students
+                                    </button>
+                                    <button
+                                        onClick={() => setShowArchived(true)}
+                                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
+                                            showArchived
+                                                ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <ArchiveBoxIcon className="h-4 w-4" />
+                                        Archived
+                                    </button>
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    {students.length === 0 
-                                        ? (showArchived ? 'No Archived Students' : 'No Students') 
-                                        : 'No Matching Students'}
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    {students.length === 0 
-                                        ? (showArchived 
-                                            ? 'No students have been archived yet.' 
-                                            : 'Add your first student to get started.')
-                                        : 'Try adjusting your search or filters.'}
-                                </p>
+
+                                {/* Filters */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            Search Students
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            Filter by Grade
+                                        </label>
+                                        <select
+                                            value={gradeFilter}
+                                            onChange={(e) => setGradeFilter(e.target.value)}
+                                            className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
+                                        >
+                                            <option value="">All Grades</option>
+                                            {grades.map(gradeOption => (
+                                                <option key={gradeOption.value} value={String(gradeOption.value)}>Grade {gradeOption.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {(searchTerm || gradeFilter) && (
+                                    <div className="mt-4 flex items-center gap-3">
+                                        <span className="text-sm text-slate-500">
+                                            Showing {filteredStudents.length} of {students.length} students
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setSearchTerm('')
+                                                setGradeFilter('')
+                                            }}
+                                            className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            /* Students Table */
-                            <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Student Name
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Grade
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                OEN
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Homeroom Teacher
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Parent Contact
-                                            </th>
-                                            {showArchived && (
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Archived Date
+                        </div>
+
+                        {/* Students Content */}
+                        <div className="p-6">
+                            {loading ? (
+                                <div className="flex justify-center py-12">
+                                    <Spinner size="lg" />
+                                </div>
+                            ) : error ? (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                                        <UserIcon className="h-8 w-8 text-red-400" />
+                                    </div>
+                                    <p className="text-red-600">{error}</p>
+                                </div>
+                            ) : filteredStudents.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                                        <UserIcon className="h-8 w-8 text-slate-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                                        {students.length === 0
+                                            ? (showArchived ? 'No Archived Students' : 'No Students Yet')
+                                            : 'No Matching Students'}
+                                    </h3>
+                                    <p className="text-sm text-slate-500">
+                                        {students.length === 0
+                                            ? (showArchived
+                                                ? 'No students have been archived yet.'
+                                                : 'Add your first student to get started.')
+                                            : 'Try adjusting your search or filters.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                /* Students Table */
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full">
+                                        <thead>
+                                            <tr className="border-b border-slate-100">
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    Student Name
                                                 </th>
-                                            )}
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {filteredStudents.map((student) => (
-                                            <tr key={student.studentId} className={`hover:bg-gray-50 ${showArchived ? 'opacity-75' : ''}`}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <UserIcon className="h-5 w-5 text-gray-400 mr-3" />
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {student.name}
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    Grade
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    OEN
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    Homeroom
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    Parent Contact
+                                                </th>
+                                                {showArchived && (
+                                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                        Archived Date
+                                                    </th>
+                                                )}
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {filteredStudents.map((student) => (
+                                                <tr key={student.studentId} className={`hover:bg-slate-50 transition-colors ${showArchived ? 'opacity-75' : ''}`}>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                                                                <UserIcon className="h-5 w-5 text-cyan-600" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-medium text-slate-900">
+                                                                    {student.name}
+                                                                </div>
+                                                                {showArchived && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                                        Archived
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
+                                                            <AcademicCapIcon className="h-4 w-4" />
+                                                            Grade {student.grade ?? '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
+                                                        {student.oen || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                        {student.homeroomTeacherId ? (
+                                                            <span className="text-emerald-600">Assigned</span>
+                                                        ) : (
+                                                            <span className="text-slate-400">Not Assigned</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                        {(student.mother.name && student.mother.name.toLowerCase() !== 'n/a' ? student.mother.name : null) ||
+                                                         (student.father.name && student.father.name.toLowerCase() !== 'n/a' ? student.father.name : null) ||
+                                                         <span className="text-slate-400">No Contact</span>}
+                                                    </td>
+                                                    {showArchived && (
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                            {student.archivedAt
+                                                                ? new Date(student.archivedAt).toLocaleDateString()
+                                                                : '-'}
+                                                        </td>
+                                                    )}
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => setViewStudent(student)}
+                                                                className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
+                                                                title="View Student"
+                                                            >
+                                                                <EyeIcon className="h-5 w-5" />
+                                                            </button>
+                                                            {!showArchived && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => setEditStudent(student)}
+                                                                        className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                                                        title="Edit Student"
+                                                                    >
+                                                                        <PencilIcon className="h-5 w-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setArchiveTarget(student)}
+                                                                        className="p-2 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                                                                        title="Archive Student"
+                                                                    >
+                                                                        <ArchiveBoxArrowDownIcon className="h-5 w-5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setDeleteTarget(student)}
+                                                                        className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                                                        title="Delete Student"
+                                                                    >
+                                                                        <TrashIcon className="h-5 w-5" />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                             {showArchived && (
-                                                                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                                    Archived
-                                                                </span>
+                                                                <button
+                                                                    onClick={() => setUnarchiveTarget(student)}
+                                                                    className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                                                    title="Restore Student"
+                                                                >
+                                                                    <ArchiveBoxIcon className="h-5 w-5" />
+                                                                </button>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    <div className="flex items-center">
-                                                        <AcademicCapIcon className="h-4 w-4 text-gray-400 mr-1" />
-                                                        Grade {student.grade ?? '-'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {student.oen || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {student.homeroomTeacherId ? 'Assigned' : 'Not Assigned'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {(student.mother.name && student.mother.name.toLowerCase() !== 'n/a' ? student.mother.name : null) || 
-                                                     (student.father.name && student.father.name.toLowerCase() !== 'n/a' ? student.father.name : null) || 
-                                                     'No Contact'}
-                                                </td>
-                                                {showArchived && (
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {student.archivedAt 
-                                                            ? new Date(student.archivedAt).toLocaleDateString()
-                                                            : '-'}
                                                     </td>
-                                                )}
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    <div className="flex space-x-2">
-                                                        <button
-                                                            onClick={() => setViewStudent(student)}
-                                                            className="text-blue-600 hover:text-blue-900 p-1 cursor-pointer"
-                                                            title="View Student"
-                                                        >
-                                                            <EyeIcon className="h-5 w-5" />
-                                                        </button>
-                                                        {!showArchived && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => setEditStudent(student)}
-                                                                    className="text-green-600 hover:text-green-900 p-1 cursor-pointer"
-                                                                    title="Edit Student"
-                                                                >
-                                                                    <PencilIcon className="h-5 w-5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setArchiveTarget(student)}
-                                                                    className="text-amber-600 hover:text-amber-900 p-1 cursor-pointer"
-                                                                    title="Archive Student"
-                                                                >
-                                                                    <ArchiveBoxArrowDownIcon className="h-5 w-5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setDeleteTarget(student)}
-                                                                    className="text-red-600 hover:text-red-900 p-1 cursor-pointer"
-                                                                    title="Delete Student"
-                                                                >
-                                                                    <TrashIcon className="h-5 w-5" />
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        {showArchived && (
-                                                            <button
-                                                                onClick={() => setUnarchiveTarget(student)}
-                                                                className="text-green-600 hover:text-green-900 p-1 cursor-pointer"
-                                                                title="Restore Student"
-                                                            >
-                                                                <ArchiveBoxIcon className="h-5 w-5" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

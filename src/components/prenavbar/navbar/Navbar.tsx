@@ -39,8 +39,8 @@ const NavBar: FC = () => {
     };
   }, []);
 
-  // Apply white background if scrolled OR if page is not scrollable
-  const showWhiteBackground = scrolled || notScrollable;
+  // Apply white background if scrolled OR if page is not scrollable OR if menu is open
+  const showWhiteBackground = scrolled || notScrollable || isOpen;
 
   return (
     <nav
@@ -50,7 +50,7 @@ const NavBar: FC = () => {
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-25">
           {/* Logo */}
           <Link href="/" scroll={false} className="flex items-center group">

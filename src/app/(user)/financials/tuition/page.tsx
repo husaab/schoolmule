@@ -6,7 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
 import { getTuitionPlansBySchool } from '@/services/tuitionPlanService'
 import { TuitionPlanPayload } from '@/services/types/tuitionPlan'
-import { ChevronDownIcon, ChevronUpIcon, PlusIcon, PencilIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, PencilIcon, TrashIcon, UserIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import AddTuitionPlanModal from '@/components/tuitionPlan/add/AddTuitionPlanModal'
@@ -189,11 +189,21 @@ const TuitionPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        <div className="text-black text-center mb-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold">Tuition Management</h1>
-          <p className="text-gray-600 mt-2">Manage tuition plans and billing for your school.</p>
-        </div>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Tuition Management</h1>
+                <p className="text-slate-500 mt-1">Manage tuition plans and billing for your school</p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-xl border border-cyan-100">
+                <CurrencyDollarIcon className="w-5 h-5 text-cyan-600" />
+                <span className="text-sm font-medium text-cyan-700">Tuition Dashboard</span>
+              </div>
+            </div>
+          </div>
 
         {/* Tuition Plans Section - Collapsible */}
         <div className="bg-white rounded-2xl shadow-md mb-8">
@@ -662,6 +672,7 @@ const TuitionPage: React.FC = () => {
             onCommentCountChange={(newCount) => updateCommentCount(commentsModalOpen.invoiceId, newCount)}
           />
         )}
+        </div>
       </main>
     </>
   )

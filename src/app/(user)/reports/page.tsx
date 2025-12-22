@@ -67,54 +67,54 @@ const ReportsPage = () => {
     <>
       <Navbar />
       <Sidebar />
-      
-      <div className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10 pb-24">
-        <div className="max-w-7xl mx-auto">
+
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Reports</h1>
-            <p className="text-gray-600">
-              Generate comprehensive reports for students, classes, and school performance analytics.
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Reports</h1>
+            <p className="text-slate-500 mt-1">
+              Generate comprehensive reports for students, classes, and school performance analytics
             </p>
           </div>
 
           {/* Report Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {reportTypes.map((report) => {
               const IconComponent = report.icon
-              
+
               if (report.isAvailable) {
                 return (
                   <Link
                     key={report.title}
                     href={report.href}
-                    className="group relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                    className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-slate-200 transition-all duration-200 overflow-hidden"
                   >
                     <div className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`${report.color} p-3 rounded-lg text-white group-hover:scale-110 transition-transform duration-200`}>
+                      <div className="flex items-start gap-4">
+                        <div className={`${report.color} p-3 rounded-xl text-white group-hover:scale-110 transition-transform duration-200 shadow-lg`}>
                           <IconComponent className="h-6 w-6" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors duration-200">
                             {report.title}
                           </h3>
-                          <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
                             {report.description}
                           </p>
                         </div>
                       </div>
-                      
+
                       {/* Arrow indicator */}
-                      <div className="absolute top-6 right-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200">
+                      <div className="absolute top-6 right-6 text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all duration-200">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
                     </div>
-                    
+
                     {/* Hover effect overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-l from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-l from-cyan-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
                   </Link>
                 )
               } else {
@@ -122,36 +122,26 @@ const ReportsPage = () => {
                   <div
                     key={report.title}
                     onClick={() => handleWorkInProgress(report.title)}
-                    className="group relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
+                    className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer opacity-75"
                   >
                     <div className="p-6">
-                      <div className="flex items-start space-x-4">
-                        <div className={`${report.color} p-3 rounded-lg text-white group-hover:scale-110 transition-transform duration-200 opacity-60`}>
+                      <div className="flex items-start gap-4">
+                        <div className={`${report.color} p-3 rounded-xl text-white transition-transform duration-200 opacity-60`}>
                           <IconComponent className="h-6 w-6" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
                             {report.title}
-                            <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                               Coming Soon
                             </span>
                           </h3>
-                          <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
                             {report.description}
                           </p>
                         </div>
                       </div>
-                      
-                      {/* Arrow indicator */}
-                      <div className="absolute top-6 right-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
                     </div>
-                    
-                    {/* Hover effect overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-l from-yellow-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
                   </div>
                 )
               }
@@ -159,25 +149,31 @@ const ReportsPage = () => {
           </div>
 
           {/* Footer Info */}
-          <div className="mt-12 bg-gray-50 rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Report Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Generate PDF reports instantly</span>
+          <div className="mt-8 bg-white rounded-2xl border border-slate-100 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Report Features</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                </div>
+                <span className="text-slate-600">Generate PDF reports instantly</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Filter by term and date ranges</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                </div>
+                <span className="text-slate-600">Filter by term and date ranges</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Perfect for parent-teacher conferences</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 bg-purple-500 rounded-full" />
+                </div>
+                <span className="text-slate-600">Perfect for parent-teacher conferences</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </>
   )
 }

@@ -11,6 +11,8 @@ import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
 import { getGradeOptions } from '@/lib/schoolUtils'
+import { BookOpenIcon, AcademicCapIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
+import Spinner from '@/components/Spinner'
 
 const GradebookDashboard: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -107,169 +109,186 @@ const GradebookDashboard: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        <div className="text-black text-center mb-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold">Gradebook</h1>
-          <p className="text-gray-600 mt-2">Select one of your classes below to enter marks</p>
-        </div>
-
-        {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-md">
-          {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
-            <div className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">Class Gradebooks</h2>
-                  <p className="text-sm text-gray-600">Access gradebooks for your classes</p>
-                </div>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Gradebook</h1>
+                <p className="text-slate-500 mt-1">Select a class to enter and manage grades</p>
               </div>
-
-              {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Term
-                  </label>
-                  <select
-                    value={termFilter}
-                    onChange={(e) => setTermFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                  >
-                    <option value="active">Active Term ({activeTerm?.name})</option>
-                    <option value="all">All Terms</option>
-                    {terms.map((term) => (
-                      <option key={term.termId} value={term.name}>
-                        {term.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter by Grade
-                  </label>
-                  <select
-                    value={gradeFilter}
-                    onChange={(e) => setGradeFilter(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
-                  >
-                    <option value="">All Grades</option>
-                    {availableGrades.map((gradeOption) => (
-                      <option key={gradeOption.value} value={String(gradeOption.value)}>
-                        Grade {gradeOption.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <BookOpenIcon className="w-5 h-5 text-emerald-600" />
+                <span className="text-sm font-medium text-emerald-700">{filteredClasses.length} Classes</span>
               </div>
-              
-              {(gradeFilter || termFilter !== 'active') && (
-                <div className="mt-4 flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    Showing {filteredClasses.length} of {classes.length} classes
-                  </span>
-                  <button
-                    onClick={() => {
-                      setGradeFilter('')
-                      setTermFilter('active')
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Classes Content */}
-          <div className="p-6 overflow-y-auto max-h-[70vh]">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="text-center text-gray-600">Loading your classes…</div>
-              </div>
-            ) : error ? (
-              <div className="text-center text-red-600 py-8">{error}</div>
-            ) : !loading && !error && availableGrades.length === 0 ? (
-              <div className="text-center text-gray-600 py-8">
-                You haven&apos;t been assigned any classes yet.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Collapsible grade sections */}
-                {availableGrades.map((gradeOption) => {
-                  const classesForGrade = filteredClasses.filter(
-                    (c) => String(c.grade) === String(gradeOption.value)
-                  )
-                  if (classesForGrade.length === 0) return null
+          {/* Main Content Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+            {/* Sticky Header */}
+            <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
+              <div className="p-6">
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Term
+                    </label>
+                    <select
+                      value={termFilter}
+                      onChange={(e) => setTermFilter(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
+                    >
+                      <option value="active">Active Term ({activeTerm?.name})</option>
+                      <option value="all">All Terms</option>
+                      {terms.map((term) => (
+                        <option key={term.termId} value={term.name}>
+                          {term.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Grade
+                    </label>
+                    <select
+                      value={gradeFilter}
+                      onChange={(e) => setGradeFilter(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
+                    >
+                      <option value="">All Grades</option>
+                      {availableGrades.map((gradeOption) => (
+                        <option key={gradeOption.value} value={String(gradeOption.value)}>
+                          Grade {gradeOption.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-                  const isCollapsed = collapsedGrades.has(String(gradeOption.value))
+                {(gradeFilter || termFilter !== 'active') && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <span className="text-sm text-slate-500">
+                      Showing {filteredClasses.length} of {classes.length} classes
+                    </span>
+                    <button
+                      onClick={() => {
+                        setGradeFilter('')
+                        setTermFilter('active')
+                      }}
+                      className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  return (
-                    <div key={gradeOption.value} className="space-y-2">
-                      {/* Grade header */}
-                      <div
-                        onClick={() => toggleGrade(String(gradeOption.value))}
-                        className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer select-none"
-                      >
-                        <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
-                        <svg
-                          className={`w-5 h-5 transform transition-transform duration-200 ${
-                            isCollapsed ? '-rotate-90' : 'rotate-0'
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
+            {/* Classes Content */}
+            <div className="p-6">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Spinner size="lg" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                    <BookOpenIcon className="h-8 w-8 text-red-400" />
+                  </div>
+                  <p className="text-red-600">{error}</p>
+                </div>
+              ) : filteredClasses.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                    <BookOpenIcon className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No Classes Found</h3>
+                  <p className="text-sm text-slate-500">
+                    {classes.length === 0
+                      ? "You haven't been assigned any classes yet."
+                      : 'Try adjusting your filters.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Collapsible grade sections */}
+                  {availableGrades.map((gradeOption) => {
+                    const classesForGrade = filteredClasses.filter(
+                      (c) => String(c.grade) === String(gradeOption.value)
+                    )
+                    if (classesForGrade.length === 0) return null
+
+                    const isCollapsed = collapsedGrades.has(String(gradeOption.value))
+
+                    return (
+                      <div key={gradeOption.value} className="space-y-2">
+                        {/* Grade header */}
+                        <button
+                          onClick={() => toggleGrade(String(gradeOption.value))}
+                          className="w-full flex items-center justify-between px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl cursor-pointer select-none hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-
-                      {/* Class cards */}
-                      {!isCollapsed &&
-                        classesForGrade.map((cls) => (
-                          <div
-                            key={cls.classId}
-                            className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-800">
-                                {cls.subject}
-                              </p>
-                              <p className="text-gray-600 text-sm">
-                                Teacher: {cls.teacherName || '-'}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                Term: {cls.termName || 'Not assigned'}
-                              </p>
-                              <p className="text-gray-600 text-sm">
-                                Class ID: {cls.classId.slice(0, 8)}…{/* truncated */}
-                              </p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                              <AcademicCapIcon className="w-5 h-5" />
                             </div>
-
-                            <div className="flex items-center space-x-4">
-                              {/* "Open Gradebook" → navigate into detailed gradebook page */}
-                              <Link
-                                href={`/gradebook/${cls.classId}`}
-                                className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors cursor-pointer"
-                              >
-                                Open Gradebook
-                              </Link>
-                            </div>
+                            <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
+                            <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                              {classesForGrade.length} {classesForGrade.length === 1 ? 'class' : 'classes'}
+                            </span>
                           </div>
-                        ))}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                          <ChevronDownIcon
+                            className={`w-5 h-5 transform transition-transform duration-200 ${
+                              isCollapsed ? '-rotate-90' : 'rotate-0'
+                            }`}
+                          />
+                        </button>
+
+                        {/* Class cards */}
+                        {!isCollapsed && (
+                          <div className="space-y-2 pl-2">
+                            {classesForGrade.map((cls) => (
+                              <Link
+                                key={cls.classId}
+                                href={`/gradebook/${cls.classId}`}
+                                className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                                    <BookOpenIcon className="w-5 h-5 text-emerald-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-slate-900 group-hover:text-emerald-600 transition-colors">
+                                      {cls.subject}
+                                    </p>
+                                    <p className="text-slate-500 text-sm">
+                                      {cls.teacherName || 'No teacher assigned'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <span className="hidden sm:inline-flex px-2.5 py-1 bg-teal-50 text-teal-600 rounded-lg text-xs font-medium">
+                                    {cls.termName || 'No term'}
+                                  </span>
+                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium group-hover:bg-emerald-600 transition-colors">
+                                    Open
+                                    <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                  </div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>

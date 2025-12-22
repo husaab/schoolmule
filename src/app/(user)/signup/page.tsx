@@ -81,26 +81,21 @@ const SignupPage: FC = () => {
 
       {/* Right Side - Form */}
       <div className="w-full lg:w-7/12 lg:ml-[41.666667%] flex flex-col min-h-screen">
-        {/* Mobile Header */}
-        <div className="lg:hidden bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-8 pt-28">
-          <Link href="/">
-            <Image
-              src="/logo/trimmedlogo.png"
-              alt="SchoolMule"
-              width={120}
-              height={40}
-              className="brightness-0 invert h-8 w-auto"
-            />
-          </Link>
+        {/* Mobile Header - Gradient Bar with Welcome Text */}
+        <div className="lg:hidden bg-gradient-to-r from-emerald-600 to-teal-600 pt-40 pb-6 px-6">
+          <h1 className="text-2xl font-bold text-white">
+            Join thousands of
+            <span className="text-emerald-200"> educators</span>
+          </h1>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-28 lg:pt-32 lg:px-12 bg-slate-50">
+        <div className="flex-1 flex items-start lg:items-center justify-center px-6 pt-6 pb-8 lg:pt-32 lg:px-12 bg-slate-50">
           <div className="w-full max-w-lg">
             <div className="text-center lg:text-left mb-6">
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">
                 Create your account
               </h2>
-              <p className="text-slate-600">
+              <p className="text-slate-600 text-sm lg:text-base">
                 Get started with SchoolMule for free
               </p>
             </div>

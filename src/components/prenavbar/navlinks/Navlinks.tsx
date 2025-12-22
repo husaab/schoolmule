@@ -60,7 +60,7 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false, onLinkClick }) => {
         <>
           <Link href="/dashboard" className={primaryButtonClass} onClick={handleClick}>
             Dashboard
-            <ArrowRightIcon className="w-4 h-4" />
+            {!vertical && <ArrowRightIcon className="w-4 h-4" />}
           </Link>
           <button
             onClick={() => {
