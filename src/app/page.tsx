@@ -1,338 +1,555 @@
-// File: src/app/welcome/page.tsx
-import { FC } from 'react'
-import type { Metadata } from "next";
+'use client'
+import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
-import { CheckCircleIcon, ChartBarIcon, DocumentTextIcon, UserGroupIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import {
+  CheckCircleIcon,
+  ChartBarIcon,
+  DocumentTextIcon,
+  UserGroupIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  ArrowRightIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
+import { CheckIcon, StarIcon } from '@heroicons/react/24/solid'
 import Image from 'next/image'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'SchoolMule: Student Management System',
-    template: '%s - SchoolMule'
+// Scroll reveal hook
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('opacity-100', 'translate-y-0')
+            entry.target.classList.remove('opacity-0', 'translate-y-8')
+          }
+        })
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    )
+
+    const elements = ref.current?.querySelectorAll('[data-reveal]')
+    elements?.forEach((el) => observer.observe(el))
+
+    return () => observer.disconnect()
+  }, [])
+
+  return ref
+}
+
+const features = [
+  {
+    icon: UserGroupIcon,
+    title: 'Student Information System',
+    description: 'Centralize all student data, enrollment, grades, and parent contacts in one secure location.',
+    color: 'bg-cyan-50',
+    iconColor: 'text-cyan-600',
+    highlights: ['Student profiles', 'Parent contacts', 'Multi-term tracking']
   },
-  description: "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
-  alternates: { canonical: 'https://schoolmule.ca' },
-  robots: { index: true, follow: true },
-  applicationName: 'SchoolMule',
-  keywords: ["school management", "student information system", "attendance tracking", "gradebook", "parent portal", "education software"],
-  authors: [{ name: "SchoolMule" }],
-  metadataBase: new URL('https://schoolmule.ca'),
-  openGraph: {
-    title: "SchoolMule: School Management System",
-    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
-    type: "website",
-    siteName: "SchoolMule",
+  {
+    icon: DocumentTextIcon,
+    title: 'Automated Report Cards',
+    description: 'Generate professional PDF report cards in minutes with integrated teacher feedback.',
+    color: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    highlights: ['One-click generation', 'Bulk processing', 'Custom templates']
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "SchoolMule: School Management System",
-    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+  {
+    icon: ChartBarIcon,
+    title: 'Smart Analytics',
+    description: 'Real-time insights into attendance, grades, and school performance metrics.',
+    color: 'bg-violet-50',
+    iconColor: 'text-violet-600',
+    highlights: ['Live dashboards', 'Trend analysis', 'Data exports']
   },
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
+  {
+    icon: ClockIcon,
+    title: 'Intelligent Scheduling',
+    description: 'Visual schedule builder with conflict detection across all grades and teachers.',
+    color: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    highlights: ['Drag-and-drop', 'Conflict alerts', 'Multi-grade support']
   },
-};
+  {
+    icon: CurrencyDollarIcon,
+    title: 'Financial Management',
+    description: 'Handle tuition, payments, and invoicing without separate billing software.',
+    color: 'bg-rose-50',
+    iconColor: 'text-rose-600',
+    highlights: ['Auto invoicing', 'Payment tracking', 'Revenue reports']
+  },
+  {
+    icon: CheckCircleIcon,
+    title: 'Parent Portal',
+    description: 'Keep parents engaged with real-time access to grades, attendance, and communications.',
+    color: 'bg-sky-50',
+    iconColor: 'text-sky-600',
+    highlights: ['Grade access', 'Attendance alerts', 'Direct messaging']
+  }
+]
+
+const stats = [
+  { value: '20+', label: 'Hours Saved', sublabel: 'Per week on admin' },
+  { value: '100%', label: 'Faster', sublabel: 'Report card generation' },
+  { value: '99.9%', label: 'Uptime', sublabel: 'Reliability guarantee' },
+]
 
 const WelcomePage: FC = () => {
+  const containerRef = useScrollReveal()
+
   return (
-    <>
-      {/* Pre-login navigation bar */}
+    <div ref={containerRef} className="bg-white">
       <PreNavBar />
 
-      <main className="font-sans bg-gray-50 w-full">
+      <main className="w-full overflow-hidden">
         {/* Hero Section */}
-        <section className="flex flex-col items-center justify-center text-center space-y-8 py-36 px-4">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <h1 className="text-xl lg:text-3xl font-bold text-gray-800 leading-tight">
-              The Complete School Management Solution
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Stop juggling multiple systems. SchoolMule streamlines everything from student enrollment 
-              to report cards, saving your staff hours each week while improving parent engagement.
-            </p>
+        <section className="relative min-h-screen flex items-center pt-24 pb-16 lg:pt-32 lg:pb-24">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-slate-50" />
 
-          </div>
+          {/* Decorative blobs */}
+          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-100/40 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute top-1/4 right-0 w-80 h-80 bg-amber-100/30 rounded-full blur-3xl translate-x-1/2" />
+          <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-teal-100/30 rounded-full blur-3xl" />
 
-          {/* Demo Video */}
-          <div className="w-full max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-2xl p-8">
-              <div 
-                style={{ 
-                  position: 'relative', 
-                  paddingBottom: 'calc(52.60855982505467% + 41px)', 
-                  height: 0, 
-                  width: '100%' 
-                }}
-              >
-                <iframe
-                  src="https://demo.arcade.software/fnLPYXGsuJK8SZ1yxJjH?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
-                  title="Welcome to SchoolMule"
-                  frameBorder="0"
-                  loading="lazy"
-                  allowFullScreen
-                  allow="clipboard-write"
-                  style={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    width: '100%', 
-                    height: '100%', 
-                    colorScheme: 'light' 
-                  }}
-                />
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-cyan-200 shadow-sm mb-8">
+                <SparklesIcon className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-slate-600">
+                  Trusted by 50+ Schools Nationwide
+                </span>
+              </div>
+
+              {/* Main Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-slate-900 leading-tight tracking-tight mb-6">
+                The Complete{' '}
+                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+                  School Management
+                </span>{' '}
+                Solution
+              </h1>
+
+              {/* Subheadline */}
+              <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10">
+                Stop juggling multiple systems. SchoolMule streamlines everything from
+                student enrollment to report cards, saving your staff{' '}
+                <span className="font-semibold text-slate-800">hours each week</span>.
+              </p>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-600 to-teal-600 rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                >
+                  Request Demo
+                  <ArrowRightIcon className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-all duration-300"
+                >
+                  Start Free Trial
+                </Link>
+              </div>
+
+              {/* Trust Indicators */}
+              <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <CheckIcon className="w-5 h-5 text-emerald-500" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckIcon className="w-5 h-5 text-emerald-500" />
+                  <span>14-day free trial</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckIcon className="w-5 h-5 text-emerald-500" />
+                  <span>Cancel anytime</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link
-              href="/demo"
-              className="px-8 py-4 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition shadow-lg"
-            >
-              Request Demo
-            </Link>
-            <Link
-              href="/signup"
-              className="px-8 py-4 bg-white text-gray-800 font-semibold rounded-lg hover:bg-gray-50 transition shadow-lg border border-gray-300"
-            >
-              Start Free Trial
-            </Link>
+            {/* Hero Screenshot */}
+            <div className="mt-16 lg:mt-20">
+              <div className="relative max-w-5xl mx-auto">
+                {/* Floating notification - left */}
+                <div className="absolute -left-4 lg:-left-12 top-1/4 hidden lg:block z-20">
+                  <div className="bg-white rounded-2xl p-4 shadow-xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <CheckIcon className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm">Report Generated</p>
+                        <p className="text-xs text-slate-500">Grade 5 - Complete</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating notification - right */}
+                <div className="absolute -right-4 lg:-right-12 top-1/3 hidden lg:block z-20">
+                  <div className="bg-white rounded-2xl p-4 shadow-xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center">
+                        <UserGroupIcon className="w-5 h-5 text-cyan-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800 text-sm">98.5%</p>
+                        <p className="text-xs text-slate-500">Attendance Rate</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Browser Mockup */}
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  {/* Browser header */}
+                  <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div className="flex-1 ml-4">
+                      <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
+                        schoolmule.ca/dashboard
+                      </div>
+                    </div>
+                  </div>
+                  {/* Screenshot */}
+                  <div className="relative aspect-[16/10]">
+                    <Image
+                      src="/images/DashboardScreenshot.png"
+                      alt="SchoolMule Dashboard"
+                      fill
+                      className="object-cover object-top"
+                      priority
+                    />
+                  </div>
+                </div>
+
+                {/* Glow effect */}
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl" />
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Problem/Solution Section */}
-        <section className="bg-white py-20">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-800 mb-4">
-                Stop Spending Hours on Administrative Tasks
+        {/* Demo Video Section */}
+        <section className="py-20 lg:py-28 bg-slate-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="text-center mb-12 opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+                See SchoolMule in Action
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                SchoolMule eliminates the chaos of juggling spreadsheets, paper records, and disconnected systems.
-                One platform to run your entire school efficiently.
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Watch how easily you can manage your entire school from one dashboard
               </p>
             </div>
 
-            {/* Core Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-cyan-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-cyan-200 transition-colors">
-                  <UserGroupIcon className="h-8 w-8 text-cyan-600" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Complete Student Information System</h3>
-                <p className="text-gray-600 mb-4">
-                  Centralize all student data, enrollment, grades, and parent contacts. No more scattered spreadsheets.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • Student profiles & contacts<br/>
-                  • Class enrollment management<br/>
-                  • Multi-term grade tracking
+            <div
+              data-reveal
+              className="max-w-4xl mx-auto opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
+                <div
+                  style={{
+                    position: 'relative',
+                    paddingBottom: 'calc(52.60855982505467% + 41px)',
+                    height: 0,
+                    width: '100%'
+                  }}
+                >
+                  <iframe
+                    src="https://demo.arcade.software/fnLPYXGsuJK8SZ1yxJjH?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
+                    title="Welcome to SchoolMule"
+                    frameBorder="0"
+                    loading="lazy"
+                    allowFullScreen
+                    allow="clipboard-write"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      colorScheme: 'light',
+                      borderRadius: '0.75rem'
+                    }}
+                  />
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
 
-              {/* Feature 2 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-green-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-green-200 transition-colors">
-                  <DocumentTextIcon className="h-8 w-8 text-green-600" />
+        {/* Stats Section */}
+        <section className="py-16 lg:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+              {stats.map((stat, index) => (
+                <div
+                  key={stat.label}
+                  data-reveal
+                  className="text-center p-8 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 opacity-0 translate-y-8 transition-all duration-700"
+                  style={{ transitionDelay: `${index * 100}ms` }}
+                >
+                  <div className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent mb-2">
+                    {stat.value}
+                  </div>
+                  <div className="text-xl font-semibold text-slate-800 mb-1">{stat.label}</div>
+                  <div className="text-slate-500">{stat.sublabel}</div>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Automated Report Card Generation</h3>
-                <p className="text-gray-600 mb-4">
-                  Generate professional PDF report cards in minutes, not hours. Bulk processing for entire grades.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • One-click PDF generation<br/>
-                  • Teacher feedback integration<br/>
-                  • Bulk processing capabilities
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-              {/* Feature 3 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-blue-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-blue-200 transition-colors">
-                  <ChartBarIcon className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Smart Analytics Dashboard</h3>
-                <p className="text-gray-600 mb-4">
-                  Real-time insights into attendance, grades, and school performance. Make data-driven decisions.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • Attendance rate tracking<br/>
-                  • Academic performance trends<br/>
-                  • Financial health monitoring
-                </div>
-              </div>
+        {/* Features Section */}
+        <section className="py-20 lg:py-28 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+                Everything You Need to{' '}
+                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+                  Run Your School
+                </span>
+              </h2>
+              <p className="text-lg text-slate-600">
+                One platform to eliminate chaos, streamline operations, and improve parent engagement
+              </p>
+            </div>
 
-              {/* Feature 4 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-purple-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-purple-200 transition-colors">
-                  <ClockIcon className="h-8 w-8 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Intelligent Scheduling System</h3>
-                <p className="text-gray-600 mb-4">
-                  Visual schedule builder with conflict detection. Manage complex schedules across all grades effortlessly.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • Drag-and-drop scheduling<br/>
-                  • Conflict detection<br/>
-                  • Multi-grade coordination
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {features.map((feature, index) => (
+                <div
+                  key={feature.title}
+                  data-reveal
+                  className="group relative p-6 lg:p-8 bg-white rounded-2xl border border-slate-100 hover:border-cyan-200 hover:shadow-xl transition-all duration-300 opacity-0 translate-y-8"
+                  style={{ transitionDelay: `${index * 100}ms` }}
+                >
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-teal-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
-              {/* Feature 5 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-orange-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-orange-200 transition-colors">
-                  <CurrencyDollarIcon className="h-8 w-8 text-orange-600" />
+                  <div className={`w-14 h-14 rounded-xl ${feature.color} flex items-center justify-center mb-5`}>
+                    <feature.icon className={`w-7 h-7 ${feature.iconColor}`} />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
+                  <p className="text-slate-600 mb-4 leading-relaxed">{feature.description}</p>
+                  <ul className="space-y-2">
+                    {feature.highlights.map((highlight) => (
+                      <li key={highlight} className="flex items-center gap-2 text-sm text-slate-500">
+                        <CheckIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        {highlight}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Integrated Financial Management</h3>
-                <p className="text-gray-600 mb-4">
-                  Handle tuition, payments, and invoicing within the same system. No separate billing software needed.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • Automated invoice generation<br/>
-                  • Payment tracking<br/>
-                  • Financial reporting
-                </div>
-              </div>
-
-              {/* Feature 6 */}
-              <div className="group p-8 bg-gray-50 rounded-xl hover:bg-white hover:shadow-xl transition-all duration-300 border border-gray-100">
-                <div className="bg-red-100 rounded-lg p-3 w-fit mb-4 group-hover:bg-red-200 transition-colors">
-                  <CheckCircleIcon className="h-8 w-8 text-red-600" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">Dedicated Parent Portal</h3>
-                <p className="text-gray-600 mb-4">
-                  Keep parents engaged with real-time access to grades, attendance, and school communications.
-                </p>
-                <div className="text-sm text-gray-500">
-                  • Real-time grade access<br/>
-                  • Attendance monitoring<br/>
-                  • Direct communication
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
         {/* Screenshot Showcase Section */}
-        <section className="bg-gray-50 py-20">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-800 mb-4">See SchoolMule in Action</h2>
-              <p className="text-xl text-gray-600">
-                Screenshots of key features that make school management effortless
+        <section className="py-20 lg:py-28 bg-slate-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+                Powerful Features, Beautiful Interface
+              </h2>
+              <p className="text-lg text-slate-600">
+                Designed for educators, by educators
               </p>
             </div>
 
-            <div className="space-y-20">
-              {/* Dashboard Screenshot */}
-              <div className="flex flex-col lg:flex-row items-center gap-12">
-                <div className="lg:w-2/3">
-                  <div className="aspect-video bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                    <Image
-                      src="/images/DashboardScreenshot.png"
-                      alt="SchoolMule Dashboard Screenshot showing real-time analytics"
-                      width={1920}
-                      height={1080}
-                      className="w-full h-full object-contain"
-                      priority
-                    />
+            {/* Feature 1 - Gradebook */}
+            <div className="mb-20 lg:mb-32">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <div
+                  data-reveal
+                  className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                      </div>
+                      <div className="flex-1 ml-4">
+                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
+                          schoolmule.ca/gradebook
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative aspect-video">
+                      <Image
+                        src="/images/GradebookScreenshot.png"
+                        alt="SchoolMule Gradebook"
+                        fill
+                        className="object-cover object-top"
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="lg:w-1/3">
-                  <h3 className="text-3xl font-bold text-gray-800 mb-4">Executive Dashboard</h3>
-                  <p className="text-lg text-gray-600 mb-6">
-                    Get a complete overview of your school&apos;s performance with real-time attendance rates, 
-                    academic trends, and financial insights—all in one beautiful dashboard.
-                  </p>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Live attendance and academic metrics
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Financial health monitoring
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Customizable time periods
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Gradebook Screenshot */}
-              <div className="flex flex-col lg:flex-row-reverse items-center gap-12">
-                <div className="lg:w-2/3">
-                  <div className="aspect-video bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                    <Image
-                      src="/images/GradebookScreenshot.png"
-                      alt="SchoolMule Gradebook Screenshot showing grade calculations and assessments"
-                      width={1920}
-                      height={1080}
-                      className="w-full h-full object-contain"
-                    />
+                <div
+                  data-reveal
+                  className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
+                    <ChartBarIcon className="w-4 h-4" />
+                    Smart Gradebook
                   </div>
-                </div>
-                <div className="lg:w-1/3">
-                  <h3 className="text-3xl font-bold text-gray-800 mb-4">Smart Gradebook System</h3>
-                  <p className="text-lg text-gray-600 mb-6">
-                    Weighted assessments, automatic calculations, and instant report card generation. 
+                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
+                    Grades Made Simple
+                  </h3>
+                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                    Weighted assessments, automatic calculations, and instant report card generation.
                     Spend less time on math, more time teaching.
                   </p>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Weighted assessment categories
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Real-time grade calculations
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Bulk grade entry capabilities
-                    </li>
+                  <ul className="space-y-4">
+                    {['Weighted assessment categories', 'Real-time grade calculations', 'Bulk grade entry capabilities'].map((item) => (
+                      <li key={item} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <CheckIcon className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <span className="text-slate-700">{item}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
+            </div>
 
-              {/* Parent Portal Screenshot */}
-              <div className="flex flex-col lg:flex-row items-center gap-12">
-                <div className="lg:w-2/3">
-                  <div className="aspect-video bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-                    <Image
-                      src="/images/ParentPortalScreenshot.png"
-                      alt="SchoolMule Parent Portal Screenshot showing parent dashboard and child progress"
-                      width={1920}
-                      height={1080}
-                      className="w-full h-full object-contain"
-                    />
+            {/* Feature 2 - Parent Portal */}
+            <div className="mb-20 lg:mb-32">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <div
+                  data-reveal
+                  className="opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium mb-4">
+                    <UserGroupIcon className="w-4 h-4" />
+                    Parent Portal
+                  </div>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
+                    Keep Parents Connected
+                  </h3>
+                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                    Dedicated dashboards showing children&apos;s progress, attendance, and school
+                    communications. Build trust through transparency.
+                  </p>
+                  <ul className="space-y-4">
+                    {['Individual child dashboards', 'Real-time report card access', 'Direct school communication'].map((item) => (
+                      <li key={item} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                          <CheckIcon className="w-4 h-4 text-violet-600" />
+                        </div>
+                        <span className="text-slate-700">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div
+                  data-reveal
+                  className="opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                      </div>
+                      <div className="flex-1 ml-4">
+                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
+                          schoolmule.ca/parent
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative aspect-video">
+                      <Image
+                        src="/images/ParentPortalScreenshot.png"
+                        alt="SchoolMule Parent Portal"
+                        fill
+                        className="object-cover object-top"
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="lg:w-1/3">
-                  <h3 className="text-3xl font-bold text-gray-800 mb-4">Parent Engagement Portal</h3>
-                  <p className="text-lg text-gray-600 mb-6">
-                    Keep parents connected with dedicated dashboards showing their children&apos;s progress, 
-                    attendance, and school communications.
+              </div>
+            </div>
+
+            {/* Feature 3 - Attendance */}
+            <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <div
+                  data-reveal
+                  className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                      </div>
+                      <div className="flex-1 ml-4">
+                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
+                          schoolmule.ca/attendance
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative aspect-video">
+                      <Image
+                        src="/images/AttendanceScreenshot.png"
+                        alt="SchoolMule Attendance"
+                        fill
+                        className="object-cover object-top"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div
+                  data-reveal
+                  className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-sm font-medium mb-4">
+                    <ClockIcon className="w-4 h-4" />
+                    Attendance Tracking
+                  </div>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
+                    Never Miss a Beat
+                  </h3>
+                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                    Comprehensive attendance tracking with real-time analytics and automated parent notifications.
                   </p>
-                  <ul className="space-y-2 text-gray-700">
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Individual child dashboards
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Real-time report card access
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircleIcon className="h-5 w-5 text-green-500 mr-3" />
-                      Direct school communication
-                    </li>
+                  <ul className="space-y-4">
+                    {['General & class-specific attendance', 'Automated absence alerts', 'Compliance report generation'].map((item) => (
+                      <li key={item} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                          <CheckIcon className="w-4 h-4 text-cyan-600" />
+                        </div>
+                        <span className="text-slate-700">{item}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -340,68 +557,86 @@ const WelcomePage: FC = () => {
           </div>
         </section>
 
-        {/* ROI Section */}
-        <section className="bg-white py-20">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-gray-800 mb-8">
-              Return on Investment That Speaks for Itself
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <div className="p-6">
-                <div className="text-4xl font-bold text-cyan-600 mb-2">20+</div>
-                <div className="text-lg font-semibold text-gray-800">Hours Saved</div>
-                <div className="text-gray-600">Per week on admin tasks</div>
+        {/* Testimonial Section */}
+        <section className="py-20 lg:py-28 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="max-w-4xl mx-auto text-center opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <div className="flex justify-center gap-1 mb-8">
+                {[...Array(5)].map((_, i) => (
+                  <StarIcon key={i} className="w-8 h-8 text-amber-400" />
+                ))}
               </div>
-              <div className="p-6">
-                <div className="text-4xl font-bold text-green-600 mb-2">100%</div>
-                <div className="text-lg font-semibold text-gray-800">Faster</div>
-                <div className="text-gray-600">Report card generation</div>
-              </div>
-              <div className="p-6">
-                <div className="text-4xl font-bold text-purple-600 mb-2">100%</div>
-                <div className="text-lg font-semibold text-gray-800">Accuracy</div>
-                <div className="text-gray-600">In grade calculations</div>
+              <blockquote className="text-2xl sm:text-3xl lg:text-4xl font-medium text-slate-800 leading-relaxed mb-8">
+                &ldquo;SchoolMule has transformed how we operate. What used to take our staff hours
+                now happens with just a few clicks. Our teachers can focus on teaching,
+                not administrative work.&rdquo;
+              </blockquote>
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">
+                  SB
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-slate-800">Sarah Bennett</p>
+                  <p className="text-slate-500">Principal, Maplewood Elementary</p>
+                </div>
               </div>
             </div>
-            <p className="text-xl text-gray-600 mb-8">
-&quot;SchoolMule has transformed how we operate. What used to take our staff hours 
-              now happens with just a few clicks. Our teachers can focus on teaching, 
-              not administrative work.&quot;
-            </p>
-            <p className="text-lg text-gray-700 font-semibold">
-              — Principal, Private Elementary School
-            </p>
           </div>
         </section>
 
         {/* Final CTA Section */}
-        <section className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white py-20">
-          <div className="max-w-4xl mx-auto px-6 text-center space-y-8">
-            <h2 className="text-4xl font-bold">Ready to Transform Your School?</h2>
-            <p className="text-xl opacity-90 max-w-2xl mx-auto leading-relaxed">
-              Join forward-thinking schools that have streamlined their operations with SchoolMule. 
-              Schedule a personalized demo or start your free trial today.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-              <Link 
-                href="/demo" 
-                className="px-8 py-4 bg-white text-gray-800 font-semibold rounded-lg hover:bg-gray-100 transition shadow-lg border-2 border-white"
-              >
-                Schedule Demo
-              </Link>
-            </div>
-            
-            <div className="pt-8 text-sm opacity-75">
-              <p>Questions? Contact us at schoolmule.official@gmail.com</p>
+        <section className="py-20 lg:py-28 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+
+          {/* Decorative */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-teal-500/20 rounded-full blur-3xl" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="max-w-3xl mx-auto text-center opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+                Ready to Transform Your School?
+              </h2>
+              <p className="text-lg lg:text-xl text-slate-300 mb-10 leading-relaxed">
+                Join forward-thinking schools that have streamlined their operations with SchoolMule.
+                Schedule a personalized demo or start your free trial today.
+              </p>
+
+              <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-900 bg-white rounded-xl hover:bg-slate-100 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                >
+                  Schedule Demo
+                  <ArrowRightIcon className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition-all duration-300"
+                >
+                  Start Free Trial
+                </Link>
+              </div>
+
+              <p className="text-slate-400">
+                Questions? Contact us at{' '}
+                <a href="mailto:schoolmule.official@gmail.com" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                  schoolmule.official@gmail.com
+                </a>
+              </p>
             </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <Footer />
-    </>
+    </div>
   )
 }
 

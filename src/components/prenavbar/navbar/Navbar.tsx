@@ -1,58 +1,99 @@
-// File: src/components/navbar/NavBar.tsx\
 'use client'
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import NavLinks from '../navlinks/Navlinks';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const NavBar: FC = () => {
-  const [atTop, setAtTop] = useState<boolean>(true);
+  const [scrolled, setScrolled] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [notScrollable, setNotScrollable] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleScroll = () => setAtTop(window.pageYOffset < 10);
+    const checkScrollable = () => {
+      // Check if page is scrollable
+      const isScrollable = document.documentElement.scrollHeight > window.innerHeight;
+      setNotScrollable(!isScrollable);
+    };
+
+    const handleScroll = () => setScrolled(window.pageYOffset > 20);
+
+    // Initial checks
     handleScroll();
+    checkScrollable();
+
+    // Listen for scroll
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // Listen for resize (content might change scrollability)
+    window.addEventListener('resize', checkScrollable);
+
+    // Also check after a short delay for dynamic content
+    const timeout = setTimeout(checkScrollable, 100);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', checkScrollable);
+      clearTimeout(timeout);
+    };
   }, []);
 
+  // Apply white background if scrolled OR if page is not scrollable
+  const showWhiteBackground = scrolled || notScrollable;
+
   return (
-    <nav className={`bg-white fixed w-full top-0 z-30 transition border-b border-gray-200 duration-300 ease-in-out ${!atTop ? 'bg-white shadow-lg' : ''}`}>      
-      <div className="flex justify-between items-center py-2 px-4 lg:px-12">
-        {/* logo */}
-        <Link href="/" scroll={false}>
+    <nav
+      className={`fixed w-full top-0 z-50 transition-all duration-300 ease-out ${
+        showWhiteBackground
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-100'
+          : 'bg-transparent'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+        <div className="flex justify-between items-center h-25">
+          {/* Logo */}
+          <Link href="/" scroll={false} className="flex items-center group">
             <Image
               src="/logo/trimmedlogo.png"
-              alt="Logo"
-              width={100}
-              height={100}
+              alt="SchoolMule Logo"
+              width={140}
+              height={36}
               quality={100}
+              className="transition-transform duration-300 group-hover:scale-105 h-20 w-auto"
             />
-        </Link>
+          </Link>
 
-        {/* desktop links */}
-        <div className="hidden lg:block">
-          <NavLinks />
-        </div>
+          {/* Desktop Navigation */}
+          <div className="hidden lg:block">
+            <NavLinks />
+          </div>
 
-        {/* mobile menu button */}
-        <button className="p-2 rounded-lg lg:hidden text-blue-900" onClick={() => setIsOpen(o => !o)}>
-          <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
+          {/* Mobile Menu Button */}
+          <button
+            className="p-2 rounded-xl lg:hidden text-slate-700 hover:bg-slate-100 transition-colors"
+            onClick={() => setIsOpen((o) => !o)}
+            aria-label={isOpen ? 'Close menu' : 'Open menu'}
+          >
             {isOpen ? (
-              <path fillRule="evenodd" clipRule="evenodd" d="M18.278 16.864a1 1 0 0 1-1.414 1.414l-4.829-4.828-4.828 4.828a1 1 0 0 1-1.414-1.414l4.828-4.829-4.828-4.828a1 1 0 0 1 1.414-1.414l4.829 4.828 4.828-4.828a1 1 0 1 1 1.414 1.414l-4.828 4.829 4.828 4.828z" />
+              <XMarkIcon className="h-6 w-6" />
             ) : (
-              <path fillRule="evenodd" d="M4 5h16a1 1 0 0 1 0 2H4a1 1 0 1 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2zm0 6h16a1 1 0 0 1 0 2H4a1 1 0 0 1 0-2z" />
+              <Bars3Icon className="h-6 w-6" />
             )}
-          </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
-      {/* mobile dropdown */}
-      {isOpen && (
-        <div className="absolute left-0 top-full w-full bg-white p-4 lg:hidden shadow-xl">
-          <NavLinks vertical />
+      {/* Mobile Dropdown */}
+      <div
+        className={`lg:hidden transition-all duration-300 ease-out overflow-hidden ${
+          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="bg-white border-t border-slate-100 px-4 py-6 shadow-xl">
+          <NavLinks vertical onLinkClick={() => setIsOpen(false)} />
         </div>
-      )}
+      </div>
     </nav>
   );
 };
