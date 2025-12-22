@@ -109,7 +109,7 @@ const StudentsPage = () => {
                     {/* Main Content Card */}
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
                         {/* Sticky Header */}
-                        <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
+                        <div className="sticky top-20 z-20 bg-white rounded-t-2xl border-b border-slate-100">
                             <div className="p-6">
                                 {/* Tabs for Active/Archived */}
                                 <div className="flex gap-2 mb-6">
@@ -220,83 +220,83 @@ const StudentsPage = () => {
                             ) : (
                                 /* Students Table */
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full">
+                                    <table className="w-full">
                                         <thead>
                                             <tr className="border-b border-slate-100">
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="sticky left-0 z-10 bg-white py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                     Student Name
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                     Grade
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                     OEN
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                     Homeroom
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                     Parent Contact
                                                 </th>
                                                 {showArchived && (
-                                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                         Archived Date
                                                     </th>
                                                 )}
-                                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="sticky right-0 z-10 bg-white px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                     Actions
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {filteredStudents.map((student) => (
-                                                <tr key={student.studentId} className={`hover:bg-slate-50 transition-colors ${showArchived ? 'opacity-75' : ''}`}>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                                                <UserIcon className="h-5 w-5 text-cyan-600" />
+                                                <tr key={student.studentId} className={`hover:bg-slate-50 transition-colors ${showArchived ? 'opacity-75' : ''} group`}>
+                                                    <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                                                                <UserIcon className="h-4 w-4 text-cyan-600" />
                                                             </div>
                                                             <div>
                                                                 <div className="text-sm font-medium text-slate-900">
                                                                     {student.name}
                                                                 </div>
                                                                 {showArchived && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
                                                                         Archived
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
                                                             <AcademicCapIcon className="h-4 w-4" />
                                                             Grade {student.grade ?? '-'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
+                                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 font-mono">
                                                         {student.oen || '-'}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                                                         {student.homeroomTeacherId ? (
                                                             <span className="text-emerald-600">Assigned</span>
                                                         ) : (
                                                             <span className="text-slate-400">Not Assigned</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
                                                         {(student.mother.name && student.mother.name.toLowerCase() !== 'n/a' ? student.mother.name : null) ||
                                                          (student.father.name && student.father.name.toLowerCase() !== 'n/a' ? student.father.name : null) ||
                                                          <span className="text-slate-400">No Contact</span>}
                                                     </td>
                                                     {showArchived && (
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                                                             {student.archivedAt
                                                                 ? new Date(student.archivedAt).toLocaleDateString()
                                                                 : '-'}
                                                         </td>
                                                     )}
-                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                    <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         <div className="flex items-center gap-1">
                                                             <button
                                                                 onClick={() => setViewStudent(student)}
