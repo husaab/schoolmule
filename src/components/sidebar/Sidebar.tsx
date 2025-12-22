@@ -176,6 +176,7 @@ const Sidebar = () => {
       id="mobile-sidebar"
       className={`
         w-72 fixed top-0 bottom-0 left-0 bg-white border-r border-slate-200 z-40
+        flex flex-col
         transform transition-transform duration-300 ease-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
@@ -310,7 +311,7 @@ const Sidebar = () => {
         )}
 
         {/* Divider */}
-        <div className="py-3">
+        <div className="py-1">
           <div className="border-t border-slate-100" />
         </div>
 
