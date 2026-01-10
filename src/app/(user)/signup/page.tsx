@@ -29,6 +29,7 @@ interface SignUpFormInputs {
   confirmPassword: string
   school: string
   role: string
+  website?: string // Honeypot field
 }
 
 const benefits = [
@@ -129,6 +130,12 @@ const SignUpForm: FC = () => {
   } = useForm<SignUpFormInputs>()
 
   const onSubmit: SubmitHandler<SignUpFormInputs> = async data => {
+    // Honeypot check - bots fill this hidden field, humans don't
+    if (data.website) {
+      showNotification('Registration Successful', 'success') // Fake success to not tip off bot
+      return
+    }
+
     const registrationData: RegisterRequest = {
       username: data.fullName,
       email: data.email,
@@ -349,6 +356,16 @@ const SignUpForm: FC = () => {
           )}
         </div>
       </div>
+
+      {/* Honeypot field - hidden from humans, bots will fill it */}
+      <input
+        type="text"
+        {...register('website')}
+        className="hidden"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+      />
 
       {/* Submit Button */}
       <button

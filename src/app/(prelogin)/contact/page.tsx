@@ -41,6 +41,7 @@ const ContactPage: FC = () => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [website, setWebsite] = useState('') // Honeypot field
   const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const notify = useNotificationStore(s => s.showNotification)
@@ -48,6 +49,13 @@ const ContactPage: FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    // Honeypot check - bots fill this hidden field, humans don't
+    if (website) {
+      setSubmitted(true) // Silently "succeed" to not tip off the bot
+      return
+    }
+
     setIsLoading(true)
 
     const payload: ContactPayload = { name, email, message }
@@ -220,6 +228,18 @@ const ContactPage: FC = () => {
                             className="w-full px-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400 resize-none"
                           />
                         </div>
+
+                        {/* Honeypot field - hidden from humans, bots will fill it */}
+                        <input
+                          type="text"
+                          name="website"
+                          value={website}
+                          onChange={e => setWebsite(e.target.value)}
+                          className="hidden"
+                          tabIndex={-1}
+                          autoComplete="off"
+                          aria-hidden="true"
+                        />
 
                         <button
                           type="submit"
