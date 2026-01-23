@@ -4,6 +4,8 @@ import apiClient from './apiClient';
 import type {
   ReportCardFeedbackPayload,
   ReportCardFeedbackResponse,
+  ClassFeedbackResponse,
+  BulkFeedbackResponse,
   ReportCardBulkGenerateRequest,
   ReportCardBulkGenerateResponse,
   ReportCardStatusResponse
@@ -25,7 +27,7 @@ export const getReportCardFeedback = async (
 
 /**
  * POST /report-cards/feedback
- * → Insert or update a student’s report card feedback for a specific class and term
+ * → Insert or update a student's report card feedback for a specific class and term
  */
 export const upsertReportCardFeedback = async (
   payload: ReportCardFeedbackPayload
@@ -36,6 +38,36 @@ export const upsertReportCardFeedback = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: payload,
+    }
+  );
+};
+
+/**
+ * GET /report-cards/feedback/class/:classId?term=...
+ * → Fetch all feedback for students in a class for a specific term
+ */
+export const getClassReportCardFeedback = async (
+  classId: string,
+  term: string
+): Promise<ClassFeedbackResponse> => {
+  return apiClient<ClassFeedbackResponse>(
+    `/report-cards/feedback/class/${encodeURIComponent(classId)}?term=${encodeURIComponent(term)}`
+  );
+};
+
+/**
+ * POST /report-cards/feedback/bulk
+ * → Insert or update feedback for multiple students at once
+ */
+export const upsertBulkReportCardFeedback = async (
+  feedbackEntries: ReportCardFeedbackPayload[]
+): Promise<BulkFeedbackResponse> => {
+  return apiClient<BulkFeedbackResponse>(
+    `/report-cards/feedback/bulk`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { feedbackEntries },
     }
   );
 };

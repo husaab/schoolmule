@@ -7,6 +7,17 @@ import { useUserStore } from '@/store/useUserStore';
 import { upsertReportCardFeedback, getReportCardFeedback } from '@/services/reportCardService';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
+import { SparklesIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+
+// Rating options for Work Habits and Behavior dropdowns
+const RATING_OPTIONS = [
+  { value: '', label: 'Select rating' },
+  { value: 'E', label: 'E - Excellent' },
+  { value: 'G', label: 'G - Good' },
+  { value: 'S', label: 'S - Satisfactory' },
+  { value: 'N', label: 'N - Needs Improvement' },
+];
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -14,6 +25,7 @@ interface FeedbackModalProps {
   studentId: string;
   studentName: string;
   classId: string;
+  subjectName?: string;
 }
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({
@@ -21,7 +33,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   onClose,
   studentId,
   studentName,
-  classId
+  classId,
+  subjectName
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -32,6 +45,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [workHabits, setWorkHabits] = useState('');
   const [behavior, setBehavior] = useState('');
   const [comment, setComment] = useState('');
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   // Fetch terms for the school when modal opens
   useEffect(() => {
@@ -117,13 +131,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
     }
 
     try {
-      const res = await upsertReportCardFeedback({ 
-        studentId, 
-        classId, 
-        term: term, 
-        workHabits, 
-        behavior, 
-        comment 
+      const res = await upsertReportCardFeedback({
+        studentId,
+        classId,
+        term: term,
+        workHabits,
+        behavior,
+        comment
       });
       if (res.status === 'success') {
         showNotification('Feedback saved successfully', 'success');
@@ -134,6 +148,46 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
     } catch (err) {
       console.error('Error saving feedback:', err);
       showNotification('Error saving feedback', 'error');
+    }
+  };
+
+  // Generate AI comment based on ratings
+  const handleGenerateAIComment = async () => {
+    if (!workHabits || !behavior) {
+      showNotification('Please select Work Habits and Behavior ratings first', 'error');
+      return;
+    }
+
+    setGeneratingAI(true);
+    try {
+      const response = await fetch('/api/ai/generate-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          subject: subjectName || 'General',
+          workHabits,
+          behavior,
+          term: term || 'Current Term'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate comment');
+      }
+
+      const data = await response.json();
+      if (data.comment) {
+        setComment(data.comment);
+        showNotification('Comment generated successfully', 'success');
+      } else {
+        throw new Error('No comment returned');
+      }
+    } catch (err) {
+      console.error('Error generating AI comment:', err);
+      showNotification('Failed to generate comment. Please try again.', 'error');
+    } finally {
+      setGeneratingAI(false);
     }
   };
 
@@ -163,36 +217,58 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Work Habits</label>
-          <textarea
-            value={workHabits}
-            onChange={(e) => setWorkHabits(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows={2}
-            placeholder="Describe the student's work habits..."
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Work Habits</label>
+            <select
+              value={workHabits}
+              onChange={(e) => setWorkHabits(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {RATING_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Behavior</label>
+            <select
+              value={behavior}
+              onChange={(e) => setBehavior(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {RATING_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Behavior</label>
-          <textarea
-            value={behavior}
-            onChange={(e) => setBehavior(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows={2}
-            placeholder="Describe the student's behavior..."
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">General Comment</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">General Comment</label>
+            <button
+              type="button"
+              onClick={handleGenerateAIComment}
+              disabled={generatingAI || !workHabits || !behavior}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              title={!workHabits || !behavior ? 'Generate with AI is only available when both Work Habits and Behavior are selected' : 'Generate AI comment based on ratings'}
+            >
+              <SparklesIcon className={`w-4 h-4 ${generatingAI ? 'animate-pulse' : ''}`} />
+              {generatingAI ? 'Generating...' : 'Generate with AI'}
+            </button>
+          </div>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows={3}
-            placeholder="Additional comments about the student's performance..."
+            rows={4}
+            placeholder="Click 'Generate with AI' or type your own comment..."
           />
         </div>
 
@@ -213,6 +289,20 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Promotional banner for bulk feedback */}
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <Link
+          href={`/gradebook/${classId}/feedback`}
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 rounded-lg hover:from-cyan-100 hover:to-teal-100 transition-all group"
+        >
+          <TableCellsIcon className="w-5 h-5 text-cyan-600" />
+          <span className="text-sm font-medium">
+            Need to enter feedback for all students? Try Bulk Feedback
+          </span>
+          <span className="text-cyan-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </Link>
+      </div>
     </Modal>
   );
 };

@@ -33,7 +33,8 @@ import {
   ArrowDownTrayIcon,
   ArrowLeftIcon,
   CheckCircleIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  ChatBubbleBottomCenterTextIcon
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 
@@ -591,6 +592,14 @@ const GradebookClass = () => {
 
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => router.push(`/gradebook/${classId}/feedback`)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
+                  title="Enter report card feedback for all students"
+                >
+                  <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
+                  Bulk Feedback
+                </button>
+                <button
                   onClick={handleExportExcel}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                 >
@@ -1020,6 +1029,7 @@ const GradebookClass = () => {
           studentId={selectedStudentId}
           studentName={selectedStudentName}
           classId={classId}
+          subjectName={classData.subject}
         />
       )}
 

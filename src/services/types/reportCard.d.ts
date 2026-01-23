@@ -16,6 +16,32 @@ export interface ReportCardFeedbackResponse {
   message?: string
 }
 
+export interface ClassFeedbackEntry {
+  studentId: string
+  studentName: string
+  classId: string
+  term: string
+  workHabits: string | null
+  behavior: string | null
+  comment: string | null
+}
+
+export interface ClassFeedbackResponse {
+  status: string
+  data: ClassFeedbackEntry[]
+  message?: string
+}
+
+export interface BulkFeedbackResponse {
+  status: string
+  message: string
+  data: {
+    updated: number
+    failed: number
+    errors?: Array<{ studentId: string; error: string }>
+  }
+}
+
 
 export type ReportCardBulkGenerateRequest = {
   studentIds: string[];
