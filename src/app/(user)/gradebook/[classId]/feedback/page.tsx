@@ -24,7 +24,9 @@ import {
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
-  SparklesIcon
+  SparklesIcon,
+  LightBulbIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline'
 
 // Rating options for Work Habits and Behavior
@@ -66,6 +68,32 @@ const BulkFeedbackPage = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
+
+  // Student grades from localStorage (computed in gradebook)
+  const [studentGrades, setStudentGrades] = useState<Record<string, number>>({})
+
+  // Load grades from localStorage on mount
+  useEffect(() => {
+    if (!classId) return
+    const stored = localStorage.getItem(`bulk_feedback_grades_${classId}`)
+    if (stored) {
+      try {
+        setStudentGrades(JSON.parse(stored))
+      } catch {
+        console.warn('Failed to parse stored grades')
+      }
+    }
+  }, [classId])
+
+  // Helper to get grade label based on percentage
+  const getGradeInfo = (grade: number | undefined) => {
+    if (grade === undefined) return { label: 'No grades yet', color: 'text-slate-400' }
+    if (grade >= 90) return { label: 'Excellent', color: 'text-emerald-600' }
+    if (grade >= 80) return { label: 'Good', color: 'text-blue-600' }
+    if (grade >= 70) return { label: 'Satisfactory', color: 'text-amber-600' }
+    if (grade >= 60) return { label: 'Needs Improvement', color: 'text-orange-600' }
+    return { label: 'Requires Support', color: 'text-red-600' }
+  }
 
   // Calculate if there are unsaved changes
   const hasUnsavedChanges = editedFeedback.size > 0
@@ -297,6 +325,9 @@ const BulkFeedbackPage = () => {
 
     setGeneratingAI((prev) => new Set(prev).add(studentId))
 
+    // Get grade for this student (may be undefined if no grades)
+    const grade = studentGrades[studentId]
+
     try {
       const response = await fetch('/api/ai/generate-comment', {
         method: 'POST',
@@ -307,6 +338,7 @@ const BulkFeedbackPage = () => {
           workHabits,
           behavior,
           term: selectedTerm,
+          grade, // Pass grade to AI (may be undefined)
         }),
       })
 
@@ -519,6 +551,42 @@ const BulkFeedbackPage = () => {
             </div>
           </div>
 
+          {/* AI Feature Info Banner */}
+          <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-purple-200/40 p-5">
+            {/* Decorative elements */}
+            <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-purple-300/20 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-fuchsia-300/20 to-transparent rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
+
+            <div className="relative flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                <SparklesIcon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-purple-900 mb-1.5 flex items-center gap-2">
+                  AI-Powered Comment Generation
+                </h3>
+                <p className="text-sm text-purple-800/70 leading-relaxed max-w-3xl">
+                  Click the <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 rounded text-purple-700 font-medium text-xs"><SparklesIcon className="w-3 h-3" />sparkle</span> button next to each comment field to generate personalized feedback.
+                  The AI combines <span className="font-medium text-purple-800">Work Habits</span>, <span className="font-medium text-purple-800">Behavior</span> ratings, and the student&apos;s <span className="font-medium text-purple-800">current grade</span> to craft appropriate comments.
+                </p>
+                <div className="mt-3 flex items-center gap-4 text-xs text-purple-600/80">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span>Select both ratings first</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span>Grades shown under each name</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span>Edit generated text as needed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Feedback Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             {loadingFeedback ? (
@@ -577,13 +645,25 @@ const BulkFeedbackPage = () => {
                             >
                               {/* Student Name */}
                               <td className="sticky left-0 z-10 bg-white px-4 py-3 border-r border-slate-100">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-slate-900">
-                                    {stu.name}
-                                  </span>
-                                  {hasEdits && (
-                                    <span className="w-2 h-2 rounded-full bg-amber-400" title="Unsaved changes" />
-                                  )}
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900">
+                                      {stu.name}
+                                    </span>
+                                    {hasEdits && (
+                                      <span className="w-2 h-2 rounded-full bg-amber-400" title="Unsaved changes" />
+                                    )}
+                                  </div>
+                                  {/* Grade Display */}
+                                  <div className="mt-0.5">
+                                    {studentGrades[stu.studentId] !== undefined ? (
+                                      <span className={`text-xs font-medium ${getGradeInfo(studentGrades[stu.studentId]).color}`}>
+                                        {studentGrades[stu.studentId].toFixed(1)}%
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">No grades yet</span>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
 
@@ -639,28 +719,37 @@ const BulkFeedbackPage = () => {
                                         : 'border-slate-200 hover:border-slate-300'
                                     }`}
                                   />
-                                  <button
-                                    onClick={() => handleGenerateAIComment(stu.studentId, stu.name)}
-                                    disabled={isGenerating || !workHabitsValue || !behaviorValue}
-                                    title={
-                                      !workHabitsValue || !behaviorValue
-                                        ? 'Generate with AI is only available when both Work Habits and Behavior are selected'
-                                        : 'Generate comment with AI based on ratings'
-                                    }
-                                    className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
-                                      isGenerating
-                                        ? 'bg-purple-100 text-purple-400'
-                                        : !workHabitsValue || !behaviorValue
-                                        ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                        : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
-                                    }`}
-                                  >
-                                    {isGenerating ? (
-                                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <SparklesIcon className="w-5 h-5" />
+                                  {/* AI Generate Button with Tooltip */}
+                                  <div className="relative group/ai flex-shrink-0">
+                                    <button
+                                      onClick={() => handleGenerateAIComment(stu.studentId, stu.name)}
+                                      disabled={isGenerating || !workHabitsValue || !behaviorValue}
+                                      className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
+                                        isGenerating
+                                          ? 'bg-purple-100 text-purple-400'
+                                          : !workHabitsValue || !behaviorValue
+                                          ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                          : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                                      }`}
+                                    >
+                                      {isGenerating ? (
+                                        <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                                      ) : (
+                                        <SparklesIcon className="w-5 h-5" />
+                                      )}
+                                    </button>
+                                    {/* Tooltip - shows when button is disabled */}
+                                    {(!workHabitsValue || !behaviorValue) && (
+                                      <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover/ai:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        <div className="flex items-center gap-1.5">
+                                          <InformationCircleIcon className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                                          <span>Please select Work Habits and Behavior first to generate AI comments</span>
+                                        </div>
+                                        {/* Tooltip arrow */}
+                                        <div className="absolute top-full right-3 border-4 border-transparent border-t-slate-800" />
+                                      </div>
                                     )}
-                                  </button>
+                                  </div>
                                 </div>
                               </td>
                             </tr>

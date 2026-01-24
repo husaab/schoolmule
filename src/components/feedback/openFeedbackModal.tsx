@@ -7,8 +7,7 @@ import { useUserStore } from '@/store/useUserStore';
 import { upsertReportCardFeedback, getReportCardFeedback } from '@/services/reportCardService';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
-import { SparklesIcon, TableCellsIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
+import { SparklesIcon, TableCellsIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 // Rating options for Work Habits and Behavior dropdowns
 const RATING_OPTIONS = [
@@ -26,6 +25,8 @@ interface FeedbackModalProps {
   studentName: string;
   classId: string;
   subjectName?: string;
+  studentGrade?: number;
+  onNavigateToBulkFeedback?: () => void;
 }
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({
@@ -34,7 +35,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   studentId,
   studentName,
   classId,
-  subjectName
+  subjectName,
+  studentGrade,
+  onNavigateToBulkFeedback
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -168,7 +171,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           subject: subjectName || 'General',
           workHabits,
           behavior,
-          term: term || 'Current Term'
+          term: term || 'Current Term',
+          grade: studentGrade // Pass grade to AI (may be undefined)
         })
       });
 
@@ -249,19 +253,48 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           </div>
         </div>
 
+        {/* AI Feature Info Card */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 border border-purple-100/60 p-4">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-200/30 to-transparent rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <div className="relative flex gap-3">
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-sm shadow-purple-200">
+              <SparklesIcon className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-semibold text-purple-900 mb-1">AI-Powered Comments</h4>
+              <p className="text-xs text-purple-700/80 leading-relaxed">
+                Select <span className="font-medium text-purple-800">Work Habits</span> and <span className="font-medium text-purple-800">Behavior</span> ratings above to enable AI generation.
+                The AI uses these ratings{studentGrade !== undefined ? <> along with the student&apos;s <span className="font-medium text-purple-800">grade ({studentGrade.toFixed(0)}%)</span></> : ''} to craft a personalized comment.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">General Comment</label>
-            <button
-              type="button"
-              onClick={handleGenerateAIComment}
-              disabled={generatingAI || !workHabits || !behavior}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              title={!workHabits || !behavior ? 'Generate with AI is only available when both Work Habits and Behavior are selected' : 'Generate AI comment based on ratings'}
-            >
-              <SparklesIcon className={`w-4 h-4 ${generatingAI ? 'animate-pulse' : ''}`} />
-              {generatingAI ? 'Generating...' : 'Generate with AI'}
-            </button>
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleGenerateAIComment}
+                disabled={generatingAI || !workHabits || !behavior}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <SparklesIcon className={`w-4 h-4 ${generatingAI ? 'animate-pulse' : ''}`} />
+                {generatingAI ? 'Generating...' : 'Generate with AI'}
+              </button>
+              {/* Tooltip - shows when button is disabled */}
+              {(!workHabits || !behavior) && (
+                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  <div className="flex items-center gap-1.5">
+                    <InformationCircleIcon className="w-4 h-4 text-amber-400" />
+                    <span>Please select Work Habits and Behavior first to generate AI comments</span>
+                  </div>
+                  {/* Tooltip arrow */}
+                  <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800" />
+                </div>
+              )}
+            </div>
           </div>
           <textarea
             value={comment}
@@ -291,18 +324,24 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
       </form>
 
       {/* Promotional banner for bulk feedback */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <Link
-          href={`/gradebook/${classId}/feedback`}
-          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 rounded-lg hover:from-cyan-100 hover:to-teal-100 transition-all group"
-        >
-          <TableCellsIcon className="w-5 h-5 text-cyan-600" />
-          <span className="text-sm font-medium">
-            Need to enter feedback for all students? Try Bulk Feedback
-          </span>
-          <span className="text-cyan-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
-        </Link>
-      </div>
+      {onNavigateToBulkFeedback && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onNavigateToBulkFeedback();
+            }}
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 rounded-lg hover:from-cyan-100 hover:to-teal-100 transition-all group cursor-pointer"
+          >
+            <TableCellsIcon className="w-5 h-5 text-cyan-600" />
+            <span className="text-sm font-medium">
+              Need to enter feedback for all students? Try Bulk Feedback
+            </span>
+            <span className="text-cyan-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
+          </button>
+        </div>
+      )}
     </Modal>
   );
 };

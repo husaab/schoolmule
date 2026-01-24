@@ -420,6 +420,21 @@ const GradebookClass = () => {
     return total
   }
 
+  // Helper to save all student grades to localStorage
+  const saveGradesToLocalStorage = () => {
+    const gradesMap: Record<string, number> = {}
+    students.forEach((stu) => {
+      gradesMap[stu.studentId] = computeTotalForStudent(stu.studentId)
+    })
+    localStorage.setItem(`bulk_feedback_grades_${classId}`, JSON.stringify(gradesMap))
+  }
+
+  // Navigate to bulk feedback (saves grades first)
+  const navigateToBulkFeedback = () => {
+    saveGradesToLocalStorage()
+    router.push(`/gradebook/${classId}/feedback`)
+  }
+
   const handleSaveAll = async () => {
     setSaving(true)
     setError(null)
@@ -592,7 +607,7 @@ const GradebookClass = () => {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => router.push(`/gradebook/${classId}/feedback`)}
+                  onClick={navigateToBulkFeedback}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                   title="Enter report card feedback for all students"
                 >
@@ -1030,6 +1045,8 @@ const GradebookClass = () => {
           studentName={selectedStudentName}
           classId={classId}
           subjectName={classData.subject}
+          studentGrade={computeTotalForStudent(selectedStudentId)}
+          onNavigateToBulkFeedback={navigateToBulkFeedback}
         />
       )}
 

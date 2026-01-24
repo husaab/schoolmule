@@ -8,10 +8,45 @@ const RATING_LABELS: Record<string, string> = {
   N: 'Needs Improvement',
 }
 
+// Get grade context and tone guidance based on percentage
+const getGradeContext = (grade: number | undefined) => {
+  if (grade === undefined) {
+    return {
+      gradeInfo: '',
+      toneGuidance: '',
+    }
+  }
+
+  let level: string
+  let toneGuidance: string
+
+  if (grade >= 90) {
+    level = 'Excellent (90%+)'
+    toneGuidance = `The student has an excellent academic grade of ${grade.toFixed(1)}%. Use a celebratory and encouraging tone. Highlight their outstanding achievement and encourage continued excellence. Express genuine pride in their accomplishments.`
+  } else if (grade >= 80) {
+    level = 'Good (80-89%)'
+    toneGuidance = `The student has a good academic grade of ${grade.toFixed(1)}%. Use a positive and encouraging tone. Acknowledge their strong performance and suggest they can reach even higher with continued effort.`
+  } else if (grade >= 70) {
+    level = 'Satisfactory (70-79%)'
+    toneGuidance = `The student has a satisfactory academic grade of ${grade.toFixed(1)}%. Use a balanced tone that acknowledges their effort while gently suggesting areas for growth. Be encouraging about their potential for improvement.`
+  } else if (grade >= 60) {
+    level = 'Needs Improvement (60-69%)'
+    toneGuidance = `The student has a grade of ${grade.toFixed(1)}% which needs improvement. Use a supportive and constructive tone. Focus on specific strategies for improvement and express confidence in their ability to grow. Avoid being discouraging.`
+  } else {
+    level = 'Requires Significant Support (below 60%)'
+    toneGuidance = `The student has a grade of ${grade.toFixed(1)}% and requires significant support. Use a caring, supportive tone. Focus on encouragement and concrete next steps. Emphasize that improvement is possible with effort and support. Avoid negative language.`
+  }
+
+  return {
+    gradeInfo: `- Academic Grade: ${grade.toFixed(1)}% (${level})`,
+    toneGuidance,
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { studentName, subject, workHabits, behavior, term } = body
+    const { studentName, subject, workHabits, behavior, term, grade } = body
 
     if (!studentName || !workHabits || !behavior) {
       return NextResponse.json(
@@ -31,6 +66,9 @@ export async function POST(request: NextRequest) {
     const workHabitsLabel = RATING_LABELS[workHabits] || workHabits
     const behaviorLabel = RATING_LABELS[behavior] || behavior
 
+    // Get grade context if available
+    const { gradeInfo, toneGuidance } = getGradeContext(grade)
+
     const prompt = `You are a helpful assistant writing report card comments for teachers. Generate a professional, warm, and constructive report card comment for a student.
 
 Student Information:
@@ -38,8 +76,9 @@ Student Information:
 - Subject: ${subject}
 - Term: ${term || 'Current Term'}
 - Work Habits Rating: ${workHabitsLabel}
-- Behavior Rating: ${behaviorLabel}
+- Behavior Rating: ${behaviorLabel}${gradeInfo ? `\n${gradeInfo}` : ''}
 
+${toneGuidance ? `Tone Guidance:\n${toneGuidance}\n` : ''}
 Guidelines:
 - Write in third person, referring to the student by their first name only (e.g., "John" not "John Smith")
 - Keep the comment between 2-4 sentences
@@ -47,9 +86,10 @@ Guidelines:
 - If ratings are Excellent or Good, focus on strengths and positive contributions
 - If ratings are Satisfactory, acknowledge effort and suggest ways to improve
 - If ratings are Needs Improvement, be constructive and focus on growth opportunities
-- Do not include the letter grades (E, G, S, N) in the comment
+- Do not include the letter grades (E, G, S, N) or the exact percentage in the comment
 - Write in a professional but warm tone suitable for parents to read
 - End on a positive or forward-looking note
+${grade !== undefined ? '- Reference the student\'s academic performance naturally without stating the exact grade' : ''}
 
 Generate only the comment text, no additional formatting or labels.`
 
