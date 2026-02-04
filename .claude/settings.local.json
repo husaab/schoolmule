@@ -12,7 +12,9 @@
       "Bash(npm run dev:*)",
       "Bash(git -C \"/mnt/c/Users/husse/OneDrive/Desktop/Github/schoolmule-backend\" status)",
       "Bash(wc:*)",
-      "Skill(frontend-design)"
+      "Skill(frontend-design)",
+      "Skill(feature-dev:feature-dev)",
+      "Skill(frontend-design:frontend-design)"
     ],
     "deny": []
   }

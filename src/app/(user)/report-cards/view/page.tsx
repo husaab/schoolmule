@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
-import { EyeIcon, ArrowDownTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/reportCardService';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import ReportCardDeleteModal from '@/components/report-cards/delete/reportCardDeleteModal';
+import SingleEmailReportCardModal from '@/components/report-cards/email/singleEmailReportCardModal';
+import BulkEmailReportCardModal from '@/components/report-cards/email/bulkEmailReportCardModal';
+import SentEmailReportCardModal from '@/components/report-cards/email/sent/sentEmailReportCardModal';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -18,6 +21,10 @@ type ReportCardRow = {
   file_path: string;
   generated_at: string;
   grade: string;
+  term?: string;
+  email_sent?: boolean;
+  email_sent_at?: string;
+  email_sent_by?: string;
 };
 
 export default function ViewReportCardsPage() {
@@ -32,6 +39,12 @@ export default function ViewReportCardsPage() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<ReportCardRow | null>(null);
+
+  // Email modal states
+  const [selectedForEmail, setSelectedForEmail] = useState<ReportCardRow | null>(null);
+  const [sendEmailModalOpen, setSendEmailModalOpen] = useState(false);
+  const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false);
+  const [bulkEmailModalOpen, setBulkEmailModalOpen] = useState(false);
 
   // Fetch terms when component mounts
   useEffect(() => {
@@ -131,6 +144,29 @@ export default function ViewReportCardsPage() {
     setDeleteModalOpen(true);
   };
 
+  const handleEmailClick = (student: ReportCardRow) => {
+    setSelectedForEmail(student);
+    if (student.email_sent) {
+      setEmailDetailsModalOpen(true);
+    } else {
+      setSendEmailModalOpen(true);
+    }
+  };
+
+  const handleEmailSent = () => {
+    // Refresh the report cards list to update email_sent status
+    if (user.school && term) {
+      getGeneratedReportCards(term, user.school).then((res) => {
+        if (res.status === 'success') {
+          setReportCards(res.data);
+        }
+      });
+    }
+  };
+
+  // Get reports that haven't been emailed yet for bulk email
+  const unemailedReports = reportCards.filter(report => !report.email_sent);
+
 
   return (
     <>
@@ -187,19 +223,33 @@ export default function ViewReportCardsPage() {
                 </div>
               </div>
 
-              {selectedGrade && (
-                <div className="mt-4 flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    Showing {groupedByGrade[selectedGrade]?.length || 0} report cards for {selectedGrade}
-                  </span>
-                  <button
-                    onClick={() => setSelectedGrade('')}
-                    className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                  >
-                    Clear filter
-                  </button>
+              {/* Bulk Email Button */}
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {selectedGrade && (
+                    <>
+                      <span className="text-sm text-gray-600">
+                        Showing {groupedByGrade[selectedGrade]?.length || 0} report cards for {selectedGrade}
+                      </span>
+                      <button
+                        onClick={() => setSelectedGrade('')}
+                        className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                      >
+                        Clear filter
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
+                {unemailedReports.length > 0 && (
+                  <button
+                    onClick={() => setBulkEmailModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
+                  >
+                    <EnvelopeIcon className="h-4 w-4" />
+                    Bulk Email ({unemailedReports.length})
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -265,6 +315,21 @@ export default function ViewReportCardsPage() {
                                     <ArrowDownTrayIcon className="h-5 w-5" />
                                   </button>
                                   <button
+                                    onClick={() => handleEmailClick(student)}
+                                    title={student.email_sent ? "View Email Details" : "Send Email"}
+                                    className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                                      student.email_sent
+                                        ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                        : 'text-purple-600 hover:text-purple-800 hover:bg-purple-50'
+                                    }`}
+                                  >
+                                    {student.email_sent ? (
+                                      <CheckCircleIcon className="h-5 w-5" />
+                                    ) : (
+                                      <EnvelopeIcon className="h-5 w-5" />
+                                    )}
+                                  </button>
+                                  <button
                                     onClick={() => openDeleteModal(student)}
                                     title="Delete Report Card"
                                     className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -306,6 +371,42 @@ export default function ViewReportCardsPage() {
           }}
         />
       )}
+
+      {/* Email Modals */}
+      {sendEmailModalOpen && selectedForEmail && (
+        <SingleEmailReportCardModal
+          isOpen={sendEmailModalOpen}
+          onClose={() => {
+            setSendEmailModalOpen(false);
+            setSelectedForEmail(null);
+          }}
+          studentId={selectedForEmail.student_id}
+          studentName={selectedForEmail.student_name}
+          term={term}
+          onEmailSent={handleEmailSent}
+        />
+      )}
+
+      {emailDetailsModalOpen && selectedForEmail && (
+        <SentEmailReportCardModal
+          isOpen={emailDetailsModalOpen}
+          onClose={() => {
+            setEmailDetailsModalOpen(false);
+            setSelectedForEmail(null);
+          }}
+          studentId={selectedForEmail.student_id}
+          studentName={selectedForEmail.student_name}
+          term={term}
+        />
+      )}
+
+      <BulkEmailReportCardModal
+        isOpen={bulkEmailModalOpen}
+        onClose={() => setBulkEmailModalOpen(false)}
+        availableReports={unemailedReports}
+        term={term}
+        onEmailsSent={handleEmailSent}
+      />
 
       <style jsx global>{`
         .custom-scrollbar {
