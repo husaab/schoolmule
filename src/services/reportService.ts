@@ -9,13 +9,15 @@ const getToken = (): string | null => {
 /**
  * Generate student summary report PDF
  * POST /api/reports/student-summary/:studentId/:classId
+ * @param orientation - 'horizontal' (landscape, default) or 'vertical' (portrait)
  */
 export const generateStudentSummaryReport = async (
   studentId: string,
-  classId: string
+  classId: string,
+  orientation: 'horizontal' | 'vertical' = 'horizontal'
 ): Promise<Blob> => {
   const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
-  const url = `${baseURL}/reports/student-summary/${encodeURIComponent(studentId)}/${encodeURIComponent(classId)}`;
+  const url = `${baseURL}/reports/student-summary/${encodeURIComponent(studentId)}/${encodeURIComponent(classId)}?orientation=${orientation}`;
   const token = getToken();
   
   const response = await fetch(url, {

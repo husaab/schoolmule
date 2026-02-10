@@ -28,6 +28,7 @@ const StudentSummaryPage = () => {
   const [selectedStudent, setSelectedStudent] = useState<string>('')
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [selectedTerm, setSelectedTerm] = useState<string>('active')
+  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal')
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [showPdfModal, setShowPdfModal] = useState(false)
@@ -118,9 +119,9 @@ const StudentSummaryPage = () => {
 
     setGenerating(true)
     try {
-      console.log('Generating report for student:', selectedStudent, 'class:', selectedClass)
-      
-      const pdfBlob = await generateStudentSummaryReport(selectedStudent, selectedClass)
+      console.log('Generating report for student:', selectedStudent, 'class:', selectedClass, 'orientation:', orientation)
+
+      const pdfBlob = await generateStudentSummaryReport(selectedStudent, selectedClass, orientation)
       setPdfBlob(pdfBlob)
       setShowPdfModal(true)
       showNotification('Report generated successfully!', 'success')
@@ -266,6 +267,43 @@ const StudentSummaryPage = () => {
                 </p>
               </div>
             </div>
+
+            {/* Orientation Toggle */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <label className="text-black block text-sm font-medium text-gray-700 mb-3">
+                Report Layout
+              </label>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="orientation"
+                    value="horizontal"
+                    checked={orientation === 'horizontal'}
+                    onChange={() => setOrientation('horizontal')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Landscape
+                    <span className="text-gray-500 ml-1">(recommended)</span>
+                  </span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="orientation"
+                    value="vertical"
+                    checked={orientation === 'vertical'}
+                    onChange={() => setOrientation('vertical')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Portrait</span>
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Landscape provides more room for assessment details and nested categories
+              </p>
+            </div>
           </div>
 
           {/* Preview Section */}
@@ -290,11 +328,17 @@ const StudentSummaryPage = () => {
                   <div>
                     <span className="font-medium text-gray-600">Term:</span>
                     <span className="ml-2 text-gray-900">
-                      {selectedTerm === 'active' 
-                        ? `${activeTerm?.name} (Active)` 
-                        : selectedTerm === 'all' 
-                          ? 'All Terms' 
+                      {selectedTerm === 'active'
+                        ? `${activeTerm?.name} (Active)`
+                        : selectedTerm === 'all'
+                          ? 'All Terms'
                           : selectedTerm}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Layout:</span>
+                    <span className="ml-2 text-gray-900">
+                      {orientation === 'horizontal' ? 'Landscape' : 'Portrait'}
                     </span>
                   </div>
                 </div>
