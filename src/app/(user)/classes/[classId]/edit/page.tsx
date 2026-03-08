@@ -39,8 +39,10 @@ import {
   ChevronDownIcon,
   CalendarDaysIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline'
+import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
 
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
@@ -58,6 +60,7 @@ export default function EditClassPage() {
   const [allStudents, setAllStudents] = useState<StudentPayload[]>([])
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [showUnenrollAllModal, setShowUnenrollAllModal] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
 
   // ───── Class Details ─────
   const [classData, setClassData] = useState<ClassPayload | null>(null)
@@ -409,6 +412,14 @@ export default function EditClassPage() {
               <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium">
                 Grade {grade}
               </span>
+              <button
+                onClick={() => setShowDuplicateModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-lg text-sm font-medium hover:from-violet-600 hover:to-purple-600 transition-all cursor-pointer"
+                title="Duplicate Class"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4" />
+                Duplicate
+              </button>
             </div>
             <p className="text-slate-500 ml-12">{subject} • {teacherName}</p>
           </div>
@@ -976,6 +987,16 @@ export default function EditClassPage() {
           onClose={() => setShowUnenrollAllModal(false)}
           classId={classId}
           onUnenrolledAll={() => setEnrolledStudents([])}
+        />
+      )}
+
+      {/* ─ Duplicate Class Modal ─ */}
+      {showDuplicateModal && classData && (
+        <ClassDuplicateModal
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+          sourceClass={classData}
+          onDuplicated={() => router.push('/classes')}
         />
       )}
     </>

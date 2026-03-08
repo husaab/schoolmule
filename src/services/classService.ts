@@ -13,6 +13,7 @@ import {
   EnrollStudentResponse,
   UnenrollStudentResponse,
 } from "./types/student";
+import { GradeValue } from "@/lib/schoolUtils";
 
 /**
  * Fetch all classes for a given school
@@ -311,4 +312,38 @@ export const downloadGradebookExcel = async (
     throw new Error(`Failed to download gradebook: ${response.status}`);
   }
   return response.blob();
+};
+
+// ── Duplicate Class ──
+
+export interface DuplicateClassPayload {
+  grade: GradeValue;
+  subject: string;
+  teacherName: string;
+  teacherId: string;
+  termId: string;
+  termName: string;
+}
+
+export interface DuplicateClassResponse {
+  status: string;
+  data: ClassPayload & {
+    assessmentsCopied: number;
+    studentsCopied: number;
+  };
+  message?: string;
+}
+
+export const duplicateClass = async (
+  sourceClassId: string,
+  payload: DuplicateClassPayload
+): Promise<DuplicateClassResponse> => {
+  return apiClient<DuplicateClassResponse>(
+    `/classes/${sourceClassId}/duplicate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+    }
+  );
 };

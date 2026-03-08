@@ -7,17 +7,20 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import ClassViewModal from '@/components/classes/view/classViewModal'
 import ClassAddModal from '@/components/classes/add/classAddModal'
 import ClassDeleteModal from '@/components/classes/delete/classDeleteModal'
+import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
-import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { getGradeOptions } from '@/lib/schoolUtils'
 
 const ClassesPage = () => {
+  const router = useRouter()
   const user = useUserStore((state) => state.user)
   
   const [classes, setClasses] = useState<ClassPayload[]>([])
@@ -31,6 +34,7 @@ const ClassesPage = () => {
   const [viewClass, setViewClass] = useState<ClassPayload | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
+  const [duplicateTarget, setDuplicateTarget] = useState<ClassPayload | null>(null)
 
   const loadClasses = useCallback(async () => {
     if (!user.school || !user.id) return;
@@ -279,7 +283,8 @@ const ClassesPage = () => {
                             {classesForGrade.map((cls) => (
                               <div
                                 key={cls.classId}
-                                className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group"
+                                onClick={() => router.push(`/classes/${cls.classId}/edit`)}
+                                className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group cursor-pointer"
                               >
                                 <div className="flex items-center gap-4">
                                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
@@ -299,7 +304,7 @@ const ClassesPage = () => {
                                   <span className="hidden sm:inline-flex px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium">
                                     {cls.termName || 'No term'}
                                   </span>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                     <button
                                       onClick={() => setViewClass(cls)}
                                       className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -314,6 +319,13 @@ const ClassesPage = () => {
                                     >
                                       <PencilSquareIcon className="h-5 w-5" />
                                     </Link>
+                                    <button
+                                      onClick={() => setDuplicateTarget(cls)}
+                                      className="p-2 rounded-lg text-violet-500 hover:text-violet-700 hover:bg-violet-50 transition-colors cursor-pointer"
+                                      title="Duplicate Class"
+                                    >
+                                      <DocumentDuplicateIcon className="h-5 w-5" />
+                                    </button>
                                     <button
                                       onClick={() => setDeleteTarget(cls)}
                                       className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
@@ -384,6 +396,16 @@ const ClassesPage = () => {
           onClose={() => setDeleteTarget(null)}
           classData={deleteTarget}
           onDeleted={() => loadClasses()}
+        />
+      )}
+
+      {/* Class Duplicate Modal */}
+      {duplicateTarget && (
+        <ClassDuplicateModal
+          isOpen={!!duplicateTarget}
+          onClose={() => setDuplicateTarget(null)}
+          sourceClass={duplicateTarget}
+          onDuplicated={() => loadClasses()}
         />
       )}
     </>
