@@ -26,7 +26,9 @@ import {
   PencilSquareIcon,
   EyeIcon,
   BanknotesIcon,
-  PresentationChartLineIcon
+  PresentationChartLineIcon,
+  UserCircleIcon,
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -270,6 +272,14 @@ const Sidebar = () => {
               <div className="border-t border-slate-100" />
             </div>
 
+            {/* My Attendance */}
+            <NavItem
+              href="/my-attendance"
+              label="My Attendance"
+              icon={UserCircleIcon}
+              isActive={pathname === '/my-attendance'}
+            />
+
             {/* Schedule */}
             <NavItem
               href="/schedule"
@@ -300,12 +310,20 @@ const Sidebar = () => {
 
             {/* Admin Panel */}
             {user?.role === 'ADMIN' && (
-              <NavItem
-                href="/admin-panel"
-                label="Admin Panel"
-                icon={ShieldCheckIcon}
-                isActive={pathname.startsWith('/admin-panel')}
-              />
+              <>
+                <NavItem
+                  href="/admin-panel"
+                  label="Admin Panel"
+                  icon={ShieldCheckIcon}
+                  isActive={pathname.startsWith('/admin-panel')}
+                />
+                <NavItem
+                  href="/staff-attendance"
+                  label="Staff Attendance"
+                  icon={IdentificationIcon}
+                  isActive={pathname === '/staff-attendance'}
+                />
+              </>
             )}
           </>
         )}

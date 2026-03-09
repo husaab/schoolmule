@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -10,6 +10,8 @@ import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/das
 import Spinner from '@/components/Spinner'
 import StaffList from '@/components/staff/StaffList'
 import { format } from 'date-fns'
+import CheckInModal from '@/components/teacherAttendance/CheckInModal'
+import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
 import {
   LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer
@@ -37,6 +39,41 @@ const DashboardPage: React.FC = () => {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [trend, setTrend] = useState<AttendanceTrendPoint[]>([])
   const [daysWindow, setDaysWindow] = useState<number>(7)
+  const [showCheckIn, setShowCheckIn] = useState(false)
+
+  // Check-in flow: localStorage for instant suppression, backend as source of truth
+  useEffect(() => {
+    if (!user.id || user.role === 'PARENT') return
+
+    const localKey = `checkin_date_${user.id}`
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+
+    // Fast path: already checked in today per localStorage
+    if (localStorage.getItem(localKey) === todayStr) return
+
+    // Slow path: ask the backend
+    getTodayStatus()
+      .then((res) => {
+        if (res.data.checkedIn) {
+          localStorage.setItem(localKey, todayStr)
+        } else {
+          setShowCheckIn(true)
+        }
+      })
+      .catch(() => {
+        // Silently fail — don't block dashboard
+      })
+  }, [user.id, user.role])
+
+  const handleCheckIn = useCallback(
+    async (status: 'PRESENT' | 'ABSENT') => {
+      await checkIn(status)
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      localStorage.setItem(`checkin_date_${user.id}`, todayStr)
+      setShowCheckIn(false)
+    },
+    [user.id]
+  )
 
   useEffect(() => {
     if (!user.school) return
@@ -272,6 +309,11 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </main>
+      <CheckInModal
+        isOpen={showCheckIn}
+        onCheckIn={handleCheckIn}
+        onSkip={() => setShowCheckIn(false)}
+      />
     </>
   )
 }

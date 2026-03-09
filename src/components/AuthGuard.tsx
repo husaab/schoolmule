@@ -73,7 +73,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         path !== '/school-approval'
       ) {
         router.replace('/school-approval')
-      } else if (path.startsWith('/admin-panel') && user.role !== "ADMIN") {
+      } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
       } else if (user.role === 'PARENT' && !isParentPath(path)) {
         router.replace("/parent/dashboard")
