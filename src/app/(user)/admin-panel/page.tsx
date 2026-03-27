@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -41,6 +41,15 @@ const adminLinks = [
     color: 'bg-amber-500',
     bgColor: 'from-amber-50 to-orange-50',
     borderColor: 'border-amber-100',
+  },
+  {
+    href: '/admin-panel/patch-notes',
+    label: 'Patch Notes',
+    description: 'Create and manage product updates shown to users.',
+    icon: SparklesIcon,
+    color: 'bg-cyan-500',
+    bgColor: 'from-cyan-50 to-teal-50',
+    borderColor: 'border-cyan-100',
   },
 ];
 

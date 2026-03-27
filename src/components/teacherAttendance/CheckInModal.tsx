@@ -2,21 +2,26 @@
 
 import Modal from '@/components/shared/modal'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface CheckInModalProps {
   isOpen: boolean
-  onCheckIn: (status: 'PRESENT' | 'ABSENT') => Promise<void>
+  onCheckIn: (status: 'PRESENT' | 'ABSENT', notes: string | null) => Promise<void>
   onSkip: () => void
 }
 
 export default function CheckInModal({ isOpen, onCheckIn, onSkip }: CheckInModalProps) {
   const [loading, setLoading] = useState(false)
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    if (isOpen) setNotes('')
+  }, [isOpen])
 
   const handleCheckIn = async (status: 'PRESENT' | 'ABSENT') => {
     setLoading(true)
     try {
-      await onCheckIn(status)
+      await onCheckIn(status, notes.trim() || null)
     } finally {
       setLoading(false)
     }
@@ -49,6 +54,20 @@ export default function CheckInModal({ isOpen, onCheckIn, onSkip }: CheckInModal
             <XCircleIcon className="w-12 h-12 text-red-500" />
             <span className="text-base font-semibold text-red-700">Absent</span>
           </button>
+        </div>
+
+        <div className="mt-5">
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">
+            Notes <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. only worked 7 hours today"
+            rows={2}
+            maxLength={500}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none placeholder:text-slate-300"
+          />
         </div>
 
         <button

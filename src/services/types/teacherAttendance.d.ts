@@ -3,6 +3,7 @@ export interface TodayStatusResponse {
   data: {
     checkedIn: boolean;
     status: string | null;
+    notes?: string | null;
   };
 }
 
@@ -12,12 +13,14 @@ export interface CheckInResponse {
     teacherId: string;
     attendanceDate: string;
     status: string;
+    notes?: string | null;
   };
 }
 
 export interface AttendanceRecord {
   attendanceDate: string;
   status: "PRESENT" | "ABSENT";
+  notes?: string | null;
 }
 
 export interface MyMonthResponse {
@@ -52,5 +55,6 @@ export interface UpdateRecordResponse {
     teacherId: string;
     attendanceDate: string;
     status: string;
+    notes?: string | null;
   };
 }

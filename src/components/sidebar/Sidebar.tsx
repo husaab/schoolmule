@@ -28,11 +28,13 @@ import {
   BanknotesIcon,
   PresentationChartLineIcon,
   UserCircleIcon,
-  IdentificationIcon
+  IdentificationIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
+import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 
 interface NavLink {
   href: string;
@@ -67,6 +69,7 @@ const Sidebar = () => {
   const pathname = usePathname();
   const user = useUserStore(s => s.user);
   const { isOpen: sidebarOpen, closeSidebar } = useSidebarStore();
+  const hasUnread = usePatchNotesStore((s) => s.hasUnread);
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -331,6 +334,19 @@ const Sidebar = () => {
         {/* Divider */}
         <div className="py-1">
           <div className="border-t border-slate-100" />
+        </div>
+
+        {/* What's New */}
+        <div className="relative">
+          <NavItem
+            href="/whats-new"
+            icon={SparklesIcon}
+            label="What's New"
+            isActive={pathname === '/whats-new'}
+          />
+          {hasUnread && (
+            <span className="absolute top-1/2 -translate-y-1/2 right-4 h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+          )}
         </div>
 
         {/* Settings */}

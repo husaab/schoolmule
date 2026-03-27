@@ -51,8 +51,8 @@ const DashboardPage: React.FC = () => {
     // Fast path: already checked in today per localStorage
     if (localStorage.getItem(localKey) === todayStr) return
 
-    // Slow path: ask the backend
-    getTodayStatus()
+    // Slow path: ask the backend (send local date to avoid UTC mismatch)
+    getTodayStatus(todayStr)
       .then((res) => {
         if (res.data.checkedIn) {
           localStorage.setItem(localKey, todayStr)
@@ -66,9 +66,9 @@ const DashboardPage: React.FC = () => {
   }, [user.id, user.role])
 
   const handleCheckIn = useCallback(
-    async (status: 'PRESENT' | 'ABSENT') => {
-      await checkIn(status)
+    async (status: 'PRESENT' | 'ABSENT', notes: string | null) => {
       const todayStr = format(new Date(), 'yyyy-MM-dd')
+      await checkIn(status, todayStr, notes)
       localStorage.setItem(`checkin_date_${user.id}`, todayStr)
       setShowCheckIn(false)
     },

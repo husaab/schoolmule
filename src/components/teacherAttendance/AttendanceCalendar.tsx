@@ -6,16 +6,18 @@ import {
   startOfWeek,
   endOfWeek,
   eachDayOfInterval,
+  addDays,
   format,
   isSameMonth,
   isToday,
-  isFuture,
+  isAfter,
   isWeekend,
 } from 'date-fns'
 
 interface AttendanceRecord {
   attendanceDate: string
   status: 'PRESENT' | 'ABSENT'
+  notes?: string | null
 }
 
 interface AttendanceCalendarProps {
@@ -39,11 +41,10 @@ export default function AttendanceCalendar({
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   // Build lookup map
-  const statusMap: Record<string, string> = {}
+  const recordMap: Record<string, AttendanceRecord> = {}
   records.forEach((r) => {
-    // Normalize to YYYY-MM-DD
     const key = r.attendanceDate.substring(0, 10)
-    statusMap[key] = r.status
+    recordMap[key] = r
   })
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -69,9 +70,11 @@ export default function AttendanceCalendar({
           const inMonth = isSameMonth(day, month)
           const weekend = isWeekend(day)
           const today = isToday(day)
-          const future = isFuture(day)
-          const status = statusMap[dateStr] || null
-          const disabled = !inMonth || weekend || future || readOnly
+          const tooFarAhead = isAfter(day, addDays(new Date(), 7))
+          const record = recordMap[dateStr] || null
+          const status = record?.status ?? null
+          const hasNote = !!(record?.notes)
+          const disabled = !inMonth || weekend || tooFarAhead || readOnly
 
           let bgClass = 'bg-white'
           if (!inMonth) bgClass = 'bg-transparent'
@@ -88,13 +91,14 @@ export default function AttendanceCalendar({
             <button
               key={dateStr}
               disabled={disabled}
+              title={hasNote ? record!.notes! : undefined}
               onClick={() => {
                 if (!disabled && onDayClick) {
                   onDayClick(dateStr, status)
                 }
               }}
               className={`
-                relative flex flex-col items-center justify-center
+                group relative flex flex-col items-center justify-center
                 rounded-xl p-2 min-h-[48px] transition-all duration-150
                 ${bgClass} ${textClass}
                 ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
@@ -107,6 +111,14 @@ export default function AttendanceCalendar({
                 <span className="text-[10px] font-semibold mt-0.5">
                   {status === 'PRESENT' ? 'P' : 'A'}
                 </span>
+              )}
+              {inMonth && !weekend && hasNote && (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute top-1.5 right-1.5" />
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] leading-tight text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 whitespace-pre-wrap">
+                    {record!.notes}
+                  </span>
+                </>
               )}
             </button>
           )
@@ -126,6 +138,10 @@ export default function AttendanceCalendar({
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-slate-50 border border-slate-200" />
           Weekend
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-amber-400" />
+          Has note
         </div>
       </div>
     </div>

@@ -9,22 +9,22 @@ import {
 
 const BASE = "/teacher-attendance";
 
-export const getTodayStatus = () =>
-  apiClient<TodayStatusResponse>(`${BASE}/today`);
+export const getTodayStatus = (date: string) =>
+  apiClient<TodayStatusResponse>(`${BASE}/today?date=${encodeURIComponent(date)}`);
 
-export const checkIn = (status: "PRESENT" | "ABSENT") =>
+export const checkIn = (status: "PRESENT" | "ABSENT", date: string, notes?: string | null) =>
   apiClient<CheckInResponse>(`${BASE}/checkin`, {
     method: "POST",
-    body: { status },
+    body: { status, date, notes: notes ?? null },
   });
 
 export const getMyMonth = (month: string) =>
   apiClient<MyMonthResponse>(`${BASE}/me?month=${encodeURIComponent(month)}`);
 
-export const updateMyRecord = (date: string, status: "PRESENT" | "ABSENT") =>
+export const updateMyRecord = (date: string, status: "PRESENT" | "ABSENT", notes?: string | null) =>
   apiClient<UpdateRecordResponse>(`${BASE}/me/${date}`, {
     method: "PATCH",
-    body: { status },
+    body: { status, notes: notes ?? null },
   });
 
 export const getAllTeacherAttendance = (school: string, month: string) =>
@@ -35,11 +35,12 @@ export const getAllTeacherAttendance = (school: string, month: string) =>
 export const updateTeacherRecord = (
   teacherId: string,
   date: string,
-  status: "PRESENT" | "ABSENT"
+  status: "PRESENT" | "ABSENT",
+  notes?: string | null
 ) =>
   apiClient<UpdateRecordResponse>(`${BASE}/${teacherId}/${date}`, {
     method: "PATCH",
-    body: { status },
+    body: { status, notes: notes ?? null },
   });
 
 export const downloadAttendancePDF = async (

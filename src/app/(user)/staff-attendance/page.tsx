@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
 import Spinner from '@/components/Spinner'
 import AttendanceCalendar from '@/components/teacherAttendance/AttendanceCalendar'
+import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceModal'
 import {
   getAllTeacherAttendance,
   updateTeacherRecord,
@@ -28,6 +29,12 @@ export default function StaffAttendancePage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [editTarget, setEditTarget] = useState<{
+    teacherId: string
+    date: string
+    status: 'PRESENT' | 'ABSENT' | null
+    notes: string | null
+  } | null>(null)
 
   const monthStr = format(currentMonth, 'yyyy-MM')
 
@@ -49,15 +56,27 @@ export default function StaffAttendancePage() {
     if (user.id) loadData()
   }, [user.id, loadData])
 
-  const handleDayClick = async (
+  const handleDayClick = (
     teacherId: string,
     date: string,
     currentStatus: string | null
   ) => {
-    const newStatus: 'PRESENT' | 'ABSENT' =
-      currentStatus === 'PRESENT' ? 'ABSENT' : 'PRESENT'
+    const teacher = teachers.find((t) => t.teacherId === teacherId)
+    const record = teacher?.records.find((r) => r.attendanceDate.substring(0, 10) === date)
+    setEditTarget({
+      teacherId,
+      date,
+      status: (currentStatus as 'PRESENT' | 'ABSENT' | null) ?? null,
+      notes: record?.notes ?? null,
+    })
+  }
+
+  const handleEditSave = async (status: 'PRESENT' | 'ABSENT', notes: string | null) => {
+    if (!editTarget) return
+    const { teacherId, date } = editTarget
     try {
-      await updateTeacherRecord(teacherId, date, newStatus)
+      await updateTeacherRecord(teacherId, date, status, notes)
+      setEditTarget(null)
       await loadData()
     } catch {
       // fail silently
@@ -207,6 +226,15 @@ export default function StaffAttendancePage() {
           </div>
         </div>
       </main>
+
+      <EditAttendanceModal
+        isOpen={!!editTarget}
+        date={editTarget?.date ?? ''}
+        currentStatus={editTarget?.status ?? null}
+        currentNotes={editTarget?.notes ?? null}
+        onSave={handleEditSave}
+        onClose={() => setEditTarget(null)}
+      />
     </>
   )
 }
