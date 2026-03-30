@@ -11,6 +11,8 @@ import {
   updateClass,
   getAssessmentsByClass,
   getStudentsInClass,
+  addTeacherToClass,
+  removeTeacherFromClass,
 } from '@/services/classService'
 import { ClassPayload } from '@/services/types/class'
 import { AssessmentPayload } from '@/services/types/assessment'
@@ -27,7 +29,11 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
-import { getGradeOptions, GradeValue } from '@/lib/schoolUtils'
+import { getGradeDisplayName, getGradeOptions, GradeValue, isJKSK } from '@/lib/schoolUtils'
+import { getJKSKDomains, deleteJKSKDomain } from '@/services/jkskService'
+import type { JKSKDomain } from '@/services/types/jksk'
+import JKSKDomainEditModal from '@/components/jksk/JKSKDomainEditModal'
+import JKSKDomainAddModal from '@/components/jksk/JKSKDomainAddModal'
 import Spinner from '@/components/Spinner'
 import {
   ArrowLeftIcon,
@@ -40,7 +46,8 @@ import {
   CalendarDaysIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
-  DocumentDuplicateIcon
+  DocumentDuplicateIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
 
@@ -78,6 +85,11 @@ export default function EditClassPage() {
   const [loadingTeachers, setLoadingTeachers] = useState(false)
   const [loadingTerms, setLoadingTerms] = useState(false)
 
+  // ───── Additional Teachers ─────
+  const [addTeacherId, setAddTeacherId] = useState<string>('')
+  const [addingTeacher, setAddingTeacher] = useState(false)
+  const [removingTeacherId, setRemovingTeacherId] = useState<string | null>(null)
+
   // ───── Assessments ─────
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
   const [assessLoading, setAssessLoading] = useState(false)
@@ -87,6 +99,14 @@ export default function EditClassPage() {
   const [editingAssessment, setEditingAssessment] = useState<AssessmentPayload | null>(null)
   const [deleteAssessmentTarget, setDeleteAssessmentTarget] = useState<AssessmentPayload | null>(null)
   const [showAddAssessmentModal, setShowAddAssessmentModal] = useState(false)
+
+  // ───── JK/SK Skill Domains ─────
+  const [jkskProgressDomains, setJkskProgressDomains] = useState<JKSKDomain[]>([])
+  const [jkskReportCardDomains, setJkskReportCardDomains] = useState<JKSKDomain[]>([])
+  const [jkskDomainsLoading, setJkskDomainsLoading] = useState(false)
+  const [editingDomain, setEditingDomain] = useState<JKSKDomain | null>(null)
+  const [addDomainType, setAddDomainType] = useState<'progress_report' | 'report_card' | null>(null)
+  const [deletingDomainId, setDeletingDomainId] = useState<string | null>(null)
 
   // ───── Fetch “all students” once ─────
   useEffect(() => {
@@ -196,9 +216,59 @@ export default function EditClassPage() {
     fetchAssessments()
   }, [classData, classId])
 
-  // ───── Fetch teachers and terms once entering edit mode ─────
+  // ───── Fetch JK/SK domains ─────
+  const refreshJKSKDomains = async () => {
+    if (!classData || !isJKSK(classData.grade) || !classData.school) return
+    setJkskDomainsLoading(true)
+    try {
+      const [prRes, rcRes] = await Promise.all([
+        getJKSKDomains('progress_report', classData.school),
+        getJKSKDomains('report_card', classData.school),
+      ])
+      const prDomains = prRes.status === 'success' ? prRes.data : []
+      const rcDomains = rcRes.status === 'success' ? rcRes.data : []
+      setJkskProgressDomains(prDomains)
+      setJkskReportCardDomains(rcDomains)
+
+      // Update the editing domain with fresh data if modal is open
+      if (editingDomain) {
+        const allDomains = [...prDomains, ...rcDomains]
+        const updated = allDomains.find(d => d.domainId === editingDomain.domainId)
+        if (updated) {
+          setEditingDomain(updated)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setJkskDomainsLoading(false)
+    }
+  }
+
   useEffect(() => {
-    if (!isEditing || !user.school) return
+    refreshJKSKDomains()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classData])
+
+  const handleDeleteDomain = async (domainId: string) => {
+    if (!confirm('Delete this domain and all its skills?')) return
+    setDeletingDomainId(domainId)
+    try {
+      const res = await deleteJKSKDomain(domainId)
+      if (res.status === 'success') {
+        showNotification('Domain deleted', 'success')
+        refreshJKSKDomains()
+      }
+    } catch {
+      showNotification('Failed to delete domain', 'error')
+    } finally {
+      setDeletingDomainId(null)
+    }
+  }
+
+  // ───── Fetch teachers (always needed for additional teachers section) and terms (on edit) ─────
+  useEffect(() => {
+    if (!user.school) return
 
     const fetchTeachers = async () => {
       setLoadingTeachers(true)
@@ -237,7 +307,7 @@ export default function EditClassPage() {
 
     fetchTeachers()
     fetchTerms()
-  }, [isEditing, user.school, showNotification])
+  }, [user.school, showNotification])
 
   // ───── Populate “edit” fields when starting to edit ─────
   useEffect(() => {
@@ -355,6 +425,7 @@ export default function EditClassPage() {
           termName:      updatedRaw.termName,
           createdAt:     updatedRaw.createdAt,
           lastModifiedAt: updatedRaw.lastModifiedAt,
+          additionalTeachers: updatedRaw.additionalTeachers ?? [],
         })
         showNotification('Class updated successfully', 'success')
         setIsEditing(false)
@@ -370,6 +441,63 @@ export default function EditClassPage() {
   const handleCancel = () => {
     setIsEditing(false)
   }
+
+  // ─── Additional Teachers handlers ───
+  const handleAddAdditionalTeacher = async () => {
+    if (!addTeacherId || !classData) return
+
+    setAddingTeacher(true)
+    try {
+      const res = await addTeacherToClass(classId, addTeacherId)
+      if (res.status === 'success') {
+        // Re-fetch class to get updated additionalTeachers
+        const classRes = await getClassById(classId)
+        if (classRes.status === 'success') {
+          setClassData(classRes.data)
+        }
+        setAddTeacherId('')
+        showNotification('Teacher added successfully', 'success')
+      } else {
+        showNotification(res.message || 'Failed to add teacher', 'error')
+      }
+    } catch (err) {
+      console.error('Error adding teacher:', err)
+      showNotification('Failed to add teacher', 'error')
+    } finally {
+      setAddingTeacher(false)
+    }
+  }
+
+  const handleRemoveAdditionalTeacher = async (teacherId: string) => {
+    if (!classData) return
+
+    setRemovingTeacherId(teacherId)
+    try {
+      const res = await removeTeacherFromClass(classId, teacherId)
+      if (res.status === 'success') {
+        // Re-fetch class to get updated additionalTeachers
+        const classRes = await getClassById(classId)
+        if (classRes.status === 'success') {
+          setClassData(classRes.data)
+        }
+        showNotification('Teacher removed', 'success')
+      } else {
+        showNotification(res.message || 'Failed to remove teacher', 'error')
+      }
+    } catch (err) {
+      console.error('Error removing teacher:', err)
+      showNotification('Failed to remove teacher', 'error')
+    } finally {
+      setRemovingTeacherId(null)
+    }
+  }
+
+  // Teachers available to add (exclude primary + already assigned)
+  const availableTeachersToAdd = teachers.filter((t) => {
+    if (t.userId === classData?.teacherId) return false
+    if (classData?.additionalTeachers?.some((at) => at.teacherId === t.userId)) return false
+    return true
+  })
 
   // ─── Filter & Sort Assessments ───
   const filteredAssessments = assessments
@@ -410,7 +538,7 @@ export default function EditClassPage() {
                 Edit Class
               </h1>
               <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium">
-                Grade {grade}
+                {getGradeDisplayName(grade)}
               </span>
               <button
                 onClick={() => setShowDuplicateModal(true)}
@@ -472,7 +600,7 @@ export default function EditClassPage() {
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl">
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Grade</p>
-                      <p className="text-slate-900 font-medium">Grade {grade}</p>
+                      <p className="text-slate-900 font-medium">{getGradeDisplayName(grade)}</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl">
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Teacher</p>
@@ -595,6 +723,92 @@ export default function EditClassPage() {
               </div>
             </div>
 
+            {/* ─────────────── Additional Teachers Section ─────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                    <UserGroupIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Additional Teachers</h2>
+                    <p className="text-xs text-slate-500">
+                      Teachers who can also view and edit this class
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Current additional teachers */}
+                {(classData?.additionalTeachers ?? []).length > 0 ? (
+                  <div className="space-y-2 mb-4">
+                    {(classData?.additionalTeachers ?? []).map((t) => (
+                      <div
+                        key={t.teacherId}
+                        className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{t.fullName}</p>
+                          <p className="text-xs text-slate-500">{t.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveAdditionalTeacher(t.teacherId)}
+                          disabled={removingTeacherId === t.teacherId}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                          title={`Remove ${t.fullName}`}
+                        >
+                          {removingTeacherId === t.teacherId ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <XMarkIcon className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 mb-4">
+                    No additional teachers assigned to this class.
+                  </p>
+                )}
+
+                {/* Add teacher dropdown */}
+                <div className="flex items-center gap-2">
+                  {loadingTeachers ? (
+                    <p className="text-sm text-slate-500">Loading teachers...</p>
+                  ) : (
+                    <>
+                      <select
+                        value={addTeacherId}
+                        onChange={(e) => setAddTeacherId(e.target.value)}
+                        className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-black bg-slate-50 focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all cursor-pointer"
+                      >
+                        <option value="">Select a teacher to add...</option>
+                        {availableTeachersToAdd.map((t) => (
+                          <option key={t.userId} value={t.userId}>
+                            {t.fullName}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAddAdditionalTeacher}
+                        disabled={!addTeacherId || addingTeacher}
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:from-violet-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        {addingTeacher ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <PlusIcon className="w-4 h-4" />
+                        )}
+                        Add
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* ─────────────── Manage Students Section ─────────────── */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
               {/* Section Header */}
@@ -649,7 +863,7 @@ export default function EditClassPage() {
                           >
                             <div>
                               <p className="font-medium text-slate-900">{stu.name}</p>
-                              <p className="text-sm text-slate-500">Grade {stu.grade}</p>
+                              <p className="text-sm text-slate-500">{getGradeDisplayName(stu.grade)}</p>
                             </div>
                             <button
                               onClick={() => handleRemoveClick(stu)}
@@ -685,193 +899,373 @@ export default function EditClassPage() {
             </div>
             {/* ───────────── End Manage Students ───────────── */}
 
-            {/* ─────────────── Assessments Section ─────────────── */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              {/* Section Header */}
-              <button
-                onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
-                className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white cursor-pointer hover:from-cyan-600 hover:to-teal-600 transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                    <ClipboardDocumentListIcon className="w-5 h-5" />
-                  </div>
-                  <span className="text-lg font-semibold">Assessments</span>
-                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
-                    {assessments.filter(a => !a.parentAssessmentId).length} total
-                  </span>
-                </div>
-                <ChevronDownIcon
-                  className={`w-5 h-5 transform transition-transform duration-200 ${
-                    isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
-                  }`}
-                />
-              </button>
-
-              {!isAssessmentsCollapsed && (
-                <div>
-                  {/* Controls: Search / Sort / Add */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <input
-                      type="text"
-                      placeholder="Search assessments…"
-                      value={searchAssess}
-                      onChange={(e) => setSearchAssess(e.target.value)}
-                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black"
-                    />
-
-                    <select
-                      value={weightSort}
-                      onChange={(e) => setWeightSort(e.target.value as 'asc' | 'desc')}
-                      className="w-full sm:w-40 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black cursor-pointer"
-                    >
-                      <option value="asc">Points ↑</option>
-                      <option value="desc">Points ↓</option>
-                    </select>
-
-                    <button
-                      onClick={() => setShowAddAssessmentModal(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm whitespace-nowrap"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                      Add Assessment
-                    </button>
-                  </div>
-
-                  {/* Total Points Banner */}
-                  {totalPoints !== 100 ? (
-                    <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 border-b border-amber-100">
-                      <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                      <div>
-                        <p className="text-amber-700 font-medium">
-                          Total: <strong>{totalPoints.toFixed(1)} points</strong>
-                        </p>
-                        <p className="text-amber-600 text-sm">
-                          Assessments should total 100 points for proper grade calculation.
-                        </p>
-                      </div>
+            {/* ─────────────── Assessments / Skill Domains Section ─────────────── */}
+            {isJKSK(grade) ? (
+              /* ── JK/SK: Show Skill Domains ── */
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <button
+                  onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
+                  className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-purple-500 to-violet-500 text-white cursor-pointer hover:from-purple-600 hover:to-violet-600 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <ClipboardDocumentListIcon className="w-5 h-5" />
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border-b border-emerald-100">
-                      <CheckCircleIcon className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-                      <p className="text-emerald-700 font-medium">
-                        Total: <strong>{totalPoints.toFixed(1)} points</strong>
-                      </p>
-                    </div>
-                  )}
+                    <span className="text-lg font-semibold">Skill Domains</span>
+                    <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                      {jkskProgressDomains.length + jkskReportCardDomains.length} domains
+                    </span>
+                  </div>
+                  <ChevronDownIcon
+                    className={`w-5 h-5 transform transition-transform duration-200 ${
+                      isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
+                    }`}
+                  />
+                </button>
 
-                  {/* Assessment List */}
-                  <div className="p-6 max-h-[500px] overflow-y-auto space-y-3">
-                    {assessLoading ? (
+                {!isAssessmentsCollapsed && (
+                  <div className="p-6 space-y-6">
+                    {jkskDomainsLoading ? (
                       <div className="flex justify-center py-8">
                         <Spinner size="md" />
                       </div>
-                    ) : assessError ? (
-                      <p className="text-red-600 text-center py-4">{assessError}</p>
-                    ) : filteredAssessments.length === 0 ? (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
-                          <ClipboardDocumentListIcon className="h-6 w-6 text-slate-400" />
-                        </div>
-                        <p className="text-slate-500">No assessments found.</p>
-                      </div>
                     ) : (
-                      filteredAssessments.map((a) => {
-                        if (a.parentAssessmentId) return null;
-
-                        const childAssessments = a.isParent
-                          ? filteredAssessments.filter(child => child.parentAssessmentId === a.assessmentId)
-                          : [];
-
-                        return (
-                          <div key={a.assessmentId} className="space-y-2">
-                            {/* Parent/Standalone Assessment */}
-                            <div
-                              className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                                a.isParent
-                                  ? 'bg-blue-50 border-blue-100 hover:bg-blue-100'
-                                  : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
-                              }`}
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-slate-900">{a.name}</p>
-                                  {a.isParent && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
-                                      Multiple
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                                  <span className="font-medium text-slate-700">
-                                    {a.weightPoints || a.weightPercent || 0} pts
-                                  </span>
-                                  {a.maxScore && !a.isParent && (
-                                    <span>Max: {a.maxScore}</span>
-                                  )}
-                                  <span>{a.date ? a.date.split('T')[0] : "No date"}</span>
-                                  {a.isParent && childAssessments.length > 0 && (
-                                    <span className="text-blue-600">
-                                      {childAssessments.length} sub-assessment{childAssessments.length !== 1 ? 's' : ''}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => setEditingAssessment(a)}
-                                  className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors cursor-pointer text-sm font-medium"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => setDeleteAssessmentTarget(a)}
-                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                  title={a.isParent ? "Delete parent and all child assessments" : "Delete assessment"}
-                                >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Child Assessments */}
-                            {a.isParent && childAssessments.length > 0 && (
-                              <div className="ml-6 space-y-1">
-                                {childAssessments.map((child) => (
-                                  <div
-                                    key={child.assessmentId}
-                                    className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg"
-                                  >
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-slate-300">└─</span>
-                                        <p className="font-medium text-slate-700 text-sm">{child.name}</p>
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
-                                          Individual
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-4 ml-6 mt-1 text-xs text-slate-400">
-                                        <span>{child.weightPoints || child.weightPercent || 0} pts</span>
-                                        {child.maxScore && <span>Max: {child.maxScore}</span>}
-                                        <span>{child.date ? child.date.split('T')[0] : "No date"}</span>
-                                      </div>
-                                    </div>
-                                    <span className="text-xs text-slate-400 italic">Edit via parent</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                      <>
+                        {/* Info Banner */}
+                        <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-100 rounded-xl">
+                          <AcademicCapIcon className="h-5 w-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-purple-700">
+                            <p className="font-medium mb-1">Skill-based grading for {getGradeDisplayName(grade)}</p>
+                            <p className="text-purple-600">These domains and skills are used for progress reports and report cards. To enter ratings for students, open the gradebook.</p>
                           </div>
-                        );
-                      }).filter(Boolean)
+                        </div>
+
+                        {/* Progress Report Domains */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              Progress Report Domains
+                              <span className="text-xs font-normal normal-case text-slate-400">(D / B / I / N)</span>
+                            </h3>
+                            <button
+                              onClick={() => setAddDomainType('progress_report')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 cursor-pointer transition-colors"
+                            >
+                              <PlusIcon className="w-3.5 h-3.5" />
+                              Add Domain
+                            </button>
+                          </div>
+                          {jkskProgressDomains.length > 0 ? (
+                            <div className="space-y-3">
+                              {jkskProgressDomains.map((domain) => (
+                                <div key={domain.domainId} className="border border-slate-100 rounded-xl overflow-hidden group">
+                                  <div className="flex items-center justify-between px-4 py-3 bg-emerald-50">
+                                    <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-slate-500">{domain.skills.length} skills</span>
+                                      <button
+                                        onClick={() => setEditingDomain(domain)}
+                                        className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteDomain(domain.domainId)}
+                                        disabled={deletingDomainId === domain.domainId}
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                      >
+                                        {deletingDomainId === domain.domainId ? (
+                                          <Spinner size="sm" />
+                                        ) : (
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="divide-y divide-slate-50">
+                                    {domain.skills.map((skill) => (
+                                      <div key={skill.skillId} className="px-4 py-2 text-sm text-slate-600">
+                                        {skill.name}
+                                      </div>
+                                    ))}
+                                    {domain.skills.length === 0 && (
+                                      <div className="px-4 py-3 text-sm text-slate-400 italic">No skills — click Edit to add</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
+                              No progress report domains yet
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Report Card Domains */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              Report Card Domains
+                              <span className="text-xs font-normal normal-case text-slate-400">(BG / DV / NI)</span>
+                            </h3>
+                            <button
+                              onClick={() => setAddDomainType('report_card')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 cursor-pointer transition-colors"
+                            >
+                              <PlusIcon className="w-3.5 h-3.5" />
+                              Add Domain
+                            </button>
+                          </div>
+                          {jkskReportCardDomains.length > 0 ? (
+                            <div className="space-y-3">
+                              {jkskReportCardDomains.map((domain) => (
+                                <div key={domain.domainId} className="border border-slate-100 rounded-xl overflow-hidden group">
+                                  <div className="flex items-center justify-between px-4 py-3 bg-blue-50">
+                                    <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-slate-500">{domain.skills.length} skills</span>
+                                      <button
+                                        onClick={() => setEditingDomain(domain)}
+                                        className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteDomain(domain.domainId)}
+                                        disabled={deletingDomainId === domain.domainId}
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                      >
+                                        {deletingDomainId === domain.domainId ? (
+                                          <Spinner size="sm" />
+                                        ) : (
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="divide-y divide-slate-50">
+                                    {domain.skills.map((skill) => (
+                                      <div key={skill.skillId} className="px-4 py-2 text-sm text-slate-600 flex justify-between items-start">
+                                        <span className="font-medium">{skill.name}</span>
+                                        {skill.description && (
+                                          <span className="text-xs text-slate-400 ml-4 text-right max-w-[50%]">{skill.description}</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {domain.skills.length === 0 && (
+                                      <div className="px-4 py-3 text-sm text-slate-400 italic">No skills — click Edit to add</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
+                              No report card domains yet
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
-                </div>
-              )}
-            </div>
-            {/* ───────────── End Assessments ───────────── */}
+                )}
+              </div>
+            ) : (
+              /* ── Grades 1-8: Standard Assessments ── */
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                {/* Section Header */}
+                <button
+                  onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
+                  className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-cyan-500 to-teal-500 text-white cursor-pointer hover:from-cyan-600 hover:to-teal-600 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <ClipboardDocumentListIcon className="w-5 h-5" />
+                    </div>
+                    <span className="text-lg font-semibold">Assessments</span>
+                    <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                      {assessments.filter(a => !a.parentAssessmentId).length} total
+                    </span>
+                  </div>
+                  <ChevronDownIcon
+                    className={`w-5 h-5 transform transition-transform duration-200 ${
+                      isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
+                    }`}
+                  />
+                </button>
+
+                {!isAssessmentsCollapsed && (
+                  <div>
+                    {/* Controls: Search / Sort / Add */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
+                      <input
+                        type="text"
+                        placeholder="Search assessments…"
+                        value={searchAssess}
+                        onChange={(e) => setSearchAssess(e.target.value)}
+                        className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black"
+                      />
+
+                      <select
+                        value={weightSort}
+                        onChange={(e) => setWeightSort(e.target.value as 'asc' | 'desc')}
+                        className="w-full sm:w-40 px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white text-black cursor-pointer"
+                      >
+                        <option value="asc">Points ↑</option>
+                        <option value="desc">Points ↓</option>
+                      </select>
+
+                      <button
+                        onClick={() => setShowAddAssessmentModal(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm whitespace-nowrap"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                        Add Assessment
+                      </button>
+                    </div>
+
+                    {/* Total Points Banner */}
+                    {totalPoints !== 100 ? (
+                      <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 border-b border-amber-100">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-amber-700 font-medium">
+                            Total: <strong>{totalPoints.toFixed(1)} points</strong>
+                          </p>
+                          <p className="text-amber-600 text-sm">
+                            Assessments should total 100 points for proper grade calculation.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border-b border-emerald-100">
+                        <CheckCircleIcon className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                        <p className="text-emerald-700 font-medium">
+                          Total: <strong>{totalPoints.toFixed(1)} points</strong>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Assessment List */}
+                    <div className="p-6 max-h-[500px] overflow-y-auto space-y-3">
+                      {assessLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Spinner size="md" />
+                        </div>
+                      ) : assessError ? (
+                        <p className="text-red-600 text-center py-4">{assessError}</p>
+                      ) : filteredAssessments.length === 0 ? (
+                        <div className="text-center py-8">
+                          <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                            <ClipboardDocumentListIcon className="h-6 w-6 text-slate-400" />
+                          </div>
+                          <p className="text-slate-500">No assessments found.</p>
+                        </div>
+                      ) : (
+                        filteredAssessments.map((a) => {
+                          if (a.parentAssessmentId) return null;
+
+                          const childAssessments = a.isParent
+                            ? filteredAssessments.filter(child => child.parentAssessmentId === a.assessmentId)
+                            : [];
+
+                          return (
+                            <div key={a.assessmentId} className="space-y-2">
+                              {/* Parent/Standalone Assessment */}
+                              <div
+                                className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                                  a.isParent
+                                    ? 'bg-blue-50 border-blue-100 hover:bg-blue-100'
+                                    : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-medium text-slate-900">{a.name}</p>
+                                    {a.isParent && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-700">
+                                        Multiple
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                                    <span className="font-medium text-slate-700">
+                                      {a.weightPoints || a.weightPercent || 0} pts
+                                    </span>
+                                    {a.maxScore && !a.isParent && (
+                                      <span>Max: {a.maxScore}</span>
+                                    )}
+                                    <span>{a.date ? a.date.split('T')[0] : "No date"}</span>
+                                    {a.isParent && childAssessments.length > 0 && (
+                                      <span className="text-blue-600">
+                                        {childAssessments.length} sub-assessment{childAssessments.length !== 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => setEditingAssessment(a)}
+                                    className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors cursor-pointer text-sm font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteAssessmentTarget(a)}
+                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                    title={a.isParent ? "Delete parent and all child assessments" : "Delete assessment"}
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Child Assessments */}
+                              {a.isParent && childAssessments.length > 0 && (
+                                <div className="ml-6 space-y-1">
+                                  {childAssessments.map((child) => (
+                                    <div
+                                      key={child.assessmentId}
+                                      className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg"
+                                    >
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-slate-300">└─</span>
+                                          <p className="font-medium text-slate-700 text-sm">{child.name}</p>
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+                                            Individual
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 ml-6 mt-1 text-xs text-slate-400">
+                                          <span>{child.weightPoints || child.weightPercent || 0} pts</span>
+                                          {child.maxScore && <span>Max: {child.maxScore}</span>}
+                                          <span>{child.date ? child.date.split('T')[0] : "No date"}</span>
+                                        </div>
+                                      </div>
+                                      <span className="text-xs text-slate-400 italic">Edit via parent</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }).filter(Boolean)
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* ───────────── End Assessments / Skill Domains ───────────── */}
           </div>
         </div>
       </main>
@@ -997,6 +1391,30 @@ export default function EditClassPage() {
           onClose={() => setShowDuplicateModal(false)}
           sourceClass={classData}
           onDuplicated={() => router.push('/classes')}
+        />
+      )}
+
+      {/* ─ JK/SK Domain Edit Modal ─ */}
+      {editingDomain && (
+        <JKSKDomainEditModal
+          isOpen={!!editingDomain}
+          onClose={() => setEditingDomain(null)}
+          domain={editingDomain}
+          onUpdate={() => {
+            refreshJKSKDomains()
+          }}
+        />
+      )}
+
+      {/* ─ JK/SK Domain Add Modal ─ */}
+      {addDomainType && classData && (
+        <JKSKDomainAddModal
+          isOpen={!!addDomainType}
+          onClose={() => setAddDomainType(null)}
+          documentType={addDomainType}
+          school={classData.school}
+          currentCount={addDomainType === 'progress_report' ? jkskProgressDomains.length : jkskReportCardDomains.length}
+          onAdded={() => refreshJKSKDomains()}
         />
       )}
     </>

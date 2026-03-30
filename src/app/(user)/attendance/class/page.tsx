@@ -181,6 +181,11 @@ const ClassAttendanceDashboard = () => {
                                     <p className="text-slate-500 text-sm">
                                       {cls.teacherName || 'No teacher assigned'}
                                     </p>
+                                    {(cls.additionalTeachers ?? []).length > 0 && (
+                                      <p className="text-slate-400 text-xs mt-0.5">
+                                        Also: {cls.additionalTeachers.map((t) => t.fullName).join(', ')}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium group-hover:bg-emerald-600 transition-colors">

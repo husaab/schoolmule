@@ -4,6 +4,7 @@ export interface ProgressReportFeedback {
   id?: string
   studentId: string
   classId: string
+  term: string
   coreStandards?: string
   workHabit?: string
   behavior?: string
@@ -14,6 +15,7 @@ export interface ProgressReportFeedback {
 export interface UpsertProgressReportFeedbackPayload {
   studentId: string
   classId: string
+  term: string
   coreStandards?: string
   workHabit?: string
   behavior?: string
@@ -30,6 +32,45 @@ export interface AllProgressReportFeedbackResponse {
   status: string
   data: ProgressReportFeedback[]
   message?: string
+}
+
+export interface ClassProgressReportFeedbackEntry {
+  id?: string
+  studentId: string
+  studentName: string
+  studentGrade?: string | null
+  classId: string
+  term: string
+  coreStandards: string | null
+  workHabit: string | null
+  behavior: string | null
+  comment: string | null
+}
+
+export interface ClassProgressReportFeedbackResponse {
+  status: string
+  data: ClassProgressReportFeedbackEntry[]
+  message?: string
+}
+
+export interface BulkProgressReportFeedbackPayload {
+  studentId: string
+  classId: string
+  term: string
+  coreStandards?: string
+  workHabit?: string
+  behavior?: string
+  comment?: string
+}
+
+export interface BulkProgressReportFeedbackResponse {
+  status: string
+  message: string
+  data: {
+    updated: number
+    failed: number
+    errors?: Array<{ studentId?: string; error: string }>
+  }
 }
 
 export interface ProgressReportRecord {
@@ -57,13 +98,14 @@ export interface AllProgressReportRecordsResponse {
   message?: string
 }
 
-// Get progress report feedback for a specific student and class
+// Get progress report feedback for a specific student, class, and term
 export const getProgressReportFeedback = async (
-  studentId: string, 
-  classId: string
+  studentId: string,
+  classId: string,
+  term: string
 ): Promise<ProgressReportFeedbackResponse> => {
   return apiClient<ProgressReportFeedbackResponse>(
-    `/progress-reports/feedback/student/${encodeURIComponent(studentId)}/class/${encodeURIComponent(classId)}`
+    `/progress-reports/feedback/student/${encodeURIComponent(studentId)}/class/${encodeURIComponent(classId)}?term=${encodeURIComponent(term)}`
   )
 }
 
@@ -77,6 +119,7 @@ export const upsertProgressReportFeedback = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: {
+        term: payload.term,
         coreStandards: payload.coreStandards,
         workHabit: payload.workHabit,
         behavior: payload.behavior,
@@ -95,22 +138,38 @@ export const getStudentProgressReportFeedback = async (
   )
 }
 
-// Get all progress report feedback for a class
+// Get all progress report feedback for a class and term
 export const getClassProgressReportFeedback = async (
-  classId: string
-): Promise<AllProgressReportFeedbackResponse> => {
-  return apiClient<AllProgressReportFeedbackResponse>(
-    `/progress-reports/feedback/class/${encodeURIComponent(classId)}`
+  classId: string,
+  term: string
+): Promise<ClassProgressReportFeedbackResponse> => {
+  return apiClient<ClassProgressReportFeedbackResponse>(
+    `/progress-reports/feedback/class/${encodeURIComponent(classId)}?term=${encodeURIComponent(term)}`
+  )
+}
+
+// Bulk upsert progress report feedback for multiple students
+export const upsertBulkProgressReportFeedback = async (
+  feedbackEntries: BulkProgressReportFeedbackPayload[]
+): Promise<BulkProgressReportFeedbackResponse> => {
+  return apiClient<BulkProgressReportFeedbackResponse>(
+    `/progress-reports/feedback/bulk`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { feedbackEntries }
+    }
   )
 }
 
 // Delete progress report feedback
 export const deleteProgressReportFeedback = async (
-  studentId: string, 
-  classId: string
+  studentId: string,
+  classId: string,
+  term: string
 ): Promise<{ status: string; message: string }> => {
   return apiClient<{ status: string; message: string }>(
-    `/progress-reports/feedback/student/${encodeURIComponent(studentId)}/class/${encodeURIComponent(classId)}`,
+    `/progress-reports/feedback/student/${encodeURIComponent(studentId)}/class/${encodeURIComponent(classId)}?term=${encodeURIComponent(term)}`,
     {
       method: 'DELETE'
     }

@@ -34,7 +34,8 @@ import {
   ArrowLeftIcon,
   CheckCircleIcon,
   CalendarDaysIcon,
-  ChatBubbleBottomCenterTextIcon
+  ChatBubbleBottomCenterTextIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 
@@ -435,6 +436,12 @@ const GradebookClass = () => {
     router.push(`/gradebook/${classId}/feedback`)
   }
 
+  // Navigate to bulk progress (saves grades first)
+  const navigateToBulkProgress = () => {
+    saveGradesToLocalStorage()
+    router.push(`/gradebook/${classId}/progress`)
+  }
+
   const handleSaveAll = async () => {
     setSaving(true)
     setError(null)
@@ -608,11 +615,19 @@ const GradebookClass = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={navigateToBulkFeedback}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-all font-medium cursor-pointer shadow-sm"
                   title="Enter report card feedback for all students"
                 >
                   <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
                   Bulk Feedback
+                </button>
+                <button
+                  onClick={navigateToBulkProgress}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all font-medium cursor-pointer shadow-sm"
+                  title="Enter progress report feedback for all students"
+                >
+                  <ClipboardDocumentCheckIcon className="h-4 w-4" />
+                  Bulk Progress
                 </button>
                 <button
                   onClick={handleExportExcel}
@@ -1057,6 +1072,9 @@ const GradebookClass = () => {
           studentId={selectedStudentId}
           studentName={selectedStudentName}
           classId={classId}
+          subjectName={classData.subject}
+          studentGrade={computeTotalForStudent(selectedStudentId)}
+          onNavigateToBulkProgress={navigateToBulkProgress}
         />
       )}
 

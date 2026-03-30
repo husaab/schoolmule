@@ -75,7 +75,7 @@ export const getClassesByTeacher = async (
 export const createClass = async (
   classData: Omit<
     ClassPayload,
-    "classId" | "createdAt" | "lastModifiedAt"
+    "classId" | "createdAt" | "lastModifiedAt" | "additionalTeachers"
   >
 ): Promise<ClassResponse> => {
   const body = {
@@ -312,6 +312,28 @@ export const downloadGradebookExcel = async (
     throw new Error(`Failed to download gradebook: ${response.status}`);
   }
   return response.blob();
+};
+
+// ── Additional Teachers ──
+
+export const addTeacherToClass = async (
+  classId: string,
+  teacherId: string
+): Promise<{ status: string; data: { classId: string; teacherId: string; addedAt: string }; message?: string }> => {
+  return apiClient(`/classes/${classId}/teachers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: { teacherId },
+  });
+};
+
+export const removeTeacherFromClass = async (
+  classId: string,
+  teacherId: string
+): Promise<{ status: string; message?: string }> => {
+  return apiClient(`/classes/${classId}/teachers/${teacherId}`, {
+    method: "DELETE",
+  });
 };
 
 // ── Duplicate Class ──

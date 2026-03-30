@@ -5,7 +5,7 @@ import Modal from '../../../shared/modal' // adjust path if needed
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { bulkEnrollStudentsToClass } from '@/services/classService'
 import { StudentPayload } from '@/services/types/student'
-import { GradeValue, getGradeOptions } from '@/lib/schoolUtils'
+import { GradeValue, getGradeOptions, getGradeDisplayName } from '@/lib/schoolUtils'
 
 interface ClassEnrollStudentModalProps {
   /** Whether the modal is open */
@@ -185,7 +185,7 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
               <option value="">All Grades</option>
               {getGradeOptions().map((gradeOption) => (
                 <option key={gradeOption.value} value={gradeOption.value.toString()}>
-                  Grade {gradeOption.label}
+                  {getGradeDisplayName(gradeOption.value)}
                 </option>
               ))}
             </select>
@@ -209,7 +209,7 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
                     htmlFor={`stu-${stu.studentId}`}
                     className="text-black"
                   >
-                    {stu.name} (Grade {stu.grade})
+                    {stu.name} ({getGradeDisplayName(stu.grade)})
                   </label>
                 </div>
               ))

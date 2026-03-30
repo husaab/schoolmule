@@ -139,6 +139,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
           termName:       raw.termName,
           createdAt:      raw.createdAt,
           lastModifiedAt: raw.lastModifiedAt,
+          additionalTeachers: raw.additionalTeachers ?? [],
         }
 
         onAdd(newClass)

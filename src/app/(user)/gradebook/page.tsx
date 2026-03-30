@@ -10,7 +10,7 @@ import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
-import { getGradeOptions } from '@/lib/schoolUtils'
+import { getGradeOptions, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
 import { BookOpenIcon, AcademicCapIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 
@@ -162,7 +162,7 @@ const GradebookDashboard: React.FC = () => {
                       <option value="">All Grades</option>
                       {availableGrades.map((gradeOption) => (
                         <option key={gradeOption.value} value={String(gradeOption.value)}>
-                          Grade {gradeOption.label}
+                          {getGradeDisplayName(gradeOption.value)}
                         </option>
                       ))}
                     </select>
@@ -235,7 +235,7 @@ const GradebookDashboard: React.FC = () => {
                             <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                               <AcademicCapIcon className="w-5 h-5" />
                             </div>
-                            <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
+                            <span className="font-semibold text-lg">{getGradeDisplayName(gradeOption.value)}</span>
                             <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
                               {classesForGrade.length} {classesForGrade.length === 1 ? 'class' : 'classes'}
                             </span>
@@ -253,7 +253,7 @@ const GradebookDashboard: React.FC = () => {
                             {classesForGrade.map((cls) => (
                               <Link
                                 key={cls.classId}
-                                href={`/gradebook/${cls.classId}`}
+                                href={isJKSK(cls.grade) ? `/gradebook/jksk/${cls.classId}` : `/gradebook/${cls.classId}`}
                                 className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group"
                               >
                                 <div className="flex items-center gap-4">
@@ -267,10 +267,20 @@ const GradebookDashboard: React.FC = () => {
                                     <p className="text-slate-500 text-sm">
                                       {cls.teacherName || 'No teacher assigned'}
                                     </p>
+                                    {(cls.additionalTeachers ?? []).length > 0 && (
+                                      <p className="text-slate-400 text-xs mt-0.5">
+                                        Also: {cls.additionalTeachers.map((t) => t.fullName).join(', ')}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
 
                                 <div className="flex items-center gap-3">
+                                  {isJKSK(cls.grade) && (
+                                    <span className="hidden sm:inline-flex px-2.5 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-medium">
+                                      Skill-Based
+                                    </span>
+                                  )}
                                   <span className="hidden sm:inline-flex px-2.5 py-1 bg-teal-50 text-teal-600 rounded-lg text-xs font-medium">
                                     {cls.termName || 'No term'}
                                   </span>

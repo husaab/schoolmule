@@ -14,7 +14,7 @@ import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
-import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
+import { getGradeOptions, getGradeNumericValue, getGradeDisplayName } from '@/lib/schoolUtils';
 
 const StudentsPage = () => {
 
@@ -161,7 +161,7 @@ const StudentsPage = () => {
                                         >
                                             <option value="">All Grades</option>
                                             {grades.map(gradeOption => (
-                                                <option key={gradeOption.value} value={String(gradeOption.value)}>Grade {gradeOption.label}</option>
+                                                <option key={gradeOption.value} value={String(gradeOption.value)}>{getGradeDisplayName(gradeOption.value)}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -271,7 +271,7 @@ const StudentsPage = () => {
                                                     <td className="px-4 py-3 whitespace-nowrap">
                                                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
                                                             <AcademicCapIcon className="h-4 w-4" />
-                                                            Grade {student.grade ?? '-'}
+                                                            {student.grade ? getGradeDisplayName(student.grade) : '-'}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500 font-mono">

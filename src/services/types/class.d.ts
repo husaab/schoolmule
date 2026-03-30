@@ -3,6 +3,16 @@
 import { GradeValue } from "@/lib/schoolUtils";
 
 /**
+ * An additional teacher assigned to a class
+ */
+export interface AdditionalTeacher {
+  teacherId: string;
+  fullName:  string;
+  email:     string;
+  addedAt:   string;
+}
+
+/**
  * Represents a single class record as returned by the API
  */
 export interface ClassPayload {
@@ -16,6 +26,7 @@ export interface ClassPayload {
   termName:     string;
   createdAt:    string;
   lastModifiedAt: string;
+  additionalTeachers: AdditionalTeacher[];
 }
 
 /**

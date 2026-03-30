@@ -62,6 +62,26 @@ export function getGradeLabel(grade: GradeValue | number | null | undefined): st
 }
 
 /**
+ * Check if a grade is JK or SK (Junior/Senior Kindergarten)
+ * Used to route to the competency-based grading system
+ */
+export function isJKSK(grade: GradeValue | string | number | null | undefined): boolean {
+  return grade === 'JK' || grade === 'SK';
+}
+
+/**
+ * Get the full display name for a grade.
+ * JK → "Junior Kindergarten", SK → "Senior Kindergarten", 1 → "Grade 1", etc.
+ * Use this instead of `Grade ${label}` to handle JK/SK properly.
+ */
+export function getGradeDisplayName(grade: GradeValue | string | number | null | undefined): string {
+  if (grade === null || grade === undefined) return '';
+  if (grade === 'JK') return 'Junior Kindergarten';
+  if (grade === 'SK') return 'Senior Kindergarten';
+  return `Grade ${grade}`;
+}
+
+/**
  * Convert a grade value to its numeric equivalent for sorting/comparison
  */
 export function getGradeNumericValue(grade: GradeValue | number | string | null | undefined): number {

@@ -17,7 +17,7 @@ import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
 import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
-import { getGradeOptions } from '@/lib/schoolUtils'
+import { getGradeOptions, getGradeDisplayName } from '@/lib/schoolUtils'
 
 const ClassesPage = () => {
   const router = useRouter()
@@ -171,7 +171,7 @@ const ClassesPage = () => {
                       <option value="">All Grades</option>
                       {availableGrades.map((gradeOption) => (
                         <option key={gradeOption.value} value={String(gradeOption.value)}>
-                          Grade {gradeOption.label}
+                          {getGradeDisplayName(gradeOption.value)}
                         </option>
                       ))}
                     </select>
@@ -265,7 +265,7 @@ const ClassesPage = () => {
                             <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                               <AcademicCapIcon className="w-5 h-5" />
                             </div>
-                            <span className="font-semibold text-lg">Grade {gradeOption.label}</span>
+                            <span className="font-semibold text-lg">{getGradeDisplayName(gradeOption.value)}</span>
                             <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
                               {classesForGrade.length} {classesForGrade.length === 1 ? 'class' : 'classes'}
                             </span>
@@ -297,6 +297,11 @@ const ClassesPage = () => {
                                     <p className="text-slate-500 text-sm">
                                       {cls.teacherName || 'No teacher assigned'}
                                     </p>
+                                    {(cls.additionalTeachers ?? []).length > 0 && (
+                                      <p className="text-slate-400 text-xs mt-0.5">
+                                        Also: {cls.additionalTeachers.map((t) => t.fullName).join(', ')}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
 
