@@ -10,7 +10,7 @@ import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
-import { getGradeOptions, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
+import { getGradeOptions, isJK, isSK, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
 import { BookOpenIcon, AcademicCapIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 
@@ -253,7 +253,7 @@ const GradebookDashboard: React.FC = () => {
                             {classesForGrade.map((cls) => (
                               <Link
                                 key={cls.classId}
-                                href={isJKSK(cls.grade) ? `/gradebook/jksk/${cls.classId}` : `/gradebook/${cls.classId}`}
+                                href={isJK(cls.grade) ? `/gradebook/jk/${cls.classId}` : isSK(cls.grade) ? `/gradebook/sk/${cls.classId}` : `/gradebook/${cls.classId}`}
                                 className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group"
                               >
                                 <div className="flex items-center gap-4">

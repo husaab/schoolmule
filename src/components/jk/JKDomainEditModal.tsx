@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react'
 import Modal from '@/components/shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import {
-  updateJKSKDomain,
-  createJKSKSkill,
-  updateJKSKSkill,
-  deleteJKSKSkill,
-} from '@/services/jkskService'
-import type { JKSKDomain, JKSKSkill } from '@/services/types/jksk'
+  updateJKDomain,
+  createJKSkill,
+  updateJKSkill,
+  deleteJKSkill,
+} from '@/services/jkService'
+import type { JKDomain, JKSkill } from '@/services/types/jk'
 import {
   PlusIcon,
   TrashIcon,
@@ -19,10 +19,10 @@ import {
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 
-interface JKSKDomainEditModalProps {
+interface JKDomainEditModalProps {
   isOpen: boolean
   onClose: () => void
-  domain: JKSKDomain
+  domain: JKDomain
   onUpdate: () => void
 }
 
@@ -33,12 +33,12 @@ interface EditingSkill {
   sortOrder: number
 }
 
-export default function JKSKDomainEditModal({
+export default function JKDomainEditModal({
   isOpen,
   onClose,
   domain,
   onUpdate,
-}: JKSKDomainEditModalProps) {
+}: JKDomainEditModalProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   // Domain name editing
@@ -62,7 +62,7 @@ export default function JKSKDomainEditModal({
     if (!domainName.trim()) return
     setSavingDomainName(true)
     try {
-      const res = await updateJKSKDomain(domain.domainId, {
+      const res = await updateJKDomain(domain.domainId, {
         name: domainName.trim(),
         sortOrder: domain.sortOrder,
       })
@@ -87,7 +87,7 @@ export default function JKSKDomainEditModal({
     })
   }
 
-  const handleStartEditSkill = (skill: JKSKSkill) => {
+  const handleStartEditSkill = (skill: JKSkill) => {
     setEditingSkill({
       skillId: skill.skillId,
       name: skill.name,
@@ -102,7 +102,7 @@ export default function JKSKDomainEditModal({
     try {
       if (editingSkill.skillId) {
         // Update existing
-        const res = await updateJKSKSkill(editingSkill.skillId, {
+        const res = await updateJKSkill(editingSkill.skillId, {
           name: editingSkill.name.trim(),
           description: editingSkill.description.trim() || null,
           sortOrder: editingSkill.sortOrder,
@@ -112,7 +112,7 @@ export default function JKSKDomainEditModal({
         }
       } else {
         // Create new
-        const res = await createJKSKSkill({
+        const res = await createJKSkill({
           domainId: domain.domainId,
           name: editingSkill.name.trim(),
           description: editingSkill.description.trim() || null,
@@ -134,7 +134,7 @@ export default function JKSKDomainEditModal({
   const handleDeleteSkill = async (skillId: string) => {
     setDeletingSkillId(skillId)
     try {
-      const res = await deleteJKSKSkill(skillId)
+      const res = await deleteJKSkill(skillId)
       if (res.status === 'success') {
         showNotification('Skill deleted', 'success')
         onUpdate()

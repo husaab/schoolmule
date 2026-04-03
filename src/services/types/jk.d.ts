@@ -1,27 +1,27 @@
-// src/services/types/jksk.d.ts
-// Types for the JK/SK competency-based grading system
+// src/services/types/jk.d.ts
+// Types for the JK competency-based grading system
 
-export interface JKSKSkill {
+export interface JKSkill {
   skillId: string
   name: string
   description: string | null
   sortOrder: number
 }
 
-export interface JKSKDomain {
+export interface JKDomain {
   domainId: string
   documentType: 'progress_report' | 'report_card'
   name: string
   sortOrder: number
-  skills: JKSKSkill[]
+  skills: JKSkill[]
 }
 
-export interface JKSKDomainsResponse {
+export interface JKDomainsResponse {
   status: string
-  data: JKSKDomain[]
+  data: JKDomain[]
 }
 
-export interface JKSKSkillAssessment {
+export interface JKSkillAssessment {
   id: string
   studentId: string
   skillId: string
@@ -34,12 +34,12 @@ export interface JKSKSkillAssessment {
   domainName: string
 }
 
-export interface JKSKAssessmentsResponse {
+export interface JKAssessmentsResponse {
   status: string
-  data: JKSKSkillAssessment[]
+  data: JKSkillAssessment[]
 }
 
-export interface JKSKAssessmentEntry {
+export interface JKAssessmentEntry {
   studentId: string
   skillId: string
   term: string
@@ -48,13 +48,13 @@ export interface JKSKAssessmentEntry {
   assessedBy?: string | null
 }
 
-export interface JKSKBulkResponse {
+export interface JKBulkResponse {
   status: string
   message: string
   data: { updated: number }
 }
 
-export interface JKSKLearningSkill {
+export interface JKLearningSkill {
   id: string
   studentId: string
   term: string
@@ -63,12 +63,12 @@ export interface JKSKLearningSkill {
   updatedAt: string
 }
 
-export interface JKSKLearningSkillsResponse {
+export interface JKLearningSkillsResponse {
   status: string
-  data: JKSKLearningSkill[]
+  data: JKLearningSkill[]
 }
 
-export interface JKSKLearningSkillEntry {
+export interface JKLearningSkillEntry {
   studentId: string
   term: string
   skillName: string
@@ -76,7 +76,7 @@ export interface JKSKLearningSkillEntry {
   school: string
 }
 
-export interface JKSKDomainComment {
+export interface JKDomainComment {
   id: string
   studentId: string
   domainId: string
@@ -86,12 +86,12 @@ export interface JKSKDomainComment {
   updatedAt: string
 }
 
-export interface JKSKDomainCommentsResponse {
+export interface JKDomainCommentsResponse {
   status: string
-  data: JKSKDomainComment[]
+  data: JKDomainComment[]
 }
 
-export interface JKSKDomainCommentEntry {
+export interface JKDomainCommentEntry {
   studentId: string
   domainId: string
   term: string
@@ -99,19 +99,19 @@ export interface JKSKDomainCommentEntry {
   school: string
 }
 
-export interface JKSKTeacherAssistant {
+export interface JKTeacherAssistant {
   id: string
   studentId: string
   teacherAssistantName: string | null
   term: string
 }
 
-export interface JKSKTeacherAssistantResponse {
+export interface JKTeacherAssistantResponse {
   status: string
-  data: JKSKTeacherAssistant | null
+  data: JKTeacherAssistant | null
 }
 
-export interface JKSKTeacherAssistantPayload {
+export interface JKTeacherAssistantPayload {
   studentId: string
   teacherAssistantName: string | null
   term: string
@@ -120,7 +120,7 @@ export interface JKSKTeacherAssistantPayload {
 
 // -- Progress Report Comments (Academic Achievement / Socio-Emotional) --
 
-export interface JKSKProgressReportComment {
+export interface JKProgressReportComment {
   id: string
   studentId: string
   term: string
@@ -129,12 +129,12 @@ export interface JKSKProgressReportComment {
   updatedAt: string
 }
 
-export interface JKSKProgressReportCommentsResponse {
+export interface JKProgressReportCommentsResponse {
   status: string
-  data: JKSKProgressReportComment[]
+  data: JKProgressReportComment[]
 }
 
-export interface JKSKProgressReportCommentEntry {
+export interface JKProgressReportCommentEntry {
   studentId: string
   term: string
   sectionType: 'academic_achievement' | 'socio_emotional'
@@ -144,32 +144,32 @@ export interface JKSKProgressReportCommentEntry {
 
 // -- Domain & Skill CRUD --
 
-export interface JKSKCreateDomainPayload {
+export interface JKCreateDomainPayload {
   documentType: 'progress_report' | 'report_card'
   name: string
   sortOrder: number
   school: string
 }
 
-export interface JKSKUpdateDomainPayload {
+export interface JKUpdateDomainPayload {
   name: string
   sortOrder: number
 }
 
-export interface JKSKCreateSkillPayload {
+export interface JKCreateSkillPayload {
   domainId: string
   name: string
   description?: string | null
   sortOrder: number
 }
 
-export interface JKSKUpdateSkillPayload {
+export interface JKUpdateSkillPayload {
   name: string
   description?: string | null
   sortOrder: number
 }
 
-export interface JKSKDomainCrudResponse {
+export interface JKDomainCrudResponse {
   status: string
   data: {
     domain_id: string
@@ -180,7 +180,7 @@ export interface JKSKDomainCrudResponse {
   }
 }
 
-export interface JKSKSkillCrudResponse {
+export interface JKSkillCrudResponse {
   status: string
   data: {
     skill_id: string

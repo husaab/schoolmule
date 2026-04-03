@@ -29,11 +29,15 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
-import { getGradeDisplayName, getGradeOptions, GradeValue, isJKSK } from '@/lib/schoolUtils'
-import { getJKSKDomains, deleteJKSKDomain } from '@/services/jkskService'
-import type { JKSKDomain } from '@/services/types/jksk'
-import JKSKDomainEditModal from '@/components/jksk/JKSKDomainEditModal'
-import JKSKDomainAddModal from '@/components/jksk/JKSKDomainAddModal'
+import { getGradeDisplayName, getGradeOptions, GradeValue, isJK, isSK, isJKSK } from '@/lib/schoolUtils'
+import { getJKDomains, deleteJKDomain } from '@/services/jkService'
+import type { JKDomain } from '@/services/types/jk'
+import JKDomainEditModal from '@/components/jk/JKDomainEditModal'
+import JKDomainAddModal from '@/components/jk/JKDomainAddModal'
+import { getSKSubjects, deleteSKSubject } from '@/services/skService'
+import type { SKSubject } from '@/services/types/sk'
+import SKSubjectEditModal from '@/components/sk/SKSubjectEditModal'
+import SKSubjectAddModal from '@/components/sk/SKSubjectAddModal'
 import Spinner from '@/components/Spinner'
 import {
   ArrowLeftIcon,
@@ -100,13 +104,21 @@ export default function EditClassPage() {
   const [deleteAssessmentTarget, setDeleteAssessmentTarget] = useState<AssessmentPayload | null>(null)
   const [showAddAssessmentModal, setShowAddAssessmentModal] = useState(false)
 
-  // ───── JK/SK Skill Domains ─────
-  const [jkskProgressDomains, setJkskProgressDomains] = useState<JKSKDomain[]>([])
-  const [jkskReportCardDomains, setJkskReportCardDomains] = useState<JKSKDomain[]>([])
-  const [jkskDomainsLoading, setJkskDomainsLoading] = useState(false)
-  const [editingDomain, setEditingDomain] = useState<JKSKDomain | null>(null)
+  // ───── JK Skill Domains ─────
+  const [jkProgressDomains, setJkProgressDomains] = useState<JKDomain[]>([])
+  const [jkReportCardDomains, setJkReportCardDomains] = useState<JKDomain[]>([])
+  const [jkDomainsLoading, setJkDomainsLoading] = useState(false)
+  const [editingDomain, setEditingDomain] = useState<JKDomain | null>(null)
   const [addDomainType, setAddDomainType] = useState<'progress_report' | 'report_card' | null>(null)
   const [deletingDomainId, setDeletingDomainId] = useState<string | null>(null)
+
+  // ───── SK Subjects & Standards ─────
+  const [skProgressSubjects, setSkProgressSubjects] = useState<SKSubject[]>([])
+  const [skReportCardSubjects, setSkReportCardSubjects] = useState<SKSubject[]>([])
+  const [skSubjectsLoading, setSkSubjectsLoading] = useState(false)
+  const [editingSubject, setEditingSubject] = useState<SKSubject | null>(null)
+  const [addSubjectType, setAddSubjectType] = useState<'progress_report' | 'report_card' | null>(null)
+  const [deletingSubjectId, setDeletingSubjectId] = useState<string | null>(null)
 
   // ───── Fetch “all students” once ─────
   useEffect(() => {
@@ -216,19 +228,19 @@ export default function EditClassPage() {
     fetchAssessments()
   }, [classData, classId])
 
-  // ───── Fetch JK/SK domains ─────
-  const refreshJKSKDomains = async () => {
-    if (!classData || !isJKSK(classData.grade) || !classData.school) return
-    setJkskDomainsLoading(true)
+  // ───── Fetch JK domains ─────
+  const refreshJKDomains = async () => {
+    if (!classData || !isJK(classData.grade) || !classData.school) return
+    setJkDomainsLoading(true)
     try {
       const [prRes, rcRes] = await Promise.all([
-        getJKSKDomains('progress_report', classData.school),
-        getJKSKDomains('report_card', classData.school),
+        getJKDomains('progress_report', classData.school),
+        getJKDomains('report_card', classData.school),
       ])
       const prDomains = prRes.status === 'success' ? prRes.data : []
       const rcDomains = rcRes.status === 'success' ? rcRes.data : []
-      setJkskProgressDomains(prDomains)
-      setJkskReportCardDomains(rcDomains)
+      setJkProgressDomains(prDomains)
+      setJkReportCardDomains(rcDomains)
 
       // Update the editing domain with fresh data if modal is open
       if (editingDomain) {
@@ -241,12 +253,12 @@ export default function EditClassPage() {
     } catch (err) {
       console.error(err)
     } finally {
-      setJkskDomainsLoading(false)
+      setJkDomainsLoading(false)
     }
   }
 
   useEffect(() => {
-    refreshJKSKDomains()
+    refreshJKDomains()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classData])
 
@@ -254,15 +266,62 @@ export default function EditClassPage() {
     if (!confirm('Delete this domain and all its skills?')) return
     setDeletingDomainId(domainId)
     try {
-      const res = await deleteJKSKDomain(domainId)
+      const res = await deleteJKDomain(domainId)
       if (res.status === 'success') {
         showNotification('Domain deleted', 'success')
-        refreshJKSKDomains()
+        refreshJKDomains()
       }
     } catch {
       showNotification('Failed to delete domain', 'error')
     } finally {
       setDeletingDomainId(null)
+    }
+  }
+
+  // ───── Fetch SK subjects ─────
+  const refreshSKSubjects = async () => {
+    if (!classData || !isSK(classData.grade) || !classData.school) return
+    setSkSubjectsLoading(true)
+    try {
+      const [prRes, rcRes] = await Promise.all([
+        getSKSubjects('progress_report', classData.school),
+        getSKSubjects('report_card', classData.school),
+      ])
+      const prSubjects = prRes.status === 'success' ? prRes.data : []
+      const rcSubjects = rcRes.status === 'success' ? rcRes.data : []
+      setSkProgressSubjects(prSubjects)
+      setSkReportCardSubjects(rcSubjects)
+
+      if (editingSubject) {
+        const allSubjects = [...prSubjects, ...rcSubjects]
+        const updated = allSubjects.find(s => s.subjectId === editingSubject.subjectId)
+        if (updated) setEditingSubject(updated)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSkSubjectsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshSKSubjects()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classData])
+
+  const handleDeleteSubject = async (subjectId: string) => {
+    if (!confirm('Delete this subject and all its standards?')) return
+    setDeletingSubjectId(subjectId)
+    try {
+      const res = await deleteSKSubject(subjectId)
+      if (res.status === 'success') {
+        showNotification('Subject deleted', 'success')
+        refreshSKSubjects()
+      }
+    } catch {
+      showNotification('Failed to delete subject', 'error')
+    } finally {
+      setDeletingSubjectId(null)
     }
   }
 
@@ -899,9 +958,9 @@ export default function EditClassPage() {
             </div>
             {/* ───────────── End Manage Students ───────────── */}
 
-            {/* ─────────────── Assessments / Skill Domains Section ─────────────── */}
-            {isJKSK(grade) ? (
-              /* ── JK/SK: Show Skill Domains ── */
+            {/* ─────────────── Assessments / Skill Domains / SK Subjects Section ─────────────── */}
+            {isJK(grade) ? (
+              /* ── JK: Show Skill Domains ── */
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <button
                   onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
@@ -913,7 +972,7 @@ export default function EditClassPage() {
                     </div>
                     <span className="text-lg font-semibold">Skill Domains</span>
                     <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
-                      {jkskProgressDomains.length + jkskReportCardDomains.length} domains
+                      {jkProgressDomains.length + jkReportCardDomains.length} domains
                     </span>
                   </div>
                   <ChevronDownIcon
@@ -925,7 +984,7 @@ export default function EditClassPage() {
 
                 {!isAssessmentsCollapsed && (
                   <div className="p-6 space-y-6">
-                    {jkskDomainsLoading ? (
+                    {jkDomainsLoading ? (
                       <div className="flex justify-center py-8">
                         <Spinner size="md" />
                       </div>
@@ -956,9 +1015,9 @@ export default function EditClassPage() {
                               Add Domain
                             </button>
                           </div>
-                          {jkskProgressDomains.length > 0 ? (
+                          {jkProgressDomains.length > 0 ? (
                             <div className="space-y-3">
-                              {jkskProgressDomains.map((domain) => (
+                              {jkProgressDomains.map((domain) => (
                                 <div key={domain.domainId} className="border border-slate-100 rounded-xl overflow-hidden group">
                                   <div className="flex items-center justify-between px-4 py-3 bg-emerald-50">
                                     <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
@@ -1021,9 +1080,9 @@ export default function EditClassPage() {
                               Add Domain
                             </button>
                           </div>
-                          {jkskReportCardDomains.length > 0 ? (
+                          {jkReportCardDomains.length > 0 ? (
                             <div className="space-y-3">
-                              {jkskReportCardDomains.map((domain) => (
+                              {jkReportCardDomains.map((domain) => (
                                 <div key={domain.domainId} className="border border-slate-100 rounded-xl overflow-hidden group">
                                   <div className="flex items-center justify-between px-4 py-3 bg-blue-50">
                                     <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
@@ -1069,6 +1128,180 @@ export default function EditClassPage() {
                           ) : (
                             <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
                               No report card domains yet
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : isSK(grade) ? (
+              /* ── SK: Show Subjects & Standards ── */
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <button
+                  onClick={() => setIsAssessmentsCollapsed((prev) => !prev)}
+                  className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-500 to-blue-500 text-white cursor-pointer hover:from-indigo-600 hover:to-blue-600 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <ClipboardDocumentListIcon className="w-5 h-5" />
+                    </div>
+                    <span className="text-lg font-semibold">Subjects &amp; Standards</span>
+                    <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                      {skProgressSubjects.length + skReportCardSubjects.length} subjects
+                    </span>
+                  </div>
+                  <ChevronDownIcon
+                    className={`w-5 h-5 transform transition-transform duration-200 ${
+                      isAssessmentsCollapsed ? '-rotate-90' : 'rotate-0'
+                    }`}
+                  />
+                </button>
+
+                {!isAssessmentsCollapsed && (
+                  <div className="p-6 space-y-6">
+                    {skSubjectsLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Spinner size="md" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Info Banner */}
+                        <div className="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                          <AcademicCapIcon className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-indigo-700">
+                            <p className="font-medium mb-1">Curriculum-based grading for {getGradeDisplayName(grade)}</p>
+                            <p className="text-indigo-600">SK uses subject-based curriculum standards. To enter ratings for students, open the gradebook.</p>
+                          </div>
+                        </div>
+
+                        {/* Progress Report Subjects */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-teal-500" />
+                              Progress Report Subjects
+                              <span className="text-xs font-normal normal-case text-slate-400">(E / G / S / NI / NA)</span>
+                            </h3>
+                            <button
+                              onClick={() => setAddSubjectType('progress_report')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 text-white rounded-lg text-xs font-medium hover:bg-teal-600 cursor-pointer transition-colors"
+                            >
+                              <PlusIcon className="w-3.5 h-3.5" />
+                              Add Subject
+                            </button>
+                          </div>
+                          {skProgressSubjects.length > 0 ? (
+                            <div className="space-y-3">
+                              {skProgressSubjects.map((subject) => (
+                                <div key={subject.subjectId} className="border border-slate-100 rounded-xl overflow-hidden group">
+                                  <div className="flex items-center justify-between px-4 py-3 bg-teal-50">
+                                    <span className="font-medium text-slate-800 text-sm">{subject.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-slate-500">{subject.standards.length} standards</span>
+                                      <button
+                                        onClick={() => setEditingSubject(subject)}
+                                        className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSubject(subject.subjectId)}
+                                        disabled={deletingSubjectId === subject.subjectId}
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                      >
+                                        {deletingSubjectId === subject.subjectId ? (
+                                          <Spinner size="sm" />
+                                        ) : (
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="divide-y divide-slate-50">
+                                    {subject.standards.map((std) => (
+                                      <div key={std.standardId} className="px-4 py-2 text-sm text-slate-600">
+                                        {std.name}
+                                      </div>
+                                    ))}
+                                    {subject.standards.length === 0 && (
+                                      <div className="px-4 py-3 text-sm text-slate-400 italic">No standards — click Edit to add</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
+                              No progress report subjects yet
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Report Card Subjects */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                              Report Card Subjects
+                              <span className="text-xs font-normal normal-case text-slate-400">(E / P / DV / EM / NI / NA)</span>
+                            </h3>
+                            <button
+                              onClick={() => setAddSubjectType('report_card')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 cursor-pointer transition-colors"
+                            >
+                              <PlusIcon className="w-3.5 h-3.5" />
+                              Add Subject
+                            </button>
+                          </div>
+                          {skReportCardSubjects.length > 0 ? (
+                            <div className="space-y-3">
+                              {skReportCardSubjects.map((subject) => (
+                                <div key={subject.subjectId} className="border border-slate-100 rounded-xl overflow-hidden group">
+                                  <div className="flex items-center justify-between px-4 py-3 bg-indigo-50">
+                                    <span className="font-medium text-slate-800 text-sm">{subject.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-slate-500">{subject.standards.length} standards</span>
+                                      <button
+                                        onClick={() => setEditingSubject(subject)}
+                                        className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSubject(subject.subjectId)}
+                                        disabled={deletingSubjectId === subject.subjectId}
+                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                      >
+                                        {deletingSubjectId === subject.subjectId ? (
+                                          <Spinner size="sm" />
+                                        ) : (
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="divide-y divide-slate-50">
+                                    {subject.standards.map((std) => (
+                                      <div key={std.standardId} className="px-4 py-2 text-sm text-slate-600">
+                                        {std.name}
+                                      </div>
+                                    ))}
+                                    {subject.standards.length === 0 && (
+                                      <div className="px-4 py-3 text-sm text-slate-400 italic">No standards — click Edit to add</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
+                              No report card subjects yet
                             </div>
                           )}
                         </div>
@@ -1396,25 +1629,47 @@ export default function EditClassPage() {
 
       {/* ─ JK/SK Domain Edit Modal ─ */}
       {editingDomain && (
-        <JKSKDomainEditModal
+        <JKDomainEditModal
           isOpen={!!editingDomain}
           onClose={() => setEditingDomain(null)}
           domain={editingDomain}
           onUpdate={() => {
-            refreshJKSKDomains()
+            refreshJKDomains()
           }}
         />
       )}
 
-      {/* ─ JK/SK Domain Add Modal ─ */}
+      {/* ─ JK Domain Add Modal ─ */}
       {addDomainType && classData && (
-        <JKSKDomainAddModal
+        <JKDomainAddModal
           isOpen={!!addDomainType}
           onClose={() => setAddDomainType(null)}
           documentType={addDomainType}
           school={classData.school}
-          currentCount={addDomainType === 'progress_report' ? jkskProgressDomains.length : jkskReportCardDomains.length}
-          onAdded={() => refreshJKSKDomains()}
+          currentCount={addDomainType === 'progress_report' ? jkProgressDomains.length : jkReportCardDomains.length}
+          onAdded={() => refreshJKDomains()}
+        />
+      )}
+
+      {/* ─ SK Subject Edit Modal ─ */}
+      {editingSubject && (
+        <SKSubjectEditModal
+          isOpen={!!editingSubject}
+          onClose={() => setEditingSubject(null)}
+          subject={editingSubject}
+          onUpdate={() => refreshSKSubjects()}
+        />
+      )}
+
+      {/* ─ SK Subject Add Modal ─ */}
+      {addSubjectType && classData && (
+        <SKSubjectAddModal
+          isOpen={!!addSubjectType}
+          onClose={() => setAddSubjectType(null)}
+          documentType={addSubjectType}
+          school={classData.school}
+          currentCount={addSubjectType === 'progress_report' ? skProgressSubjects.length : skReportCardSubjects.length}
+          onAdded={() => refreshSKSubjects()}
         />
       )}
     </>

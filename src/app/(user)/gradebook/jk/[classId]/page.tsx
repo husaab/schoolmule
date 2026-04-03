@@ -8,21 +8,21 @@ import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import {
-  getJKSKDomains,
-  getJKSKAssessments,
-  bulkUpsertJKSKAssessments,
-  getJKSKLearningSkills,
-  bulkUpsertJKSKLearningSkills,
-  getJKSKDomainComments,
-  bulkUpsertJKSKDomainComments,
-  getJKSKTeacherAssistant,
-  upsertJKSKTeacherAssistant,
-  getJKSKProgressReportComments,
-  bulkUpsertJKSKProgressReportComments,
-} from '@/services/jkskService'
+  getJKDomains,
+  getJKAssessments,
+  bulkUpsertJKAssessments,
+  getJKLearningSkills,
+  bulkUpsertJKLearningSkills,
+  getJKDomainComments,
+  bulkUpsertJKDomainComments,
+  getJKTeacherAssistant,
+  upsertJKTeacherAssistant,
+  getJKProgressReportComments,
+  bulkUpsertJKProgressReportComments,
+} from '@/services/jkService'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
-import type { JKSKDomain } from '@/services/types/jksk'
+import type { JKDomain } from '@/services/types/jk'
 import {
   ArrowLeftIcon,
   AcademicCapIcon,
@@ -73,7 +73,7 @@ const SOCIO_EMOTIONAL_DOMAIN_NAMES = ['Social Skills', 'Emotional Development']
 
 type TabType = 'progress_report' | 'report_card'
 
-const JKSKGradebook = () => {
+const JKGradebook = () => {
   const { classId } = useParams() as { classId: string }
   const router = useRouter()
   const user = useUserStore((s) => s.user)
@@ -82,7 +82,7 @@ const JKSKGradebook = () => {
   // Core data
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
-  const [domains, setDomains] = useState<JKSKDomain[]>([])
+  const [domains, setDomains] = useState<JKDomain[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -132,7 +132,7 @@ const JKSKGradebook = () => {
   // Load domains when tab changes
   useEffect(() => {
     if (!user?.school) return
-    getJKSKDomains(activeTab, user.school)
+    getJKDomains(activeTab, user.school)
       .then((res) => {
         if (res.status === 'success') setDomains(res.data)
       })
@@ -151,7 +151,7 @@ const JKSKGradebook = () => {
       setProgressComments({})
 
       // Load skill assessments
-      const assessRes = await getJKSKAssessments(selectedStudentId, term, activeTab)
+      const assessRes = await getJKAssessments(selectedStudentId, term, activeTab)
       if (assessRes.status === 'success') {
         const map: Record<string, string> = {}
         assessRes.data.forEach((a) => {
@@ -163,9 +163,9 @@ const JKSKGradebook = () => {
       // For report card tab, also load comments, learning skills, TA
       if (activeTab === 'report_card') {
         const [commentsRes, lsRes, taRes] = await Promise.all([
-          getJKSKDomainComments(selectedStudentId, term),
-          getJKSKLearningSkills(selectedStudentId, term),
-          getJKSKTeacherAssistant(selectedStudentId, term),
+          getJKDomainComments(selectedStudentId, term),
+          getJKLearningSkills(selectedStudentId, term),
+          getJKTeacherAssistant(selectedStudentId, term),
         ])
 
         if (commentsRes.status === 'success') {
@@ -194,7 +194,7 @@ const JKSKGradebook = () => {
       // For progress report tab, load progress report comments
       if (activeTab === 'progress_report') {
         try {
-          const prCommentsRes = await getJKSKProgressReportComments(selectedStudentId, term)
+          const prCommentsRes = await getJKProgressReportComments(selectedStudentId, term)
           if (prCommentsRes.status === 'success') {
             const pmap: Record<string, string> = {}
             prCommentsRes.data.forEach((c) => {
@@ -393,7 +393,7 @@ const JKSKGradebook = () => {
         }))
 
       if (assessmentEntries.length > 0) {
-        await bulkUpsertJKSKAssessments(assessmentEntries)
+        await bulkUpsertJKAssessments(assessmentEntries)
       }
 
       // For progress report, save progress report comments
@@ -409,7 +409,7 @@ const JKSKGradebook = () => {
           }))
 
         if (prCommentEntries.length > 0) {
-          await bulkUpsertJKSKProgressReportComments(prCommentEntries)
+          await bulkUpsertJKProgressReportComments(prCommentEntries)
         }
       }
 
@@ -426,7 +426,7 @@ const JKSKGradebook = () => {
           }))
 
         if (commentEntries.length > 0) {
-          await bulkUpsertJKSKDomainComments(commentEntries)
+          await bulkUpsertJKDomainComments(commentEntries)
         }
 
         const lsEntries = Object.entries(learningSkills)
@@ -440,11 +440,11 @@ const JKSKGradebook = () => {
           }))
 
         if (lsEntries.length > 0) {
-          await bulkUpsertJKSKLearningSkills(lsEntries)
+          await bulkUpsertJKLearningSkills(lsEntries)
         }
 
         if (teacherAssistant !== undefined) {
-          await upsertJKSKTeacherAssistant({
+          await upsertJKTeacherAssistant({
             studentId: selectedStudentId,
             teacherAssistantName: teacherAssistant || null,
             term,
@@ -951,4 +951,4 @@ const JKSKGradebook = () => {
   )
 }
 
-export default JKSKGradebook
+export default JKGradebook
