@@ -42,7 +42,11 @@ export default function PublicFormRenderer({ form }: Props) {
   };
 
   const sanitizedDescription = form.description
-    ? DOMPurify.sanitize(form.description.replace(/&nbsp;/g, ' '))
+    ? DOMPurify.sanitize(
+        form.description
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s*style="[^"]*"/g, '')
+      )
     : null;
 
   return (
