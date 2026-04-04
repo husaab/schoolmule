@@ -40,7 +40,7 @@ export default function RegistrationFormsPage() {
   const handleCreate = async () => {
     try {
       const res = await registrationService.createForm({ title: 'Untitled Form' });
-      router.push(`/admin-panel/registration/${res.data.formId}`);
+      router.push(`/admin-panel/forms/${res.data.formId}`);
     } catch (error) {
       showNotification(error instanceof Error ? error.message : 'Error creating form', 'error');
     }
@@ -66,8 +66,8 @@ export default function RegistrationFormsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Registration Forms</h1>
-              <p className="text-slate-500 mt-1">Create and manage custom registration forms for your school</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Forms</h1>
+              <p className="text-slate-500 mt-1">Create and manage custom forms for your school</p>
             </div>
             <button
               onClick={handleCreate}
@@ -116,7 +116,7 @@ export default function RegistrationFormsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
                         <Link
-                          href={`/admin-panel/registration/${form.formId}`}
+                          href={`/admin-panel/forms/${form.formId}`}
                           className="text-lg font-semibold text-slate-900 hover:text-cyan-600 transition-colors truncate"
                         >
                           {form.title}
@@ -145,7 +145,7 @@ export default function RegistrationFormsPage() {
                         </button>
                       )}
                       <Link
-                        href={`/admin-panel/registration/${form.formId}`}
+                        href={`/admin-panel/forms/${form.formId}`}
                         className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
                       >
                         <ArrowRightIcon className="w-4 h-4" />

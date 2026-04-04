@@ -43,9 +43,9 @@ const adminLinks = [
     borderColor: 'border-amber-100',
   },
   {
-    href: '/admin-panel/registration',
-    label: 'Registration Forms',
-    description: 'Create and manage custom registration forms for parents.',
+    href: '/admin-panel/forms',
+    label: 'Forms',
+    description: 'Create and manage custom forms for parents and students.',
     icon: ClipboardDocumentListIcon,
     color: 'bg-rose-500',
     bgColor: 'from-rose-50 to-pink-50',

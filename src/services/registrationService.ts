@@ -88,6 +88,11 @@ export const updateSubmissionStatus = (submissionId: string, status: string) =>
     body: { status },
   });
 
+export const deleteSubmission = (submissionId: string) =>
+  apiClient<{ status: string; message: string }>(`/registration/submissions/${submissionId}`, {
+    method: 'DELETE',
+  });
+
 // ─── CSV Export ─────────────────────────────────────────────────────
 
 export const exportSubmissions = async (formId: string, filters: SubmissionFilters = {}) => {

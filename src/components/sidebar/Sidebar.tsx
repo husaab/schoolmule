@@ -80,7 +80,7 @@ const Sidebar = () => {
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isFeedbackPath = pathname.startsWith('/feedback')
   const isFinancialPath = pathname.startsWith('/financials')
-  const isRegistrationPath = pathname.startsWith('/admin-panel/registration');
+  const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
 
   const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
@@ -330,22 +330,22 @@ const Sidebar = () => {
             {/* Admin Panel */}
             {user?.role === 'ADMIN' && (
               <>
-                {/* Registration */}
-                <div className="relative">
-                  <DropdownSection
-                    label="Registration"
-                    icon={ClipboardDocumentListIcon}
-                    isOpen={registrationOpen}
-                    onToggle={() => setRegistrationOpen(!registrationOpen)}
-                    isActive={isRegistrationPath}
-                  >
-                    <SubNavItem href="/admin-panel/registration" label="Form Builder" icon={PencilSquareIcon} />
-                    <SubNavItem href="/admin-panel/registration/submissions" label="Submissions" icon={EyeIcon} />
-                  </DropdownSection>
-                  {newSubmissionCount > 0 && (
-                    <span className="absolute top-1/2 -translate-y-1/2 right-4 h-2 w-2 rounded-full bg-rose-400 animate-pulse" />
-                  )}
-                </div>
+                {/* Forms */}
+                <DropdownSection
+                  label="Forms"
+                  icon={ClipboardDocumentListIcon}
+                  isOpen={registrationOpen}
+                  onToggle={() => setRegistrationOpen(!registrationOpen)}
+                  isActive={isRegistrationPath}
+                >
+                  <SubNavItem href="/admin-panel/forms" label="Form Builder" icon={PencilSquareIcon} />
+                  <div className="relative">
+                    <SubNavItem href="/admin-panel/forms/submissions" label="Submissions" icon={EyeIcon} />
+                    {newSubmissionCount > 0 && (
+                      <span className="absolute top-1/2 -translate-y-1/2 right-2 h-2 w-2 rounded-full bg-rose-400 animate-pulse" />
+                    )}
+                  </div>
+                </DropdownSection>
 
                 <NavItem
                   href="/admin-panel"

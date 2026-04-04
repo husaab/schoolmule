@@ -26,7 +26,7 @@ export default function FormBuilderPage() {
       setForm(res.data);
     } catch {
       showNotification('Error loading form', 'error');
-      router.push('/admin-panel/registration');
+      router.push('/admin-panel/forms');
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function FormBuilderPage() {
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
           {/* Back link */}
           <Link
-            href="/admin-panel/registration"
+            href="/admin-panel/forms"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-cyan-600 mb-6 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />

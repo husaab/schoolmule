@@ -15,6 +15,7 @@ import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import {
   EyeIcon,
+  TrashIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -71,6 +72,19 @@ export default function SubmissionsList({ forms }: Props) {
       fetchSubmissions();
     } catch {
       showNotification('Error updating status', 'error');
+    }
+  };
+
+  const handleDelete = async (submissionId: string) => {
+    if (!confirm('Are you sure you want to delete this submission?')) return;
+    try {
+      await registrationService.deleteSubmission(submissionId);
+      setDetailOpen(false);
+      setDetailSubmission(null);
+      fetchSubmissions();
+      showNotification('Submission deleted', 'success');
+    } catch {
+      showNotification('Error deleting submission', 'error');
     }
   };
 
@@ -144,7 +158,7 @@ export default function SubmissionsList({ forms }: Props) {
               </thead>
               <tbody>
                 {submissions.map((sub) => (
-                  <tr key={sub.submissionId} className="border-b border-slate-50 hover:bg-slate-50">
+                  <tr key={sub.submissionId} onClick={() => { setDetailSubmission(sub); setDetailOpen(true); }} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                       {new Date(sub.submittedAt).toLocaleDateString('en-CA')}
                     </td>
@@ -165,12 +179,20 @@ export default function SubmissionsList({ forms }: Props) {
                       </td>
                     ))}
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => { setDetailSubmission(sub); setDetailOpen(true); }}
-                        className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDetailSubmission(sub); setDetailOpen(true); }}
+                          className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(sub.submissionId); }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -206,7 +228,7 @@ export default function SubmissionsList({ forms }: Props) {
       {/* Detail Modal */}
       <Modal isOpen={detailOpen} onClose={() => setDetailOpen(false)} title="Submission Detail" size="lg">
         {detailSubmission && (
-          <div className="space-y-4 p-1">
+          <div className="space-y-4 px-6 py-4">
             <div className="flex items-center justify-between text-sm text-slate-500">
               <span>Submitted: {new Date(detailSubmission.submittedAt).toLocaleString('en-CA')}</span>
               <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[detailSubmission.status]}`}>
@@ -225,24 +247,32 @@ export default function SubmissionsList({ forms }: Props) {
               ))}
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              {detailSubmission.status === 'new' && (
-                <button
-                  onClick={() => {
-                    handleStatusChange(detailSubmission.submissionId, 'reviewed');
-                    setDetailOpen(false);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
-                >
-                  Mark as Reviewed
-                </button>
-              )}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
               <button
-                onClick={() => setDetailOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                onClick={() => handleDelete(detailSubmission.submissionId)}
+                className="px-4 py-2 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
               >
-                Close
+                Delete
               </button>
+              <div className="flex gap-2">
+                {detailSubmission.status === 'new' && (
+                  <button
+                    onClick={() => {
+                      handleStatusChange(detailSubmission.submissionId, 'reviewed');
+                      setDetailOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
+                  >
+                    Mark as Reviewed
+                  </button>
+                )}
+                <button
+                  onClick={() => setDetailOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
