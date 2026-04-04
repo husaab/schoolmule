@@ -35,6 +35,8 @@ import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
+import { useRegistrationStore } from '@/store/useRegistrationStore'
+import { getNewSubmissionCount } from '@/services/registrationService'
 
 interface NavLink {
   href: string;
@@ -71,20 +73,34 @@ const Sidebar = () => {
   const { isOpen: sidebarOpen, closeSidebar } = useSidebarStore();
   const hasUnread = usePatchNotesStore((s) => s.hasUnread);
 
+  const newSubmissionCount = useRegistrationStore((s) => s.newSubmissionCount);
+  const setNewSubmissionCount = useRegistrationStore((s) => s.setNewSubmissionCount);
+
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isFeedbackPath = pathname.startsWith('/feedback')
   const isFinancialPath = pathname.startsWith('/financials')
+  const isRegistrationPath = pathname.startsWith('/admin-panel/registration');
 
   const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
   const [financialOpen, setFinancialOpen] = useState(isFinancialPath);
+  const [registrationOpen, setRegistrationOpen] = useState(isRegistrationPath);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     closeSidebar();
   }, [pathname, closeSidebar]);
+
+  // Fetch new submission count for admin badge
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      getNewSubmissionCount()
+        .then((res) => setNewSubmissionCount(res.data.count))
+        .catch(() => {});
+    }
+  }, [user?.role, setNewSubmissionCount]);
 
   // Close sidebar when clicking outside (mobile)
   useEffect(() => {
@@ -314,11 +330,28 @@ const Sidebar = () => {
             {/* Admin Panel */}
             {user?.role === 'ADMIN' && (
               <>
+                {/* Registration */}
+                <div className="relative">
+                  <DropdownSection
+                    label="Registration"
+                    icon={ClipboardDocumentListIcon}
+                    isOpen={registrationOpen}
+                    onToggle={() => setRegistrationOpen(!registrationOpen)}
+                    isActive={isRegistrationPath}
+                  >
+                    <SubNavItem href="/admin-panel/registration" label="Form Builder" icon={PencilSquareIcon} />
+                    <SubNavItem href="/admin-panel/registration/submissions" label="Submissions" icon={EyeIcon} />
+                  </DropdownSection>
+                  {newSubmissionCount > 0 && (
+                    <span className="absolute top-1/2 -translate-y-1/2 right-4 h-2 w-2 rounded-full bg-rose-400 animate-pulse" />
+                  )}
+                </div>
+
                 <NavItem
                   href="/admin-panel"
                   label="Admin Panel"
                   icon={ShieldCheckIcon}
-                  isActive={pathname.startsWith('/admin-panel')}
+                  isActive={pathname.startsWith('/admin-panel') && !isRegistrationPath}
                 />
                 <NavItem
                   href="/staff-attendance"

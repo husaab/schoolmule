@@ -9,6 +9,23 @@ import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import PatchNotesModal from '@/components/patchNotes/PatchNotesModal'
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
+
+// Known top-level app route segments (to distinguish from public form slugs)
+const KNOWN_APP_ROUTES = [
+  'login', 'signup', 'about', 'product', 'contact', 'demo',
+  'forgot-password', 'reset-password', 'dashboard', 'students', 'classes',
+  'gradebook', 'attendance', 'reports', 'report-cards', 'schedule',
+  'feedback', 'communication', 'admin-panel', 'settings', 'support',
+  'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
+  'staff-attendance', 'my-attendance', 'whats-new', 'parent',
+  'financials', 'forbidden', 'api', '_next',
+];
+
+// Check if a path is a public registration form URL: /{schoolSlug}/{formSlug}
+const isPublicFormPath = (path: string) => {
+  const segments = path.split('/').filter(Boolean);
+  return segments.length === 2 && !KNOWN_APP_ROUTES.includes(segments[0]);
+};
 const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
 
 // Check if path matches parent patterns (including dynamic routes)
@@ -87,13 +104,13 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     // Handle routing logic
-    if (!token && !PUBLIC_PATHS.includes(path)) {
+    if (!token && !PUBLIC_PATHS.includes(path) && !isPublicFormPath(path)) {
       router.replace('/')
     }
 
     // Handle authenticated user routing
     if (token && user.id) {
-      if (PUBLIC_PATHS.includes(path) || path === '/') {
+      if ((PUBLIC_PATHS.includes(path) || path === '/') && !isPublicFormPath(path)) {
         router.replace('/dashboard')
       } else if (!user.isVerifiedEmail && path !== '/verify-email' && path !== '/verify-email-token') {
         router.replace('/verify-email')

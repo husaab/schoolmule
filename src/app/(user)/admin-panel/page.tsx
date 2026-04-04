@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -41,6 +41,15 @@ const adminLinks = [
     color: 'bg-amber-500',
     bgColor: 'from-amber-50 to-orange-50',
     borderColor: 'border-amber-100',
+  },
+  {
+    href: '/admin-panel/registration',
+    label: 'Registration Forms',
+    description: 'Create and manage custom registration forms for parents.',
+    icon: ClipboardDocumentListIcon,
+    color: 'bg-rose-500',
+    bgColor: 'from-rose-50 to-pink-50',
+    borderColor: 'border-rose-100',
   },
   {
     href: '/admin-panel/patch-notes',
