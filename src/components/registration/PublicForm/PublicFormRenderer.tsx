@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import DOMPurify from 'dompurify';
+import Link from 'next/link';
+import Image from 'next/image';
 import type { PublicFormData } from '@/services/types/registration';
 import { submitPublicForm } from '@/services/registrationPublicService';
 import FormField from './FormField';
@@ -18,6 +20,9 @@ export default function PublicFormRenderer({ form }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, string>>();
+
+  // Check if user is logged in (has auth token)
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token');
 
   if (submitted) {
     return <SuccessMessage schoolName={form.schoolName} />;
@@ -37,11 +42,32 @@ export default function PublicFormRenderer({ form }: Props) {
   };
 
   const sanitizedDescription = form.description
-    ? DOMPurify.sanitize(form.description)
+    ? DOMPurify.sanitize(form.description.replace(/&nbsp;/g, ' '))
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* Top Nav */}
+      <nav className="flex items-center justify-between mb-6">
+        <Link href="/">
+          <Image
+            src="/logo/trimmedlogo.png"
+            alt="SchoolMule"
+            width={200}
+            height={60}
+            className="h-16 w-auto"
+          />
+        </Link>
+        {isLoggedIn && (
+          <Link
+            href="/dashboard"
+            className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors"
+          >
+            Dashboard &rarr;
+          </Link>
+        )}
+      </nav>
+
       {/* Banner Image */}
       {form.bannerImageUrl && (
         <div className="rounded-t-2xl overflow-hidden mb-0">
@@ -65,7 +91,7 @@ export default function PublicFormRenderer({ form }: Props) {
 
         {sanitizedDescription && (
           <div
-            className="prose prose-sm prose-slate max-w-none text-slate-700"
+            className="prose prose-slate max-w-none text-slate-700 [&_p]:my-4 [&_p:empty]:my-0 [&_p:has(br:only-child)]:h-5 [&_p:has(br:only-child)]:my-0"
             dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
           />
         )}
