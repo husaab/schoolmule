@@ -10,9 +10,14 @@ interface Props {
   index: number;
 }
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export default function FormField({ field, register, errors, index }: Props) {
   const error = errors[field.fieldId];
   const label = `${index + 1}. ${field.label}`;
+
+  // Validate as email if the field type is 'email' OR the label contains 'email'
+  const isEmailField = field.fieldType === 'email' || /email/i.test(field.label);
 
   const baseInputClass =
     'w-full px-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors';
@@ -28,9 +33,14 @@ export default function FormField({ field, register, errors, index }: Props) {
       {/* Text / Email / Phone */}
       {(field.fieldType === 'text' || field.fieldType === 'email' || field.fieldType === 'phone') && (
         <input
-          type={field.fieldType === 'phone' ? 'tel' : field.fieldType}
-          placeholder={field.placeholder || 'Your answer'}
-          {...register(field.fieldId, { required: field.isRequired ? 'This field is required' : false })}
+          type={isEmailField ? 'email' : field.fieldType === 'phone' ? 'tel' : 'text'}
+          placeholder={field.placeholder || (isEmailField ? 'example@email.com' : 'Your answer')}
+          {...register(field.fieldId, {
+            required: field.isRequired ? 'This field is required' : false,
+            ...(isEmailField && {
+              pattern: { value: EMAIL_REGEX, message: 'Please enter a valid email address' },
+            }),
+          })}
           className={`${baseInputClass} ${errorClass}`}
         />
       )}
