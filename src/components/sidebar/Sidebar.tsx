@@ -175,8 +175,8 @@ const Sidebar = () => {
     </div>
   );
 
-  const SubNavItem = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) => {
-    const isActive = pathname === href || pathname.startsWith(href + '/');
+  const SubNavItem = ({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; exact?: boolean }) => {
+    const isActive = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'));
     return (
       <Link
         href={href}
@@ -338,7 +338,7 @@ const Sidebar = () => {
                   onToggle={() => setRegistrationOpen(!registrationOpen)}
                   isActive={isRegistrationPath}
                 >
-                  <SubNavItem href="/admin-panel/forms" label="Form Builder" icon={PencilSquareIcon} />
+                  <SubNavItem href="/admin-panel/forms" label="Form Builder" icon={PencilSquareIcon} exact />
                   <div className="relative">
                     <SubNavItem href="/admin-panel/forms/submissions" label="Submissions" icon={EyeIcon} />
                     {newSubmissionCount > 0 && (
