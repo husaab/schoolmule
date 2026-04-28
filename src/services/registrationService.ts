@@ -75,6 +75,8 @@ export const getSubmissions = (formId: string, filters: SubmissionFilters = {}) 
   if (filters.dateTo) params.set('dateTo', filters.dateTo);
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
+  if (filters.sortFieldId) params.set('sortFieldId', filters.sortFieldId);
+  if (filters.sortDir) params.set('sortDir', filters.sortDir);
   const qs = params.toString();
   return apiClient<SubmissionsListResponse>(`/registration/forms/${formId}/submissions${qs ? `?${qs}` : ''}`);
 };
@@ -103,6 +105,8 @@ export const exportSubmissions = async (formId: string, filters: SubmissionFilte
   if (filters.status) params.set('status', filters.status);
   if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
   if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (filters.sortFieldId) params.set('sortFieldId', filters.sortFieldId);
+  if (filters.sortDir) params.set('sortDir', filters.sortDir);
   const qs = params.toString();
 
   const response = await fetch(
@@ -112,11 +116,18 @@ export const exportSubmissions = async (formId: string, filters: SubmissionFilte
 
   if (!response.ok) throw new Error('Export failed');
 
+  // Use the server-supplied filename from the Content-Disposition header
+  // so the download uses the form's title (e.g. "Al_Haadi_Academy_..._submissions.csv")
+  // instead of the form's UUID.
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+  const filename = filenameMatch?.[1] ? decodeURIComponent(filenameMatch[1]) : `submissions_${formId}.csv`;
+
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `submissions_${formId}.csv`;
+  a.download = filename;
   a.click();
   window.URL.revokeObjectURL(url);
 };

@@ -129,4 +129,7 @@ export interface SubmissionFilters {
   dateTo?: string;
   page?: number;
   limit?: number;
+  // Sort by a field UUID, or the special string 'submittedAt'
+  sortFieldId?: string;
+  sortDir?: 'asc' | 'desc';
 }

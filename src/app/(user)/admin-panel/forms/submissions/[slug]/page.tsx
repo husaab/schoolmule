@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -24,6 +24,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InboxStackIcon,
+  ArrowsUpDownIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
 } from '@heroicons/react/24/outline';
 
 const statusColors: Record<string, string> = {
@@ -35,6 +38,7 @@ const statusColors: Record<string, string> = {
 export default function FormSubmissionsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const showNotification = useNotificationStore((s) => s.showNotification);
   const slug = params.slug as string;
 
@@ -46,8 +50,41 @@ export default function FormSubmissionsPage() {
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [fields, setFields] = useState<FormField[]>([]);
   const [pagination, setPagination] = useState<SubmissionPagination>({ total: 0, page: 1, limit: 25 });
-  const [filters, setFilters] = useState<FiltersType>({ page: 1, limit: 25 });
+
+  // Initialize filters from URL params (so refresh / shareable links retain sort)
+  const [filters, setFilters] = useState<FiltersType>(() => ({
+    page: 1,
+    limit: 25,
+    sortFieldId: searchParams.get('sortFieldId') || undefined,
+    sortDir: (searchParams.get('sortDir') as 'asc' | 'desc') || undefined,
+  }));
   const [loading, setLoading] = useState(false);
+
+  // Build the column list shown in the table:
+  // First 3 fields by default, plus the sorted field if it's not already among them.
+  // This way users always see the column they sorted by.
+  const displayedFields = useMemo(() => {
+    const baseColumns = fields.slice(0, 3);
+    const sortedField = filters.sortFieldId && filters.sortFieldId !== 'submittedAt'
+      ? fields.find((f) => f.fieldId === filters.sortFieldId)
+      : null;
+    if (sortedField && !baseColumns.some((f) => f.fieldId === sortedField.fieldId)) {
+      return [...baseColumns, sortedField];
+    }
+    return baseColumns;
+  }, [fields, filters.sortFieldId]);
+
+  // Sync filters to URL whenever they change (preserves sort across navigation)
+  useEffect(() => {
+    const sp = new URLSearchParams();
+    if (filters.sortFieldId) sp.set('sortFieldId', filters.sortFieldId);
+    if (filters.sortDir) sp.set('sortDir', filters.sortDir);
+    const qs = sp.toString();
+    const newUrl = qs ? `?${qs}` : '';
+    if (window.location.search !== newUrl) {
+      window.history.replaceState(null, '', `${window.location.pathname}${newUrl}`);
+    }
+  }, [filters.sortFieldId, filters.sortDir]);
 
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
@@ -165,9 +202,34 @@ export default function FormSubmissionsPage() {
             <ExportButton formId={form.formId} filters={filters} />
           </div>
 
-          {/* Filters */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6">
-            <SubmissionFiltersComponent filters={filters} onChange={setFilters} />
+          {/* Filters + Sort */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[280px]">
+              <SubmissionFiltersComponent filters={filters} onChange={setFilters} />
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-2 pl-4 sm:border-l sm:border-slate-200">
+              <ArrowsUpDownIcon className="w-4 h-4 text-slate-400" />
+              <label className="text-xs text-slate-500">Sort by:</label>
+              <select
+                value={filters.sortFieldId || ''}
+                onChange={(e) => setFilters({ ...filters, sortFieldId: e.target.value || undefined, sortDir: filters.sortDir || 'asc', page: 1 })}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white max-w-[180px]"
+              >
+                <option value="">Date submitted</option>
+                {fields.map((f) => (
+                  <option key={f.fieldId} value={f.fieldId}>{f.label.length > 30 ? f.label.slice(0, 30) + '…' : f.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setFilters({ ...filters, sortDir: filters.sortDir === 'asc' ? 'desc' : 'asc', page: 1 })}
+                className="p-2 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                title={filters.sortDir === 'asc' ? 'Ascending' : 'Descending'}
+              >
+                {filters.sortDir === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Loading */}
@@ -200,11 +262,24 @@ export default function FormSubmissionsPage() {
                     <tr className="border-b border-slate-100 bg-slate-50/80">
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                      {fields.slice(0, 3).map((f) => (
-                        <th key={f.fieldId} className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider truncate max-w-[200px]">
-                          {f.label}
-                        </th>
-                      ))}
+                      {displayedFields.map((f) => {
+                        const isSorted = filters.sortFieldId === f.fieldId;
+                        return (
+                          <th
+                            key={f.fieldId}
+                            className={`text-left px-5 py-3.5 text-xs font-semibold uppercase tracking-wider truncate max-w-[200px] ${isSorted ? 'text-cyan-700 bg-cyan-50/40' : 'text-slate-500'}`}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              {f.label}
+                              {isSorted && (
+                                filters.sortDir === 'desc'
+                                  ? <ArrowDownIcon className="w-3 h-3" />
+                                  : <ArrowUpIcon className="w-3 h-3" />
+                              )}
+                            </span>
+                          </th>
+                        );
+                      })}
                       <th className="text-right px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -230,11 +305,17 @@ export default function FormSubmissionsPage() {
                             <option value="archived">Archived</option>
                           </select>
                         </td>
-                        {fields.slice(0, 3).map((f) => (
-                          <td key={f.fieldId} className="px-5 py-3.5 text-slate-600 truncate max-w-[200px]">
-                            {sub.answers[f.fieldId] || '—'}
-                          </td>
-                        ))}
+                        {displayedFields.map((f) => {
+                          const isSorted = filters.sortFieldId === f.fieldId;
+                          return (
+                            <td
+                              key={f.fieldId}
+                              className={`px-5 py-3.5 truncate max-w-[200px] ${isSorted ? 'bg-cyan-50/40 text-slate-900 font-medium' : 'text-slate-600'}`}
+                            >
+                              {sub.answers[f.fieldId] || '—'}
+                            </td>
+                          );
+                        })}
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
@@ -257,28 +338,53 @@ export default function FormSubmissionsPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50/50">
-                  <button
-                    onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
-                    disabled={(filters.page || 1) <= 1}
-                    className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+              {/* Pagination + page size */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3.5 border-t border-slate-100 bg-slate-50/50">
+                {/* Page size selector */}
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>Show</span>
+                  <select
+                    value={filters.limit || 25}
+                    onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value, 10), page: 1 })}
+                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
                   >
-                    <ChevronLeftIcon className="w-4 h-4" /> Previous
-                  </button>
-                  <span className="text-sm text-slate-500">
-                    Page {filters.page || 1} of {totalPages}
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={250}>250</option>
+                    <option value={500}>500</option>
+                  </select>
+                  <span>per page</span>
+                  <span className="hidden sm:inline text-slate-400">·</span>
+                  <span className="hidden sm:inline">
+                    Showing {Math.min(((filters.page || 1) - 1) * (filters.limit || 25) + 1, pagination.total)}–
+                    {Math.min((filters.page || 1) * (filters.limit || 25), pagination.total)} of {pagination.total}
                   </span>
-                  <button
-                    onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
-                    disabled={(filters.page || 1) >= totalPages}
-                    className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next <ChevronRightIcon className="w-4 h-4" />
-                  </button>
                 </div>
-              )}
+
+                {/* Page navigation */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
+                      disabled={(filters.page || 1) <= 1}
+                      className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeftIcon className="w-4 h-4" /> Previous
+                    </button>
+                    <span className="text-sm text-slate-500">
+                      Page {filters.page || 1} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
+                      disabled={(filters.page || 1) >= totalPages}
+                      className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next <ChevronRightIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
