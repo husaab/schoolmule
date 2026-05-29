@@ -29,7 +29,8 @@ import {
   PresentationChartLineIcon,
   UserCircleIcon,
   IdentificationIcon,
-  SparklesIcon
+  SparklesIcon,
+  TrophyIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -260,6 +261,14 @@ const Sidebar = () => {
               label="Reports"
               icon={ChartBarIcon}
               isActive={pathname.startsWith('/reports')}
+            />
+
+            {/* Student Views — custom filtered lists for awards/recognition */}
+            <NavItem
+              href="/student-views"
+              label="Student Views"
+              icon={TrophyIcon}
+              isActive={pathname.startsWith('/student-views')}
             />
 
             {/* Report Cards Dropdown */}
