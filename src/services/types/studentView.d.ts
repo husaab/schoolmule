@@ -85,3 +85,47 @@ export interface PreviewResponse {
   data: { students: EvaluatedStudent[] };
   message?: string;
 }
+
+export interface CertificateEmailRequest {
+  studentIds: string[];
+  /** Shared subject for the whole batch (optional; per-student default used if blank). */
+  customHeader?: string;
+  /** Shared message block appended to every email (optional). */
+  customMessage?: string;
+  ccAddresses?: string[];
+}
+
+export interface CertificateEmailResult {
+  studentId: string;
+  studentName: string;
+  status: 'success' | 'failed';
+  sentTo?: string[];
+  error?: string;
+}
+
+export interface CertificateEmailResponse {
+  status: 'completed' | 'failed';
+  viewId?: string;
+  summary?: { total: number; sent: number; failed: number; duration: string };
+  results?: CertificateEmailResult[];
+  message?: string;
+}
+
+export interface SingleCertificateEmailRequest {
+  /** Explicit recipients for this one student (e.g. a single parent). */
+  emailAddresses: string[];
+  customHeader?: string;
+  customMessage?: string;
+  ccAddresses?: string[];
+}
+
+export interface SingleCertificateEmailResponse {
+  status: 'success' | 'failed';
+  message?: string;
+  data?: {
+    id?: string;
+    sentAt?: string;
+    emailId?: string;
+    sentTo?: string[];
+  };
+}

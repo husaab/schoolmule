@@ -23,9 +23,12 @@ import {
   LockClosedIcon,
   UsersIcon,
   ArrowLeftIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
+import EmailCertificatesModal from '@/components/student-views/email/EmailCertificatesModal'
+import SingleEmailCertificateModal from '@/components/student-views/email/SingleEmailCertificateModal'
 
 export default function StudentViewDetailPage() {
   const { viewId } = useParams<{ viewId: string }>()
@@ -37,6 +40,8 @@ export default function StudentViewDetailPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [downloadingStudentId, setDownloadingStudentId] = useState<string | null>(null)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailStudentTarget, setEmailStudentTarget] = useState<EvaluatedStudent | null>(null)
 
   useEffect(() => {
     if (!viewId) return
@@ -186,10 +191,24 @@ export default function StudentViewDetailPage() {
               <button
                 onClick={handleCertificates}
                 disabled={busy || selected.size === 0}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-white border border-cyan-200 text-cyan-700 hover:bg-cyan-50 disabled:opacity-50"
               >
                 <DocumentTextIcon className="w-4 h-4" />
                 Certificates ({selected.size})
+              </button>
+              <button
+                onClick={() => {
+                  if (selected.size === 0) {
+                    showNotification('Select at least one student', 'error')
+                    return
+                  }
+                  setEmailModalOpen(true)
+                }}
+                disabled={busy || selected.size === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-50"
+              >
+                <EnvelopeIcon className="w-4 h-4" />
+                Email Parents ({selected.size})
               </button>
               <Link
                 href={`/student-views/new?duplicateFrom=${encodeURIComponent(view.viewId)}`}
@@ -258,18 +277,28 @@ export default function StudentViewDetailPage() {
                           {s.displayMetric.toFixed(1)}%
                         </td>
                         <td className="px-5 py-2 text-right">
-                          <button
-                            onClick={() => handleSingleCertificate(s)}
-                            disabled={isDownloading || busy}
-                            title="Download this student's certificate"
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 cursor-pointer hover:bg-cyan-50 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isDownloading ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              <DocumentArrowDownIcon className="w-4 h-4" />
-                            )}
-                          </button>
+                          <div className="inline-flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setEmailStudentTarget(s)}
+                              disabled={busy}
+                              title="Email this student's certificate to a parent"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 cursor-pointer hover:bg-cyan-50 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <EnvelopeIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleSingleCertificate(s)}
+                              disabled={isDownloading || busy}
+                              title="Download this student's certificate"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 cursor-pointer hover:bg-cyan-50 hover:text-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isDownloading ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                <DocumentArrowDownIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -280,6 +309,25 @@ export default function StudentViewDetailPage() {
           </div>
         </main>
       </div>
+
+      <EmailCertificatesModal
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        viewId={view.viewId}
+        viewName={view.name}
+        students={students.filter((s) => selected.has(s.studentId))}
+      />
+
+      {emailStudentTarget && (
+        <SingleEmailCertificateModal
+          isOpen={!!emailStudentTarget}
+          onClose={() => setEmailStudentTarget(null)}
+          viewId={view.viewId}
+          viewName={view.name}
+          studentId={emailStudentTarget.studentId}
+          studentName={emailStudentTarget.studentName}
+        />
+      )}
     </div>
   )
 }

@@ -9,6 +9,10 @@ import type {
   CreateStudentViewRequest,
   UpdateStudentViewRequest,
   StudentViewCriteria,
+  CertificateEmailRequest,
+  CertificateEmailResponse,
+  SingleCertificateEmailRequest,
+  SingleCertificateEmailResponse,
 } from './types/studentView';
 
 export const listStudentViews = (): Promise<StudentViewListResponse> =>
@@ -51,6 +55,30 @@ export const previewStudentView = (
     method: 'POST',
     body: { criteria },
   });
+
+// Emails each selected student's certificate PDF to their parents.
+// Returns JSON (per-student results), so it uses apiClient — unlike the
+// blob-returning certificate *download* below.
+export const emailStudentViewCertificates = (
+  viewId: string,
+  body: CertificateEmailRequest,
+): Promise<CertificateEmailResponse> =>
+  apiClient<CertificateEmailResponse, CertificateEmailRequest>(
+    `/student-views/${encodeURIComponent(viewId)}/email`,
+    { method: 'POST', body },
+  );
+
+// Emails ONE student's certificate to an explicit recipient list (e.g. a
+// single parent). Used by the per-row single-send modal.
+export const emailSingleStudentViewCertificate = (
+  viewId: string,
+  studentId: string,
+  body: SingleCertificateEmailRequest,
+): Promise<SingleCertificateEmailResponse> =>
+  apiClient<SingleCertificateEmailResponse, SingleCertificateEmailRequest>(
+    `/student-views/${encodeURIComponent(viewId)}/email/student/${encodeURIComponent(studentId)}`,
+    { method: 'POST', body },
+  );
 
 // CSV and PDF use the same auth token but need raw response handling — fetch directly.
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
