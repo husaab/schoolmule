@@ -33,6 +33,10 @@ export default function EditStudentViewPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isShared, setIsShared] = useState(false)
+  // Mirrors the row's current system flag in the form; admins can flip it.
+  // Stays null until the source view loads so we can distinguish "unchanged"
+  // from "explicitly toggled" on save.
+  const [systemFlag, setSystemFlag] = useState<boolean | null>(null)
   const [criteria, setCriteria] = useState<StudentViewCriteria | null>(null)
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [subjects, setSubjects] = useState<string[]>([])
@@ -49,6 +53,7 @@ export default function EditStudentViewPage() {
         setName(v.name)
         setDescription(v.description)
         setIsShared(v.isShared)
+        setSystemFlag(v.isSystem)
         setCriteria(v.criteria)
       })
       .catch(() => showNotification('Failed to load view', 'error'))
@@ -111,13 +116,25 @@ export default function EditStudentViewPage() {
     )
   }
 
+  const isAdmin = user?.role === 'ADMIN'
+  // Only include isSystem in the PATCH body when an admin actually flipped it.
+  // If unchanged, leave it out so the backend takes the no-op COALESCE path.
+  const systemFlagChanged =
+    isAdmin && systemFlag !== null && systemFlag !== view.isSystem
+
   const handleSave = async () => {
     if (!name.trim()) {
       showNotification('View name is required', 'error')
       return
     }
     try {
-      await updateStudentView(viewId, { name, description, isShared, criteria })
+      await updateStudentView(viewId, {
+        name,
+        description,
+        isShared,
+        criteria,
+        ...(systemFlagChanged ? { isSystem: systemFlag as boolean } : {}),
+      })
       showNotification('View saved', 'success')
       router.push(`/student-views/${viewId}`)
     } catch {
@@ -156,6 +173,38 @@ export default function EditStudentViewPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
+              {isAdmin && systemFlag !== null && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <label className="flex items-start gap-2 text-sm text-amber-900 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={systemFlag}
+                      onChange={(e) => setSystemFlag(e.target.checked)}
+                      className="mt-0.5 rounded text-amber-600"
+                    />
+                    <span>
+                      {view.isSystem ? (
+                        <>
+                          <strong>System view (school-wide)</strong>
+                          <span className="block text-xs text-amber-700 mt-0.5">
+                            Uncheck to convert this back to a personal view. You will become the
+                            owner; other teachers will lose access unless you keep sharing on.
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <strong>Promote to system view</strong>
+                          <span className="block text-xs text-amber-700 mt-0.5">
+                            Make this permanent and school-wide. Sharing will be forced on and the
+                            view will no longer have an individual owner.
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <CriteriaBuilder
                 name={name}
                 description={description}
@@ -191,18 +240,13 @@ export default function EditStudentViewPage() {
               {!previewLoading && previewStudents && (
                 <>
                   <div className="text-2xl font-bold text-cyan-700 mb-3">{previewStudents.length}</div>
-                  <div className="max-h-80 overflow-y-auto space-y-1">
-                    {previewStudents.slice(0, 25).map((s) => (
+                  <div className="max-h-[32rem] overflow-y-auto space-y-1 pr-1">
+                    {previewStudents.map((s) => (
                       <div key={s.studentId} className="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
                         <span className="text-slate-700">{s.studentName}</span>
                         <span className="text-slate-500">{s.displayMetric.toFixed(1)}%</span>
                       </div>
                     ))}
-                    {previewStudents.length > 25 && (
-                      <div className="text-xs text-slate-400 pt-2">
-                        …and {previewStudents.length - 25} more
-                      </div>
-                    )}
                   </div>
                 </>
               )}

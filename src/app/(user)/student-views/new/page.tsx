@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import CriteriaBuilder from '@/components/studentViews/CriteriaBuilder'
@@ -9,11 +9,15 @@ import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getAllClasses } from '@/services/classService'
-import { createStudentView, previewStudentView } from '@/services/studentViewService'
+import {
+  createStudentView,
+  previewStudentView,
+  getStudentView,
+} from '@/services/studentViewService'
 import type { StudentViewCriteria, EvaluatedStudent } from '@/services/types/studentView'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
-import { TrophyIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { TrophyIcon, ArrowLeftIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 
 const DEFAULT_CRITERIA: StudentViewCriteria = {
   termScope: 'active',
@@ -27,6 +31,9 @@ const DEFAULT_CRITERIA: StudentViewCriteria = {
 
 export default function NewStudentViewPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const duplicateFromId = searchParams.get('duplicateFrom')
+
   const user = useUserStore((s) => s.user)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -38,6 +45,7 @@ export default function NewStudentViewPage() {
   const isAdmin = user?.role === 'ADMIN'
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [subjects, setSubjects] = useState<string[]>([])
+  const [sourceName, setSourceName] = useState<string | null>(null)
 
   const [previewStudents, setPreviewStudents] = useState<EvaluatedStudent[] | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -53,6 +61,23 @@ export default function NewStudentViewPage() {
       })
       .catch(() => {})
   }, [user?.school])
+
+  // Pre-fill state from a source view when ?duplicateFrom=<viewId> is present.
+  // Visibility inherits from the source; isSystem only sticks for admins.
+  useEffect(() => {
+    if (!duplicateFromId) return
+    getStudentView(duplicateFromId)
+      .then((r) => {
+        const src = r.data
+        setSourceName(src.name)
+        setName(`${src.name} (Copy)`)
+        setDescription(src.description)
+        setCriteria(src.criteria)
+        setIsShared(src.isShared)
+        setIsSystem(isAdmin ? src.isSystem : false)
+      })
+      .catch(() => showNotification('Could not load source view', 'error'))
+  }, [duplicateFromId, isAdmin, showNotification])
 
   // Live preview: debounce 500ms
   useEffect(() => {
@@ -108,15 +133,31 @@ export default function NewStudentViewPage() {
             <ArrowLeftIcon className="w-4 h-4" />
             Back to Student Views
           </Link>
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-cyan-50 rounded-xl">
               <TrophyIcon className="w-7 h-7 text-cyan-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">New Student View</h1>
-              <p className="text-sm text-slate-500">Define filter criteria and save for reuse</p>
+              <h1 className="text-2xl font-bold text-slate-900">
+                {sourceName ? 'Duplicate Student View' : 'New Student View'}
+              </h1>
+              <p className="text-sm text-slate-500">
+                {sourceName
+                  ? 'Tweak anything below and save as a new view.'
+                  : 'Define filter criteria and save for reuse'}
+              </p>
             </div>
           </div>
+
+          {sourceName && (
+            <div className="mb-6 rounded-xl border border-cyan-200 bg-cyan-50/60 px-4 py-3 flex items-start gap-2.5">
+              <DocumentDuplicateIcon className="w-5 h-5 text-cyan-600 mt-0.5 shrink-0" />
+              <div className="text-sm text-cyan-900">
+                Duplicating from <strong>&ldquo;{sourceName}&rdquo;</strong>. The original is unchanged
+                — your edits below create a new view.
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
@@ -193,16 +234,13 @@ function PreviewPanel({
       {!loading && students && (
         <>
           <div className="text-2xl font-bold text-cyan-700 mb-3">{students.length}</div>
-          <div className="max-h-80 overflow-y-auto space-y-1">
-            {students.slice(0, 25).map((s) => (
+          <div className="max-h-[32rem] overflow-y-auto space-y-1 pr-1">
+            {students.map((s) => (
               <div key={s.studentId} className="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
                 <span className="text-slate-700">{s.studentName}</span>
                 <span className="text-slate-500">{s.displayMetric.toFixed(1)}%</span>
               </div>
             ))}
-            {students.length > 25 && (
-              <div className="text-xs text-slate-400 pt-2">…and {students.length - 25} more</div>
-            )}
           </div>
         </>
       )}

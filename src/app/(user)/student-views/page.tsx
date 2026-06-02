@@ -20,6 +20,7 @@ import {
   ArrowLeftIcon,
   MagnifyingGlassIcon,
   SparklesIcon,
+  DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline'
 
 type Tab = 'dashboard' | 'mine' | 'shared' | 'system'
@@ -486,6 +487,13 @@ function ViewCard({
           Open
         </Link>
         <div className="flex items-center gap-1">
+          <Link
+            href={`/student-views/new?duplicateFrom=${encodeURIComponent(view.viewId)}`}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-cyan-700 hover:bg-cyan-50"
+            title="Duplicate"
+          >
+            <DocumentDuplicateIcon className="w-4 h-4" />
+          </Link>
           {canEdit && (
             <Link
               href={`/student-views/${view.viewId}/edit`}

@@ -47,6 +47,8 @@ export interface UpdateStudentViewRequest {
   name?: string;
   description?: string;
   isShared?: boolean;
+  /** Admin-only. true = promote to system view, false = demote to personal view. */
+  isSystem?: boolean;
   criteria?: StudentViewCriteria;
 }
 

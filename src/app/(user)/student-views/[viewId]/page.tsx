@@ -17,6 +17,7 @@ import {
   ArrowDownTrayIcon,
   DocumentTextIcon,
   DocumentArrowDownIcon,
+  DocumentDuplicateIcon,
   PencilSquareIcon,
   ShieldCheckIcon,
   LockClosedIcon,
@@ -190,6 +191,13 @@ export default function StudentViewDetailPage() {
                 <DocumentTextIcon className="w-4 h-4" />
                 Certificates ({selected.size})
               </button>
+              <Link
+                href={`/student-views/new?duplicateFrom=${encodeURIComponent(view.viewId)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 hover:border-cyan-200"
+              >
+                <DocumentDuplicateIcon className="w-4 h-4" />
+                Duplicate
+              </Link>
               {canEdit && (
                 <Link
                   href={`/student-views/${view.viewId}/edit`}
