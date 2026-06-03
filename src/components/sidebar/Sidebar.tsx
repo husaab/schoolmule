@@ -54,6 +54,7 @@ const teacherLinks: NavLink[] = [
   { href: '/students', label: 'Students', icon: UserGroupIcon },
   { href: '/classes', label: 'Classes', icon: AcademicCapIcon },
   { href: '/gradebook', label: 'Gradebook', icon: BookOpenIcon },
+  { href: '/analytics', label: 'Analytics', icon: PresentationChartLineIcon },
 ];
 
 const parentLinks: NavLink[] = [

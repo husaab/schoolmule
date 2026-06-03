@@ -33,6 +33,9 @@ export default function ViewReportCardsPage() {
   const [reportCards, setReportCards] = useState<ReportCardRow[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
+  // When deep-linked from the generate page (?preview=<studentId>), auto-open
+  // that student's report card viewer once the cards for the term have loaded.
+  const [autoPreviewStudentId, setAutoPreviewStudentId] = useState<string | null>(null);
   const [terms, setTerms] = useState<TermPayload[]>([]);
   const [loadingTerms, setLoadingTerms] = useState(false);
   const [term, setTerm] = useState<string>('');
@@ -54,9 +57,17 @@ export default function ViewReportCardsPage() {
       getTermsBySchool(user.school).then((res) => {
         if (res.status === 'success') {
           setTerms(res.data);
-          
-          // Set default term to active term
-          if (user.activeTerm) {
+
+          // A deep link (?term=...&preview=...) wins over the default term so
+          // the requested report card's term is the one that loads.
+          const params = new URLSearchParams(window.location.search);
+          const queryTerm = params.get('term');
+          const previewStudentId = params.get('preview');
+          if (previewStudentId) setAutoPreviewStudentId(previewStudentId);
+
+          if (queryTerm) {
+            setTerm(queryTerm);
+          } else if (user.activeTerm) {
             setTerm(user.activeTerm);
           } else {
             // Find active term from the list
@@ -121,6 +132,19 @@ export default function ViewReportCardsPage() {
       setViewingUrl(result);
     }
   };
+
+  // Auto-open the viewer once the deep-linked student's card is available.
+  // Runs once per deep link (the id is cleared after opening).
+  useEffect(() => {
+    if (!autoPreviewStudentId || reportCards.length === 0) return;
+    const match = reportCards.find((r) => r.student_id === autoPreviewStudentId);
+    if (match) {
+      handlePreview(match.file_path);
+      setAutoPreviewStudentId(null);
+    }
+    // handlePreview is stable enough for this one-shot deep-link open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPreviewStudentId, reportCards]);
 
   const handleDownload = async (filePath: string) => {
     let url = signedUrls[filePath];

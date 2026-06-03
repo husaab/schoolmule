@@ -742,3 +742,57 @@ body {
 .preserve-3d {
   transform-style: preserve-3d;
 }
+
+/* ==========================================================================
+   Analytics report print target
+   Hidden on screen; when printing, only the generated report is shown.
+   ========================================================================== */
+
+.analytics-print-target {
+  display: none;
+}
+
+@media print {
+  body > *:not(.analytics-print-target),
+  main,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  .analytics-print-target {
+    display: block !important;
+    padding: 2rem;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+
+  .analytics-print-target h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #0891b2;
+    padding-bottom: 0.5rem;
+  }
+
+  .analytics-print-target h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 1.25rem 0 0.5rem;
+    color: #0e7490;
+  }
+
+  .analytics-print-target ul {
+    margin: 0.5rem 0 0.75rem 1.25rem;
+    list-style: disc;
+  }
+
+  .analytics-print-target li {
+    margin-bottom: 0.3rem;
+  }
+
+  .analytics-print-target p {
+    margin-bottom: 0.6rem;
+  }
+}

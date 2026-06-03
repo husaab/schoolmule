@@ -211,26 +211,11 @@ export default function GenerateReportCardsPage() {
     }
   };
 
-  const handleOpenGeneratedInNewTab = async (studentId: string) => {
-    // Open the tab synchronously (within the click) so it isn't popup-blocked,
-    // then point it at the signed URL once resolved.
-    const tab = window.open('', '_blank');
-    setResolvingStudentId(studentId);
-    try {
-      const url = await resolveReportCardUrl(studentId);
-      if (url && tab) {
-        tab.location.href = url;
-      } else {
-        tab?.close();
-        showNotification('Could not load that report card', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      tab?.close();
-      showNotification('Could not load that report card', 'error');
-    } finally {
-      setResolvingStudentId(null);
-    }
+  const handleOpenGeneratedInNewTab = (studentId: string) => {
+    // Open the in-app View page (which auto-opens the report card viewer modal)
+    // in a new tab — instead of exposing the raw Supabase bucket URL.
+    const url = `/report-cards/view?term=${encodeURIComponent(term)}&preview=${encodeURIComponent(studentId)}`;
+    window.open(url, '_blank');
   };
 
   return (
