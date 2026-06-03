@@ -6,11 +6,13 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
-import { generateBulkReportCards } from '@/services/reportCardService';
+import { generateBulkReportCards, getGeneratedReportCardsByStudentId, getSignedReportCardUrl } from '@/services/reportCardService';
 import GenerateReportCardModal from '@/components/report-cards/generateReportCardModal';
+import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 export default function GenerateReportCardsPage() {
   const user = useUserStore((state) => state.user);
@@ -18,6 +20,7 @@ export default function GenerateReportCardsPage() {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [generateAll, setGenerateAll] = useState<boolean>(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const showNotification = useNotificationStore(state => state.showNotification);
 
@@ -27,6 +30,9 @@ export default function GenerateReportCardsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [generatedStudents, setGeneratedStudents] = useState<{ studentId: string; name: string }[]>([]);
+  const [resolvingStudentId, setResolvingStudentId] = useState<string | null>(null);
+  const [viewingUrl, setViewingUrl] = useState<string | null>(null);
 
   const groupedByGrade = useMemo(() => {
     return students.reduce((acc, student) => {
@@ -135,6 +141,15 @@ export default function GenerateReportCardsPage() {
     });
   };
 
+  const toggleGradeCollapse = (grade: string) => {
+    setCollapsedGrades(prev => {
+      const next = new Set(prev);
+      if (next.has(grade)) next.delete(grade);
+      else next.add(grade);
+      return next;
+    });
+  };
+
   const handleGenerate = async () => {
     if (!term || selectedStudents.size === 0) {
       showNotification('Please select a term and at least one student.', "error");
@@ -143,6 +158,7 @@ export default function GenerateReportCardsPage() {
     setShowModal(true);
     setIsLoading(true);
     setResultMessage(null);
+    setGeneratedStudents([]);
 
     try {
       const res = await generateBulkReportCards({
@@ -153,12 +169,67 @@ export default function GenerateReportCardsPage() {
       const successCount = res.generated.length;
       const failedCount = res.failed.length;
 
+      // Capture the generated students (with names) so they can be viewed right away.
+      const nameById = new Map(students.map((s) => [s.studentId, s.name]));
+      setGeneratedStudents(
+        res.generated.map((g) => ({
+          studentId: g.studentId,
+          name: nameById.get(g.studentId) ?? 'Student',
+        })),
+      );
+
       setResultMessage(`Generated ${successCount} report card(s). ${failedCount > 0 ? failedCount + ' failed.' : ''}`);
     } catch (err) {
       console.error(err);
       setResultMessage('An error occurred while generating report cards.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Look up the signed PDF URL for a freshly generated report card.
+  const resolveReportCardUrl = async (studentId: string): Promise<string | null> => {
+    if (!user.school) return null;
+    const res = await getGeneratedReportCardsByStudentId(studentId, term, user.school);
+    if (res.status === 'success' && res.data.length > 0) {
+      return getSignedReportCardUrl(res.data[0].file_path);
+    }
+    return null;
+  };
+
+  const handlePreviewGenerated = async (studentId: string) => {
+    setResolvingStudentId(studentId);
+    try {
+      const url = await resolveReportCardUrl(studentId);
+      if (url) setViewingUrl(url);
+      else showNotification('Could not load that report card', 'error');
+    } catch (err) {
+      console.error(err);
+      showNotification('Could not load that report card', 'error');
+    } finally {
+      setResolvingStudentId(null);
+    }
+  };
+
+  const handleOpenGeneratedInNewTab = async (studentId: string) => {
+    // Open the tab synchronously (within the click) so it isn't popup-blocked,
+    // then point it at the signed URL once resolved.
+    const tab = window.open('', '_blank');
+    setResolvingStudentId(studentId);
+    try {
+      const url = await resolveReportCardUrl(studentId);
+      if (url && tab) {
+        tab.location.href = url;
+      } else {
+        tab?.close();
+        showNotification('Could not load that report card', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      tab?.close();
+      showNotification('Could not load that report card', 'error');
+    } finally {
+      setResolvingStudentId(null);
     }
   };
 
@@ -289,17 +360,31 @@ export default function GenerateReportCardsPage() {
                     const gradeIds = gradeStudents.map(s => s.studentId);
                     const allInGradeSelected = gradeIds.length > 0 && gradeIds.every(id => selectedStudents.has(id));
                     const someInGradeSelected = gradeIds.some(id => selectedStudents.has(id));
-                    
+                    const isCollapsed = collapsedGrades.has(grade);
+
                     return (
                       <div key={grade} className="space-y-2">
-                        {/* Grade header with select all */}
-                        <div className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg">
+                        {/* Grade header (click anywhere to collapse) with select all */}
+                        <div
+                          onClick={() => toggleGradeCollapse(grade)}
+                          role="button"
+                          aria-expanded={!isCollapsed}
+                          className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer hover:bg-cyan-700 transition-colors"
+                        >
                           <div className="flex items-center space-x-3">
+                            {isCollapsed ? (
+                              <ChevronRightIcon className="w-5 h-5" />
+                            ) : (
+                              <ChevronDownIcon className="w-5 h-5" />
+                            )}
                             <span className="font-semibold text-lg">{grade}</span>
                             <span className="text-sm">({gradeStudents.length} student{gradeStudents.length !== 1 ? 's' : ''})</span>
                           </div>
                           {!generateAll && gradeStudents.length > 0 && (
-                            <label className="flex items-center space-x-2 cursor-pointer">
+                            <label
+                              className="flex items-center space-x-2 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <input
                                 type="checkbox"
                                 checked={allInGradeSelected}
@@ -317,26 +402,38 @@ export default function GenerateReportCardsPage() {
                         </div>
 
                         {/* Student cards */}
-                        <div className="space-y-2">
-                          {gradeStudents.map((student) => (
-                            <div
-                              key={student.studentId}
-                              className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-800">{student.name}</p>
-                                <p className="text-gray-600 text-sm">Grade {student.grade}</p>
+                        {!isCollapsed && (
+                          <div className="space-y-2">
+                            {gradeStudents.map((student) => (
+                              <div
+                                key={student.studentId}
+                                onClick={() => !generateAll && handleSelectStudent(student.studentId)}
+                                role="button"
+                                aria-pressed={selectedStudents.has(student.studentId)}
+                                className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
+                                  generateAll
+                                    ? 'bg-gray-50 border-gray-200 cursor-not-allowed'
+                                    : selectedStudents.has(student.studentId)
+                                      ? 'bg-cyan-50 border-cyan-300 cursor-pointer hover:bg-cyan-100'
+                                      : 'bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100'
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-800">{student.name}</p>
+                                  <p className="text-gray-600 text-sm">Grade {student.grade}</p>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  disabled={generateAll}
+                                  checked={selectedStudents.has(student.studentId)}
+                                  onChange={() => handleSelectStudent(student.studentId)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                                />
                               </div>
-                              <input
-                                type="checkbox"
-                                disabled={generateAll}
-                                checked={selectedStudents.has(student.studentId)}
-                                onChange={() => handleSelectStudent(student.studentId)}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
-                              />
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   }
@@ -388,7 +485,15 @@ export default function GenerateReportCardsPage() {
         onClose={() => setShowModal(false)}
         isLoading={isLoading}
         resultMessage={resultMessage || ''}
+        generatedStudents={generatedStudents}
+        resolvingStudentId={resolvingStudentId}
+        onPreview={handlePreviewGenerated}
+        onOpenNewTab={handleOpenGeneratedInNewTab}
       />
+
+      {viewingUrl && (
+        <ReportCardViewerModal url={viewingUrl} onClose={() => setViewingUrl(null)} />
+      )}
 
       <style jsx global>{`
         .custom-scrollbar {

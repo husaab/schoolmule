@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
-import { EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/reportCardService';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import ReportCardDeleteModal from '@/components/report-cards/delete/reportCardDeleteModal';
@@ -32,6 +32,7 @@ export default function ViewReportCardsPage() {
   const showNotification = useNotificationStore(state => state.showNotification);
   const [reportCards, setReportCards] = useState<ReportCardRow[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
   const [terms, setTerms] = useState<TermPayload[]>([]);
   const [loadingTerms, setLoadingTerms] = useState(false);
   const [term, setTerm] = useState<string>('');
@@ -98,6 +99,15 @@ export default function ViewReportCardsPage() {
   }, {} as Record<string, ReportCardRow[]>);
 
   const hasAnyReportCards = Object.values(groupedByGrade).some((students) => students.length > 0);
+
+  const toggleGradeCollapse = (grade: string) => {
+    setCollapsedGrades(prev => {
+      const next = new Set(prev);
+      if (next.has(grade)) next.delete(grade);
+      else next.add(grade);
+      return next;
+    });
+  };
 
   const handlePreview = async (filePath: string) => {
     if (signedUrls[filePath]) {
@@ -272,20 +282,37 @@ export default function ViewReportCardsPage() {
                   .map(([grade, students]) => {
                     const collapsed = selectedGrade && grade !== selectedGrade;
                     if (!selectedGrade || !collapsed) {
+                      const isCollapsed = collapsedGrades.has(grade);
                       return (
                         <div key={grade} className="space-y-2">
-                          {/* Grade header */}
-                          <div className="flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg">
-                            <span className="font-semibold text-lg">{grade}</span>
+                          {/* Grade header (click anywhere to collapse) */}
+                          <button
+                            type="button"
+                            onClick={() => toggleGradeCollapse(grade)}
+                            aria-expanded={!isCollapsed}
+                            className="w-full flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer hover:bg-cyan-700 transition-colors focus:outline-none"
+                          >
+                            <div className="flex items-center space-x-3">
+                              {isCollapsed ? (
+                                <ChevronRightIcon className="w-5 h-5" />
+                              ) : (
+                                <ChevronDownIcon className="w-5 h-5" />
+                              )}
+                              <span className="font-semibold text-lg">{grade}</span>
+                            </div>
                             <span className="text-sm">{students.length} report cards</span>
-                          </div>
+                          </button>
 
                           {/* Student cards */}
+                          {!isCollapsed && (
                           <div className="space-y-2">
                             {students.map((student) => (
                               <div
                                 key={student.student_id}
-                                className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                                onClick={() => handlePreview(student.file_path)}
+                                role="button"
+                                title="View report card"
+                                className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                               >
                                 <div className="flex-1">
                                   <p className="font-medium text-gray-800">{student.student_name}</p>
@@ -299,7 +326,10 @@ export default function ViewReportCardsPage() {
                                     })}
                                   </p>
                                 </div>
-                                <div className="flex items-center space-x-3">
+                                <div
+                                  className="flex items-center space-x-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <button
                                     onClick={() => handlePreview(student.file_path)}
                                     title="View PDF"
@@ -340,6 +370,7 @@ export default function ViewReportCardsPage() {
                               </div>
                             ))}
                           </div>
+                          )}
                         </div>
                       );
                     }
