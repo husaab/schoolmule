@@ -168,7 +168,12 @@ const AnalyticsContent: React.FC = () => {
 
   const aiPanel = <AiInsightsPanel />
   const atRiskPanel = (
-    <AtRiskWatchlist snapshot={snapshot.data} loading={snapshot.loading} params={params} />
+    <AtRiskWatchlist
+      snapshot={snapshot.data}
+      loading={snapshot.loading}
+      params={params}
+      grade={params.view === 'grade' ? params.grade : null}
+    />
   )
 
   return (
@@ -264,7 +269,12 @@ const AnalyticsContent: React.FC = () => {
               />
             )}
             {params.view === 'grade' && overview.data && (
-              <GradeCohortView overview={overview.data} params={params} aiPanel={aiPanel} />
+              <GradeCohortView
+                overview={overview.data}
+                params={params}
+                aiPanel={aiPanel}
+                atRiskPanel={atRiskPanel}
+              />
             )}
             {params.view === 'class' && classDetail.data && (
               <ClassView classData={classDetail.data} params={params} aiPanel={aiPanel} />
@@ -302,9 +312,6 @@ const AnalyticsPage: React.FC = () => (
         <AnalyticsContent />
       </Suspense>
     </main>
-    {/* Hidden print target for the report composer (revealed by @media print,
-        kept outside <main> which print CSS hides) */}
-    <div id="analytics-print-target" className="analytics-print-target" />
   </>
 )
 

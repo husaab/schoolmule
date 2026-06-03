@@ -19,6 +19,8 @@ interface AtRiskWatchlistProps {
   snapshot: SnapshotData | null
   loading: boolean
   params: UseAnalyticsParams
+  /** Limit the list to one grade level (e.g. on the grade cohort view). */
+  grade?: string | null
 }
 
 type ScoredStudent = SnapshotStudent & { risk: AtRiskResult }
@@ -122,12 +124,13 @@ const StudentCard: React.FC<{ student: ScoredStudent; params: UseAnalyticsParams
   )
 }
 
-const AtRiskWatchlist: React.FC<AtRiskWatchlistProps> = ({ snapshot, loading, params }) => {
+const AtRiskWatchlist: React.FC<AtRiskWatchlistProps> = ({ snapshot, loading, params, grade }) => {
   const [showModerate, setShowModerate] = useState(true)
 
   const scored = useMemo<ScoredStudent[]>(() => {
     if (!snapshot) return []
     return snapshot.students
+      .filter((s) => !grade || s.gradeLevel === grade)
       .map((s) => ({
         ...s,
         risk: computeAtRiskScore({
@@ -139,13 +142,13 @@ const AtRiskWatchlist: React.FC<AtRiskWatchlistProps> = ({ snapshot, loading, pa
       }))
       .filter((s) => s.risk.tier !== 'low')
       .sort((a, b) => b.risk.score - a.risk.score)
-  }, [snapshot])
+  }, [snapshot, grade])
 
   const high = scored.filter((s) => s.risk.tier === 'high')
   const moderate = scored.filter((s) => s.risk.tier === 'moderate')
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col xl:h-full">
       <h3 className="text-sm font-semibold text-slate-900 inline-flex items-center gap-2 mb-1">
         <ShieldExclamationIcon className="w-4 h-4 text-rose-500" />
         Early-Warning Watchlist
@@ -165,7 +168,7 @@ const AtRiskWatchlist: React.FC<AtRiskWatchlistProps> = ({ snapshot, loading, pa
           No students currently need attention 🎉
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 xl:flex-1 xl:min-h-0 xl:overflow-y-auto xl:pr-1 xl:-mr-1">
           {high.map((s) => (
             <StudentCard key={s.studentId} student={s} params={params} />
           ))}

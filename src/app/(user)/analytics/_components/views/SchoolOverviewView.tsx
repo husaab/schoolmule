@@ -145,10 +145,15 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
           />
         </div>
 
-        {/* AI column */}
-        <div className="space-y-6">
-          {aiPanel}
-          {atRiskPanel}
+        {/* AI column. On xl the inner wrapper is absolutely positioned so the
+            column never contributes to the row height — it ends exactly where
+            the left column's last card ends, and the watchlist scrolls
+            internally for anything beyond that. */}
+        <div className="xl:relative">
+          <div className="space-y-6 xl:space-y-0 xl:absolute xl:inset-0 xl:flex xl:flex-col xl:gap-6">
+            {aiPanel}
+            <div className="xl:flex-1 xl:min-h-0">{atRiskPanel}</div>
+          </div>
         </div>
       </div>
     </div>

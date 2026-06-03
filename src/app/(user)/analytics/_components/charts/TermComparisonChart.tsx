@@ -42,7 +42,7 @@ const TermComparisonChart: React.FC<TermComparisonChartProps> = ({
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer>
-        <BarChart data={data} margin={{ left: -10, right: 10, top: 10, bottom: 0 }} barGap={4} barCategoryGap="22%">
+        <BarChart data={data} margin={{ left: 0, right: 10, top: 10, bottom: 0 }} barGap={4} barCategoryGap="22%">
           <XAxis
             dataKey="label"
             tick={{ fill: '#64748b', fontSize: 11 }}
@@ -55,7 +55,7 @@ const TermComparisonChart: React.FC<TermComparisonChartProps> = ({
             tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
-            width={40}
+            width={46}
           />
           <Tooltip
             cursor={{ fill: 'rgba(8,145,178,0.06)' }}

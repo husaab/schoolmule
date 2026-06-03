@@ -17,9 +17,10 @@ interface GradeCohortViewProps {
   overview: OverviewData
   params: UseAnalyticsParams
   aiPanel: React.ReactNode
+  atRiskPanel: React.ReactNode
 }
 
-const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiPanel }) => {
+const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiPanel, atRiskPanel }) => {
   const cohort = overview.byGrade.find((g) => g.grade === params.grade)
 
   if (!cohort) {
@@ -104,7 +105,10 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
           />
         </div>
 
-        <div className="space-y-6">{aiPanel}</div>
+        <div className="space-y-6">
+          {aiPanel}
+          {atRiskPanel}
+        </div>
       </div>
     </div>
   )

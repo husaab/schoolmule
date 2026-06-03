@@ -1,15 +1,17 @@
 'use client'
 
 // AI report composer: pick sections + audience → generate markdown →
-// edit in a textarea → print (browser PDF) or copy.
+// rendered document preview in an iframe (print = save as PDF), with an
+// optional raw-markdown edit mode.
 
-import React, { useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import {
-  DocumentTextIcon,
   PrinterIcon,
   ClipboardIcon,
   ArrowLeftIcon,
   SparklesIcon,
+  PencilSquareIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
@@ -25,6 +27,49 @@ interface AiReportComposerProps {
 
 const SECTIONS = ['Overview', 'Highlights', 'Areas of Concern', 'Recommendations']
 
+/** Wrap the rendered markdown in a complete, print-ready HTML document. */
+function buildReportDocument(markdown: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #1e293b;
+    line-height: 1.65;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem;
+    font-size: 15px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 1.25rem;
+    border-bottom: 2px solid #0891b2;
+    padding-bottom: 0.6rem;
+  }
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.5rem;
+    color: #0e7490;
+  }
+  ul { margin: 0.5rem 0 0.9rem 1.25rem; padding: 0; }
+  li { margin-bottom: 0.35rem; }
+  p { margin: 0 0 0.7rem; }
+  @media print {
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+${markdownToHtml(markdown)}
+</body>
+</html>`
+}
+
 const AiReportComposer: React.FC<AiReportComposerProps> = ({
   isOpen,
   onClose,
@@ -35,10 +80,14 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const [phase, setPhase] = useState<'configure' | 'preview'>('configure')
+  const [editing, setEditing] = useState(false)
   const [sections, setSections] = useState<string[]>([...SECTIONS])
   const [audience, setAudience] = useState<'principal' | 'parent-night'>('principal')
   const [report, setReport] = useState('')
   const [loading, setLoading] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+
+  const reportHtml = useMemo(() => buildReportDocument(report), [report])
 
   const toggleSection = (s: string) =>
     setSections((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
@@ -54,6 +103,7 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to generate report')
       setReport(data.report)
+      setEditing(false)
       setPhase('preview')
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Failed to generate report', 'error')
@@ -62,11 +112,13 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
     }
   }
 
+  // Print just the iframe's document — the browser's print dialog offers
+  // "Save as PDF", so this is the PDF export.
   const print = () => {
-    const target = document.getElementById('analytics-print-target')
-    if (!target) return
-    target.innerHTML = markdownToHtml(report)
-    window.print()
+    const win = iframeRef.current?.contentWindow
+    if (!win) return
+    win.focus()
+    win.print()
   }
 
   const copy = async () => {
@@ -77,10 +129,10 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="AI Performance Report" style="w-full max-w-3xl">
       {phase === 'configure' ? (
-        <div className="space-y-5 p-1">
+        <div className="space-y-6 p-6">
           <div>
             <p className="text-sm font-medium text-slate-700 mb-2">Audience</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {(
                 [
                   { key: 'principal', label: 'Principal / Admin', desc: 'May reference individual students' },
@@ -90,7 +142,7 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
                 <button
                   key={a.key}
                   onClick={() => setAudience(a.key)}
-                  className={`p-3 rounded-xl border text-left transition-colors ${
+                  className={`p-4 rounded-xl border text-left transition-colors ${
                     audience === a.key
                       ? 'border-cyan-400 bg-cyan-50 ring-1 ring-cyan-200'
                       : 'border-slate-200 hover:border-slate-300'
@@ -105,7 +157,7 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
 
           <div>
             <p className="text-sm font-medium text-slate-700 mb-2">Sections</p>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {SECTIONS.map((s) => (
                 <label key={s} className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
                   <input
@@ -127,45 +179,67 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
           <button
             onClick={generate}
             disabled={loading || sections.length === 0 || !serializedContext}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl shadow-sm hover:from-cyan-600 hover:to-teal-600 disabled:opacity-50 transition-all"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl shadow-sm hover:from-cyan-600 hover:to-teal-600 disabled:opacity-50 transition-all"
           >
             <SparklesIcon className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
             {loading ? 'Writing report…' : 'Generate Report'}
           </button>
         </div>
       ) : (
-        <div className="space-y-4 p-1">
-          <textarea
-            value={report}
-            onChange={(e) => setReport(e.target.value)}
-            rows={18}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-          />
+        <div className="space-y-4 p-6">
+          {editing ? (
+            <textarea
+              value={report}
+              onChange={(e) => setReport(e.target.value)}
+              rows={18}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            />
+          ) : (
+            <iframe
+              ref={iframeRef}
+              srcDoc={reportHtml}
+              title="Report preview"
+              className="w-full h-[55vh] bg-white border border-slate-200 rounded-xl"
+            />
+          )}
+
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setPhase('configure')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
             >
               <ArrowLeftIcon className="w-4 h-4" /> Back
+            </button>
+            <button
+              onClick={() => setEditing((e) => !e)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              {editing ? (
+                <>
+                  <EyeIcon className="w-4 h-4" /> Preview
+                </>
+              ) : (
+                <>
+                  <PencilSquareIcon className="w-4 h-4" /> Edit
+                </>
+              )}
             </button>
             <div className="flex-1" />
             <button
               onClick={copy}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
             >
               <ClipboardIcon className="w-4 h-4" /> Copy
             </button>
             <button
               onClick={print}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl shadow-sm hover:from-cyan-600 hover:to-teal-600 transition-all"
+              disabled={editing}
+              title={editing ? 'Switch to Preview before printing' : undefined}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl shadow-sm hover:from-cyan-600 hover:to-teal-600 disabled:opacity-50 transition-all"
             >
-              <PrinterIcon className="w-4 h-4" /> Print / PDF
+              <PrinterIcon className="w-4 h-4" /> Save as PDF
             </button>
           </div>
-          <p className="text-xs text-slate-400 flex items-center gap-1.5">
-            <DocumentTextIcon className="w-3.5 h-3.5" />
-            Edit the markdown above, then print to save as PDF.
-          </p>
         </div>
       )}
     </Modal>

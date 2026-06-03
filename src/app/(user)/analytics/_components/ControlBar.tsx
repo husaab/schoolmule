@@ -4,7 +4,7 @@
 // filters, the grade-engine toggle, and the AI chat launcher.
 
 import React from 'react'
-import { SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../_hooks/useAnalyticsParams'
 import EngineTooltip from './EngineTooltip'
@@ -169,6 +169,27 @@ const ControlBar: React.FC<ControlBarProps> = ({
           <SparklesIcon className="w-4 h-4" />
           <span className="hidden sm:inline">Ask AI</span>
         </button>
+
+        {/* Clear filters — far right, always reachable since the bar is sticky.
+            Resets to the plain school overview; keeps term + engine. */}
+        {(params.view !== 'school' || params.grade || params.subject || params.compareTerm) && (
+          <button
+            onClick={() =>
+              params.setParams({
+                view: 'school',
+                grade: null,
+                subject: null,
+                classId: null,
+                studentId: null,
+                compareTerm: null,
+              })
+            }
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          >
+            <XMarkIcon className="w-4 h-4" />
+            Clear
+          </button>
+        )}
       </div>
     </div>
   )

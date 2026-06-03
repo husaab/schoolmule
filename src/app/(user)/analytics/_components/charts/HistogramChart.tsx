@@ -52,7 +52,7 @@ const HistogramChart: React.FC<HistogramChartProps> = ({
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer>
-        <BarChart data={buckets} margin={{ left: -15, right: 10, top: 18, bottom: 0 }}>
+        <BarChart data={buckets} margin={{ left: 0, right: 10, top: 18, bottom: 0 }}>
           <XAxis
             dataKey="bucket"
             tick={{ fill: '#64748b', fontSize: 11 }}
@@ -64,7 +64,7 @@ const HistogramChart: React.FC<HistogramChartProps> = ({
             tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
-            width={32}
+            width={38}
           />
           <Tooltip
             cursor={{ fill: 'rgba(8,145,178,0.06)' }}

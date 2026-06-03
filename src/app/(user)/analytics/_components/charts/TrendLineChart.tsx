@@ -48,7 +48,7 @@ const TrendLineChart: React.FC<TrendLineChartProps> = ({
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer>
-        <LineChart data={data} margin={{ left: -5, right: 20, top: 10, bottom: 0 }}>
+        <LineChart data={data} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
           <XAxis
             dataKey="label"
             tick={{ fill: '#64748b', fontSize: 11 }}
