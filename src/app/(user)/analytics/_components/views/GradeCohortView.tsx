@@ -46,6 +46,7 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
     { key: 'teacherName', label: 'Teacher', lowPriority: true },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => (c.classAvg == null ? '—' : `${c.classAvg}%`) },
+    { key: 'classMedian', label: 'Median', numeric: true, render: (c) => (c.classMedian == null ? '—' : `${c.classMedian}%`) },
   ]
 
   const studentColumns: Column<GradeStudentRow>[] = [
@@ -105,9 +106,13 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
           />
         </div>
 
-        <div className="space-y-6">
-          {aiPanel}
-          {atRiskPanel}
+        {/* AI column — absolutely positioned on xl so it never extends the
+            page past the left column; the watchlist caps + scrolls inside. */}
+        <div className="xl:relative">
+          <div className="space-y-6 xl:space-y-0 xl:absolute xl:inset-0 xl:flex xl:flex-col xl:gap-6">
+            {aiPanel}
+            <div className="xl:flex-1 xl:min-h-0">{atRiskPanel}</div>
+          </div>
         </div>
       </div>
     </div>

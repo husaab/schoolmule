@@ -60,6 +60,7 @@ export interface SubjectClassRow {
   teacherName: string
   studentCount: number
   classAvg: number | null
+  classMedian: number | null
 }
 
 export interface SubjectStats {

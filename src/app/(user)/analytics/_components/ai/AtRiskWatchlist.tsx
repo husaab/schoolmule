@@ -148,7 +148,10 @@ const AtRiskWatchlist: React.FC<AtRiskWatchlistProps> = ({ snapshot, loading, pa
   const moderate = scored.filter((s) => s.risk.tier === 'moderate')
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col xl:h-full">
+    // max-h (not h): the card only grows to its content, but is capped by the
+    // column height — long lists scroll internally, short lists end at their
+    // last card.
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col xl:max-h-full">
       <h3 className="text-sm font-semibold text-slate-900 inline-flex items-center gap-2 mb-1">
         <ShieldExclamationIcon className="w-4 h-4 text-rose-500" />
         Early-Warning Watchlist

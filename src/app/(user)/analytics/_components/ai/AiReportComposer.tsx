@@ -17,12 +17,23 @@ import Modal from '@/components/shared/modal'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { markdownToHtml } from '@/lib/analyticsUtils'
+import { TermPayload } from '@/services/types/term'
+import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
+import StudentPicker, { PickerStudent } from '../StudentPicker'
 
 interface AiReportComposerProps {
   isOpen: boolean
   onClose: () => void
   schoolName: string
   termName: string
+  /** What the report covers, e.g. "Whole School", "Grade 3", "Math (Gr 7)", a student name. */
+  scopeLabel: string
+  params: UseAnalyticsParams
+  terms: TermPayload[]
+  grades: string[]
+  students: PickerStudent[]
+  /** True while the page is re-loading data after a scope change. */
+  dataLoading: boolean
 }
 
 const SECTIONS = ['Overview', 'Highlights', 'Areas of Concern', 'Recommendations']
@@ -75,6 +86,12 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
   onClose,
   schoolName,
   termName,
+  scopeLabel,
+  params,
+  terms,
+  grades,
+  students,
+  dataLoading,
 }) => {
   const serializedContext = useAnalyticsStore((s) => s.serializedContext)
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -98,7 +115,14 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
       const res = await fetch('/api/ai/analytics/report-composer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: serializedContext, sections, audience, schoolName, termName }),
+        body: JSON.stringify({
+          context: serializedContext,
+          sections,
+          audience,
+          schoolName,
+          termName,
+          scope: scopeLabel,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to generate report')
@@ -130,6 +154,73 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="AI Performance Report" style="w-full max-w-3xl">
       {phase === 'configure' ? (
         <div className="space-y-6 p-6">
+          {/* Report scope — these drive the page filters behind the modal,
+              so the generated report always matches the loaded data. */}
+          <div>
+            <p className="text-sm font-medium text-slate-700 mb-2">Report scope</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Report term"
+                value={params.termId ?? ''}
+                onChange={(e) =>
+                  params.setParams({
+                    termId: e.target.value,
+                    ...(e.target.value === 'all' ? { compareTerm: null } : {}),
+                  })
+                }
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
+              >
+                {terms.map((t) => (
+                  <option key={t.termId} value={t.termId}>
+                    {t.name} {t.academicYear}
+                  </option>
+                ))}
+                {terms.length > 1 && <option value="all">All terms (combined)</option>}
+              </select>
+
+              <select
+                aria-label="Report grade"
+                value={params.view === 'student' || params.view === 'class' ? '' : (params.grade ?? '')}
+                disabled={params.view === 'student' || params.view === 'class'}
+                onChange={(e) =>
+                  e.target.value
+                    ? params.drillTo('grade', { grade: e.target.value })
+                    : params.drillTo('school')
+                }
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer disabled:opacity-50"
+              >
+                <option value="">Whole school</option>
+                {grades.map((g) => (
+                  <option key={g} value={g}>
+                    Grade {g}
+                  </option>
+                ))}
+              </select>
+
+              <StudentPicker
+                students={students}
+                onSelect={(s) => params.drillTo('student', { studentId: s.studentId, grade: s.grade })}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              This report will cover:{' '}
+              <span className="font-semibold text-cyan-700">
+                {schoolName} — {scopeLabel} — {termName}
+              </span>
+              {(params.view === 'student' || params.view === 'class') && (
+                <>
+                  {' '}
+                  <button
+                    onClick={() => params.drillTo('school')}
+                    className="text-cyan-600 hover:text-cyan-800 underline"
+                  >
+                    reset to whole school
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+
           <div>
             <p className="text-sm font-medium text-slate-700 mb-2">Audience</p>
             <div className="grid grid-cols-2 gap-3">
@@ -172,17 +263,13 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-slate-400">
-            The report is written from the analytics view currently on screen.
-          </p>
-
           <button
             onClick={generate}
-            disabled={loading || sections.length === 0 || !serializedContext}
+            disabled={loading || dataLoading || sections.length === 0 || !serializedContext}
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl shadow-sm hover:from-cyan-600 hover:to-teal-600 disabled:opacity-50 transition-all"
           >
-            <SparklesIcon className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
-            {loading ? 'Writing report…' : 'Generate Report'}
+            <SparklesIcon className={`w-4 h-4 ${loading || dataLoading ? 'animate-pulse' : ''}`} />
+            {loading ? 'Writing report…' : dataLoading ? 'Loading scope data…' : 'Generate Report'}
           </button>
         </div>
       ) : (

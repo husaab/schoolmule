@@ -9,7 +9,7 @@ const ALL_SECTIONS = ['Overview', 'Highlights', 'Areas of Concern', 'Recommendat
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { context, sections, audience, schoolName, termName } = body
+    const { context, sections, audience, schoolName, termName, scope } = body
 
     if (!context || typeof context !== 'string' || context.length < 10) {
       return NextResponse.json({ error: 'No analytics data loaded' }, { status: 400 })
@@ -40,7 +40,8 @@ Section guidance:
 
 Use precise numbers from the snapshot. Formal but accessible language for ${audienceLabel}.
 ${audience === 'parent-night' ? 'Do NOT name individual students — aggregate statements only.' : 'Naming individual students is acceptable where it adds clarity.'}
-Start the document with "# ${schoolName || 'School'} — ${termName || 'Term'} Performance Summary".
+${scope && scope !== 'Whole School' ? `This report is scoped to: ${scope}. Write only about that scope.` : ''}
+Start the document with "# ${schoolName || 'School'} — ${scope && scope !== 'Whole School' ? `${scope} — ` : ''}${termName || 'Term'} Performance Summary".
 Output markdown only.`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

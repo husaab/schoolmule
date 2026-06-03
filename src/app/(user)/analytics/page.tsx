@@ -145,6 +145,18 @@ const AnalyticsContent: React.FC = () => {
     : null
   const studentLabel = studentDetail.data?.studentName ?? null
 
+  // Human-readable scope of the current view (used by the AI report)
+  const scopeLabel =
+    params.view === 'student'
+      ? studentLabel
+        ? `${studentLabel} (Grade ${studentDetail.data?.gradeLevel})`
+        : 'Student'
+      : params.view === 'class'
+        ? classLabel || 'Class'
+        : params.view === 'grade'
+          ? `Grade ${params.grade}`
+          : 'Whole School'
+
   // ── Render helpers ─────────────────────────────────────────────────
   const activeError =
     params.view === 'class'
@@ -292,6 +304,12 @@ const AnalyticsContent: React.FC = () => {
         onClose={() => setReportOpen(false)}
         schoolName={user.school ? getSchoolName(user.school) : 'School'}
         termName={termName}
+        scopeLabel={scopeLabel}
+        params={params}
+        terms={terms}
+        grades={grades}
+        students={allStudents}
+        dataLoading={activeLoading}
       />
     </>
   )

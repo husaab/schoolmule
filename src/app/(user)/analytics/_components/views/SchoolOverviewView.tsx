@@ -73,6 +73,7 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
     { key: 'teacherName', label: 'Teacher', lowPriority: true },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
+    { key: 'classMedian', label: 'Median', numeric: true, render: (c) => fmtPct(c.classMedian) },
   ]
 
   const comparisonData = overview.byGrade.map((g) => ({
