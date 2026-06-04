@@ -1,7 +1,12 @@
 'use client'
 
 import React from 'react'
-import type { StudentViewCriteria, TermScope, AggregationMode } from '@/services/types/studentView'
+import type {
+  StudentViewCriteria,
+  TermScope,
+  AggregationMode,
+  CrossTermAggregation,
+} from '@/services/types/studentView'
 import type { TermPayload } from '@/services/types/term'
 
 const NUMERIC_GRADES = ['1', '2', '3', '4', '5', '6', '7', '8']
@@ -35,6 +40,9 @@ export default function CriteriaBuilder({
     onCriteriaChange({ ...criteria, ...patch })
 
   const needsTermPicker = ['specific', 'every_listed', 'any_listed'].includes(criteria.termScope)
+  const isMultiTerm = ['every_listed', 'any_listed', 'all'].includes(criteria.termScope)
+  const crossTermMode: CrossTermAggregation =
+    criteria.crossTermAggregation || 'each_term_separately'
 
   const toggleArrayValue = (key: 'gradeLevels' | 'subjects' | 'termIds', value: string) => {
     const current = (criteria[key] as string[] | undefined) || []
@@ -95,6 +103,32 @@ export default function CriteriaBuilder({
           ]}
         />
       </Field>
+
+      {/* Cross-term combine logic — only meaningful when termScope crosses
+          multiple terms. For single-term scopes, this option is irrelevant. */}
+      {isMultiTerm && (
+        <Field label="When combining terms">
+          <Radio
+            name="crossTermAggregation"
+            value={crossTermMode}
+            onChange={(v) =>
+              setCriteria({ crossTermAggregation: v as CrossTermAggregation })
+            }
+            options={[
+              {
+                value: 'each_term_separately',
+                label:
+                  'Each term separately — student must clear the threshold in every selected term',
+              },
+              {
+                value: 'cumulative_avg',
+                label:
+                  'Cumulative across terms — average all terms together, check that one number',
+              },
+            ]}
+          />
+        </Field>
+      )}
 
       {/* Term picker (conditional) */}
       {needsTermPicker && (

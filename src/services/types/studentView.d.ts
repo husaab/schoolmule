@@ -9,6 +9,19 @@ export type TermScope =
 
 export type AggregationMode = 'overall_avg' | 'every_class' | 'any_class';
 
+/**
+ * How to combine per-term results when termScope spans multiple terms.
+ *  - 'each_term_separately' (default, backward-compat): student must clear
+ *    the within-term threshold in each listed term independently.
+ *  - 'cumulative_avg': average the student's per-term metric across all
+ *    listed terms and compare that single number to the threshold.
+ *    "≥ 90% across both terms" semantic — what most schools intuit.
+ *
+ * Only meaningful when termScope ∈ {every_listed, any_listed, all}. Ignored
+ * for active/specific (single term).
+ */
+export type CrossTermAggregation = 'each_term_separately' | 'cumulative_avg';
+
 export interface StudentViewCriteria {
   termScope: TermScope;
   termIds?: string[];
@@ -16,6 +29,8 @@ export interface StudentViewCriteria {
   termIdsMode?: 'FIRST_TWO_TERMS';
   thresholdPercent: number;
   aggregationMode: AggregationMode;
+  /** Default 'each_term_separately' if absent. Ignored for single-term scopes. */
+  crossTermAggregation?: CrossTermAggregation;
   gradeLevels?: string[];
   subjects?: string[];
   attendanceMinPercent?: number | null;

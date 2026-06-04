@@ -50,7 +50,22 @@ export default function StudentViewsDashboard() {
   }, [])
 
   const handleDelete = async (v: StudentViewPayload) => {
-    if (!confirm(`Delete "${v.name}"?`)) return
+    const baseMsg = `Delete "${v.name}"?`
+    // System views are school-wide baselines — extra friction before letting
+    // an admin pull the rug out from under everyone in the school.
+    const message = v.isSystem
+      ? `${baseMsg}\n\nThis is a SYSTEM view used school-wide. All teachers will lose access immediately. This cannot be undone.`
+      : baseMsg
+    if (!confirm(message)) return
+    if (v.isSystem) {
+      const confirmText = window.prompt(
+        `To confirm deletion of the system view "${v.name}", type DELETE in capital letters:`,
+      )
+      if (confirmText !== 'DELETE') {
+        showNotification('Deletion cancelled', 'error')
+        return
+      }
+    }
     try {
       await deleteStudentView(v.viewId)
       showNotification('View deleted', 'success')
@@ -441,8 +456,11 @@ function ViewCard({
   variant?: 'default' | 'featured'
 }) {
   const isOwner = view.ownerUserId === currentUserId && !view.isSystem
-  const canEdit = isOwner || (view.isSystem && currentUserRole === 'ADMIN')
-  const canDelete = isOwner
+  const isAdmin = currentUserRole === 'ADMIN'
+  const canEdit = isOwner || (view.isSystem && isAdmin)
+  // Admins can now delete any view in their school, including system views.
+  // Non-admins still only delete what they own.
+  const canDelete = isOwner || isAdmin
 
   const cardStyles =
     variant === 'featured'

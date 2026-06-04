@@ -10,6 +10,7 @@ import {
   PaperAirplaneIcon,
   SparklesIcon,
   ChatBubbleLeftRightIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { ChatMessage } from '@/services/types/analytics'
@@ -125,13 +126,26 @@ const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ isOpen, onClose }) => {
                   Grounded in the current {viewLevel || 'school'} view
                 </p>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Close chat"
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => setMessages([])}
+                    disabled={streaming}
+                    aria-label="Clear chat"
+                    className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-white rounded-lg disabled:opacity-40 transition-colors"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                    Clear
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  aria-label="Close chat"
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg transition-colors"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
