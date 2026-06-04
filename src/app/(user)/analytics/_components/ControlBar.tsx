@@ -37,16 +37,12 @@ const ControlBar: React.FC<ControlBarProps> = ({
     <div className="sticky top-20 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-3 flex flex-wrap items-center gap-2.5">
         {/* Term — single term or every term combined */}
+        {/* Term. "All terms (combined)" is the single way to compare terms —
+            pick it, then a grade + subject to see the Term 1 vs Term 2 view. */}
         <select
           aria-label="Term"
           value={params.termId ?? ''}
-          onChange={(e) =>
-            params.setParams({
-              termId: e.target.value,
-              // Comparison is per-term only; clear it in combined mode.
-              ...(e.target.value === 'all' ? { compareTerm: null } : {}),
-            })
-          }
+          onChange={(e) => params.setParams({ termId: e.target.value, compareTerm: null })}
           className={selectCls}
         >
           {terms.map((t) => (
@@ -57,34 +53,11 @@ const ControlBar: React.FC<ControlBarProps> = ({
           {terms.length > 1 && <option value="all">All terms (combined)</option>}
         </select>
 
-        {/* Compare term (hidden in combined mode) */}
-        {params.termId !== 'all' && (
-          <select
-            aria-label="Compare with term"
-            value={params.compareTerm ?? ''}
-            onChange={(e) => params.setParams({ compareTerm: e.target.value || null })}
-            className={selectCls}
-          >
-            <option value="">No comparison</option>
-            {terms
-              .filter((t) => t.termId !== params.termId)
-              .map((t) => (
-                <option key={t.termId} value={t.termId}>
-                  vs {t.name} {t.academicYear}
-                </option>
-              ))}
-          </select>
-        )}
-
-        {params.termId === 'all' ? (
+        {params.termId === 'all' && (
           <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-cyan-50 text-cyan-700 border border-cyan-100 rounded-full">
             combined
           </span>
-        ) : params.compareTerm ? (
-          <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-teal-50 text-teal-700 border border-teal-100 rounded-full">
-            comparing
-          </span>
-        ) : null}
+        )}
 
         {/* Grade filter. Stacks with subject: if a subject is active, narrowing
             the grade keeps the subject (stays in the combined subject view). */}

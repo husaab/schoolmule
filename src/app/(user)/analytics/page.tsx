@@ -140,10 +140,16 @@ const AnalyticsContent: React.FC = () => {
 
   // ── Control bar filter lists from overview data ───────────────────
   const grades = useMemo(() => overview.data?.byGrade.map((g) => g.grade) ?? [], [overview.data])
-  const subjects = useMemo(
-    () => overview.data?.bySubject.map((s) => s.subject) ?? [],
-    [overview.data]
-  )
+  // When a grade is selected, only offer subjects that actually have a class in
+  // that grade — schools run different subjects per grade, so a school-wide
+  // list would include subjects that error out for the current grade.
+  const subjects = useMemo(() => {
+    const all = overview.data?.bySubject ?? []
+    const scoped = params.grade
+      ? all.filter((s) => s.classes.some((c) => c.grade === params.grade))
+      : all
+    return scoped.map((s) => s.subject)
+  }, [overview.data, params.grade])
   const allStudents = useMemo(
     () =>
       (overview.data?.byGrade ?? [])
