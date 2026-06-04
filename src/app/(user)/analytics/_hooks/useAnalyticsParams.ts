@@ -25,7 +25,7 @@ export interface UseAnalyticsParams extends AnalyticsParams {
   drillTo: (view: AnalyticsViewLevel, patch?: Partial<AnalyticsParams>) => void
 }
 
-const VIEWS: AnalyticsViewLevel[] = ['school', 'grade', 'class', 'student']
+const VIEWS: AnalyticsViewLevel[] = ['school', 'grade', 'subject', 'class', 'student']
 
 export function useAnalyticsParams(): UseAnalyticsParams {
   const router = useRouter()
@@ -64,13 +64,17 @@ export function useAnalyticsParams(): UseAnalyticsParams {
 
   const drillTo = useCallback(
     (view: AnalyticsViewLevel, patch: Partial<AnalyticsParams> = {}) => {
-      // Clear selections deeper than the target view so breadcrumbs stay honest.
+      // Clear only selections strictly DEEPER than the target view. grade and
+      // subject are independent, stackable filters (Grade 3 + Math), so neither
+      // clears the other here — call sites pass explicit grade/subject nulls
+      // when they specifically want to narrow one of them.
       const cleared: Partial<AnalyticsParams> = { view, ...patch }
       if (view === 'school') {
-        cleared.grade = null
+        cleared.grade = patch.grade ?? null
+        cleared.subject = patch.subject ?? null
         cleared.classId = null
         cleared.studentId = null
-      } else if (view === 'grade') {
+      } else if (view === 'grade' || view === 'subject') {
         cleared.classId = null
         cleared.studentId = null
       } else if (view === 'class') {

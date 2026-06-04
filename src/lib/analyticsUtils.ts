@@ -28,6 +28,7 @@ export interface AnalyticsContextInput {
   compareTermName?: string | null
   engine: string
   selectedGrade?: string | null
+  selectedSubject?: string | null
   overview?: OverviewData | null
   classDetail?: ClassData | null
   studentDetail?: StudentData | null
@@ -90,6 +91,29 @@ export function serializeAnalyticsContext(input: AnalyticsContextInput): string 
         if (stu.missingCount >= 3) flags.push(`missing=${stu.missingCount}`)
         lines.push(
           `  ${stu.studentName} | ${fmt(stu.overallAvg)} | ${stu.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
+        )
+      }
+    }
+  }
+
+  // Subject view: one subject, either school-wide or scoped to a grade.
+  if (ov && input.viewLevel === 'subject' && input.selectedSubject) {
+    const subj = ov.bySubject.find((s) => s.subject === input.selectedSubject)
+    if (subj) {
+      const gradeScoped = input.selectedGrade != null
+      const classes = gradeScoped
+        ? subj.classes.filter((c) => c.grade === input.selectedGrade)
+        : subj.classes
+      if (gradeScoped) {
+        lines.push(`SUBJECT: ${subj.subject} in Grade ${input.selectedGrade} | ${classes.length} class(es)`)
+      } else {
+        lines.push(`SUBJECT: ${subj.subject} (school-wide) | ${subj.classCount} classes | ${statsLine(subj.stats)}`)
+      }
+      lines.push('CLASSES (grade | teacher | class avg | median):')
+      for (const c of classes) {
+        const flag = c.classAvg != null && c.classAvg < 65 ? ' [FLAG: class avg<65]' : ''
+        lines.push(
+          `  Grade ${c.grade} | ${c.teacherName} | ${fmt(c.classAvg)} | ${fmt(c.classMedian)}${flag}`
         )
       }
     }

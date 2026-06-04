@@ -91,7 +91,7 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
             rowKey={(c) => c.classId}
             exportFilename={`grade-${cohort.grade}-classes`}
             defaultSort={{ key: 'classAvg', dir: 'desc' }}
-            onRowClick={(c) => params.drillTo('class', { classId: c.classId })}
+            onRowClick={(c) => params.drillTo('class', { classId: c.classId, subject: c.subject })}
           />
 
           <AnalyticsTable

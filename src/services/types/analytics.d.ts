@@ -6,7 +6,7 @@
 /** Which grade engine computed the numbers (see EngineTooltip for the difference). */
 export type GradeEngine = 'null_skip' | 'null_zero'
 
-export type AnalyticsViewLevel = 'school' | 'grade' | 'class' | 'student'
+export type AnalyticsViewLevel = 'school' | 'grade' | 'subject' | 'class' | 'student'
 
 /** Descriptive summary returned by the backend's statsUtils.summarize(). */
 export interface SummaryStats {

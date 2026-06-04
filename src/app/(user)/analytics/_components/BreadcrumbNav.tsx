@@ -21,11 +21,26 @@ const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({ params, classLabel, stude
   if (params.grade) {
     crumbs.push({
       label: `Grade ${params.grade}`,
+      // Narrowing up to a grade drops any subject filter (whole-cohort view).
       onClick:
-        params.view !== 'grade' ? () => params.drillTo('grade', { grade: params.grade }) : undefined,
+        params.view !== 'grade'
+          ? () => params.drillTo('grade', { grade: params.grade, subject: null })
+          : undefined,
     })
   }
-  if (params.classId) {
+  if (params.subject) {
+    crumbs.push({
+      label: params.grade ? `${params.subject}` : params.subject,
+      onClick:
+        params.view !== 'subject'
+          ? () => params.drillTo('subject', { subject: params.subject })
+          : undefined,
+    })
+  }
+  // A class belongs to a subject, so when a subject crumb is already shown the
+  // class crumb would be redundant with it (and the page title). Only show the
+  // class crumb when there's no subject context.
+  if (params.classId && !params.subject) {
     crumbs.push({
       label: classLabel || 'Class',
       onClick:

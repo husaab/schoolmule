@@ -123,12 +123,12 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
 
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
             <h2 className="text-lg font-semibold text-slate-900 mb-1">Subject Performance</h2>
-            <p className="text-sm text-slate-500 mb-4">Distribution of student grades per subject</p>
+            <p className="text-sm text-slate-500 mb-4">Click a subject to drill into it</p>
             <QuartileChart
               rows={subjectFiltered.map((sub) => ({
                 label: sub.subject,
                 stats: sub.stats,
-                onClick: () => params.setParams({ subject: sub.subject }),
+                onClick: () => params.drillTo('subject', { subject: sub.subject }),
               }))}
             />
           </div>
@@ -141,8 +141,7 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
             rowKey={(c) => c.classId}
             exportFilename="classes"
             defaultSort={{ key: 'classAvg', dir: 'desc' }}
-            initialLimit={12}
-            onRowClick={(c) => params.drillTo('class', { classId: c.classId, grade: c.grade })}
+            onRowClick={(c) => params.drillTo('class', { classId: c.classId, grade: c.grade, subject: c.subject })}
           />
         </div>
 

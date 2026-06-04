@@ -29,6 +29,7 @@ import BreadcrumbNav from './_components/BreadcrumbNav'
 import { SkeletonCard, SkeletonChart, SkeletonTable } from './_components/Skeletons'
 import SchoolOverviewView from './_components/views/SchoolOverviewView'
 import GradeCohortView from './_components/views/GradeCohortView'
+import SubjectView from './_components/views/SubjectView'
 import ClassView from './_components/views/ClassView'
 import StudentView from './_components/views/StudentView'
 import AiInsightsPanel from './_components/ai/AiInsightsPanel'
@@ -68,8 +69,20 @@ const AnalyticsContent: React.FC = () => {
   // ── Data hooks (overview always — it powers school/grade views AND
   //    the control-bar filter lists; class/student fetch on demand) ──
   const overview = useAnalyticsOverview(params.termId, params.engine, params.compareTerm)
+
+  // Grade + Subject that resolves to a single class → show that class's full
+  // analytics inline (distribution, assessments, rankings) without an extra
+  // click. classId stays derived (not in the URL) so the breadcrumb stays
+  // School › Grade › Subject.
+  const autoClassId = useMemo(() => {
+    if (params.view !== 'subject' || !params.grade || !params.subject || !overview.data) return null
+    const subj = overview.data.bySubject.find((s) => s.subject === params.subject)
+    const inGrade = subj?.classes.filter((c) => c.grade === params.grade) ?? []
+    return inGrade.length === 1 ? inGrade[0].classId : null
+  }, [params.view, params.grade, params.subject, overview.data])
+
   const classDetail = useAnalyticsClass(
-    params.view === 'class' ? params.classId : null,
+    params.view === 'class' ? params.classId : autoClassId,
     params.engine,
     params.termId
   )
@@ -99,22 +112,24 @@ const AnalyticsContent: React.FC = () => {
       compareTermName,
       engine: params.engine,
       selectedGrade: params.grade,
+      selectedSubject: params.subject,
     }
     if (params.view === 'student' && studentDetail.data) {
       setSnapshot({ ...base, viewLevel: 'student', studentDetail: studentDetail.data })
-    } else if (params.view === 'class' && classDetail.data) {
+    } else if ((params.view === 'class' || autoClassId) && classDetail.data) {
+      // Class view, or a grade+subject combo that resolved to one class.
       setSnapshot({ ...base, viewLevel: 'class', classDetail: classDetail.data })
     } else if (overview.data) {
-      setSnapshot({
-        ...base,
-        viewLevel: params.view === 'grade' ? 'grade' : 'school',
-        overview: overview.data,
-      })
+      const viewLevel =
+        params.view === 'grade' ? 'grade' : params.view === 'subject' ? 'subject' : 'school'
+      setSnapshot({ ...base, viewLevel, overview: overview.data })
     }
   }, [
     params.view,
     params.grade,
+    params.subject,
     params.engine,
+    autoClassId,
     overview.data,
     classDetail.data,
     studentDetail.data,
@@ -155,7 +170,11 @@ const AnalyticsContent: React.FC = () => {
         ? classLabel || 'Class'
         : params.view === 'grade'
           ? `Grade ${params.grade}`
-          : 'Whole School'
+          : params.view === 'subject'
+            ? params.grade
+              ? `Grade ${params.grade} ${params.subject}`
+              : (params.subject ?? 'Subject')
+            : 'Whole School'
 
   // ── Render helpers ─────────────────────────────────────────────────
   const activeError =
@@ -176,7 +195,11 @@ const AnalyticsContent: React.FC = () => {
       ? classDetail.loading || !classDetail.data
       : params.view === 'student'
         ? studentDetail.loading || !studentDetail.data
-        : overview.loading || !overview.data)
+        : // subject view first needs overview; if it resolves to a single class,
+          // also wait on that class's detail
+          overview.loading ||
+          !overview.data ||
+          (autoClassId ? classDetail.loading || !classDetail.data : false))
 
   const aiPanel = <AiInsightsPanel />
   const atRiskPanel = (
@@ -207,6 +230,8 @@ const AnalyticsContent: React.FC = () => {
             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 mt-2">
               {params.view === 'school' && 'School Analytics'}
               {params.view === 'grade' && `Grade ${params.grade} Cohort`}
+              {params.view === 'subject' &&
+                (params.grade ? `Grade ${params.grade} — ${params.subject}` : params.subject || 'Subject Analytics')}
               {params.view === 'class' && (classLabel || 'Class Analytics')}
               {params.view === 'student' && (studentLabel || 'Student Profile')}
             </h1>
@@ -288,6 +313,15 @@ const AnalyticsContent: React.FC = () => {
                 atRiskPanel={atRiskPanel}
               />
             )}
+            {params.view === 'subject' &&
+              (autoClassId && classDetail.data ? (
+                // Grade + subject narrowed to a single class — show it in full.
+                <ClassView classData={classDetail.data} params={params} aiPanel={aiPanel} />
+              ) : (
+                overview.data && (
+                  <SubjectView overview={overview.data} params={params} aiPanel={aiPanel} />
+                )
+              ))}
             {params.view === 'class' && classDetail.data && (
               <ClassView classData={classDetail.data} params={params} aiPanel={aiPanel} />
             )}
@@ -308,6 +342,7 @@ const AnalyticsContent: React.FC = () => {
         params={params}
         terms={terms}
         grades={grades}
+        subjects={subjects}
         students={allStudents}
         dataLoading={activeLoading}
       />

@@ -32,10 +32,11 @@ const StudentPicker: React.FC<StudentPickerProps> = ({ students, onSelect }) => 
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Show every match — the dropdown scrolls (max-h). No artificial cap.
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return students.slice(0, 8)
-    return students.filter((s) => s.studentName.toLowerCase().includes(q)).slice(0, 8)
+    if (!q) return students
+    return students.filter((s) => s.studentName.toLowerCase().includes(q))
   }, [students, query])
 
   const pick = (s: PickerStudent) => {

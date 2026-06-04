@@ -9,6 +9,7 @@ import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../_hooks/useAnalyticsParams'
 import EngineTooltip from './EngineTooltip'
 import StudentPicker, { PickerStudent } from './StudentPicker'
+import FilterDropdown from './FilterDropdown'
 
 interface ControlBarProps {
   params: UseAnalyticsParams
@@ -85,18 +86,21 @@ const ControlBar: React.FC<ControlBarProps> = ({
           </span>
         ) : null}
 
-        {/* Grade filter (drills to grade view) */}
+        {/* Grade filter. Stacks with subject: if a subject is active, narrowing
+            the grade keeps the subject (stays in the combined subject view). */}
         <select
           aria-label="Grade level"
-          value={params.view === 'grade' || params.view === 'school' ? params.grade ?? '' : params.grade ?? ''}
-          onChange={(e) =>
-            e.target.value
-              ? params.drillTo('grade', { grade: e.target.value })
-              : params.drillTo('school')
-          }
+          value={params.grade ?? ''}
+          onChange={(e) => {
+            const grade = e.target.value || null
+            if (params.subject) params.drillTo('subject', { grade })
+            else if (grade) params.drillTo('grade', { grade })
+            else params.drillTo('school')
+          }}
           className={selectCls}
         >
           <option value="">All grades</option>
+          {/* clearing a grade while a subject is active drops to school-wide subject */}
           {grades.map((g) => (
             <option key={g} value={g}>
               Grade {g}
@@ -104,20 +108,21 @@ const ControlBar: React.FC<ControlBarProps> = ({
           ))}
         </select>
 
-        {/* Subject filter */}
-        <select
-          aria-label="Subject"
-          value={params.subject ?? ''}
-          onChange={(e) => params.setParams({ subject: e.target.value || null })}
-          className={selectCls}
-        >
-          <option value="">All subjects</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        {/* Subject filter. Stacks with grade: selecting a subject keeps the
+            active grade, producing e.g. "Grade 3 — Math". */}
+        <FilterDropdown
+          ariaLabel="Subject"
+          placeholder="All subjects"
+          value={params.subject}
+          options={subjects.map((s) => ({ value: s, label: s }))}
+          onChange={(subject) => {
+            if (subject) params.drillTo('subject', { subject })
+            // Clearing the subject: keep the grade (if any) but explicitly drop
+            // the subject param so the dropdown + breadcrumb don't go stale.
+            else if (params.grade) params.drillTo('grade', { grade: params.grade, subject: null })
+            else params.drillTo('school')
+          }}
+        />
 
         {/* Jump to a student's profile */}
         <StudentPicker

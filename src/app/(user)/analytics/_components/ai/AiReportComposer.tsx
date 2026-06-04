@@ -31,6 +31,7 @@ interface AiReportComposerProps {
   params: UseAnalyticsParams
   terms: TermPayload[]
   grades: string[]
+  subjects: string[]
   students: PickerStudent[]
   /** True while the page is re-loading data after a scope change. */
   dataLoading: boolean
@@ -90,6 +91,7 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
   params,
   terms,
   grades,
+  subjects,
   students,
   dataLoading,
 }) => {
@@ -182,17 +184,38 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
                 aria-label="Report grade"
                 value={params.view === 'student' || params.view === 'class' ? '' : (params.grade ?? '')}
                 disabled={params.view === 'student' || params.view === 'class'}
-                onChange={(e) =>
-                  e.target.value
-                    ? params.drillTo('grade', { grade: e.target.value })
-                    : params.drillTo('school')
-                }
+                onChange={(e) => {
+                  const grade = e.target.value || null
+                  if (params.subject) params.drillTo('subject', { grade })
+                  else if (grade) params.drillTo('grade', { grade })
+                  else params.drillTo('school')
+                }}
                 className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer disabled:opacity-50"
               >
                 <option value="">Whole school</option>
                 {grades.map((g) => (
                   <option key={g} value={g}>
                     Grade {g}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                aria-label="Report subject"
+                value={params.view === 'student' || params.view === 'class' ? '' : (params.subject ?? '')}
+                disabled={params.view === 'student' || params.view === 'class'}
+                onChange={(e) => {
+                  const subject = e.target.value || null
+                  if (subject) params.drillTo('subject', { subject })
+                  else if (params.grade) params.drillTo('grade', { grade: params.grade, subject: null })
+                  else params.drillTo('school')
+                }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer disabled:opacity-50"
+              >
+                <option value="">All subjects</option>
+                {subjects.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
                   </option>
                 ))}
               </select>
