@@ -61,6 +61,43 @@ export interface SubjectClassRow {
   studentCount: number
   classAvg: number | null
   classMedian: number | null
+  termId: string
+}
+
+// ── Cross-term comparison (subject + grade across all terms) ────────
+
+export interface TermComparisonTerm {
+  termId: string
+  termName: string
+  teacherName: string
+  studentCount: number
+  stats: SummaryStats | null
+}
+
+export interface TermComparisonStudent {
+  studentId: string
+  studentName: string
+  byTerm: Record<string, number | null>
+  delta: number | null
+}
+
+export interface TermComparisonData {
+  subject: string
+  grade: string
+  engine: GradeEngine
+  terms: TermComparisonTerm[]
+  students: TermComparisonStudent[]
+  combined: {
+    avg: number | null
+    median: number | null
+    classCount: number
+    studentCount: number
+  }
+}
+
+export interface TermComparisonResponse {
+  status: string
+  data: TermComparisonData
 }
 
 export interface SubjectStats {

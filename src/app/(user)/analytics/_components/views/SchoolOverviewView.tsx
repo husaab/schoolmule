@@ -67,9 +67,25 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
     sub.classes.map((c) => ({ ...c, subject: sub.subject }))
   )
 
+  // In all-terms mode the same class appears once per term — show which term.
+  const allTerms = params.termId === 'all'
+  const termNameById = new Map(overview.terms.map((t) => [t.term_id, t.name]))
+
   const classColumns: Column<SubjectClassRow & { subject: string }>[] = [
     { key: 'subject', label: 'Subject' },
     { key: 'grade', label: 'Grade', accessor: (c) => Number(c.grade), numeric: true, render: (c) => `Grade ${c.grade}` },
+    ...(allTerms
+      ? [{
+          key: 'termId',
+          label: 'Term',
+          accessor: (c: SubjectClassRow) => termNameById.get(c.termId) ?? '',
+          render: (c: SubjectClassRow) => (
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600 rounded-full">
+              {termNameById.get(c.termId) ?? '—'}
+            </span>
+          ),
+        } satisfies Column<SubjectClassRow & { subject: string }>]
+      : []),
     { key: 'teacherName', label: 'Teacher', lowPriority: true },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
@@ -141,7 +157,15 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
             rowKey={(c) => c.classId}
             exportFilename="classes"
             defaultSort={{ key: 'classAvg', dir: 'desc' }}
-            onRowClick={(c) => params.drillTo('class', { classId: c.classId, grade: c.grade, subject: c.subject })}
+            onRowClick={(c) =>
+              params.drillTo('class', {
+                classId: c.classId,
+                grade: c.grade,
+                subject: c.subject,
+                // jump out of "all terms" into the class's own term
+                ...(allTerms ? { termId: c.termId } : {}),
+              })
+            }
           />
         </div>
 

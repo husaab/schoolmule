@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import {
   UserGroupIcon,
@@ -8,6 +8,8 @@ import {
   PresentationChartLineIcon,
   ClipboardDocumentCheckIcon,
   ExclamationTriangleIcon,
+  UsersIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import { ClassData, ClassStudentRow, AssessmentStatsRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
@@ -28,6 +30,9 @@ const fmtPct = (v: number | null | undefined) => (v == null ? '—' : `${v}%`)
 
 const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => {
   const s = classData.summary.stats
+  // Two analysis lenses share one space — Students leads (most actionable for
+  // a teacher); Assessments is one click away with equal billing.
+  const [lens, setLens] = useState<'students' | 'assessments'>('students')
 
   const completionAvg = useMemo(() => {
     const rates = classData.assessments.map((a) => a.completionRate)
@@ -131,58 +136,100 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900 mb-1">Grade Distribution</h2>
-              <p className="text-xs text-slate-500 mb-3">Final grades in this class</p>
-              <HistogramChart data={classData.summary.histogram} height={210} />
-            </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900 mb-1">Assessment Difficulty Map</h2>
-              <p className="text-xs text-slate-500 mb-3">Bottom-left = hard &amp; incomplete · dot size = weight</p>
-              <ScatterDifficultyChart assessments={classData.assessments} height={210} />
-            </div>
+          {/* Two-lens analysis. Students first — the most actionable view. */}
+          <div className="inline-flex bg-slate-100 rounded-xl p-1" role="tablist" aria-label="Class analysis lens">
+            {(
+              [
+                { key: 'students', label: 'Students', icon: UsersIcon },
+                { key: 'assessments', label: 'Assessments', icon: ClipboardDocumentListIcon },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={lens === t.key}
+                onClick={() => setLens(t.key)}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  lens === t.key
+                    ? 'bg-white text-cyan-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <t.icon className="w-4 h-4" />
+                {t.label}
+                <span
+                  className={`ml-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                    lens === t.key ? 'bg-cyan-50 text-cyan-600' : 'bg-slate-200/70 text-slate-500'
+                  }`}
+                >
+                  {t.key === 'students' ? classData.students.length : classData.assessments.length}
+                </span>
+              </button>
+            ))}
           </div>
 
-          {trendData.length >= 2 && (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900 mb-1">Class Average Over Time</h2>
-              <p className="text-xs text-slate-500 mb-3">Per-assessment class averages in date order</p>
-              <TrendLineChart data={trendData} referenceValue={s?.avg ?? null} referenceLabel={`avg ${s?.avg}%`} height={220} />
+          {lens === 'students' ? (
+            <div key="students" className="space-y-6 animate-fade-in-up">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <h2 className="text-base font-semibold text-slate-900 mb-1">Grade Distribution</h2>
+                <p className="text-xs text-slate-500 mb-3">Final grades in this class</p>
+                <HistogramChart data={classData.summary.histogram} height={210} />
+              </div>
+
+              <AnalyticsTable
+                title="Student Rankings"
+                subtitle="Click a student for their cross-class profile"
+                columns={studentColumns}
+                data={classData.students}
+                rowKey={(r) => r.studentId}
+                exportFilename={`${classData.subject}-grade${classData.grade}-students`}
+                defaultSort={{ key: 'finalPct', dir: 'desc' }}
+                onRowClick={(r) => params.drillTo('student', { studentId: r.studentId })}
+              />
+            </div>
+          ) : (
+            <div key="assessments" className="space-y-6 animate-fade-in-up">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                  <h2 className="text-base font-semibold text-slate-900 mb-1">Assessment Difficulty Map</h2>
+                  <p className="text-xs text-slate-500 mb-3">Bottom-left = hard &amp; incomplete · dot size = weight</p>
+                  <ScatterDifficultyChart assessments={classData.assessments} height={210} />
+                </div>
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                  <h2 className="text-base font-semibold text-slate-900 mb-1">Class Average Over Time</h2>
+                  <p className="text-xs text-slate-500 mb-3">Per-assessment class averages in date order</p>
+                  {trendData.length >= 2 ? (
+                    <TrendLineChart data={trendData} referenceValue={s?.avg ?? null} referenceLabel={`avg ${s?.avg}%`} height={210} />
+                  ) : (
+                    <div className="flex items-center justify-center text-sm text-slate-400" style={{ height: 210 }}>
+                      Need at least two dated assessments
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <AnalyticsTable
+                title="Assessments"
+                subtitle="Spot too-hard or incomplete assessments at a glance"
+                columns={assessmentColumns}
+                data={classData.assessments}
+                rowKey={(a) => a.assessmentId}
+                exportFilename={`${classData.subject}-grade${classData.grade}-assessments`}
+                searchable={false}
+                defaultSort={{ key: 'date', dir: 'asc' }}
+              />
+
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <h2 className="text-base font-semibold text-slate-900 mb-1">Per-Assessment Spread</h2>
+                <p className="text-xs text-slate-500 mb-3">Score distribution per assessment</p>
+                <QuartileChart
+                  rows={classData.assessments
+                    .filter((a) => a.stats != null)
+                    .map((a) => ({ label: a.name, stats: a.stats }))}
+                />
+              </div>
             </div>
           )}
-
-          <AnalyticsTable
-            title="Assessments"
-            subtitle="Spot too-hard or incomplete assessments at a glance"
-            columns={assessmentColumns}
-            data={classData.assessments}
-            rowKey={(a) => a.assessmentId}
-            exportFilename={`${classData.subject}-grade${classData.grade}-assessments`}
-            searchable={false}
-            defaultSort={{ key: 'date', dir: 'asc' }}
-          />
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <h2 className="text-base font-semibold text-slate-900 mb-1">Per-Assessment Spread</h2>
-            <p className="text-xs text-slate-500 mb-3">Score distribution per assessment</p>
-            <QuartileChart
-              rows={classData.assessments
-                .filter((a) => a.stats != null)
-                .map((a) => ({ label: a.name, stats: a.stats }))}
-            />
-          </div>
-
-          <AnalyticsTable
-            title="Student Rankings"
-            subtitle="Click a student for their cross-class profile"
-            columns={studentColumns}
-            data={classData.students}
-            rowKey={(r) => r.studentId}
-            exportFilename={`${classData.subject}-grade${classData.grade}-students`}
-            defaultSort={{ key: 'finalPct', dir: 'desc' }}
-            onRowClick={(r) => params.drillTo('student', { studentId: r.studentId })}
-          />
         </div>
 
         <div className="space-y-6">{aiPanel}</div>

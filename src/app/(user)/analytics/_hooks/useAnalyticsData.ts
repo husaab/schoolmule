@@ -9,12 +9,14 @@ import {
   getAnalyticsClass,
   getAnalyticsStudent,
   getAnalyticsSnapshot,
+  getAnalyticsTermComparison,
 } from '@/services/analyticsService'
 import {
   OverviewData,
   ClassData,
   StudentData,
   SnapshotData,
+  TermComparisonData,
   GradeEngine,
 } from '@/services/types/analytics'
 
@@ -114,5 +116,20 @@ export function useAnalyticsSnapshot(
     Boolean(termId),
     termId ? () => getAnalyticsSnapshot(termId, engine).then((r) => r.data) : null,
     [termId, engine]
+  )
+}
+
+export function useAnalyticsTermComparison(
+  enabled: boolean,
+  subject: string | null,
+  grade: string | null,
+  engine: GradeEngine
+): HookState<TermComparisonData> {
+  return useFetch<TermComparisonData>(
+    enabled && Boolean(subject && grade),
+    enabled && subject && grade
+      ? () => getAnalyticsTermComparison(subject, grade, engine).then((r) => r.data)
+      : null,
+    [enabled, subject, grade, engine]
   )
 }

@@ -10,6 +10,7 @@ import {
   ClassResponse,
   StudentResponse,
   SnapshotResponse,
+  TermComparisonResponse,
   GradeEngine,
 } from './types/analytics'
 
@@ -68,4 +69,17 @@ export const getAnalyticsSnapshot = async (
 ): Promise<SnapshotResponse> => {
   const query = `?termId=${encodeURIComponent(termId)}&engine=${engine}`
   return apiClient<SnapshotResponse>(`/analytics/snapshot${query}`)
+}
+
+/**
+ * Cross-term comparison for one subject+grade (all terms).
+ * GET /analytics/term-comparison?subject=...&grade=...&engine=...
+ */
+export const getAnalyticsTermComparison = async (
+  subject: string,
+  grade: string,
+  engine: GradeEngine
+): Promise<TermComparisonResponse> => {
+  const query = `?subject=${encodeURIComponent(subject)}&grade=${encodeURIComponent(grade)}&engine=${engine}`
+  return apiClient<TermComparisonResponse>(`/analytics/term-comparison${query}`)
 }

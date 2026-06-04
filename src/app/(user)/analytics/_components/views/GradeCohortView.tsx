@@ -41,8 +41,23 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
       sub.classes.filter((c) => c.grade === cohort.grade).map((c) => ({ ...c, subject: sub.subject }))
     )
 
+  const allTerms = params.termId === 'all'
+  const termNameById = new Map(overview.terms.map((t) => [t.term_id, t.name]))
+
   const classColumns: Column<SubjectClassRow & { subject: string }>[] = [
     { key: 'subject', label: 'Subject' },
+    ...(allTerms
+      ? [{
+          key: 'termId',
+          label: 'Term',
+          accessor: (c: SubjectClassRow) => termNameById.get(c.termId) ?? '',
+          render: (c: SubjectClassRow) => (
+            <span className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-600 rounded-full">
+              {termNameById.get(c.termId) ?? '—'}
+            </span>
+          ),
+        } satisfies Column<SubjectClassRow & { subject: string }>]
+      : []),
     { key: 'teacherName', label: 'Teacher', lowPriority: true },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => (c.classAvg == null ? '—' : `${c.classAvg}%`) },
@@ -91,7 +106,13 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
             rowKey={(c) => c.classId}
             exportFilename={`grade-${cohort.grade}-classes`}
             defaultSort={{ key: 'classAvg', dir: 'desc' }}
-            onRowClick={(c) => params.drillTo('class', { classId: c.classId, subject: c.subject })}
+            onRowClick={(c) =>
+              params.drillTo('class', {
+                classId: c.classId,
+                subject: c.subject,
+                ...(allTerms ? { termId: c.termId } : {}),
+              })
+            }
           />
 
           <AnalyticsTable

@@ -160,6 +160,15 @@ const AnalyticsContent: React.FC = () => {
     : null
   const studentLabel = studentDetail.data?.studentName ?? null
 
+  // A class is on screen either via the class view or a grade+subject combo
+  // that resolved to one class. Its heading reads "Grade 3 — Arabic — Term 1"
+  // with the term in a smaller, lighter weight.
+  const showingClass =
+    (params.view === 'class' || (params.view === 'subject' && !!autoClassId)) && !!classDetail.data
+  const classTermName = classDetail.data
+    ? (terms.find((t) => t.termId === classDetail.data!.termId)?.name ?? null)
+    : null
+
   // Human-readable scope of the current view (used by the AI report)
   const scopeLabel =
     params.view === 'student'
@@ -228,11 +237,24 @@ const AnalyticsContent: React.FC = () => {
           <div>
             <BreadcrumbNav params={params} classLabel={classLabel} studentLabel={studentLabel} />
             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 mt-2">
-              {params.view === 'school' && 'School Analytics'}
-              {params.view === 'grade' && `Grade ${params.grade} Cohort`}
-              {params.view === 'subject' &&
-                (params.grade ? `Grade ${params.grade} — ${params.subject}` : params.subject || 'Subject Analytics')}
-              {params.view === 'class' && (classLabel || 'Class Analytics')}
+              {showingClass && classDetail.data ? (
+                <>
+                  Grade {classDetail.data.grade} — {classDetail.data.subject}
+                  {classTermName && (
+                    <span className="text-lg lg:text-xl font-semibold text-slate-400">
+                      {' '}— {classTermName}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  {params.view === 'school' && 'School Analytics'}
+                  {params.view === 'grade' && `Grade ${params.grade} Cohort`}
+                  {params.view === 'subject' &&
+                    (params.grade ? `Grade ${params.grade} — ${params.subject}` : params.subject || 'Subject Analytics')}
+                  {params.view === 'class' && (classLabel || 'Class Analytics')}
+                </>
+              )}
               {params.view === 'student' && (studentLabel || 'Student Profile')}
             </h1>
             <p className="text-slate-500 mt-1 text-sm">

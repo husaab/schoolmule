@@ -9,10 +9,12 @@ import {
 } from '@heroicons/react/24/outline'
 import { OverviewData, SubjectClassRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
+import { useAnalyticsTermComparison } from '../../_hooks/useAnalyticsData'
 import StatCard from '../StatCard'
 import HistogramChart from '../charts/HistogramChart'
 import TermComparisonChart from '../charts/TermComparisonChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
+import TermComparisonSection from './TermComparisonSection'
 
 interface SubjectViewProps {
   overview: OverviewData
@@ -23,6 +25,16 @@ interface SubjectViewProps {
 const fmtPct = (v: number | null | undefined) => (v == null ? '—' : `${v}%`)
 
 const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) => {
+  // Cross-term comparison only in all-terms + grade + subject. Hook is called
+  // unconditionally (rules of hooks); it self-disables otherwise.
+  const wantComparison = params.termId === 'all' && params.grade != null && params.subject != null
+  const comparison = useAnalyticsTermComparison(
+    wantComparison,
+    params.subject,
+    params.grade,
+    params.engine
+  )
+
   const subject = overview.bySubject.find((s) => s.subject === params.subject)
 
   if (!subject) {
@@ -62,6 +74,13 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
       : null
   const singleClassMedian = classes.length === 1 ? classes[0].classMedian : null
 
+  // When the same grade+subject spans multiple terms, show the cross-term
+  // comparison and use its pooled (exact) avg/median for the headline cards.
+  const cmp = comparison.data
+  const multiTerm = !!cmp && cmp.terms.length >= 2
+  const headlineAvg = cmp?.combined.avg ?? weightedAvg
+  const headlineMedian = cmp?.combined.median ?? singleClassMedian
+
   const classColumns: Column<SubjectClassRow>[] = [
     { key: 'grade', label: 'Grade', accessor: (c) => Number(c.grade), numeric: true, render: (c) => <span className="font-semibold text-slate-900">Grade {c.grade}</span> },
     { key: 'teacherName', label: 'Teacher' },
@@ -82,16 +101,27 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
         {gradeScoped ? (
           <>
-            <StatCard label="Average" value={fmtPct(weightedAvg)} icon={ChartBarIcon} color="from-cyan-500 to-cyan-600" />
             <StatCard
-              label="Median"
-              value={fmtPct(singleClassMedian)}
+              label={multiTerm ? 'Combined Average' : 'Average'}
+              value={fmtPct(headlineAvg)}
+              icon={ChartBarIcon}
+              color="from-cyan-500 to-cyan-600"
+              sub={multiTerm ? `across ${cmp!.terms.length} terms` : undefined}
+            />
+            <StatCard
+              label={multiTerm ? 'Combined Median' : 'Median'}
+              value={fmtPct(headlineMedian)}
               icon={PresentationChartLineIcon}
               color="from-teal-500 to-teal-600"
-              sub={classes.length > 1 ? 'open a class for its median' : undefined}
+              sub={!multiTerm && classes.length > 1 ? 'open a class for its median' : undefined}
             />
             <StatCard label="Classes" value={classes.length} icon={AcademicCapIcon} color="from-indigo-500 to-indigo-600" />
-            <StatCard label="Students" value={totalStudents} icon={ArrowsUpDownIcon} color="from-violet-500 to-violet-600" />
+            <StatCard
+              label="Students"
+              value={multiTerm ? cmp!.combined.studentCount : totalStudents}
+              icon={ArrowsUpDownIcon}
+              color="from-violet-500 to-violet-600"
+            />
           </>
         ) : (
           <>
@@ -128,6 +158,9 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
               </div>
             </>
           )}
+
+          {/* Cross-term comparison sits above the class list in combined mode. */}
+          {gradeScoped && multiTerm && cmp && <TermComparisonSection data={cmp} />}
 
           <AnalyticsTable
             title={gradeScoped ? `Grade ${params.grade} ${subject.subject} Classes` : `${subject.subject} Classes`}
