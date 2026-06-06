@@ -20,7 +20,6 @@ import type { AssessmentPayload } from '@/services/types/assessment'
 import { getTermByNameAndSchool } from '@/services/termService'
 import StudentAssessmentsModal from '@/components/assessments/student/studentAssessmentsModal'
 import type { TermPayload } from '@/services/types/term'
-import OpenFeedBackModal from '@/components/feedback/openFeedbackModal';
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
@@ -66,7 +65,6 @@ const GradebookClass = () => {
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentName, setSelectedStudentName] = useState<string | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
 
   // Child assessments modal state
@@ -739,9 +737,6 @@ const GradebookClass = () => {
                       Total
                     </th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[90px]">
-                      Feedback
-                    </th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[90px]">
                       Progress
                     </th>
                   </tr>
@@ -996,19 +991,6 @@ const GradebookClass = () => {
                               onClick={() => {
                                 setSelectedStudentId(stu.studentId);
                                 setSelectedStudentName(stu.name);
-                                setIsFeedbackModalOpen(true);
-                              }}
-                              className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                            >
-                              Feedback
-                            </button>
-                          </td>
-
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => {
-                                setSelectedStudentId(stu.studentId);
-                                setSelectedStudentName(stu.name);
                                 setIsProgressReportModalOpen(true);
                               }}
                               className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
@@ -1051,19 +1033,6 @@ const GradebookClass = () => {
           </div>
         )}
       </main>
-
-      {selectedStudentId && selectedStudentName && (
-        <OpenFeedBackModal
-          isOpen={isFeedbackModalOpen}
-          onClose={() => setIsFeedbackModalOpen(false)}
-          studentId={selectedStudentId}
-          studentName={selectedStudentName}
-          classId={classId}
-          subjectName={classData.subject}
-          studentGrade={computeTotalForStudent(selectedStudentId)}
-          onNavigateToBulkFeedback={navigateToBulkFeedback}
-        />
-      )}
 
       {selectedStudentId && selectedStudentName && (
         <ProgressReportModal

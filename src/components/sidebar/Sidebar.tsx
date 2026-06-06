@@ -13,11 +13,7 @@ import {
   AcademicCapIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
-  CalendarDaysIcon,
-  DocumentTextIcon,
-  ChatBubbleLeftRightIcon,
   ChartBarIcon,
-  CurrencyDollarIcon,
   ClipboardDocumentListIcon,
   QuestionMarkCircleIcon,
   EnvelopeIcon,
@@ -25,7 +21,6 @@ import {
   DocumentChartBarIcon,
   PencilSquareIcon,
   EyeIcon,
-  BanknotesIcon,
   PresentationChartLineIcon,
   UserCircleIcon,
   IdentificationIcon,
@@ -59,8 +54,6 @@ const teacherLinks: NavLink[] = [
 
 const parentLinks: NavLink[] = [
   { href: '/parent/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { href: '/parent/communication', label: 'Communication', icon: ChatBubbleLeftRightIcon },
-  { href: '/parent/feedback', label: 'Feedback', icon: DocumentTextIcon },
   { href: '/parent/report-cards', label: 'Report Cards', icon: DocumentChartBarIcon }
 ];
 
@@ -80,14 +73,10 @@ const Sidebar = () => {
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
-  const isFeedbackPath = pathname.startsWith('/feedback')
-  const isFinancialPath = pathname.startsWith('/financials')
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
 
-  const [feedbackOpen, setFeedbackOpen] = useState(isFeedbackPath)
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
-  const [financialOpen, setFinancialOpen] = useState(isFinancialPath);
   const [registrationOpen, setRegistrationOpen] = useState(isRegistrationPath);
 
   // Close sidebar on route change (mobile)
@@ -284,18 +273,6 @@ const Sidebar = () => {
               <SubNavItem href="/report-cards/view" label="View & Download" icon={EyeIcon} />
             </DropdownSection>
 
-            {/* Financials Dropdown */}
-            <DropdownSection
-              label="Financials"
-              icon={CurrencyDollarIcon}
-              isOpen={financialOpen}
-              onToggle={() => setFinancialOpen(o => !o)}
-              isActive={isFinancialPath}
-            >
-              <SubNavItem href="/financials/tuition" label="Tuition & Invoices" icon={BanknotesIcon} />
-              <SubNavItem href="/financials/overview" label="Financial Overview" icon={PresentationChartLineIcon} />
-            </DropdownSection>
-
             {/* Divider */}
             <div className="py-3">
               <div className="border-t border-slate-100" />
@@ -307,34 +284,6 @@ const Sidebar = () => {
               label="My Attendance"
               icon={UserCircleIcon}
               isActive={pathname === '/my-attendance'}
-            />
-
-            {/* Schedule */}
-            <NavItem
-              href="/schedule"
-              label="Schedule"
-              icon={CalendarDaysIcon}
-              isActive={pathname === '/schedule'}
-            />
-
-            {/* Feedback Dropdown */}
-            <DropdownSection
-              label="Feedback"
-              icon={ChatBubbleLeftRightIcon}
-              isOpen={feedbackOpen}
-              onToggle={() => setFeedbackOpen(!feedbackOpen)}
-              isActive={isFeedbackPath}
-            >
-              <SubNavItem href="/feedback/send" label="Send Feedback" icon={PencilSquareIcon} />
-              <SubNavItem href="/feedback" label="View & Edit" icon={EyeIcon} />
-            </DropdownSection>
-
-            {/* Communication */}
-            <NavItem
-              href="/communication"
-              label="Parent Communication"
-              icon={EnvelopeIcon}
-              isActive={pathname === '/communication'}
             />
 
             {/* Admin Panel */}

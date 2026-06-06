@@ -9,8 +9,7 @@ import { ParentStudentPayload } from '@/services/types/parentStudent'
 import Spinner from '@/components/Spinner'
 import ParentChildCard from '@/components/parent/card/ParentChildCard'
 import StaffList from '@/components/staff/StaffList'
-import { HomeIcon, ChatBubbleLeftRightIcon, UserGroupIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
-import Link from 'next/link'
+import { HomeIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 const ParentDashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -51,28 +50,6 @@ const ParentDashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Communication Card */}
-          <Link
-            href="/parent/communication"
-            className="group block bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6 hover:shadow-lg hover:border-slate-200 transition-all"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-cyan-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors">Communication</h2>
-                  <p className="text-sm text-slate-500">View messages or announcements from the school</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl text-sm font-medium group-hover:from-cyan-600 group-hover:to-teal-600 transition-all">
-                View Messages
-                <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </div>
-          </Link>
 
           {/* Loading/Error */}
           {loading && (

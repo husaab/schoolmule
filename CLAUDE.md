@@ -32,14 +32,6 @@ School Mule is a comprehensive school management system with separate frontend a
 - **Primary Key**: (class_id, student_id)
 - **Purpose**: Many-to-many relationship between classes and students
 
-### Scheduling System
-
-#### schedules
-- **Primary Key**: `schedule_id` (UUID)
-- **Fields**: grade, day_of_week, start_time, end_time, subject, teacher_name, is_lunch, lunch_supervisor, school, week_start_date
-- **Purpose**: Weekly class schedules with time blocks
-- **Note**: Currently updated to support 1-hour time blocks (8 AM - 5 PM)
-
 ### Assessment & Grading
 
 #### assessments
@@ -93,14 +85,8 @@ School Mule is a comprehensive school management system with separate frontend a
 
 ## Frontend Structure
 
-### Key Components
-- **Schedule System**: `ScheduleGrid.tsx`, `ScheduleWeekView.tsx`
-  - Supports dynamic time blocks with precise positioning
-  - Handles overlapping schedules and partial coverage
-  - Recently updated to use 1-hour blocks instead of 45-minute blocks
-
 ### Services Layer
-- API clients for each domain (authService, classService, scheduleService, etc.)
+- API clients for each domain (authService, classService, etc.)
 - Type definitions in `services/types/`
 
 ### State Management
@@ -130,7 +116,6 @@ School Mule is a comprehensive school management system with separate frontend a
 /api/studentAssessments - Individual student scores
 /api/attendance    - Class and general attendance
 /api/report-cards  - Report card generation
-/api/schedules     - Schedule management
 /api/dashboard     - Dashboard data aggregation
 /api/teachers      - Teacher-specific operations
 ```
@@ -143,19 +128,11 @@ School Mule is a comprehensive school management system with separate frontend a
 - **Validation**: Express-validator for input validation
 - **Rate Limiting**: 1000 requests per minute
 
-### Schedule API Endpoints
-- `GET /api/schedules?school=X&week=Y` - Get all schedules
-- `GET /api/schedules/grade/:grade?school=X&week=Y` - Get by grade
-- `POST /api/schedules` - Create schedule
-- `PATCH /api/schedules/:id` - Update schedule
-- `DELETE /api/schedules/:id` - Delete schedule
-
 ## Memory Persistence
 **IMPORTANT**: Claude Code doesn't retain information between sessions. This `CLAUDE.md` file serves as persistent memory. Always reference this file when working on the School Mule system.
 
 ## Notes for Future Development
 - Backend project located at: `/mnt/c/Users/husse/OneDrive/Desktop/Github/schoolmule-backend`
-- Schedule system recently enhanced to support variable-length time blocks
 - Database uses UUIDs for all primary keys
 - Foreign key relationships maintain referential integrity with CASCADE deletes where appropriate
 - Backend uses structured MVC pattern: routes → controllers → queries → database

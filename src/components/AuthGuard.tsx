@@ -14,11 +14,11 @@ const PUBLIC_PATHS = ['/', '/login', '/signup', '/about', '/product', '/contact'
 const KNOWN_APP_ROUTES = [
   'login', 'signup', 'about', 'product', 'contact', 'demo',
   'forgot-password', 'reset-password', 'dashboard', 'students', 'classes',
-  'gradebook', 'attendance', 'reports', 'report-cards', 'schedule',
-  'feedback', 'communication', 'admin-panel', 'settings', 'support',
+  'gradebook', 'attendance', 'reports', 'report-cards',
+  'admin-panel', 'settings', 'support',
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'whats-new', 'parent',
-  'financials', 'forbidden', 'api', '_next',
+  'forbidden', 'api', '_next',
 ];
 
 // Check if a path is a public registration form URL: /{schoolSlug}/{formSlug}
@@ -26,7 +26,10 @@ const isPublicFormPath = (path: string) => {
   const segments = path.split('/').filter(Boolean);
   return segments.length === 2 && !KNOWN_APP_ROUTES.includes(segments[0]);
 };
-const PARENT_PATHS = ['/parent/dashboard', '/parent/feedback', '/parent/communication', '/settings', '/parent/report-cards']
+
+// Per-school signup pages are public: /signup/{schoolSlug}
+const isPublicSignupPath = (path: string) => path.startsWith('/signup/');
+const PARENT_PATHS = ['/parent/dashboard', '/settings', '/parent/report-cards']
 
 // Check if path matches parent patterns (including dynamic routes)
 const isParentPath = (path: string) => {
@@ -104,7 +107,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     // Handle routing logic
-    if (!token && !PUBLIC_PATHS.includes(path) && !isPublicFormPath(path)) {
+    if (!token && !PUBLIC_PATHS.includes(path) && !isPublicFormPath(path) && !isPublicSignupPath(path)) {
       router.replace('/')
     }
 

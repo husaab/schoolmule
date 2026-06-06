@@ -3,8 +3,28 @@
 export const schoolDisplayNames: Record<string, string> = {
   PLAYGROUND:       'Playground School',
   ALHAADIACADEMY:   'Al Haadi Academy',
+  ALRASOOLACADEMY:  'Al Rasool Academy',
+  JCC:              'Jaafari Community Centre',
   // add more enum→name mappings here as needed
 };
+
+/**
+ * Static public path to each school's logo (served from /public).
+ * Used for app chrome (header lockup) where we want a synchronous, no-flicker
+ * asset — distinct from the dynamic Supabase-bucket assets used on report cards.
+ */
+export const schoolLogos: Record<string, string> = {
+  ALHAADIACADEMY: '/schools/alhaadiacademy/AlHaadiAcademyLogo.avif',
+  // add more enum→logo-path mappings here as needed
+};
+
+/**
+ * Get the static public path to a school's logo, or null if none is configured.
+ */
+export function getSchoolLogo(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return schoolLogos[raw] ?? null;
+}
 
 /**
  * Convert a School enum value into its user-friendly display name.
@@ -20,6 +40,47 @@ export function getSchoolName(raw: string): string {
     .split(/[_\s]+/)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+}
+
+/**
+ * A school as presented in the public signup directory. Kept deliberately
+ * minimal (no API payload) because the directory is pre-auth: `GET /schools`
+ * requires a token, so the signup surface is sourced from this static list.
+ */
+export interface SignupSchool {
+  schoolCode: string;
+  name: string;
+}
+
+/**
+ * Schools offered on the public signup directory, in display order.
+ * Onboard a new school: add a line here, and (optionally) its logo in
+ * `schoolLogos` above — schools with no logo fall back to a branded initial.
+ * Test/demo tenants (e.g. PLAYGROUND) are intentionally excluded.
+ */
+export const SIGNUP_SCHOOLS: SignupSchool[] = [
+  { schoolCode: 'ALHAADIACADEMY',  name: 'Al Haadi Academy' },
+  { schoolCode: 'ALRASOOLACADEMY', name: 'Al Rasool Academy' },
+  { schoolCode: 'JCC',             name: 'Jaafari Community Centre (JCC)' },
+];
+
+/**
+ * URL-friendly slug for a school, used in deep-linkable signup routes
+ * (e.g. "ALHAADIACADEMY" → "alhaadiacademy"). Mirrors the /public/schools/<code>/
+ * asset-folder convention.
+ */
+export function getSchoolSlug(code: string): string {
+  return code.toLowerCase();
+}
+
+/**
+ * Reverse-resolve a signup slug back to its school by matching against each
+ * school's computed slug. Robust against codes containing separators, unlike a
+ * naive toUpperCase(). Returns null when no school matches.
+ */
+export function findSignupSchoolBySlug(slug: string): SignupSchool | null {
+  const target = slug.toLowerCase();
+  return SIGNUP_SCHOOLS.find(s => getSchoolSlug(s.schoolCode) === target) ?? null;
 }
 
 // Grade types and utilities

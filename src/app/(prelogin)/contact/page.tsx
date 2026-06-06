@@ -135,10 +135,10 @@ const ContactPage: FC = () => {
                       <div>
                         <h3 className="font-semibold text-slate-800 mb-1">Email Us</h3>
                         <a
-                          href="mailto:schoolmule.official@gmail.com"
+                          href="mailto:info@schoolmule.ca"
                           className="text-cyan-600 hover:text-cyan-700 transition-colors"
                         >
-                          schoolmule.official@gmail.com
+                          info@schoolmule.ca
                         </a>
                       </div>
                     </div>

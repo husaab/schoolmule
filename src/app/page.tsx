@@ -557,6 +557,107 @@ const WelcomePage: FC = () => {
           </div>
         </section>
 
+        {/* Analytics Section */}
+        <section className="py-20 lg:py-28 bg-gradient-to-b from-slate-50 to-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              data-reveal
+              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium mb-4">
+                <ChartBarIcon className="w-4 h-4" />
+                Analytics &amp; Insights
+              </div>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+                Data That{' '}
+                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+                  Drives Decisions
+                </span>
+              </h2>
+              <p className="text-lg text-slate-600">
+                Turn everyday school data into clear, visual insight — so you can act before small issues become big ones
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              {/* Screenshot */}
+              <div
+                data-reveal
+                className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
+              >
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div className="flex-1 ml-4">
+                      <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
+                        schoolmule.ca/analytics
+                      </div>
+                    </div>
+                  </div>
+                  <div className="relative aspect-video">
+                    <Image
+                      src="/images/AnalyticsScreenshot.png"
+                      alt="SchoolMule Analytics"
+                      fill
+                      className="object-cover object-top"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Text + stat cards */}
+              <div
+                data-reveal
+                className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
+              >
+                <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
+                  See the Whole School at a Glance
+                </h3>
+                <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+                  Attendance, grades, and enrollment come together in one live dashboard.
+                  Spot trends, flag at-risk students early, and share clear reports with your team in seconds.
+                </p>
+
+                {/* Metric strip */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+                  {[
+                    { value: '96%', label: 'Avg. Attendance' },
+                    { value: '+12%', label: 'Grade Trend' },
+                    { value: '20h', label: 'Saved / Week' },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center"
+                    >
+                      <div className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+                        {stat.value}
+                      </div>
+                      <div className="text-xs sm:text-sm text-slate-500 mt-1 leading-tight">
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <ul className="space-y-4">
+                  {['Live attendance & enrollment charts', 'Grade distribution & trend analysis', 'At-risk student early alerts'].map((item) => (
+                    <li key={item} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <CheckIcon className="w-4 h-4 text-violet-600" />
+                      </div>
+                      <span className="text-slate-700">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Testimonial Section */}
         <section className="py-20 lg:py-28 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -576,11 +677,11 @@ const WelcomePage: FC = () => {
               </blockquote>
               <div className="flex items-center justify-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">
-                  SB
+                  MS
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-slate-800">Sarah Bennett</p>
-                  <p className="text-slate-500">Principal, Maplewood Elementary</p>
+                  <p className="font-semibold text-slate-800">Majida Shoauib</p>
+                  <p className="text-slate-500">Principal, Al Haadi Islamic School</p>
                 </div>
               </div>
             </div>
@@ -626,8 +727,8 @@ const WelcomePage: FC = () => {
 
               <p className="text-slate-400">
                 Questions? Contact us at{' '}
-                <a href="mailto:schoolmule.official@gmail.com" className="text-cyan-400 hover:text-cyan-300 transition-colors">
-                  schoolmule.official@gmail.com
+                <a href="mailto:info@schoolmule.ca" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                  info@schoolmule.ca
                 </a>
               </p>
             </div>

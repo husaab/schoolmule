@@ -7,7 +7,7 @@ import { EnvelopeIcon } from '@heroicons/react/24/outline'
 
 const Footer: FC = () => {
   const year = new Date().getFullYear()
-  const supportEmail = 'schoolmule.official@gmail.com'
+  const supportEmail = 'info@schoolmule.ca'
   const mailto = `mailto:${supportEmail}?subject=${encodeURIComponent('SchoolMule Inquiry')}`
 
   const footerLinks = {

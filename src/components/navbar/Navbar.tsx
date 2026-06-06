@@ -6,6 +6,7 @@ import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useSidebarStore } from '@/store/useSidebarStore';
 import { useUserStore } from '@/store/useUserStore';
 import { getSchoolName } from '@/lib/schoolUtils';
+import SchoolLogo from '@/components/branding/SchoolLogo';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -41,14 +42,17 @@ const NavBar: FC = () => {
             <Bars3Icon className="h-6 w-6" />
           </button>
 
-          {/* School Name / Page Context */}
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold text-slate-900">
-              {user?.school ? getSchoolName(user.school) : 'SchoolMule'}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {user?.role === 'ADMIN' ? 'Administrator' : user?.role === 'PARENT' ? 'Parent Portal' : 'Teacher Portal'}
-            </p>
+          {/* School Identity — logo mark + name / page context */}
+          <div className="hidden sm:flex items-center gap-3">
+            <SchoolLogo schoolCode={user?.school ?? null} size={52} />
+            <div>
+              <h1 className="text-lg font-semibold text-slate-900">
+                {user?.school ? getSchoolName(user.school) : 'SchoolMule'}
+              </h1>
+              <p className="text-xs text-slate-500">
+                {user?.role === 'ADMIN' ? 'Administrator' : user?.role === 'PARENT' ? 'Parent Portal' : 'Teacher Portal'}
+              </p>
+            </div>
           </div>
         </div>
 

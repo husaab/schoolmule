@@ -26,12 +26,6 @@ const ParentChildCard: React.FC<ParentChildCardProps> = ({ childLink }) => {
 
       <div className="mt-4 flex flex-wrap gap-2">
         <a
-          href={`/parent/feedback?studentId=${studentId}`}
-          className="px-4 py-2 bg-blue-400 text-white rounded-lg text-sm hover:bg-blue-500"
-        >
-          View Student Assessments & Feedback
-        </a>
-        <a
           href={`/parent/report-cards?studentId=${studentId}`}
           className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
         >
