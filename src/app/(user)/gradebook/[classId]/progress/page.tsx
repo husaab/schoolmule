@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
+import ProgressReportModal from '@/components/progress-report/ProgressReportModal'
 
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import { getClassProgressReportFeedback, upsertBulkProgressReportFeedback } from '@/services/progressReportService'
@@ -27,7 +28,8 @@ import {
   SparklesIcon,
   InformationCircleIcon,
   CalendarDaysIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline'
 
 // Core Standards options
@@ -80,6 +82,7 @@ const BulkProgressPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [showTermSelector, setShowTermSelector] = useState(false)
+  const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
 
   // Student grades from localStorage (computed in gradebook)
   const [studentGrades, setStudentGrades] = useState<Record<string, number>>({})
@@ -381,6 +384,34 @@ const BulkProgressPage = () => {
     }
   }
 
+  // Close the single-student modal and refresh feedback so modal saves show in the table
+  const handleModalClose = () => {
+    setModalStudent(null)
+    if (!classId || !selectedTerm) return
+    getClassProgressReportFeedback(classId, selectedTerm)
+      .then((res) => {
+        if (res.status === 'success') {
+          const feedbackMap = new Map<string, ClassProgressReportFeedbackEntry>()
+          res.data.forEach((entry) => {
+            feedbackMap.set(entry.studentId, entry)
+          })
+          setExistingFeedback(feedbackMap)
+        }
+      })
+      .catch((err) => {
+        console.error('Error refreshing progress feedback:', err)
+      })
+  }
+
+  // Navigate to the report card feedback page with unsaved changes check
+  const navigateToReportCardFeedback = () => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm('You have unsaved progress changes. Are you sure you want to leave?')
+      if (!confirmLeave) return
+    }
+    router.push(`/gradebook/${classId}/feedback`)
+  }
+
   // Handle back button with unsaved changes check
   const handleBackClick = () => {
     if (hasUnsavedChanges) {
@@ -456,7 +487,7 @@ const BulkProgressPage = () => {
                   Back to Gradebook
                 </button>
                 <h1 className="text-2xl lg:text-3xl font-bold">
-                  Bulk Progress Reports
+                  Progress Report Feedback
                 </h1>
                 <p className="text-white/80 mt-1">
                   Grade {classData.grade} - {classData.subject}
@@ -579,6 +610,29 @@ const BulkProgressPage = () => {
             </div>
           </div>
 
+          {/* Destination Disclaimer Banner */}
+          <div className="mb-6 rounded-2xl bg-emerald-50 border border-emerald-200 p-5">
+            <div className="flex items-start gap-3">
+              <InformationCircleIcon className="h-6 w-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-emerald-900">
+                  This page is for progress reports — not report cards
+                </h3>
+                <p className="text-sm text-emerald-800/80 mt-1">
+                  Everything entered here appears on students&apos; <span className="font-semibold">progress report</span> PDFs.
+                  Looking to enter report card feedback instead?
+                </p>
+                <button
+                  onClick={navigateToReportCardFeedback}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-900 cursor-pointer"
+                >
+                  Go to Report Card Feedback
+                  <span aria-hidden>&rarr;</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* AI Feature Info Banner */}
           <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-purple-200/40 p-5">
             <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-purple-300/20 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -681,6 +735,13 @@ const BulkProgressPage = () => {
                                     <span className="font-medium text-slate-900">
                                       {stu.name}
                                     </span>
+                                    <button
+                                      onClick={() => setModalStudent({ id: stu.studentId, name: stu.name })}
+                                      className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                      title="Edit this student's progress report feedback"
+                                    >
+                                      <PencilSquareIcon className="h-4 w-4" />
+                                    </button>
                                     {hasEdits && (
                                       <span className="w-2 h-2 rounded-full bg-amber-400" title="Unsaved changes" />
                                     )}
@@ -830,6 +891,19 @@ const BulkProgressPage = () => {
           )}
         </div>
       </main>
+
+      {modalStudent && (
+        <ProgressReportModal
+          isOpen={true}
+          onClose={handleModalClose}
+          studentId={modalStudent.id}
+          studentName={modalStudent.name}
+          classId={classId}
+          subjectName={classData.subject}
+          studentGrade={studentGrades[modalStudent.id]}
+          initialTerm={selectedTerm}
+        />
+      )}
     </>
   )
 }

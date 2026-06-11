@@ -126,3 +126,20 @@ export const deleteReportCard = async (filePath: string): Promise<{ status: stri
     method: 'DELETE',
   });
 };
+
+/**
+ * POST /report-cards/delete/bulk
+ * → Delete multiple report cards (storage files + database records)
+ */
+export const deleteBulkReportCards = async (
+  filePaths: string[]
+): Promise<{ status: string; deleted?: string[] }> => {
+  return apiClient<{ status: string; deleted?: string[] }>(
+    `/report-cards/delete/bulk`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { filePaths },
+    }
+  );
+};

@@ -21,7 +21,6 @@ import { getTermByNameAndSchool } from '@/services/termService'
 import StudentAssessmentsModal from '@/components/assessments/student/studentAssessmentsModal'
 import type { TermPayload } from '@/services/types/term'
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
-import ProgressReportModal from '@/components/progress-report/ProgressReportModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import {
@@ -63,9 +62,6 @@ const GradebookClass = () => {
   const [scoresMatrix, setScoresMatrix] = useState<ScoreRow[]>([])
   const [termData, setTermData] = useState<TermPayload | null>(null)
 
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [selectedStudentName, setSelectedStudentName] = useState<string | null>(null);
-  const [isProgressReportModalOpen, setIsProgressReportModalOpen] = useState(false);
 
   // Child assessments modal state
   const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
@@ -614,18 +610,18 @@ const GradebookClass = () => {
                 <button
                   onClick={navigateToBulkFeedback}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-all font-medium cursor-pointer shadow-sm"
-                  title="Enter report card feedback for all students"
+                  title="Enter feedback that appears on report cards"
                 >
                   <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-                  Bulk Feedback
+                  Report Card Feedback
                 </button>
                 <button
                   onClick={navigateToBulkProgress}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all font-medium cursor-pointer shadow-sm"
-                  title="Enter progress report feedback for all students"
+                  title="Enter feedback that appears on progress reports (not report cards)"
                 >
                   <ClipboardDocumentCheckIcon className="h-4 w-4" />
-                  Bulk Progress
+                  Progress Report Feedback
                 </button>
                 <button
                   onClick={handleExportExcel}
@@ -736,9 +732,6 @@ const GradebookClass = () => {
                     <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700 min-w-[80px] bg-emerald-50">
                       Total
                     </th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[90px]">
-                      Progress
-                    </th>
                   </tr>
                 </thead>
 
@@ -746,7 +739,7 @@ const GradebookClass = () => {
                   {students.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={3 + displayedAssessments.length}
+                        colSpan={2 + displayedAssessments.length}
                         className="px-4 py-12 text-center"
                       >
                         <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
@@ -985,19 +978,6 @@ const GradebookClass = () => {
                           <td className="px-4 py-2 text-center bg-emerald-50/50 font-semibold text-slate-900">
                             {total.toFixed(1)}%
                           </td>
-
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => {
-                                setSelectedStudentId(stu.studentId);
-                                setSelectedStudentName(stu.name);
-                                setIsProgressReportModalOpen(true);
-                              }}
-                              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                            >
-                              Progress
-                            </button>
-                          </td>
                         </tr>
                       )
                     })
@@ -1033,19 +1013,6 @@ const GradebookClass = () => {
           </div>
         )}
       </main>
-
-      {selectedStudentId && selectedStudentName && (
-        <ProgressReportModal
-          isOpen={isProgressReportModalOpen}
-          onClose={() => setIsProgressReportModalOpen(false)}
-          studentId={selectedStudentId}
-          studentName={selectedStudentName}
-          classId={classId}
-          subjectName={classData.subject}
-          studentGrade={computeTotalForStudent(selectedStudentId)}
-          onNavigateToBulkProgress={navigateToBulkProgress}
-        />
-      )}
 
       {selectedParentAssessment && (
         <ChildAssessmentsModal

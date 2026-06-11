@@ -10,7 +10,6 @@ import type { TermPayload } from '@/services/types/term';
 import {
   SparklesIcon,
   InformationCircleIcon,
-  TableCellsIcon,
   CalendarDaysIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
@@ -23,7 +22,7 @@ interface ProgressReportModalProps {
   classId: string;
   subjectName?: string;
   studentGrade?: number;
-  onNavigateToBulkProgress?: () => void;
+  initialTerm?: string;
 }
 
 const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
@@ -34,7 +33,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   classId,
   subjectName,
   studentGrade,
-  onNavigateToBulkProgress,
+  initialTerm,
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -64,7 +63,9 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
         if (res.status === 'success' && res.data) {
           setTerms(res.data);
           // Set default term
-          if (user.activeTerm) {
+          if (initialTerm) {
+            setTerm(initialTerm);
+          } else if (user.activeTerm) {
             setTerm(user.activeTerm);
           } else {
             const activeTerm = res.data.find((t: TermPayload) => t.isActive);
@@ -83,7 +84,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
     };
 
     fetchTerms();
-  }, [isOpen, user?.school, user?.activeTerm]);
+  }, [isOpen, user?.school, user?.activeTerm, initialTerm]);
 
   // Fetch existing feedback when modal opens and term is set
   useEffect(() => {
@@ -360,26 +361,6 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
             </button>
           </div>
         </form>
-      )}
-
-      {/* Bulk progress upsell banner */}
-      {onNavigateToBulkProgress && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onNavigateToBulkProgress();
-            }}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 rounded-lg hover:from-emerald-100 hover:to-green-100 transition-all group cursor-pointer"
-          >
-            <TableCellsIcon className="w-5 h-5 text-emerald-600" />
-            <span className="text-sm font-medium">
-              Need to enter progress reports for all students? Try Bulk Progress
-            </span>
-            <span className="text-emerald-500 group-hover:translate-x-1 transition-transform">&rarr;</span>
-          </button>
-        </div>
       )}
     </Modal>
   );

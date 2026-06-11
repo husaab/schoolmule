@@ -375,6 +375,15 @@ const BulkFeedbackPage = () => {
     router.push(`/gradebook/${classId}`)
   }
 
+  // Navigate to the progress report feedback page with unsaved changes check
+  const navigateToProgressReportFeedback = () => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm('You have unsaved feedback changes. Are you sure you want to leave?')
+      if (!confirmLeave) return
+    }
+    router.push(`/gradebook/${classId}/progress`)
+  }
+
   // Loading state
   if (loading) {
     return (
@@ -547,6 +556,29 @@ const BulkFeedbackPage = () => {
                   className="h-full bg-white transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Destination Disclaimer Banner */}
+          <div className="mb-6 rounded-2xl bg-cyan-50 border border-cyan-200 p-5">
+            <div className="flex items-start gap-3">
+              <InformationCircleIcon className="h-6 w-6 text-cyan-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-cyan-900">
+                  This page is for report cards
+                </h3>
+                <p className="text-sm text-cyan-800/80 mt-1">
+                  Everything entered here appears on students&apos; <span className="font-semibold">report card</span> PDFs.
+                  Looking to enter progress report feedback instead?
+                </p>
+                <button
+                  onClick={navigateToProgressReportFeedback}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 cursor-pointer"
+                >
+                  Go to Progress Report Feedback
+                  <span aria-hidden>&rarr;</span>
+                </button>
               </div>
             </div>
           </div>

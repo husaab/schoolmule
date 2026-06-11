@@ -8,6 +8,7 @@ import { EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon, C
 import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/reportCardService';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import ReportCardDeleteModal from '@/components/report-cards/delete/reportCardDeleteModal';
+import BulkDeleteReportCardModal from '@/components/report-cards/delete/bulkDeleteReportCardModal';
 import SingleEmailReportCardModal from '@/components/report-cards/email/singleEmailReportCardModal';
 import BulkEmailReportCardModal from '@/components/report-cards/email/bulkEmailReportCardModal';
 import SentEmailReportCardModal from '@/components/report-cards/email/sent/sentEmailReportCardModal';
@@ -43,6 +44,10 @@ export default function ViewReportCardsPage() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<ReportCardRow | null>(null);
+
+  // Bulk delete selection (keyed by file_path, same key the delete API uses)
+  const [selectedFilePaths, setSelectedFilePaths] = useState<string[]>([]);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
   // Email modal states
   const [selectedForEmail, setSelectedForEmail] = useState<ReportCardRow | null>(null);
@@ -94,6 +99,7 @@ export default function ViewReportCardsPage() {
   // Fetch report cards when term is selected
   useEffect(() => {
     if (user.school && term) {
+      setSelectedFilePaths([]);
       getGeneratedReportCards(term, user.school).then((res) => {
         if (res.status === 'success') {
           setReportCards(res.data);
@@ -178,6 +184,34 @@ export default function ViewReportCardsPage() {
     setDeleteModalOpen(true);
   };
 
+  const toggleCardSelection = (filePath: string) => {
+    setSelectedFilePaths((prev) =>
+      prev.includes(filePath)
+        ? prev.filter((p) => p !== filePath)
+        : [...prev, filePath]
+    );
+  };
+
+  const toggleGradeSelection = (students: ReportCardRow[]) => {
+    const gradePaths = students.map((s) => s.file_path);
+    const allSelected = gradePaths.every((p) => selectedFilePaths.includes(p));
+    setSelectedFilePaths((prev) =>
+      allSelected
+        ? prev.filter((p) => !gradePaths.includes(p))
+        : [...new Set([...prev, ...gradePaths])]
+    );
+  };
+
+  const handleBulkDeleted = (filePaths: string[]) => {
+    setReportCards((prev) => prev.filter((r) => !filePaths.includes(r.file_path)));
+    setSignedUrls((prev) => {
+      const copy = { ...prev };
+      filePaths.forEach((p) => delete copy[p]);
+      return copy;
+    });
+    setSelectedFilePaths([]);
+  };
+
   const handleEmailClick = (student: ReportCardRow) => {
     setSelectedForEmail(student);
     if (student.email_sent) {
@@ -244,7 +278,11 @@ export default function ViewReportCardsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
                   <select
                     value={selectedGrade}
-                    onChange={(e) => setSelectedGrade(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedGrade(e.target.value);
+                      // Hidden rows shouldn't stay silently selected for deletion
+                      setSelectedFilePaths([]);
+                    }}
                     className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">-- All Grades --</option>
@@ -274,15 +312,34 @@ export default function ViewReportCardsPage() {
                     </>
                   )}
                 </div>
-                {unemailedReports.length > 0 && (
-                  <button
-                    onClick={() => setBulkEmailModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
-                  >
-                    <EnvelopeIcon className="h-4 w-4" />
-                    Bulk Email ({unemailedReports.length})
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {selectedFilePaths.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setSelectedFilePaths([])}
+                        className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                      >
+                        Clear selection
+                      </button>
+                      <button
+                        onClick={() => setBulkDeleteModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors cursor-pointer text-sm font-medium"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        Delete Selected ({selectedFilePaths.length})
+                      </button>
+                    </>
+                  )}
+                  {unemailedReports.length > 0 && (
+                    <button
+                      onClick={() => setBulkEmailModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
+                    >
+                      <EnvelopeIcon className="h-4 w-4" />
+                      Bulk Email ({unemailedReports.length})
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -309,14 +366,28 @@ export default function ViewReportCardsPage() {
                       const isCollapsed = collapsedGrades.has(grade);
                       return (
                         <div key={grade} className="space-y-2">
-                          {/* Grade header (click anywhere to collapse) */}
-                          <button
-                            type="button"
+                          {/* Grade header (click anywhere to collapse; checkbox selects whole grade) */}
+                          <div
+                            role="button"
                             onClick={() => toggleGradeCollapse(grade)}
                             aria-expanded={!isCollapsed}
                             className="w-full flex items-center justify-between px-4 py-2 bg-cyan-600 text-white rounded-lg cursor-pointer hover:bg-cyan-700 transition-colors focus:outline-none"
                           >
                             <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                title="Select all report cards in this grade"
+                                checked={students.every((s) => selectedFilePaths.includes(s.file_path))}
+                                ref={(el) => {
+                                  if (el) {
+                                    const selectedCount = students.filter((s) => selectedFilePaths.includes(s.file_path)).length;
+                                    el.indeterminate = selectedCount > 0 && selectedCount < students.length;
+                                  }
+                                }}
+                                onChange={() => toggleGradeSelection(students)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                              />
                               {isCollapsed ? (
                                 <ChevronRightIcon className="w-5 h-5" />
                               ) : (
@@ -325,7 +396,7 @@ export default function ViewReportCardsPage() {
                               <span className="font-semibold text-lg">{grade}</span>
                             </div>
                             <span className="text-sm">{students.length} report cards</span>
-                          </button>
+                          </div>
 
                           {/* Student cards */}
                           {!isCollapsed && (
@@ -338,6 +409,14 @@ export default function ViewReportCardsPage() {
                                 title="View report card"
                                 className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                               >
+                                <input
+                                  type="checkbox"
+                                  title="Select report card"
+                                  checked={selectedFilePaths.includes(student.file_path)}
+                                  onChange={() => toggleCardSelection(student.file_path)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-4 w-4 mr-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                                />
                                 <div className="flex-1">
                                   <p className="font-medium text-gray-800">{student.student_name}</p>
                                   <p className="text-gray-600 text-sm">
@@ -422,8 +501,18 @@ export default function ViewReportCardsPage() {
               delete copy[filePath];
               return copy;
             });
+            setSelectedFilePaths((prev) => prev.filter((p) => p !== filePath));
             setDeleteModalOpen(false);
           }}
+        />
+      )}
+
+      {bulkDeleteModalOpen && selectedFilePaths.length > 0 && (
+        <BulkDeleteReportCardModal
+          isOpen={bulkDeleteModalOpen}
+          onClose={() => setBulkDeleteModalOpen(false)}
+          filePaths={selectedFilePaths}
+          onDeleted={handleBulkDeleted}
         />
       )}
 
