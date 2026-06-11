@@ -28,6 +28,8 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
   const [weightPoints, setWeightPoints] = useState<string>('')
   // Maximum possible score for this assessment (e.g., 40 for a test out of 40)
   const [maxScore, setMaxScore] = useState<string>('')
+  // Once the teacher edits max score directly, stop mirroring weight points into it
+  const [maxScoreTouched, setMaxScoreTouched] = useState(false)
   const [date, setDate] = useState<string>('')
   const [isParent, setIsParent] = useState(false)
   const [childrenData, setChildrenData] = useState<Array<{name: string, weightPoints: string, maxScore: string, date: string}>>([])
@@ -41,6 +43,7 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
       setName('')
       setWeightPoints('')
       setMaxScore('')
+      setMaxScoreTouched(false)
       setDate('')
       setIsParent(false)
       setChildrenData([])
@@ -211,7 +214,12 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
             type="number"
             required
             value={weightPoints}
-            onChange={(e) => setWeightPoints(e.target.value)}
+            onChange={(e) => {
+              setWeightPoints(e.target.value)
+              // Default scoring scale to the weight (out-of-weight-points convention)
+              // until the teacher sets a different maximum score themselves
+              if (!maxScoreTouched) setMaxScore(e.target.value)
+            }}
             className="w-full border rounded px-2 py-1"
             placeholder="e.g. 15"
             min={0}
@@ -228,7 +236,10 @@ const AssessmentAddModal: React.FC<AssessmentAddModalProps> = ({
               type="number"
               required
               value={maxScore}
-              onChange={(e) => setMaxScore(e.target.value)}
+              onChange={(e) => {
+                setMaxScore(e.target.value)
+                setMaxScoreTouched(true)
+              }}
               className="w-full border rounded px-2 py-1"
               placeholder="e.g. 40"
               min={0}

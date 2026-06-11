@@ -1006,19 +1006,11 @@ const GradebookClass = () => {
                                       id={`grade-${rowIndex}-${colIndex}`}
                                       type="number"
                                       min="0"
-                                      max={(() => {
-                                        const childPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                        const storedMaxScore = Number(a.maxScore || 100)
-                                        return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
-                                      })()}
+                                      max={Number(a.maxScore || 100)}
                                       step="1"
                                       className="w-16 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm text-black focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                                       value={currentValue}
-                                      placeholder={`/${(() => {
-                                        const childPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                        const storedMaxScore = Number(a.maxScore || 100)
-                                        return (storedMaxScore === 100 && childPoints < 100) ? childPoints : storedMaxScore
-                                      })()}`}
+                                      placeholder={`/${Number(a.maxScore || 100)}`}
                                       onChange={(e) =>
                                         handleScoreChange(
                                           stu.studentId,
