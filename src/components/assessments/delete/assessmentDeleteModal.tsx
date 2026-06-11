@@ -42,7 +42,8 @@ const AssessmentDeleteModal: React.FC<AssessmentDeleteModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
       <h2 className="text-lg font-semibold mb-4 text-black">Delete Assessment</h2>
       <p className="text-black mb-6">
-        Are you sure you want to delete <strong>{assessment.name}</strong> (Weight: {assessment.weightPercent}%)?
+        Are you sure you want to delete <strong>{assessment.name}</strong> ({assessment.weightPoints || assessment.weightPercent || 0} pts)?
+        This will also permanently delete all student scores recorded for this assessment{assessment.isParent ? ' and its individual assessments' : ''}.
       </p>
       <div className="flex justify-end space-x-4">
         <button

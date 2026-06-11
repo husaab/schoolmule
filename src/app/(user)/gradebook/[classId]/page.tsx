@@ -22,6 +22,7 @@ import StudentAssessmentsModal from '@/components/assessments/student/studentAss
 import type { TermPayload } from '@/services/types/term'
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
+import AssessmentManagerModal from '@/components/assessments/manage/assessmentManagerModal';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import {
   MinusCircleIcon,
@@ -33,7 +34,8 @@ import {
   CheckCircleIcon,
   CalendarDaysIcon,
   ChatBubbleBottomCenterTextIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 
@@ -78,6 +80,10 @@ const GradebookClass = () => {
 
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means "no entry yet")
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
+
+  // Assessment manager modal state
+  const [isAssessmentManagerOpen, setIsAssessmentManagerOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -436,7 +442,7 @@ const GradebookClass = () => {
     router.push(`/gradebook/${classId}/progress`)
   }
 
-  const handleSaveAll = async () => {
+  const handleSaveAll = async (): Promise<boolean> => {
     setSaving(true)
     setError(null)
 
@@ -463,8 +469,9 @@ const GradebookClass = () => {
 
     if (toUpsert.length === 0) {
       setSaving(false)
+      setEditedScores({})
       showNotification('No changes to save', 'success')
-      return
+      return true
     }
 
     try {
@@ -477,11 +484,55 @@ const GradebookClass = () => {
         throw new Error(refreshed.message || 'Failed to refresh scores')
       }
       showNotification('Grades successfully saved', 'success')
+      return true
     } catch (err) {
       console.error(err)
       setError('Error saving scores')
+      return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleOpenAssessmentManager = async () => {
+    if (hasUnsavedChanges) {
+      const confirmSave = window.confirm(
+        'You have unsaved grade changes. They must be saved before editing assessments. Save now?'
+      )
+      if (!confirmSave) return
+      const saved = await handleSaveAll()
+      if (!saved) return
+    }
+    setIsAssessmentManagerOpen(true)
+  }
+
+  const handleAssessmentManagerClose = async (didChange: boolean) => {
+    setIsAssessmentManagerOpen(false)
+    if (!didChange) return
+
+    setRefreshing(true)
+    try {
+      const [assessRes] = await Promise.all([
+        getAssessmentsByClass(classId),
+        refreshScoresMatrix(),
+        loadExclusionsData(),
+      ])
+      if (assessRes.status === 'success') {
+        setAssessments(assessRes.data)
+        // Drop edited-score keys for assessments that no longer exist
+        const validIds = new Set(assessRes.data.map((a: AssessmentPayload) => a.assessmentId))
+        setEditedScores((prev) => {
+          const entries = Object.entries(prev).filter(([key]) => validIds.has(key.split('|')[1]))
+          return entries.length === Object.keys(prev).length ? prev : Object.fromEntries(entries)
+        })
+      } else {
+        throw new Error(assessRes.message || 'Failed to refresh assessments')
+      }
+    } catch (err) {
+      console.error('Error refreshing after assessment changes:', err)
+      showNotification('Failed to refresh gradebook', 'error')
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -624,6 +675,14 @@ const GradebookClass = () => {
                   Progress Report Feedback
                 </button>
                 <button
+                  onClick={handleOpenAssessmentManager}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
+                  title="Add, edit, or delete this class's assessments"
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                  Edit Assessments
+                </button>
+                <button
                   onClick={handleExportExcel}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                 >
@@ -700,6 +759,11 @@ const GradebookClass = () => {
 
           {/* Main Content Card - Gradebook Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            {refreshing ? (
+              <div className="flex justify-center items-center py-24">
+                <Spinner size="md" />
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -985,6 +1049,7 @@ const GradebookClass = () => {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
 
           {error && (
@@ -1049,6 +1114,13 @@ const GradebookClass = () => {
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}
+      />
+
+      <AssessmentManagerModal
+        isOpen={isAssessmentManagerOpen}
+        classId={classId}
+        assessments={assessments}
+        onClose={handleAssessmentManagerClose}
       />
 
       {selectedExclusionStudent && (
