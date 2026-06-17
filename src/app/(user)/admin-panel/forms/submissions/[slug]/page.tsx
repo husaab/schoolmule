@@ -6,6 +6,9 @@ import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import SubmissionFiltersComponent from '@/components/registration/Submissions/SubmissionFilters';
+import SortControls from '@/components/registration/Submissions/SortControls';
+import FieldValueFilters from '@/components/registration/Submissions/FieldValueFilters';
+import FilterSummaryChip from '@/components/registration/Submissions/FilterSummaryChip';
 import ExportButton from '@/components/registration/Submissions/ExportButton';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -16,6 +19,8 @@ import type {
   FormSubmission,
   SubmissionFilters as FiltersType,
   SubmissionPagination,
+  SortSpec,
+  FieldFilter,
 } from '@/services/types/registration';
 import {
   ArrowLeftIcon,
@@ -25,7 +30,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InboxStackIcon,
-  ArrowsUpDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
@@ -34,6 +38,36 @@ const statusColors: Record<string, string> = {
   new: 'bg-cyan-100 text-cyan-700',
   reviewed: 'bg-emerald-100 text-emerald-700',
   archived: 'bg-slate-100 text-slate-600',
+};
+
+// ─── URL (de)serialization for sort + field filters ──────────────────
+// sort=fieldId:dir,fieldId:dir   ·   fieldFilters=<JSON array of { fieldId, values }>
+const parseSortsFromUrl = (sortRaw: string | null, legacyFieldId: string | null, legacyDir: string | null): SortSpec[] => {
+  if (sortRaw) {
+    return sortRaw
+      .split(',')
+      .map((pair) => {
+        const [fieldId, dir] = pair.split(':');
+        return { fieldId: (fieldId || '').trim(), dir: dir === 'desc' ? 'desc' : 'asc' } as SortSpec;
+      })
+      .filter((s) => s.fieldId);
+  }
+  // Back-compat with the old single-sort URL params.
+  if (legacyFieldId) return [{ fieldId: legacyFieldId, dir: legacyDir === 'desc' ? 'desc' : 'asc' }];
+  return [];
+};
+
+const parseFieldFiltersFromUrl = (raw: string | null): FieldFilter[] => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((f) => f && typeof f.fieldId === 'string' && Array.isArray(f.values))
+      .map((f) => ({ fieldId: f.fieldId, values: f.values.map((v: unknown) => String(v)) }));
+  } catch {
+    return [];
+  }
 };
 
 export default function FormSubmissionsPage() {
@@ -52,40 +86,58 @@ export default function FormSubmissionsPage() {
   const [fields, setFields] = useState<FormField[]>([]);
   const [pagination, setPagination] = useState<SubmissionPagination>({ total: 0, page: 1, limit: 25 });
 
-  // Initialize filters from URL params (so refresh / shareable links retain sort)
+  // Initialize filters from URL params (so refresh / shareable links retain sort + filters)
   const [filters, setFilters] = useState<FiltersType>(() => ({
     page: 1,
     limit: 25,
-    sortFieldId: searchParams.get('sortFieldId') || undefined,
-    sortDir: (searchParams.get('sortDir') as 'asc' | 'desc') || undefined,
+    sorts: parseSortsFromUrl(
+      searchParams.get('sort'),
+      searchParams.get('sortFieldId'),
+      searchParams.get('sortDir'),
+    ),
+    fieldFilters: parseFieldFiltersFromUrl(searchParams.get('fieldFilters')),
   }));
   const [loading, setLoading] = useState(false);
 
-  // Build the column list shown in the table:
-  // First 3 fields by default, plus the sorted field if it's not already among them.
-  // This way users always see the column they sorted by.
+  // Map fieldId → its sort level (1-based) + direction, for table header indicators.
+  const sortByField = useMemo(() => {
+    const m = new Map<string, { level: number; dir: 'asc' | 'desc' }>();
+    (filters.sorts || []).forEach((s, i) => m.set(s.fieldId, { level: i + 1, dir: s.dir }));
+    return m;
+  }, [filters.sorts]);
+
+  // Whether to show per-column sort levels (only meaningful with 2+ sorts).
+  const showSortLevels = (filters.sorts?.length || 0) > 1;
+
+  // Build the column list shown in the table: first 3 fields by default, plus any
+  // field referenced by an active sort or filter so users always see those columns.
   const displayedFields = useMemo(() => {
     const baseColumns = fields.slice(0, 3);
-    const sortedField = filters.sortFieldId && filters.sortFieldId !== 'submittedAt'
-      ? fields.find((f) => f.fieldId === filters.sortFieldId)
-      : null;
-    if (sortedField && !baseColumns.some((f) => f.fieldId === sortedField.fieldId)) {
-      return [...baseColumns, sortedField];
-    }
-    return baseColumns;
-  }, [fields, filters.sortFieldId]);
+    const extraIds = new Set<string>();
+    (filters.sorts || []).forEach((s) => { if (s.fieldId !== 'submittedAt') extraIds.add(s.fieldId); });
+    (filters.fieldFilters || []).forEach((f) => extraIds.add(f.fieldId));
+    const extras = fields.filter(
+      (f) => extraIds.has(f.fieldId) && !baseColumns.some((b) => b.fieldId === f.fieldId)
+    );
+    return [...baseColumns, ...extras];
+  }, [fields, filters.sorts, filters.fieldFilters]);
 
-  // Sync filters to URL whenever they change (preserves sort across navigation)
+  // Sync filters to URL whenever sort/field filters change (preserves them across navigation)
   useEffect(() => {
     const sp = new URLSearchParams();
-    if (filters.sortFieldId) sp.set('sortFieldId', filters.sortFieldId);
-    if (filters.sortDir) sp.set('sortDir', filters.sortDir);
+    if (filters.sorts && filters.sorts.length > 0) {
+      sp.set('sort', filters.sorts.map((s) => `${s.fieldId}:${s.dir}`).join(','));
+    }
+    const activeFilters = (filters.fieldFilters || []).filter((f) => f.values.length > 0);
+    if (activeFilters.length > 0) {
+      sp.set('fieldFilters', JSON.stringify(activeFilters));
+    }
     const qs = sp.toString();
     const newUrl = qs ? `?${qs}` : '';
     if (window.location.search !== newUrl) {
       window.history.replaceState(null, '', `${window.location.pathname}${newUrl}`);
     }
-  }, [filters.sortFieldId, filters.sortDir]);
+  }, [filters.sorts, filters.fieldFilters]);
 
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
@@ -290,37 +342,37 @@ export default function FormSubmissionsPage() {
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">{form.title}</h1>
               <p className="text-slate-500 mt-1">{pagination.total} submission{pagination.total !== 1 ? 's' : ''}</p>
+              <div className="mt-2">
+                <FilterSummaryChip
+                  fieldFilters={filters.fieldFilters || []}
+                  fields={fields}
+                  total={pagination.total}
+                  onClear={() => setFilters({ ...filters, fieldFilters: [], page: 1 })}
+                />
+              </div>
             </div>
             <ExportButton formId={form.formId} filters={filters} />
           </div>
 
           {/* Filters + Sort */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[280px]">
-              <SubmissionFiltersComponent filters={filters} onChange={setFilters} />
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col gap-4">
+            <SubmissionFiltersComponent filters={filters} onChange={setFilters} />
 
-            {/* Sort */}
-            <div className="flex items-center gap-2 pl-4 sm:border-l sm:border-slate-200">
-              <ArrowsUpDownIcon className="w-4 h-4 text-slate-400" />
-              <label className="text-xs text-slate-500">Sort by:</label>
-              <select
-                value={filters.sortFieldId || ''}
-                onChange={(e) => setFilters({ ...filters, sortFieldId: e.target.value || undefined, sortDir: filters.sortDir || 'asc', page: 1 })}
-                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white max-w-[180px]"
-              >
-                <option value="">Date submitted</option>
-                {fields.map((f) => (
-                  <option key={f.fieldId} value={f.fieldId}>{f.label.length > 30 ? f.label.slice(0, 30) + '…' : f.label}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setFilters({ ...filters, sortDir: filters.sortDir === 'asc' ? 'desc' : 'asc', page: 1 })}
-                className="p-2 text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
-                title={filters.sortDir === 'asc' ? 'Ascending' : 'Descending'}
-              >
-                {filters.sortDir === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />}
-              </button>
+            <div className="flex flex-col lg:flex-row lg:items-start gap-6 border-t border-slate-100 pt-4">
+              <div className="lg:w-1/2">
+                <SortControls
+                  fields={fields}
+                  sorts={filters.sorts || []}
+                  onChange={(sorts) => setFilters({ ...filters, sorts, page: 1 })}
+                />
+              </div>
+              <div className="lg:w-1/2 lg:border-l lg:border-slate-100 lg:pl-6">
+                <FieldValueFilters
+                  fields={fields}
+                  fieldFilters={filters.fieldFilters || []}
+                  onChange={(fieldFilters) => setFilters({ ...filters, fieldFilters, page: 1 })}
+                />
+              </div>
             </div>
           </div>
 
@@ -338,7 +390,7 @@ export default function FormSubmissionsPage() {
               <InboxStackIcon className="w-14 h-14 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-700 mb-1">No submissions found</h3>
               <p className="text-sm text-slate-500">
-                {filters.status || filters.dateFrom || filters.dateTo
+                {filters.status || filters.dateFrom || filters.dateTo || (filters.fieldFilters?.some((f) => f.values.length > 0))
                   ? 'Try adjusting your filters.'
                   : 'Submissions will appear here once parents fill out this form.'}
               </p>
@@ -355,7 +407,8 @@ export default function FormSubmissionsPage() {
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                       {displayedFields.map((f) => {
-                        const isSorted = filters.sortFieldId === f.fieldId;
+                        const sortInfo = sortByField.get(f.fieldId);
+                        const isSorted = !!sortInfo;
                         return (
                           <th
                             key={f.fieldId}
@@ -363,10 +416,13 @@ export default function FormSubmissionsPage() {
                           >
                             <span className="inline-flex items-center gap-1.5">
                               {f.label}
-                              {isSorted && (
-                                filters.sortDir === 'desc'
-                                  ? <ArrowDownIcon className="w-3 h-3" />
-                                  : <ArrowUpIcon className="w-3 h-3" />
+                              {sortInfo && (
+                                <span className="inline-flex items-center gap-0.5">
+                                  {sortInfo.dir === 'desc'
+                                    ? <ArrowDownIcon className="w-3 h-3" />
+                                    : <ArrowUpIcon className="w-3 h-3" />}
+                                  {showSortLevels && <span className="text-[10px]">{sortInfo.level}</span>}
+                                </span>
                               )}
                             </span>
                           </th>
@@ -398,7 +454,7 @@ export default function FormSubmissionsPage() {
                           </select>
                         </td>
                         {displayedFields.map((f) => {
-                          const isSorted = filters.sortFieldId === f.fieldId;
+                          const isSorted = sortByField.has(f.fieldId);
                           return (
                             <td
                               key={f.fieldId}

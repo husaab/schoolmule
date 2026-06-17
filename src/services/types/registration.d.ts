@@ -123,13 +123,30 @@ export interface UpsertFieldsBody {
   fields: Omit<FormField, 'fieldId' | 'sortOrder'>[];
 }
 
+// One level of sort: a field UUID (or the special string 'submittedAt') + direction.
+export interface SortSpec {
+  fieldId: string;
+  dir: 'asc' | 'desc';
+}
+
+// A per-field value filter. `values` are OR'd together; different fields are AND'd.
+// Choice fields match exactly; text-ish fields match by "contains".
+export interface FieldFilter {
+  fieldId: string;
+  values: string[];
+}
+
 export interface SubmissionFilters {
   status?: SubmissionStatus;
   dateFrom?: string;
   dateTo?: string;
   page?: number;
   limit?: number;
-  // Sort by a field UUID, or the special string 'submittedAt'
+  // Ordered multi-sort (priority order). Replaces the legacy sortFieldId/sortDir.
+  sorts?: SortSpec[];
+  // Per-field answer-value filters.
+  fieldFilters?: FieldFilter[];
+  // Legacy single-sort params (still honored by the backend; not emitted by the UI).
   sortFieldId?: string;
   sortDir?: 'asc' | 'desc';
 }

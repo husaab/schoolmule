@@ -68,6 +68,20 @@ export const upsertFields = (formId: string, fields: Partial<FormField>[]) =>
 
 // ─── Submissions ────────────────────────────────────────────────────
 
+// Serializes the multi-sort + per-field-value filters into query params shared
+// by the list and export endpoints:
+//   sort=fieldId:dir,fieldId:dir
+//   fieldFilters=<URL-encoded JSON array of { fieldId, values }>
+const serializeSortAndFilters = (params: URLSearchParams, filters: SubmissionFilters) => {
+  if (filters.sorts && filters.sorts.length > 0) {
+    params.set('sort', filters.sorts.map((s) => `${s.fieldId}:${s.dir}`).join(','));
+  }
+  const active = (filters.fieldFilters || []).filter((f) => f.values.length > 0);
+  if (active.length > 0) {
+    params.set('fieldFilters', JSON.stringify(active));
+  }
+};
+
 export const getSubmissions = (formId: string, filters: SubmissionFilters = {}) => {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
@@ -75,8 +89,7 @@ export const getSubmissions = (formId: string, filters: SubmissionFilters = {}) 
   if (filters.dateTo) params.set('dateTo', filters.dateTo);
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
-  if (filters.sortFieldId) params.set('sortFieldId', filters.sortFieldId);
-  if (filters.sortDir) params.set('sortDir', filters.sortDir);
+  serializeSortAndFilters(params, filters);
   const qs = params.toString();
   return apiClient<SubmissionsListResponse>(`/registration/forms/${formId}/submissions${qs ? `?${qs}` : ''}`);
 };
@@ -111,8 +124,7 @@ export const exportSubmissions = async (formId: string, filters: SubmissionFilte
   if (filters.status) params.set('status', filters.status);
   if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
   if (filters.dateTo) params.set('dateTo', filters.dateTo);
-  if (filters.sortFieldId) params.set('sortFieldId', filters.sortFieldId);
-  if (filters.sortDir) params.set('sortDir', filters.sortDir);
+  serializeSortAndFilters(params, filters);
   const qs = params.toString();
 
   const response = await fetch(
