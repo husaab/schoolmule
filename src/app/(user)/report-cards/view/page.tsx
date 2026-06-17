@@ -9,6 +9,7 @@ import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/repo
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
 import ReportCardDeleteModal from '@/components/report-cards/delete/reportCardDeleteModal';
 import BulkDeleteReportCardModal from '@/components/report-cards/delete/bulkDeleteReportCardModal';
+import BulkDownloadReportCardModal from '@/components/report-cards/download/bulkDownloadReportCardModal';
 import SingleEmailReportCardModal from '@/components/report-cards/email/singleEmailReportCardModal';
 import BulkEmailReportCardModal from '@/components/report-cards/email/bulkEmailReportCardModal';
 import SentEmailReportCardModal from '@/components/report-cards/email/sent/sentEmailReportCardModal';
@@ -48,6 +49,7 @@ export default function ViewReportCardsPage() {
   // Bulk delete selection (keyed by file_path, same key the delete API uses)
   const [selectedFilePaths, setSelectedFilePaths] = useState<string[]>([]);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkDownloadModalOpen, setBulkDownloadModalOpen] = useState(false);
 
   // Email modal states
   const [selectedForEmail, setSelectedForEmail] = useState<ReportCardRow | null>(null);
@@ -116,6 +118,13 @@ export default function ViewReportCardsPage() {
   }, {} as Record<string, ReportCardRow[]>);
 
   const hasAnyReportCards = Object.values(groupedByGrade).some((students) => students.length > 0);
+
+  // "Select all" operates on the currently-visible cards: when a grade filter
+  // is active only that grade is shown, otherwise every grade is shown.
+  const visibleReportCards = selectedGrade ? (groupedByGrade[selectedGrade] || []) : reportCards;
+  const visibleFilePaths = visibleReportCards.map((r) => r.file_path);
+  const allVisibleSelected =
+    visibleFilePaths.length > 0 && visibleFilePaths.every((p) => selectedFilePaths.includes(p));
 
   const toggleGradeCollapse = (grade: string) => {
     setCollapsedGrades(prev => {
@@ -202,6 +211,14 @@ export default function ViewReportCardsPage() {
     );
   };
 
+  const toggleSelectAll = () => {
+    setSelectedFilePaths((prev) =>
+      allVisibleSelected
+        ? prev.filter((p) => !visibleFilePaths.includes(p))
+        : [...new Set([...prev, ...visibleFilePaths])]
+    );
+  };
+
   const handleBulkDeleted = (filePaths: string[]) => {
     setReportCards((prev) => prev.filter((r) => !filePaths.includes(r.file_path)));
     setSignedUrls((prev) => {
@@ -240,16 +257,16 @@ export default function ViewReportCardsPage() {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        <div className="text-black text-center mb-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold">View Report Cards</h1>
-          <p className="text-gray-600 mt-2">View, download, and manage generated report cards</p>
-        </div>
-
+      <main className="lg:ml-64 pt-24 lg:pt-28 bg-gray-50 min-h-screen p-4 lg:p-10">
         {/* Main Content Card */}
         <div className="bg-white rounded-2xl shadow-md">
+          {/* Card header */}
+          <div className="px-6 pt-6 pb-4 text-black border-b border-gray-200">
+            <h1 className="text-2xl font-semibold">View Report Cards</h1>
+            <p className="text-gray-600 text-sm mt-1">View, download, and manage generated report cards</p>
+          </div>
           {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
             <div className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -313,6 +330,14 @@ export default function ViewReportCardsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
+                  {hasAnyReportCards && (
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                    >
+                      {allVisibleSelected ? 'Deselect all' : 'Select all'}
+                    </button>
+                  )}
                   {selectedFilePaths.length > 0 && (
                     <>
                       <button
@@ -320,6 +345,13 @@ export default function ViewReportCardsPage() {
                         className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
                       >
                         Clear selection
+                      </button>
+                      <button
+                        onClick={() => setBulkDownloadModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
+                      >
+                        <ArrowDownTrayIcon className="h-4 w-4" />
+                        Download Selected ({selectedFilePaths.length})
                       </button>
                       <button
                         onClick={() => setBulkDeleteModalOpen(true)}
@@ -513,6 +545,16 @@ export default function ViewReportCardsPage() {
           onClose={() => setBulkDeleteModalOpen(false)}
           filePaths={selectedFilePaths}
           onDeleted={handleBulkDeleted}
+        />
+      )}
+
+      {bulkDownloadModalOpen && selectedFilePaths.length > 0 && (
+        <BulkDownloadReportCardModal
+          isOpen={bulkDownloadModalOpen}
+          onClose={() => setBulkDownloadModalOpen(false)}
+          filePaths={selectedFilePaths}
+          term={term}
+          onDownloaded={() => setSelectedFilePaths([])}
         />
       )}
 

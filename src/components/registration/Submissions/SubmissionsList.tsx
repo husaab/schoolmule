@@ -16,6 +16,7 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import {
   EyeIcon,
   TrashIcon,
+  PencilIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -43,6 +44,42 @@ export default function SubmissionsList({ forms }: Props) {
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Answer editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [editAnswers, setEditAnswers] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const openDetail = (sub: FormSubmission) => {
+    setDetailSubmission(sub);
+    setIsEditing(false);
+    setDetailOpen(true);
+  };
+
+  const startEditing = () => {
+    if (!detailSubmission) return;
+    setEditAnswers({ ...detailSubmission.answers });
+    setIsEditing(true);
+  };
+
+  const handleSaveAnswers = async () => {
+    if (!detailSubmission) return;
+    setSaving(true);
+    try {
+      const res = await registrationService.updateSubmissionAnswers(
+        detailSubmission.submissionId,
+        editAnswers
+      );
+      setDetailSubmission(res.data);
+      setIsEditing(false);
+      fetchSubmissions();
+      showNotification('Submission updated', 'success');
+    } catch (err) {
+      showNotification((err as Error).message || 'Error updating submission', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fetchSubmissions = useCallback(async () => {
     if (!selectedFormId) return;
@@ -92,6 +129,53 @@ export default function SubmissionsList({ forms }: Props) {
 
   // Build a field lookup map
   const fieldMap = new Map(fields.map((f) => [f.fieldId, f]));
+
+  // Renders an editable input for a field while in edit mode. Mirrors the
+  // field-type branching used in PublicForm/FormField.tsx.
+  const renderEditField = (field: FormField) => {
+    const value = editAnswers[field.fieldId] ?? '';
+    const onChange = (v: string) =>
+      setEditAnswers((prev) => ({ ...prev, [field.fieldId]: v }));
+    const inputClass =
+      'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-colors';
+
+    if (field.fieldType === 'textarea') {
+      return (
+        <textarea
+          rows={3}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${inputClass} resize-y`}
+        />
+      );
+    }
+
+    if (field.fieldType === 'select' || field.fieldType === 'radio') {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+          <option value="">— No answer —</option>
+          {field.options?.map((opt, i) => (
+            <option key={i} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    }
+
+    const inputType =
+      field.fieldType === 'date' ? 'date'
+      : field.fieldType === 'email' || /email/i.test(field.label) ? 'email'
+      : field.fieldType === 'phone' ? 'tel'
+      : 'text';
+
+    return (
+      <input
+        type={inputType}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+      />
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -158,7 +242,7 @@ export default function SubmissionsList({ forms }: Props) {
               </thead>
               <tbody>
                 {submissions.map((sub) => (
-                  <tr key={sub.submissionId} onClick={() => { setDetailSubmission(sub); setDetailOpen(true); }} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
+                  <tr key={sub.submissionId} onClick={() => openDetail(sub)} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                       {new Date(sub.submittedAt).toLocaleDateString('en-CA')}
                     </td>
@@ -181,7 +265,7 @@ export default function SubmissionsList({ forms }: Props) {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setDetailSubmission(sub); setDetailOpen(true); }}
+                          onClick={(e) => { e.stopPropagation(); openDetail(sub); }}
                           className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
                         >
                           <EyeIcon className="w-4 h-4" />
@@ -239,40 +323,77 @@ export default function SubmissionsList({ forms }: Props) {
             <div className="divide-y divide-slate-100">
               {fields.map((field) => (
                 <div key={field.fieldId} className="py-3">
-                  <p className="text-xs font-semibold text-slate-500 uppercase mb-1">{field.label}</p>
-                  <p className="text-sm text-slate-900">
-                    {detailSubmission.answers[field.fieldId] || <span className="text-slate-400 italic">No answer</span>}
+                  <p className="text-xs font-semibold text-slate-500 uppercase mb-1">
+                    {field.label}
+                    {field.isRequired && <span className="text-rose-500 ml-1">*</span>}
                   </p>
+                  {isEditing ? (
+                    renderEditField(field)
+                  ) : (
+                    <p className="text-sm text-slate-900">
+                      {detailSubmission.answers[field.fieldId] || <span className="text-slate-400 italic">No answer</span>}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                onClick={() => handleDelete(detailSubmission.submissionId)}
-                className="px-4 py-2 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
-              >
-                Delete
-              </button>
-              <div className="flex gap-2">
-                {detailSubmission.status === 'new' && (
+              {isEditing ? (
+                <>
+                  <span />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveAnswers}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
                   <button
-                    onClick={() => {
-                      handleStatusChange(detailSubmission.submissionId, 'reviewed');
-                      setDetailOpen(false);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
+                    onClick={() => handleDelete(detailSubmission.submissionId)}
+                    className="px-4 py-2 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
                   >
-                    Mark as Reviewed
+                    Delete
                   </button>
-                )}
-                <button
-                  onClick={() => setDetailOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={startEditing}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                    >
+                      <PencilIcon className="w-4 h-4" /> Edit
+                    </button>
+                    {detailSubmission.status === 'new' && (
+                      <button
+                        onClick={() => {
+                          handleStatusChange(detailSubmission.submissionId, 'reviewed');
+                          setDetailOpen(false);
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
+                      >
+                        Mark as Reviewed
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setDetailOpen(false)}
+                      className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

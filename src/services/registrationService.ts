@@ -90,6 +90,12 @@ export const updateSubmissionStatus = (submissionId: string, status: string) =>
     body: { status },
   });
 
+export const updateSubmissionAnswers = (submissionId: string, answers: Record<string, string>) =>
+  apiClient<SubmissionResponse>(`/registration/submissions/${submissionId}/answers`, {
+    method: 'PATCH',
+    body: { answers },
+  });
+
 export const deleteSubmission = (submissionId: string) =>
   apiClient<{ status: string; message: string }>(`/registration/submissions/${submissionId}`, {
     method: 'DELETE',
