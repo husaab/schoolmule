@@ -18,7 +18,6 @@ export default function GenerateReportCardsPage() {
   const user = useUserStore((state) => state.user);
   const [students, setStudents] = useState<StudentPayload[]>([]);
   const [selectedGrade, setSelectedGrade] = useState<string>('');
-  const [generateAll, setGenerateAll] = useState<boolean>(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -100,17 +99,16 @@ export default function GenerateReportCardsPage() {
     }
   }, [user.school, user.activeTerm, showNotification]);
 
-  useEffect(() => {
-    if (generateAll) {
-      const allIds = students.map((s) => s.studentId);
-      setSelectedStudents(new Set(allIds));
-    } else {
-      setSelectedStudents(new Set());
-    }
-  }, [generateAll, students]);
+  // "Generate for All Students" is a select-all toggle derived from the current
+  // selection, so the individual / per-grade checkboxes stay editable — letting
+  // the user select everyone and then exclude specific grades (e.g. JK/SK) or students.
+  const allSelected = students.length > 0 && selectedStudents.size === students.length;
+
+  const handleToggleAll = (checked: boolean) => {
+    setSelectedStudents(checked ? new Set(students.map((s) => s.studentId)) : new Set());
+  };
 
   const handleSelectStudent = (id: string) => {
-    if (generateAll) return;
     setSelectedStudents((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -123,7 +121,6 @@ export default function GenerateReportCardsPage() {
   };
 
   const handleSelectAllInGrade = (grade: string) => {
-    if (generateAll) return;
     const gradeStudents = filteredGroupedByGrade[grade] || [];
     const gradeIds = gradeStudents.map(s => s.studentId);
     const allSelected = gradeIds.every(id => selectedStudents.has(id));
@@ -259,12 +256,8 @@ export default function GenerateReportCardsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
                   <select
-                    disabled={generateAll}
                     value={selectedGrade}
-                    onChange={(e) => {
-                      setSelectedGrade(e.target.value);
-                      setGenerateAll(false);
-                    }}
+                    onChange={(e) => setSelectedGrade(e.target.value)}
                     className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">-- All Grades --</option>
@@ -285,7 +278,6 @@ export default function GenerateReportCardsPage() {
                     placeholder="Search by name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    disabled={generateAll}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100"
                   />
                 </div>
@@ -295,13 +287,11 @@ export default function GenerateReportCardsPage() {
                 <label className="inline-flex items-center">
                   <input
                     type="checkbox"
-                    checked={generateAll}
-                    onChange={(e) => {
-                      setGenerateAll(e.target.checked);
-                      if (e.target.checked) {
-                        setSelectedGrade('');
-                      }
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedStudents.size > 0 && !allSelected;
                     }}
+                    onChange={(e) => handleToggleAll(e.target.checked)}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm font-medium text-gray-700">Generate Report Cards for All Students</span>
@@ -317,10 +307,9 @@ export default function GenerateReportCardsPage() {
                     </span>
                   )}
                 </p>
-                {(generateAll || selectedGrade || searchTerm) && (
+                {(selectedGrade || searchTerm || selectedStudents.size > 0) && (
                   <button
                     onClick={() => {
-                      setGenerateAll(false);
                       setSelectedGrade('');
                       setSearchTerm('');
                       setSelectedStudents(new Set());
@@ -342,7 +331,7 @@ export default function GenerateReportCardsPage() {
                 .sort(([a], [b]) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
                 .map(([grade, gradeStudents]) => {
                   const collapsed = selectedGrade && grade !== selectedGrade;
-                  if (generateAll || !selectedGrade || !collapsed) {
+                  if (!selectedGrade || !collapsed) {
                     const gradeIds = gradeStudents.map(s => s.studentId);
                     const allInGradeSelected = gradeIds.length > 0 && gradeIds.every(id => selectedStudents.has(id));
                     const someInGradeSelected = gradeIds.some(id => selectedStudents.has(id));
@@ -366,7 +355,7 @@ export default function GenerateReportCardsPage() {
                             <span className="font-semibold text-lg">{grade}</span>
                             <span className="text-sm">({gradeStudents.length} student{gradeStudents.length !== 1 ? 's' : ''})</span>
                           </div>
-                          {!generateAll && gradeStudents.length > 0 && (
+                          {gradeStudents.length > 0 && (
                             <label
                               className="flex items-center space-x-2 cursor-pointer"
                               onClick={(e) => e.stopPropagation()}
@@ -393,15 +382,13 @@ export default function GenerateReportCardsPage() {
                             {gradeStudents.map((student) => (
                               <div
                                 key={student.studentId}
-                                onClick={() => !generateAll && handleSelectStudent(student.studentId)}
+                                onClick={() => handleSelectStudent(student.studentId)}
                                 role="button"
                                 aria-pressed={selectedStudents.has(student.studentId)}
                                 className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
-                                  generateAll
-                                    ? 'bg-gray-50 border-gray-200 cursor-not-allowed'
-                                    : selectedStudents.has(student.studentId)
-                                      ? 'bg-cyan-50 border-cyan-300 cursor-pointer hover:bg-cyan-100'
-                                      : 'bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100'
+                                  selectedStudents.has(student.studentId)
+                                    ? 'bg-cyan-50 border-cyan-300 cursor-pointer hover:bg-cyan-100'
+                                    : 'bg-gray-50 border-gray-200 cursor-pointer hover:bg-gray-100'
                                 }`}
                               >
                                 <div className="flex-1">
@@ -410,11 +397,10 @@ export default function GenerateReportCardsPage() {
                                 </div>
                                 <input
                                   type="checkbox"
-                                  disabled={generateAll}
                                   checked={selectedStudents.has(student.studentId)}
                                   onChange={() => handleSelectStudent(student.studentId)}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                 />
                               </div>
                             ))}
@@ -428,7 +414,7 @@ export default function GenerateReportCardsPage() {
             </div>
             
             {/* No results message */}
-            {Object.keys(filteredGroupedByGrade).length === 0 && !generateAll && (
+            {Object.keys(filteredGroupedByGrade).length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500">
                   {searchTerm ? `No students found matching "${searchTerm}"` : 'No students found'}
