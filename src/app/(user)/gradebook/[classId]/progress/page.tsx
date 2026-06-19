@@ -10,13 +10,11 @@ import ProgressReportModal from '@/components/progress-report/ProgressReportModa
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import { getClassProgressReportFeedback, upsertBulkProgressReportFeedback } from '@/services/progressReportService'
 import type { ClassProgressReportFeedbackEntry, BulkProgressReportFeedbackPayload } from '@/services/progressReportService'
-import { getTermsBySchool } from '@/services/termService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
-import type { TermPayload } from '@/services/types/term'
 
 import {
   UserGroupIcon,
@@ -28,7 +26,6 @@ import {
   SparklesIcon,
   InformationCircleIcon,
   CalendarDaysIcon,
-  ChevronDownIcon,
   PencilSquareIcon
 } from '@heroicons/react/24/outline'
 
@@ -68,7 +65,6 @@ const BulkProgressPage = () => {
   // Data state
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
-  const [terms, setTerms] = useState<TermPayload[]>([])
   const [selectedTerm, setSelectedTerm] = useState<string>('')
 
   // Progress feedback state: Map of studentId -> feedback data
@@ -81,7 +77,6 @@ const BulkProgressPage = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
-  const [showTermSelector, setShowTermSelector] = useState(false)
   const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
 
   // Student grades from localStorage (computed in gradebook)
@@ -142,9 +137,8 @@ const BulkProgressPage = () => {
     Promise.all([
       getClassById(classId),
       getStudentsInClass(classId),
-      getTermsBySchool(user.school),
     ])
-      .then(([classRes, stuRes, termRes]) => {
+      .then(([classRes, stuRes]) => {
         if (classRes.status !== 'success') {
           throw new Error(classRes.message || 'Failed to load class info')
         }
@@ -155,22 +149,9 @@ const BulkProgressPage = () => {
         }
         setStudents(stuRes.data)
 
-        if (termRes.status !== 'success') {
-          throw new Error('Failed to load terms')
-        }
-        setTerms(termRes.data)
-
-        // Set default term to active term
-        if (user.activeTerm) {
-          setSelectedTerm(user.activeTerm)
-        } else {
-          const activeTerm = termRes.data.find((t: TermPayload) => t.isActive)
-          if (activeTerm) {
-            setSelectedTerm(activeTerm.name)
-          } else if (termRes.data.length > 0) {
-            setSelectedTerm(termRes.data[0].name)
-          }
-        }
+        // A class belongs to exactly one term — progress feedback is always
+        // entered for that term, never a teacher-selected one.
+        setSelectedTerm(classRes.data.termName)
       })
       .catch((err) => {
         console.error(err)
@@ -179,7 +160,7 @@ const BulkProgressPage = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, user?.school, user?.activeTerm])
+  }, [classId, user?.school])
 
   // Load feedback when term changes
   useEffect(() => {
@@ -495,37 +476,13 @@ const BulkProgressPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Term Toggle + Selector */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowTermSelector(!showTermSelector)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white/80 hover:text-white hover:bg-white/20 transition-all text-sm cursor-pointer"
-                    title="Filter by term"
-                  >
-                    <CalendarDaysIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{selectedTerm || 'Term'}</span>
-                    <ChevronDownIcon className={`h-3 w-3 transition-transform ${showTermSelector ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showTermSelector && (
-                    <select
-                      value={selectedTerm}
-                      onChange={(e) => {
-                        if (hasUnsavedChanges) {
-                          const confirmChange = window.confirm('You have unsaved changes. Changing term will discard them. Continue?')
-                          if (!confirmChange) return
-                        }
-                        setSelectedTerm(e.target.value)
-                      }}
-                      className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer"
-                    >
-                      {terms.map((t) => (
-                        <option key={t.termId} value={t.name} className="text-slate-900">
-                          {t.name} ({t.academicYear})
-                          {t.isActive ? ' - Active' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                {/* Term — fixed to the class's term (progress feedback is always for this term) */}
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm"
+                  title="Feedback is saved for this class's term"
+                >
+                  <CalendarDaysIcon className="h-4 w-4" />
+                  <span>{classData.termName}</span>
                 </div>
 
                 {/* Save Button */}

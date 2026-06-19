@@ -334,8 +334,9 @@ export default function GenerateReportCardsPage() {
             </div>
           </div>
 
-          {/* Students Content */}
-          <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {/* Students Content — extra bottom padding so the last student isn't
+              hidden behind the fixed "Generate" bar */}
+          <div className="p-6 pb-28 overflow-y-auto max-h-[60vh]">
             <div className="space-y-4">
               {Object.entries(filteredGroupedByGrade)
                 .sort(([a], [b]) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))

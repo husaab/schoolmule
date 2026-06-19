@@ -8,13 +8,11 @@ import Spinner from '@/components/Spinner'
 
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import { getClassReportCardFeedback, upsertBulkReportCardFeedback } from '@/services/reportCardService'
-import { getTermsBySchool } from '@/services/termService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
-import type { TermPayload } from '@/services/types/term'
 import type { ClassFeedbackEntry, ReportCardFeedbackPayload } from '@/services/types/reportCard'
 
 import {
@@ -55,7 +53,6 @@ const BulkFeedbackPage = () => {
   // Data state
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
-  const [terms, setTerms] = useState<TermPayload[]>([])
   const [selectedTerm, setSelectedTerm] = useState<string>('')
 
   // Feedback state: Map of studentId -> feedback data
@@ -127,9 +124,8 @@ const BulkFeedbackPage = () => {
     Promise.all([
       getClassById(classId),
       getStudentsInClass(classId),
-      getTermsBySchool(user.school),
     ])
-      .then(([classRes, stuRes, termRes]) => {
+      .then(([classRes, stuRes]) => {
         if (classRes.status !== 'success') {
           throw new Error(classRes.message || 'Failed to load class info')
         }
@@ -140,22 +136,9 @@ const BulkFeedbackPage = () => {
         }
         setStudents(stuRes.data)
 
-        if (termRes.status !== 'success') {
-          throw new Error('Failed to load terms')
-        }
-        setTerms(termRes.data)
-
-        // Set default term to active term
-        if (user.activeTerm) {
-          setSelectedTerm(user.activeTerm)
-        } else {
-          const activeTerm = termRes.data.find((t: TermPayload) => t.isActive)
-          if (activeTerm) {
-            setSelectedTerm(activeTerm.name)
-          } else if (termRes.data.length > 0) {
-            setSelectedTerm(termRes.data[0].name)
-          }
-        }
+        // A class belongs to exactly one term — feedback is always entered for
+        // that term, never a teacher-selected one. Anchor to the class's term.
+        setSelectedTerm(classRes.data.termName)
       })
       .catch((err) => {
         console.error(err)
@@ -164,7 +147,7 @@ const BulkFeedbackPage = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, user?.school, user?.activeTerm])
+  }, [classId, user?.school])
 
   // Load feedback when term changes
   useEffect(() => {
@@ -458,25 +441,13 @@ const BulkFeedbackPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                {/* Term Selector */}
-                <select
-                  value={selectedTerm}
-                  onChange={(e) => {
-                    if (hasUnsavedChanges) {
-                      const confirmChange = window.confirm('You have unsaved changes. Changing term will discard them. Continue?')
-                      if (!confirmChange) return
-                    }
-                    setSelectedTerm(e.target.value)
-                  }}
-                  className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer"
+                {/* Term — fixed to the class's term (feedback is always for this term) */}
+                <div
+                  className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white"
+                  title="Feedback is saved for this class's term"
                 >
-                  {terms.map((t) => (
-                    <option key={t.termId} value={t.name} className="text-slate-900">
-                      {t.name} ({t.academicYear})
-                      {t.isActive ? ' - Active' : ''}
-                    </option>
-                  ))}
-                </select>
+                  {classData.termName}
+                </div>
 
                 {/* Save Button */}
                 <button
