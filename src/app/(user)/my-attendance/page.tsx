@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -11,10 +11,14 @@ import { getMyMonth, updateMyRecord } from '@/services/teacherAttendanceService'
 import { AttendanceRecord } from '@/services/types/teacherAttendance'
 import { format, addMonths, subMonths } from 'date-fns'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
-export default function MyAttendancePage() {
+function MyAttendanceContent() {
   const user = useUserStore((s) => s.user)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const { get, setParams } = useFilterParams()
+  // Filter lives in the URL so Back/refresh/share restore it.
+  const monthParam = get('month')
+  const currentMonth = monthParam ? new Date(monthParam + '-01T00:00:00') : new Date()
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [workingDays, setWorkingDays] = useState(0)
   const [presentDays, setPresentDays] = useState(0)
@@ -89,7 +93,7 @@ export default function MyAttendancePage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 mb-6">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <button
-                onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+                onClick={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
                 className="p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <ChevronLeftIcon className="w-5 h-5 text-slate-600" />
@@ -98,7 +102,7 @@ export default function MyAttendancePage() {
                 {format(currentMonth, 'MMMM yyyy')}
               </h2>
               <button
-                onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+                onClick={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
                 className="p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <ChevronRightIcon className="w-5 h-5 text-slate-600" />
@@ -152,5 +156,13 @@ export default function MyAttendancePage() {
         onClose={() => setEditTarget(null)}
       />
     </>
+  )
+}
+
+export default function MyAttendancePage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+      <MyAttendanceContent />
+    </Suspense>
   )
 }

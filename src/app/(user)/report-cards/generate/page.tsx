@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getAllStudents } from '@/services/studentService';
@@ -13,14 +13,18 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
-export default function GenerateReportCardsPage() {
+function GenerateReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
+  const { get, setParams } = useFilterParams();
   const [students, setStudents] = useState<StudentPayload[]>([]);
-  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  // Grade filter lives in the URL; search is local (seeded from URL) for snappy
+  // typing, mirrored to the URL on change. `term` keeps its own init effect.
+  const selectedGrade = get('grade');
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>(() => get('q'));
   const showNotification = useNotificationStore(state => state.showNotification);
 
   const [terms, setTerms] = useState<TermPayload[]>([]);
@@ -238,7 +242,7 @@ export default function GenerateReportCardsPage() {
                   ) : (
                     <select
                       value={term}
-                      onChange={(e) => setTerm(e.target.value)}
+                      onChange={(e) => { setTerm(e.target.value); setParams({ term: e.target.value }); }}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-black text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     >
@@ -257,7 +261,7 @@ export default function GenerateReportCardsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
                   <select
                     value={selectedGrade}
-                    onChange={(e) => setSelectedGrade(e.target.value)}
+                    onChange={(e) => setParams({ grade: e.target.value })}
                     className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">-- All Grades --</option>
@@ -277,7 +281,7 @@ export default function GenerateReportCardsPage() {
                     type="text"
                     placeholder="Search by name..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }); }}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100"
                   />
                 </div>
@@ -310,8 +314,8 @@ export default function GenerateReportCardsPage() {
                 {(selectedGrade || searchTerm || selectedStudents.size > 0) && (
                   <button
                     onClick={() => {
-                      setSelectedGrade('');
                       setSearchTerm('');
+                      setParams({ grade: null, q: null });
                       setSelectedStudents(new Set());
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
@@ -421,7 +425,7 @@ export default function GenerateReportCardsPage() {
                 </p>
                 {searchTerm && (
                   <button
-                    onClick={() => setSearchTerm('')}
+                    onClick={() => { setSearchTerm(''); setParams({ q: null }); }}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
                     Clear search
@@ -481,5 +485,13 @@ export default function GenerateReportCardsPage() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function GenerateReportCardsPage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10 pb-24" />}>
+      <GenerateReportCardsPageContent />
+    </Suspense>
   );
 }

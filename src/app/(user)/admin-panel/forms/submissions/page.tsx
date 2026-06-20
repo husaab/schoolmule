@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import * as registrationService from '@/services/registrationService';
 import type { RegistrationForm, FormStatus } from '@/services/types/registration';
 import {
@@ -25,13 +26,15 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; do
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-export default function SubmissionsPage() {
+function SubmissionsContent() {
   const router = useRouter();
   const showNotification = useNotificationStore((s) => s.showNotification);
+  const { get, setParams } = useFilterParams();
   const [forms, setForms] = useState<RegistrationForm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FormStatus | 'all'>('all');
+  // Search seeded from URL; status filter is URL source of truth.
+  const [search, setSearch] = useState(() => get('q'));
+  const statusFilter = get('status', 'all') as FormStatus | 'all';
 
   const fetchForms = useCallback(async () => {
     try {
@@ -114,7 +117,7 @@ export default function SubmissionsPage() {
                   <input
                     type="text"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { setSearch(e.target.value); setParams({ q: e.target.value }); }}
                     placeholder="Search forms..."
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-white placeholder:text-slate-400 transition-colors"
                   />
@@ -129,7 +132,7 @@ export default function SubmissionsPage() {
                     return (
                       <button
                         key={s}
-                        onClick={() => setStatusFilter(s)}
+                        onClick={() => setParams({ status: s === 'all' ? null : s })}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                           isActive
                             ? 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200'
@@ -220,7 +223,7 @@ export default function SubmissionsPage() {
                     <MagnifyingGlassIcon className="w-10 h-10 mx-auto mb-3 text-slate-300" />
                     <p className="text-sm">No forms match your search or filters</p>
                     <button
-                      onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                      onClick={() => { setSearch(''); setParams({ q: null, status: null }); }}
                       className="text-xs text-cyan-600 hover:text-cyan-700 font-medium mt-2"
                     >
                       Clear filters
@@ -233,5 +236,13 @@ export default function SubmissionsPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function SubmissionsPage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+      <SubmissionsContent />
+    </Suspense>
   );
 }

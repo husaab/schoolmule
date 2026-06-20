@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import StudentAddModal from '@/components/student/add/studentAddModal';
@@ -15,22 +15,26 @@ import { useUserStore } from '@/store/useUserStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 import { getGradeOptions, getGradeNumericValue, getGradeDisplayName } from '@/lib/schoolUtils';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
-const StudentsPage = () => {
+const StudentsContent = () => {
 
+    const { get, setParams } = useFilterParams();
     const [students, setStudents] = useState<StudentPayload[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    // Free-text search keeps local state for snappy typing, seeded from URL.
+    const [searchTerm, setSearchTerm] = useState(() => get('q'));
     const user = useUserStore((state) => state.user);
-    const [gradeFilter, setGradeFilter] = useState<string>('');
+    // Filters live in the URL so Back/refresh/share restore them.
+    const gradeFilter = get('grade');
+    const showArchived = get('archived') === '1';
     const [showAddModal, setShowAddModal] = useState(false);
     const [viewStudent, setViewStudent] = useState<StudentPayload | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<StudentPayload | null>(null);
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null);
     const [archiveTarget, setArchiveTarget] = useState<StudentPayload | null>(null);
     const [unarchiveTarget, setUnarchiveTarget] = useState<StudentPayload | null>(null);
-    const [showArchived, setShowArchived] = useState(false);
 
     const loadStudents = useCallback(async () => {
         if (!user.school) return;
@@ -114,7 +118,7 @@ const StudentsPage = () => {
                                 {/* Tabs for Active/Archived */}
                                 <div className="flex gap-2 mb-6">
                                     <button
-                                        onClick={() => setShowArchived(false)}
+                                        onClick={() => setParams({ archived: null })}
                                         className={`px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
                                             !showArchived
                                                 ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 border border-cyan-100'
@@ -124,7 +128,7 @@ const StudentsPage = () => {
                                         Active Students
                                     </button>
                                     <button
-                                        onClick={() => setShowArchived(true)}
+                                        onClick={() => setParams({ archived: '1' })}
                                         className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
                                             showArchived
                                                 ? 'bg-amber-50 text-amber-700 border border-amber-100'
@@ -146,7 +150,7 @@ const StudentsPage = () => {
                                             type="text"
                                             placeholder="Search by name..."
                                             value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                                         />
                                     </div>
@@ -156,7 +160,7 @@ const StudentsPage = () => {
                                         </label>
                                         <select
                                             value={gradeFilter}
-                                            onChange={(e) => setGradeFilter(e.target.value)}
+                                            onChange={(e) => setParams({ grade: e.target.value })}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                                         >
                                             <option value="">All Grades</option>
@@ -175,7 +179,7 @@ const StudentsPage = () => {
                                         <button
                                             onClick={() => {
                                                 setSearchTerm('')
-                                                setGradeFilter('')
+                                                setParams({ q: null, grade: null })
                                             }}
                                             className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                                         >
@@ -404,7 +408,13 @@ const StudentsPage = () => {
             </main>
         </>
     );
-    
+
 };
+
+const StudentsPage = () => (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+        <StudentsContent />
+    </Suspense>
+);
 
 export default StudentsPage;

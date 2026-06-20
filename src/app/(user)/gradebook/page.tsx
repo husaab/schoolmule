@@ -1,7 +1,7 @@
 // File: src/app/(user)/gradebook/page.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -13,16 +13,19 @@ import Link from 'next/link'
 import { getGradeOptions, isJK, isSK, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
 import { BookOpenIcon, AcademicCapIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
-const GradebookDashboard: React.FC = () => {
+const GradebookDashboardContent: React.FC = () => {
   const user = useUserStore((state) => state.user)
+  const { get, setParams } = useFilterParams()
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [gradeFilter, setGradeFilter] = useState<string>('')
-  const [termFilter, setTermFilter] = useState<string>('active')
+  // Filters live in the URL so Back/refresh/share restore them.
+  const gradeFilter = get('grade')
+  const termFilter = get('term', 'active')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
 
   // 1) Fetch all classes taught by this teacher
@@ -138,7 +141,7 @@ const GradebookDashboard: React.FC = () => {
                     </label>
                     <select
                       value={termFilter}
-                      onChange={(e) => setTermFilter(e.target.value)}
+                      onChange={(e) => setParams({ term: e.target.value === 'active' ? null : e.target.value })}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="active">Active Term ({activeTerm?.name})</option>
@@ -156,7 +159,7 @@ const GradebookDashboard: React.FC = () => {
                     </label>
                     <select
                       value={gradeFilter}
-                      onChange={(e) => setGradeFilter(e.target.value)}
+                      onChange={(e) => setParams({ grade: e.target.value })}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="">All Grades</option>
@@ -175,10 +178,7 @@ const GradebookDashboard: React.FC = () => {
                       Showing {filteredClasses.length} of {classes.length} classes
                     </span>
                     <button
-                      onClick={() => {
-                        setGradeFilter('')
-                        setTermFilter('active')
-                      }}
+                      onClick={() => setParams({ grade: null, term: null })}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
                       Clear filters
@@ -305,5 +305,11 @@ const GradebookDashboard: React.FC = () => {
     </>
   )
 }
+
+const GradebookDashboard: React.FC = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <GradebookDashboardContent />
+  </Suspense>
+)
 
 export default GradebookDashboard

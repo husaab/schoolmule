@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, Suspense } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -22,16 +22,19 @@ import {
   SparklesIcon,
   DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 type Tab = 'dashboard' | 'mine' | 'shared' | 'system'
 
-export default function StudentViewsDashboard() {
+function StudentViewsDashboardContent() {
   const user = useUserStore((s) => s.user)
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const { get, setParams } = useFilterParams()
   const [views, setViews] = useState<StudentViewPayload[]>([])
   const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
-  const [tab, setTab] = useState<Tab>('dashboard')
+  // Search seeded from URL; tab is URL source of truth.
+  const [query, setQuery] = useState(() => get('q'))
+  const tab = (get('tab', 'dashboard')) as Tab
 
   const load = async () => {
     setLoading(true)
@@ -156,16 +159,16 @@ export default function StudentViewsDashboard() {
 
           {/* Tabs */}
           <div className="flex flex-wrap items-center gap-1 mb-6 border-b border-slate-200">
-            <TabButton active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
+            <TabButton active={tab === 'dashboard'} onClick={() => setParams({ tab: null })}>
               Dashboard
             </TabButton>
-            <TabButton active={tab === 'mine'} onClick={() => setTab('mine')} count={counts.mine}>
+            <TabButton active={tab === 'mine'} onClick={() => setParams({ tab: 'mine' })} count={counts.mine}>
               Mine
             </TabButton>
-            <TabButton active={tab === 'shared'} onClick={() => setTab('shared')} count={counts.shared}>
+            <TabButton active={tab === 'shared'} onClick={() => setParams({ tab: 'shared' })} count={counts.shared}>
               Shared
             </TabButton>
-            <TabButton active={tab === 'system'} onClick={() => setTab('system')} count={counts.system}>
+            <TabButton active={tab === 'system'} onClick={() => setParams({ tab: 'system' })} count={counts.system}>
               System
             </TabButton>
           </div>
@@ -177,7 +180,7 @@ export default function StudentViewsDashboard() {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setParams({ q: e.target.value }); }}
                 placeholder="Search views by name or description"
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none"
               />
@@ -287,6 +290,14 @@ export default function StudentViewsDashboard() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function StudentViewsDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <StudentViewsDashboardContent />
+    </Suspense>
   )
 }
 

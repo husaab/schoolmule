@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -15,20 +15,23 @@ import { ArrowLeftIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outlin
 import Link from 'next/link'
 import StudentSummaryReportModal from '@/components/studentreport/studentsummary/StudentSummaryReportModal'
 import { generateStudentSummaryReport } from '@/services/reportService'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
-const StudentSummaryPage = () => {
+const StudentSummaryContent = () => {
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore((state) => state.showNotification)
-  
+  const { get, setParams } = useFilterParams()
+
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [activeTerm, setActiveTerm] = useState<TermPayload | null>(null)
-  
-  const [selectedStudent, setSelectedStudent] = useState<string>('')
-  const [selectedClass, setSelectedClass] = useState<string>('')
-  const [selectedTerm, setSelectedTerm] = useState<string>('active')
-  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal')
+
+  // Filters live in the URL so Back/refresh/share restore them.
+  const selectedStudent = get('student')
+  const selectedClass = get('class')
+  const selectedTerm = get('term', 'active')
+  const orientation = (get('orientation', 'horizontal')) as 'horizontal' | 'vertical'
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [showPdfModal, setShowPdfModal] = useState(false)
@@ -205,8 +208,8 @@ const StudentSummaryPage = () => {
                 <select
                   value={selectedClass}
                   onChange={(e) => {
-                    setSelectedClass(e.target.value)
-                    setSelectedStudent('') // Reset student when class changes
+                    // Reset student when class changes
+                    setParams({ class: e.target.value, student: null })
                   }}
                   className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -226,7 +229,7 @@ const StudentSummaryPage = () => {
                 </label>
                 <select
                   value={selectedStudent}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
+                  onChange={(e) => setParams({ student: e.target.value })}
                   disabled={!selectedClass}
                   className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
@@ -252,7 +255,7 @@ const StudentSummaryPage = () => {
                 </label>
                 <select
                   value={selectedTerm}
-                  onChange={(e) => setSelectedTerm(e.target.value)}
+                  onChange={(e) => setParams({ term: e.target.value === 'active' ? null : e.target.value })}
                   className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="active">Active Term ({activeTerm?.name})</option>
@@ -280,7 +283,7 @@ const StudentSummaryPage = () => {
                     name="orientation"
                     value="horizontal"
                     checked={orientation === 'horizontal'}
-                    onChange={() => setOrientation('horizontal')}
+                    onChange={() => setParams({ orientation: null })}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">
@@ -294,7 +297,7 @@ const StudentSummaryPage = () => {
                     name="orientation"
                     value="vertical"
                     checked={orientation === 'vertical'}
-                    onChange={() => setOrientation('vertical')}
+                    onChange={() => setParams({ orientation: 'vertical' })}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">Portrait</span>
@@ -398,5 +401,11 @@ const StudentSummaryPage = () => {
     </>
   )
 }
+
+const StudentSummaryPage = () => (
+  <Suspense fallback={<div className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10" />}>
+    <StudentSummaryContent />
+  </Suspense>
+)
 
 export default StudentSummaryPage

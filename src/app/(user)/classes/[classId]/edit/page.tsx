@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -42,6 +43,7 @@ import Spinner from '@/components/Spinner'
 import {
   ArrowLeftIcon,
   AcademicCapIcon,
+  BookOpenIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
   PencilSquareIcon,
@@ -599,6 +601,14 @@ export default function EditClassPage() {
               <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg text-sm font-medium">
                 {getGradeDisplayName(grade)}
               </span>
+              <Link
+                href={isJK(grade) ? `/gradebook/jk/${classId}` : isSK(grade) ? `/gradebook/sk/${classId}` : `/gradebook/${classId}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg text-sm font-medium hover:from-emerald-600 hover:to-teal-600 transition-all cursor-pointer"
+                title="Open Gradebook"
+              >
+                <BookOpenIcon className="h-4 w-4" />
+                Go to Gradebook
+              </Link>
               <button
                 onClick={() => setShowDuplicateModal(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-lg text-sm font-medium hover:from-violet-600 hover:to-purple-600 transition-all cursor-pointer"

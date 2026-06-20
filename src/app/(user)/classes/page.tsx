@@ -1,7 +1,7 @@
 // File: src/app/(user)/classes/page.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import ClassViewModal from '@/components/classes/view/classViewModal'
@@ -15,21 +15,25 @@ import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
-import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
-import { getGradeOptions, getGradeDisplayName } from '@/lib/schoolUtils'
+import { getGradeOptions, getGradeDisplayName, isJK, isSK } from '@/lib/schoolUtils'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
-const ClassesPage = () => {
+const ClassesPageContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
-  
+  const { get, setParams } = useFilterParams()
+
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [gradeFilter, setGradeFilter] = useState<string>('')
-  const [termFilter, setTermFilter] = useState<string>('active')
+  // Grade/term filters live in the URL; search stays local (seeded from URL)
+  // for snappy typing, mirrored to the URL on change.
+  const [searchTerm, setSearchTerm] = useState(() => get('q'))
+  const gradeFilter = get('grade')
+  const termFilter = get('term', 'active')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
   const [viewClass, setViewClass] = useState<ClassPayload | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -155,7 +159,7 @@ const ClassesPage = () => {
                       type="text"
                       placeholder="Search by subject or teacher..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                     />
                   </div>
@@ -165,7 +169,7 @@ const ClassesPage = () => {
                     </label>
                     <select
                       value={gradeFilter}
-                      onChange={(e) => setGradeFilter(e.target.value)}
+                      onChange={(e) => setParams({ grade: e.target.value })}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="">All Grades</option>
@@ -182,7 +186,7 @@ const ClassesPage = () => {
                     </label>
                     <select
                       value={termFilter}
-                      onChange={(e) => setTermFilter(e.target.value)}
+                      onChange={(e) => setParams({ term: e.target.value === 'active' ? null : e.target.value })}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="active">Active Term ({activeTerm?.name})</option>
@@ -204,8 +208,7 @@ const ClassesPage = () => {
                     <button
                       onClick={() => {
                         setSearchTerm('')
-                        setGradeFilter('')
-                        setTermFilter('active')
+                        setParams({ q: null, grade: null, term: null })
                       }}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
@@ -310,6 +313,13 @@ const ClassesPage = () => {
                                     {cls.termName || 'No term'}
                                   </span>
                                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Link
+                                      href={isJK(cls.grade) ? `/gradebook/jk/${cls.classId}` : isSK(cls.grade) ? `/gradebook/sk/${cls.classId}` : `/gradebook/${cls.classId}`}
+                                      className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                      title="Open Gradebook"
+                                    >
+                                      <BookOpenIcon className="h-5 w-5" />
+                                    </Link>
                                     <button
                                       onClick={() => setViewClass(cls)}
                                       className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -416,5 +426,11 @@ const ClassesPage = () => {
     </>
   )
 }
+
+const ClassesPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <ClassesPageContent />
+  </Suspense>
+)
 
 export default ClassesPage

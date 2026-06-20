@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -19,6 +19,7 @@ import DeleteProgressReportModal from '@/components/progress-report/delete/delet
 import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
 import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
 import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 interface ProgressReportRecord {
   student_id?: string
@@ -37,22 +38,24 @@ interface ProgressReportRecord {
   email_sent_by?: string
 }
 
-const ProgressReportsPage = () => {
+const ProgressReportsContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore((state) => state.showNotification)
+  const { get, setParams } = useFilterParams()
 
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [students, setStudents] = useState<StudentPayload[]>([])
-  const [selectedTerm, setSelectedTerm] = useState<string>('')
+  // Filters live in the URL so Back/refresh/share restore them.
+  const selectedTerm = get('term')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [generatedReports, setGeneratedReports] = useState<ProgressReportRecord[]>([])
-  
-  // Filter states
-  const [studentSearchTerm, setStudentSearchTerm] = useState('')
-  const [studentGradeFilter, setStudentGradeFilter] = useState('')
-  const [reportSearchTerm, setReportSearchTerm] = useState('')
-  const [reportGradeFilter, setReportGradeFilter] = useState('')
+
+  // Filter states — search inputs seeded from URL; grade selects are URL source of truth.
+  const [studentSearchTerm, setStudentSearchTerm] = useState(() => get('sq'))
+  const studentGradeFilter = get('sgrade')
+  const [reportSearchTerm, setReportSearchTerm] = useState(() => get('rq'))
+  const reportGradeFilter = get('rgrade')
   
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -82,11 +85,6 @@ const ProgressReportsPage = () => {
 
       if (termsRes.status === 'success') {
         setTerms(termsRes.data)
-        // Set active term as default
-        const activeTerm = termsRes.data.find(t => t.isActive)
-        if (activeTerm) {
-          setSelectedTerm(activeTerm.name)
-        }
       }
 
       if (studentsRes.status === 'success') {
@@ -98,6 +96,14 @@ const ProgressReportsPage = () => {
       setLoading(false)
     }
   }, [user?.school])
+
+  // Default to the active term once terms load, only if the URL hasn't pinned
+  // one. Kept out of fetchData so changing filters never refetches data.
+  useEffect(() => {
+    if (selectedTerm || terms.length === 0) return
+    const activeTerm = terms.find(t => t.isActive)
+    if (activeTerm) setParams({ term: activeTerm.name })
+  }, [terms, selectedTerm, setParams])
 
   // Fetch generated reports when term changes
   const fetchGeneratedReports = useCallback(async () => {
@@ -366,7 +372,7 @@ const ProgressReportsPage = () => {
                   </label>
                   <select
                     value={selectedTerm}
-                    onChange={(e) => setSelectedTerm(e.target.value)}
+                    onChange={(e) => setParams({ term: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Select a term</option>
@@ -391,7 +397,7 @@ const ProgressReportsPage = () => {
                         type="text"
                         placeholder="Search by name..."
                         value={studentSearchTerm}
-                        onChange={(e) => setStudentSearchTerm(e.target.value)}
+                        onChange={(e) => { setStudentSearchTerm(e.target.value); setParams({ sq: e.target.value }); }}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -402,7 +408,7 @@ const ProgressReportsPage = () => {
                       </label>
                       <select
                         value={studentGradeFilter}
-                        onChange={(e) => setStudentGradeFilter(e.target.value)}
+                        onChange={(e) => setParams({ sgrade: e.target.value })}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">All Grades</option>
@@ -423,7 +429,7 @@ const ProgressReportsPage = () => {
                       <button
                         onClick={() => {
                           setStudentSearchTerm('')
-                          setStudentGradeFilter('')
+                          setParams({ sq: null, sgrade: null })
                         }}
                         className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
                       >
@@ -512,7 +518,7 @@ const ProgressReportsPage = () => {
                         type="text"
                         placeholder="Search by student name..."
                         value={reportSearchTerm}
-                        onChange={(e) => setReportSearchTerm(e.target.value)}
+                        onChange={(e) => { setReportSearchTerm(e.target.value); setParams({ rq: e.target.value }); }}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -523,7 +529,7 @@ const ProgressReportsPage = () => {
                       </label>
                       <select
                         value={reportGradeFilter}
-                        onChange={(e) => setReportGradeFilter(e.target.value)}
+                        onChange={(e) => setParams({ rgrade: e.target.value })}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">All Grades</option>
@@ -558,7 +564,7 @@ const ProgressReportsPage = () => {
                       <button
                         onClick={() => {
                           setReportSearchTerm('')
-                          setReportGradeFilter('')
+                          setParams({ rq: null, rgrade: null })
                         }}
                         className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
                       >
@@ -708,5 +714,11 @@ const ProgressReportsPage = () => {
     </>
   )
 }
+
+const ProgressReportsPage = () => (
+  <Suspense fallback={<main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black" />}>
+    <ProgressReportsContent />
+  </Suspense>
+)
 
 export default ProgressReportsPage

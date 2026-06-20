@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useUserStore } from '@/store/useUserStore';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -10,13 +10,16 @@ import { ClassPayload } from '@/services/types/class';
 import { getGradeOptions } from '@/lib/schoolUtils';
 import { AcademicCapIcon, ClipboardDocumentCheckIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
-const ClassAttendanceDashboard = () => {
+const ClassAttendanceDashboardContent = () => {
   const user = useUserStore((state) => state.user);
   const router = useRouter();
+  const { get, setParams } = useFilterParams();
   const [classes, setClasses] = useState<ClassPayload[]>([]);
   const [loading, setLoading] = useState(true);
-  const [gradeFilter, setGradeFilter] = useState<string>('');
+  // Filter lives in the URL so Back/refresh/share restore it.
+  const gradeFilter = get('grade');
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -90,7 +93,7 @@ const ClassAttendanceDashboard = () => {
                     </label>
                     <select
                       value={gradeFilter}
-                      onChange={(e) => setGradeFilter(e.target.value)}
+                      onChange={(e) => setParams({ grade: e.target.value })}
                       className="w-48 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="">All Grades</option>
@@ -103,7 +106,7 @@ const ClassAttendanceDashboard = () => {
                   </div>
                   {gradeFilter && (
                     <button
-                      onClick={() => setGradeFilter('')}
+                      onClick={() => setParams({ grade: null })}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
                       Clear filter
@@ -208,5 +211,11 @@ const ClassAttendanceDashboard = () => {
     </>
   );
 };
+
+const ClassAttendanceDashboard = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <ClassAttendanceDashboardContent />
+  </Suspense>
+);
 
 export default ClassAttendanceDashboard;

@@ -2,7 +2,7 @@
 
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
@@ -15,17 +15,21 @@ import {
 import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
 import { ClipboardDocumentCheckIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
-export default function GeneralAttendancePage() {
+function GeneralAttendanceContent() {
+  const { get, setParams } = useFilterParams();
   const [students, setStudents] = useState<StudentPayload[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus | null>>({});
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore(state => state.showNotification)
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('');
+  // Free-text search keeps local state for snappy typing, seeded from URL.
+  const [searchTerm, setSearchTerm] = useState(() => get('q'));
+  // Filters live in the URL so Back/refresh/share restore them.
+  const gradeFilter = get('grade');
 
   const grades = getGradeOptions();
 
@@ -47,9 +51,7 @@ export default function GeneralAttendancePage() {
       return a.name.localeCompare(b.name);
     });
 
- const [selectedDate, setSelectedDate] = useState(() => {
-  return format(new Date(), 'yyyy-MM-dd'); // Uses user’s browser local time
-    });
+  const selectedDate = get('date') || format(new Date(), 'yyyy-MM-dd'); // Uses user’s browser local time
 
   useEffect(() => {
     getGeneralAttendanceByDate(selectedDate, user.school!).then(res => {
@@ -174,7 +176,7 @@ export default function GeneralAttendancePage() {
                   id="attendance-date"
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => setParams({ date: e.target.value })}
                   className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-white cursor-pointer"
                 />
               </div>
@@ -244,7 +246,7 @@ export default function GeneralAttendancePage() {
                       type="text"
                       placeholder="Search by name..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                     />
                   </div>
@@ -254,7 +256,7 @@ export default function GeneralAttendancePage() {
                     </label>
                     <select
                       value={gradeFilter}
-                      onChange={(e) => setGradeFilter(e.target.value)}
+                      onChange={(e) => setParams({ grade: e.target.value })}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
                     >
                       <option value="">All Grades</option>
@@ -275,7 +277,7 @@ export default function GeneralAttendancePage() {
                     <button
                       onClick={() => {
                         setSearchTerm('')
-                        setGradeFilter('')
+                        setParams({ q: null, grade: null })
                       }}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
@@ -410,5 +412,13 @@ export default function GeneralAttendancePage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function GeneralAttendancePage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50 pb-28" />}>
+      <GeneralAttendanceContent />
+    </Suspense>
   );
 }

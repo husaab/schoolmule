@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
@@ -16,6 +16,7 @@ import SentEmailReportCardModal from '@/components/report-cards/email/sent/sentE
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
 type ReportCardRow = {
   student_id: string;
@@ -29,11 +30,15 @@ type ReportCardRow = {
   email_sent_by?: string;
 };
 
-export default function ViewReportCardsPage() {
+function ViewReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore(state => state.showNotification);
+  const { get, setParams } = useFilterParams();
   const [reportCards, setReportCards] = useState<ReportCardRow[]>([]);
-  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  // Grade filter lives in the URL; `term` keeps its own state + init effect
+  // below (which preserves the ?term= / ?preview= deep-link behavior) and is
+  // mirrored to the URL when changed.
+  const selectedGrade = get('grade');
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
   // When deep-linked from the generate page (?preview=<studentId>), auto-open
   // that student's report card viewer once the cards for the term have loaded.
@@ -276,7 +281,7 @@ export default function ViewReportCardsPage() {
                   ) : (
                     <select
                       value={term}
-                      onChange={(e) => setTerm(e.target.value)}
+                      onChange={(e) => { setTerm(e.target.value); setParams({ term: e.target.value }); }}
                       className="w-full border border-gray-300 text-black rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     >
@@ -296,7 +301,7 @@ export default function ViewReportCardsPage() {
                   <select
                     value={selectedGrade}
                     onChange={(e) => {
-                      setSelectedGrade(e.target.value);
+                      setParams({ grade: e.target.value });
                       // Hidden rows shouldn't stay silently selected for deletion
                       setSelectedFilePaths([]);
                     }}
@@ -321,7 +326,7 @@ export default function ViewReportCardsPage() {
                         Showing {groupedByGrade[selectedGrade]?.length || 0} report cards for {selectedGrade}
                       </span>
                       <button
-                        onClick={() => setSelectedGrade('')}
+                        onClick={() => setParams({ grade: null })}
                         className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                       >
                         Clear filter
@@ -608,5 +613,13 @@ export default function ViewReportCardsPage() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function ViewReportCardsPage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-64 pt-24 lg:pt-28 bg-gray-50 min-h-screen p-4 lg:p-10" />}>
+      <ViewReportCardsPageContent />
+    </Suspense>
   );
 }

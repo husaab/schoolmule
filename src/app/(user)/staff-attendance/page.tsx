@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -20,13 +20,17 @@ import {
   IdentificationIcon,
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
-export default function StaffAttendancePage() {
+function StaffAttendanceContent() {
   const user = useUserStore((s) => s.user)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const { get, setParams } = useFilterParams()
+  // Filters live in the URL so Back/refresh/share restore them.
+  const monthParam = get('month')
+  const currentMonth = monthParam ? new Date(monthParam + '-01T00:00:00') : new Date()
+  const selectedTeacherId = get('teacher')
   const [teachers, setTeachers] = useState<TeacherAttendanceData[]>([])
   const [workingDays, setWorkingDays] = useState(0)
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
   const [editTarget, setEditTarget] = useState<{
@@ -137,7 +141,7 @@ export default function StaffAttendancePage() {
               {/* Month Navigation */}
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+                  onClick={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
                   className="p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <ChevronLeftIcon className="w-5 h-5 text-slate-600" />
@@ -146,7 +150,7 @@ export default function StaffAttendancePage() {
                   {format(currentMonth, 'MMMM yyyy')}
                 </h2>
                 <button
-                  onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+                  onClick={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
                   className="p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <ChevronRightIcon className="w-5 h-5 text-slate-600" />
@@ -156,7 +160,7 @@ export default function StaffAttendancePage() {
               {/* Teacher Filter */}
               <select
                 value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                onChange={(e) => setParams({ teacher: e.target.value })}
                 className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer"
               >
                 <option value="">All Teachers</option>
@@ -236,5 +240,13 @@ export default function StaffAttendancePage() {
         onClose={() => setEditTarget(null)}
       />
     </>
+  )
+}
+
+export default function StaffAttendancePage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 h-screen flex flex-col bg-slate-50" />}>
+      <StaffAttendanceContent />
+    </Suspense>
   )
 }
