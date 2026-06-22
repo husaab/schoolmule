@@ -16,6 +16,8 @@ import { ArrowLeftIcon, DocumentArrowDownIcon, CalendarIcon, UserIcon, Magnifyin
 import GenerateProgressReportModal from '@/components/progress-report/generate/generateProgressReportModal'
 import ViewProgressReportModal from '@/components/progress-report/view/viewProgressReportModal'
 import DeleteProgressReportModal from '@/components/progress-report/delete/deleteProgressReportModal'
+import BulkDeleteProgressReportModal from '@/components/progress-report/delete/bulkDeleteProgressReportModal'
+import BulkDownloadProgressReportModal from '@/components/progress-report/download/bulkDownloadProgressReportModal'
 import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
 import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
 import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
@@ -70,6 +72,11 @@ const ProgressReportsContent = () => {
   const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false)
   const [sendEmailModalOpen, setSendEmailModalOpen] = useState(false)
   const [bulkEmailModalOpen, setBulkEmailModalOpen] = useState(false)
+
+  // Bulk selection for download/delete (keyed by file_path, same key the APIs use)
+  const [selectedReportPaths, setSelectedReportPaths] = useState<string[]>([])
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false)
+  const [bulkDownloadModalOpen, setBulkDownloadModalOpen] = useState(false)
 
   // Fetch initial data
   const fetchData = useCallback(async () => {
@@ -312,6 +319,24 @@ const ProgressReportsContent = () => {
     setBulkEmailModalOpen(true)
   }
 
+  // Records use dual field naming; file_path is the delete/download key.
+  const pathOf = (r: ProgressReportRecord) => r.file_path || r.filePath || ''
+
+  const visiblePaths = filteredReports.map(pathOf).filter(Boolean)
+  const allVisibleSelected = visiblePaths.length > 0 && visiblePaths.every(p => selectedReportPaths.includes(p))
+
+  const toggleReportSelection = (filePath: string) => {
+    setSelectedReportPaths(prev =>
+      prev.includes(filePath)
+        ? prev.filter(p => p !== filePath)
+        : [...prev, filePath]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    setSelectedReportPaths(allVisibleSelected ? [] : visiblePaths)
+  }
+
   if (loading) {
     return (
       <>
@@ -372,7 +397,7 @@ const ProgressReportsContent = () => {
                   </label>
                   <select
                     value={selectedTerm}
-                    onChange={(e) => setParams({ term: e.target.value })}
+                    onChange={(e) => { setParams({ term: e.target.value }); setSelectedReportPaths([]); }}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   >
                     <option value="">Select a term</option>
@@ -518,7 +543,7 @@ const ProgressReportsContent = () => {
                         type="text"
                         placeholder="Search by student name..."
                         value={reportSearchTerm}
-                        onChange={(e) => { setReportSearchTerm(e.target.value); setParams({ rq: e.target.value }); }}
+                        onChange={(e) => { setReportSearchTerm(e.target.value); setParams({ rq: e.target.value }); setSelectedReportPaths([]); }}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -529,7 +554,7 @@ const ProgressReportsContent = () => {
                       </label>
                       <select
                         value={reportGradeFilter}
-                        onChange={(e) => setParams({ rgrade: e.target.value })}
+                        onChange={(e) => { setParams({ rgrade: e.target.value }); setSelectedReportPaths([]); }}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="">All Grades</option>
@@ -565,6 +590,7 @@ const ProgressReportsContent = () => {
                         onClick={() => {
                           setReportSearchTerm('')
                           setParams({ rq: null, rgrade: null })
+                          setSelectedReportPaths([])
                         }}
                         className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
                       >
@@ -573,6 +599,44 @@ const ProgressReportsContent = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Bulk selection action bar */}
+                {filteredReports.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-sm text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                    >
+                      {allVisibleSelected ? 'Deselect all' : 'Select all'}
+                    </button>
+                    {selectedReportPaths.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setSelectedReportPaths([])}
+                          className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          Clear selection
+                        </button>
+                        <div className="ml-auto flex items-center gap-3">
+                          <button
+                            onClick={() => setBulkDownloadModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
+                          >
+                            <ArrowDownTrayIcon className="h-4 w-4" />
+                            Download Selected ({selectedReportPaths.length})
+                          </button>
+                          <button
+                            onClick={() => setBulkDeleteModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors cursor-pointer text-sm font-medium"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            Delete Selected ({selectedReportPaths.length})
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
                 {filteredReports.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600">
@@ -589,13 +653,22 @@ const ProgressReportsContent = () => {
                         key={`${report.student_id || report.studentId}-${report.term}`}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
-                        <div>
-                          <div className="font-medium">{report.student_name || report.studentName}</div>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            title="Select progress report"
+                            checked={selectedReportPaths.includes(pathOf(report))}
+                            onChange={() => toggleReportSelection(pathOf(report))}
+                            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                          />
+                          <div>
+                            <div className="font-medium">{report.student_name || report.studentName}</div>
                           <div className="text-sm text-gray-600">
                             {report.term} • Grade {report.grade}
                           </div>
                           <div className="text-xs text-gray-500">
                             Generated: {new Date(report.generated_at || report.generatedAt || '').toLocaleDateString()}
+                          </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -660,9 +733,31 @@ const ProgressReportsContent = () => {
           filePath={selectedForDelete.file_path || selectedForDelete.filePath || ''}
           onDeleted={(filePath: string) => {
             setGeneratedReports((prev) => prev.filter((r) => (r.file_path || r.filePath) !== filePath));
+            setSelectedReportPaths((prev) => prev.filter((p) => p !== filePath));
             setDeleteModalOpen(false);
             setSelectedForDelete(null);
           }}
+        />
+      )}
+
+      {bulkDeleteModalOpen && selectedReportPaths.length > 0 && (
+        <BulkDeleteProgressReportModal
+          isOpen={bulkDeleteModalOpen}
+          onClose={() => setBulkDeleteModalOpen(false)}
+          filePaths={selectedReportPaths}
+          onDeleted={(filePaths: string[]) => {
+            setGeneratedReports((prev) => prev.filter((r) => !filePaths.includes(r.file_path || r.filePath || '')));
+            setSelectedReportPaths([]);
+          }}
+        />
+      )}
+
+      {bulkDownloadModalOpen && selectedReportPaths.length > 0 && (
+        <BulkDownloadProgressReportModal
+          isOpen={bulkDownloadModalOpen}
+          onClose={() => setBulkDownloadModalOpen(false)}
+          filePaths={selectedReportPaths}
+          term={selectedTerm}
         />
       )}
 

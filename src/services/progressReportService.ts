@@ -242,6 +242,20 @@ export const deleteProgressReport = async (filePath: string): Promise<{ status: 
   })
 }
 
+// Bulk delete progress reports (storage files + database records)
+export const deleteBulkProgressReports = async (
+  filePaths: string[]
+): Promise<{ status: string; deleted?: string[] }> => {
+  return apiClient<{ status: string; deleted?: string[] }>(
+    `/progress-reports/delete/bulk`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { filePaths }
+    }
+  );
+};
+
 // Get signed URL for progress report (similar to report cards)
 export const getSignedProgressReportUrl = async (filePath: string): Promise<string | null> => {
   const response = await apiClient<{ url: string }>(`/progress-reports/signed-url?path=${encodeURIComponent(filePath)}`);
