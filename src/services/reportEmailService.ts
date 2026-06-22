@@ -113,3 +113,33 @@ export const generateDefaultSubject = (
   const reportLabel = reportType === 'progress_report' ? 'Progress Report' : 'Report Card';
   return `${studentName} - ${reportLabel} (${term})`;
 };
+
+/**
+ * Default editable email body, prefilled into the message textarea.
+ * Uses [Student Name] / [Term] merge tags that the backend resolves per
+ * recipient. Wording is kept in sync with the backend getDefaultEmailBody so an
+ * empty message reproduces the previous email exactly.
+ */
+export const generateDefaultMessage = (
+  reportType: 'progress_report' | 'report_card'
+): string => {
+  if (reportType === 'progress_report') {
+    return "Dear Parent/Guardian,\n\nPlease find attached the progress report for [Student Name] for [Term]. If you have any questions or concerns about your child's progress, please don't hesitate to contact us.";
+  }
+  return "Dear Parent/Guardian,\n\nPlease find attached the report card for [Student Name] for [Term]. If you have any questions about your child's academic performance, please feel free to reach out.";
+};
+
+/**
+ * Resolve merge tags for the live preview shown in the email modals.
+ * Mirrors the backend substitution ([Student Name], [Term]); unknown tags pass
+ * through. For bulk sends, pass a sample student name (the actual name varies
+ * per recipient on send).
+ */
+export const resolveMessagePreview = (
+  body: string,
+  { studentName, term }: { studentName: string; term: string }
+): string => {
+  return body
+    .split('[Student Name]').join(studentName)
+    .split('[Term]').join(term);
+};

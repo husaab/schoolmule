@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/modal';
 import { PaperAirplaneIcon, UsersIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, FunnelIcon } from '@heroicons/react/24/outline';
-import { sendBulkReportEmails, generateDefaultSubject } from '@/services/reportEmailService';
+import { sendBulkReportEmails, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendBulkReportEmailPayload, BulkReportEmailResponse, BulkReportEmailResult } from '@/services/types/reportEmails';
 import { getGradeNumericValue } from '@/lib/schoolUtils';
@@ -58,6 +58,13 @@ export default function BulkEmailReportCardModal({
   // Input states
   const [ccInput, setCcInput] = useState('');
 
+  // Sample student name for the live message preview (the real name is
+  // substituted per recipient when each email is sent).
+  const previewReport =
+    availableReports.find((r) => (r.student_id || r.studentId) === selectedStudentIds[0]) ||
+    availableReports[0];
+  const sampleStudentName = previewReport?.student_name || previewReport?.studentName || 'the student';
+
   const reportsByGrade = availableReports.reduce((acc, report) => {
     const grade = report.grade || 'Unknown';
     if (!acc[grade]) acc[grade] = [];
@@ -76,7 +83,7 @@ export default function BulkEmailReportCardModal({
     if (isOpen) {
       // Set default subject for bulk emails
       setCustomHeader(generateDefaultSubject('Report Cards', 'report_card', term));
-      setCustomMessage('');
+      setCustomMessage(generateDefaultMessage('report_card'));
       setCcAddresses([]);
       setCcInput('');
       setResults(null);
@@ -482,26 +489,29 @@ export default function BulkEmailReportCardModal({
               {/* Custom Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Custom Message (Optional)
+                  Email Message (shared)
                 </label>
-                <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Default email message:</strong>
-                  </p>
-                  <p className="text-sm text-blue-700 italic">
-                    &quot;Dear Parent/Guardian, Please find attached the report card for [Student Name] for {term}. If you have any questions about your child&apos;s progress, please don&apos;t hesitate to contact us.&quot;
-                  </p>
-                  <p className="text-xs text-blue-600 mt-2">
-                    Would you like to add a shared custom message for all emails?
-                  </p>
-                </div>
                 <textarea
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
-                  rows={4}
+                  rows={6}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add your shared custom message here (optional)..."
+                  placeholder="Write the email body parents will see..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Merge tags <code>[Student Name]</code> and <code>[Term]</code> are replaced per student when each email is sent.
+                </p>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Preview:</strong>
+                  </p>
+                  <p className="text-sm text-blue-700 italic whitespace-pre-line">
+                    {resolveMessagePreview(customMessage, { studentName: sampleStudentName, term })}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Name varies per student.
+                  </p>
+                </div>
               </div>
 
               {/* Form Actions */}

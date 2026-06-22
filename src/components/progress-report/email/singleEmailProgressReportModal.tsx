@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/components/shared/modal';
 import { EnvelopeIcon, PaperAirplaneIcon, UserIcon, ChatBubbleLeftRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { sendReportEmail, generateDefaultSubject, validateEmailAddresses } from '@/services/reportEmailService';
+import { sendReportEmail, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview, validateEmailAddresses } from '@/services/reportEmailService';
 import { getStudentById } from '@/services/studentService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendReportEmailPayload } from '@/services/types/reportEmails';
@@ -74,7 +74,7 @@ export default function SingleEmailProgressReportModal({
         setCustomHeader(generateDefaultSubject(studentName, 'progress_report', term));
         
         // Set default message
-        setCustomMessage('');
+        setCustomMessage(generateDefaultMessage('progress_report'));
       }
     } catch (error) {
       console.error('Error fetching student data:', error);
@@ -95,7 +95,7 @@ export default function SingleEmailProgressReportModal({
     setEmailAddresses([]);
     setCcAddresses([]);
     setCustomHeader('');
-    setCustomMessage('');
+    setCustomMessage(generateDefaultMessage('progress_report'));
     setEmailInput('');
     setCcInput('');
     setStudent(null);
@@ -287,29 +287,29 @@ export default function SingleEmailProgressReportModal({
                 />
               </div>
 
-              {/* Custom Message */}
+              {/* Email Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Custom Message (Optional)
+                  Email Message
                 </label>
-                <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Default email message:</strong>
-                  </p>
-                  <p className="text-sm text-blue-700 italic">
-                    &quot;Dear Parent/Guardian, Please find attached the progress report for {studentName} for {term}. If you have any questions about your child&apos;s progress, please don&apos;t hesitate to contact us.&quot;
-                  </p>
-                  <p className="text-xs text-blue-600 mt-2">
-                    Would you like to add a custom message in addition to the default text?
-                  </p>
-                </div>
                 <textarea
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
-                  rows={4}
+                  rows={6}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add your custom message here (optional)..."
+                  placeholder="Write the email body parents will see..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Merge tags <code>[Student Name]</code> and <code>[Term]</code> are replaced when the email is sent.
+                </p>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Preview:</strong>
+                  </p>
+                  <p className="text-sm text-blue-700 italic whitespace-pre-line">
+                    {resolveMessagePreview(customMessage, { studentName, term })}
+                  </p>
+                </div>
               </div>
 
               {/* Warning */}
