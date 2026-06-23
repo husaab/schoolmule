@@ -55,7 +55,8 @@ const ProgressReportsContent = () => {
 
   // Filter states — search inputs seeded from URL; grade selects are URL source of truth.
   const [studentSearchTerm, setStudentSearchTerm] = useState(() => get('sq'))
-  const studentGradeFilter = get('sgrade')
+  // Grades the user has deselected (excluded) from the generate list; empty = all grades shown.
+  const excludedGrades = get('xgrades') ? get('xgrades').split(',') : []
   const [reportSearchTerm, setReportSearchTerm] = useState(() => get('rq'))
   const reportGradeFilter = get('rgrade')
   
@@ -141,7 +142,7 @@ const ProgressReportsContent = () => {
   const filteredStudents = students
     .filter(s => {
       const matchesName = s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())
-      const matchesGrade = studentGradeFilter === '' || String(s.grade) === studentGradeFilter
+      const matchesGrade = !excludedGrades.includes(String(s.grade))
       return matchesName && matchesGrade
     })
     .sort((a, b) => {
@@ -190,6 +191,21 @@ const ProgressReportsContent = () => {
       setSelectedStudents([])
     } else {
       setSelectedStudents(filteredStudents.map(s => s.studentId))
+    }
+  }
+
+  // Toggle a grade in/out of the generate list. Deselecting a grade also drops any
+  // already-selected students of that grade so they aren't generated while hidden.
+  const toggleGradeExcluded = (gradeValue: string | number) => {
+    const g = String(gradeValue)
+    const isExcluding = !excludedGrades.includes(g)
+    const next = isExcluding ? [...excludedGrades, g] : excludedGrades.filter(x => x !== g)
+    setParams({ xgrades: next.length ? next.join(',') : null })
+    if (isExcluding) {
+      setSelectedStudents(prev => prev.filter(id => {
+        const stu = students.find(s => s.studentId === id)
+        return stu ? String(stu.grade) !== g : true
+      }))
     }
   }
 
@@ -357,7 +373,7 @@ const ProgressReportsContent = () => {
       <Sidebar />
       
       <main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-screen-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
@@ -375,6 +391,30 @@ const ProgressReportsContent = () => {
             </p>
           </div>
 
+          {/* Term Selection — shared across both panels (generate + view) */}
+          <div className="mb-8 bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <CalendarIcon className="h-4 w-4 inline mr-1" />
+              Select Term
+            </label>
+            <select
+              value={selectedTerm}
+              onChange={(e) => { setParams({ term: e.target.value }); setSelectedReportPaths([]); }}
+              className="w-full lg:max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Select a term</option>
+              {terms.map((term) => (
+                <option key={term.termId} value={term.name}>
+                  {term.name} ({term.academicYear})
+                  {term.isActive && ' - Active'}
+                </option>
+              ))}
+            </select>
+            <p className="text-gray-500 text-xs mt-2">
+              Generating for and viewing reports for this term.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Generate Reports Section */}
             <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -389,64 +429,68 @@ const ProgressReportsContent = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Term Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <CalendarIcon className="h-4 w-4 inline mr-1" />
-                    Term
-                  </label>
-                  <select
-                    value={selectedTerm}
-                    onChange={(e) => { setParams({ term: e.target.value }); setSelectedReportPaths([]); }}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="">Select a term</option>
-                    {terms.map((term) => (
-                      <option key={term.termId} value={term.name}>
-                        {term.name} ({term.academicYear})
-                        {term.isActive && ' - Active'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!selectedTerm && (
+                  <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                    Select a term above to generate progress reports.
+                  </div>
+                )}
 
                 {/* Student Filters */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <MagnifyingGlassIcon className="h-4 w-4 inline mr-1" />
-                        Search Students
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Search by name..."
-                        value={studentSearchTerm}
-                        onChange={(e) => { setStudentSearchTerm(e.target.value); setParams({ sq: e.target.value }); }}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <MagnifyingGlassIcon className="h-4 w-4 inline mr-1" />
+                      Search Students
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search by name..."
+                      value={studentSearchTerm}
+                      onChange={(e) => { setStudentSearchTerm(e.target.value); setParams({ sq: e.target.value }); }}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  {/* Grade toggles — all included by default; click to deselect a grade (e.g. JK/SK). */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         <FunnelIcon className="h-4 w-4 inline mr-1" />
-                        Filter by Grade
+                        Grades to include
                       </label>
-                      <select
-                        value={studentGradeFilter}
-                        onChange={(e) => setParams({ sgrade: e.target.value })}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="">All Grades</option>
-                        {grades.map(gradeOption => (
-                          <option key={gradeOption.value} value={String(gradeOption.value)}>
-                            Grade {gradeOption.label}
-                          </option>
-                        ))}
-                      </select>
+                      {excludedGrades.length > 0 && (
+                        <button
+                          onClick={() => setParams({ xgrades: null })}
+                          className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {grades.map(gradeOption => {
+                        const g = String(gradeOption.value)
+                        const included = !excludedGrades.includes(g)
+                        return (
+                          <button
+                            key={gradeOption.value}
+                            type="button"
+                            onClick={() => toggleGradeExcluded(gradeOption.value)}
+                            aria-pressed={included}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
+                              included
+                                ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+                                : 'bg-white text-gray-400 border-gray-300 hover:bg-gray-50 line-through'
+                            }`}
+                          >
+                            {gradeOption.label}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
-                  
-                  {(studentSearchTerm || studentGradeFilter) && (
+
+                  {(studentSearchTerm || excludedGrades.length > 0) && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">
                         Showing {filteredStudents.length} of {students.length} students
@@ -454,7 +498,7 @@ const ProgressReportsContent = () => {
                       <button
                         onClick={() => {
                           setStudentSearchTerm('')
-                          setParams({ sq: null, sgrade: null })
+                          setParams({ sq: null, xgrades: null })
                         }}
                         className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
                       >
@@ -479,7 +523,7 @@ const ProgressReportsContent = () => {
                     </button>
                   </div>
                   
-                  <div className="max-h-80 overflow-y-auto border border-gray-300 rounded-md">
+                  <div className="max-h-96 overflow-y-auto border border-gray-300 rounded-md">
                     {filteredStudents.length === 0 ? (
                       <div className="p-4 text-center text-gray-600">
                         {students.length === 0 ? 'No students found' : 'No students match your filters'}
@@ -647,7 +691,7 @@ const ProgressReportsContent = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-120 overflow-y-auto">
+                  <div className="space-y-3 max-h-[40rem] overflow-y-auto">
                     {filteredReports.map((report) => (
                       <div
                         key={`${report.student_id || report.studentId}-${report.term}`}
