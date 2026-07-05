@@ -3,6 +3,7 @@ import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
+import HeroDemoVideo from '@/components/landing/HeroDemoVideo'
 import {
   CheckCircleIcon,
   ChartBarIcon,
@@ -194,32 +195,8 @@ const WelcomePage: FC = () => {
                   </div>
                 </div>
 
-                {/* Browser Mockup */}
-                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                  {/* Browser header */}
-                  <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                    </div>
-                    <div className="flex-1 ml-4">
-                      <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                        schoolmule.ca/dashboard
-                      </div>
-                    </div>
-                  </div>
-                  {/* Screenshot */}
-                  <div className="relative aspect-[16/10]">
-                    <Image
-                      src="/images/DashboardScreenshot.png"
-                      alt="SchoolMule Dashboard"
-                      fill
-                      className="object-cover object-top"
-                      priority
-                    />
-                  </div>
-                </div>
+                {/* Product demo video */}
+                <HeroDemoVideo />
 
                 {/* Glow effect */}
                 <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl" />
