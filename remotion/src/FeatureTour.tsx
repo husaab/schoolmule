@@ -1,4 +1,4 @@
-import { AbsoluteFill } from 'remotion';
+import { AbsoluteFill, Audio, interpolate, staticFile } from 'remotion';
 import { TransitionSeries, linearTiming } from '@remotion/transitions';
 import { fade } from '@remotion/transitions/fade';
 import { XFADE } from './brand';
@@ -35,6 +35,15 @@ const xfade = () => (
 
 export const FeatureTour: React.FC = () => (
   <AbsoluteFill style={{ backgroundColor: '#ffffff' }}>
+    <Audio
+      src={staticFile('music.mp3')}
+      volume={(f) =>
+        interpolate(f, [0, 24, TOTAL_FRAMES - 45, TOTAL_FRAMES], [0, 0.3, 0.3, 0], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        })
+      }
+    />
     <TransitionSeries>
       <TransitionSeries.Sequence durationInFrames={D.intro}><Intro /></TransitionSeries.Sequence>
       {xfade()}
