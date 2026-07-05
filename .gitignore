@@ -3,6 +3,9 @@
 # dependencies
 /node_modules
 /.pnp
+remotion/node_modules
+remotion/out
+.superpowers/
 .pnp.*
 .yarn/*
 !.yarn/patches

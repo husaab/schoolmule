@@ -3,6 +3,7 @@ import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
+import HeroDemoVideo from '@/components/landing/HeroDemoVideo'
 import {
   CheckCircleIcon,
   ChartBarIcon,
@@ -161,68 +162,13 @@ const WelcomePage: FC = () => {
               </div>
             </div>
 
-            {/* Hero Screenshot */}
+            {/* Product demo video */}
             <div className="mt-16 lg:mt-20">
               <div className="relative max-w-5xl mx-auto">
-                {/* Floating notification - left */}
-                <div className="absolute -left-4 lg:-left-12 top-1/4 hidden lg:block z-20">
-                  <div className="bg-white rounded-2xl p-4 shadow-xl border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <CheckIcon className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-800 text-sm">Report Generated</p>
-                        <p className="text-xs text-slate-500">Grade 5 - Complete</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating notification - right */}
-                <div className="absolute -right-4 lg:-right-12 top-1/3 hidden lg:block z-20">
-                  <div className="bg-white rounded-2xl p-4 shadow-xl border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center">
-                        <UserGroupIcon className="w-5 h-5 text-cyan-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-800 text-sm">98.5%</p>
-                        <p className="text-xs text-slate-500">Attendance Rate</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Browser Mockup */}
-                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                  {/* Browser header */}
-                  <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                    </div>
-                    <div className="flex-1 ml-4">
-                      <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                        schoolmule.ca/dashboard
-                      </div>
-                    </div>
-                  </div>
-                  {/* Screenshot */}
-                  <div className="relative aspect-[16/10]">
-                    <Image
-                      src="/images/DashboardScreenshot.png"
-                      alt="SchoolMule Dashboard"
-                      fill
-                      className="object-cover object-top"
-                      priority
-                    />
-                  </div>
-                </div>
+                <HeroDemoVideo />
 
                 {/* Glow effect */}
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl" />
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl -z-10" />
               </div>
             </div>
           </div>
