@@ -206,6 +206,52 @@ body {
   }
 }
 
+@keyframes heroDrift {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(30px, -38px) rotate(9deg);
+  }
+  50% {
+    transform: translate(-20px, -56px) rotate(-7deg);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(-34px, -22px) rotate(11deg);
+  }
+}
+
+@keyframes heroDriftReverse {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(-30px, 34px) rotate(-9deg);
+  }
+  50% {
+    transform: translate(22px, 52px) rotate(7deg);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(36px, 18px) rotate(-11deg);
+  }
+}
+
+@keyframes heroBlobDrift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(45px, -35px) scale(1.18);
+  }
+  66% {
+    transform: translate(-30px, 25px) scale(0.92);
+  }
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.4);
@@ -287,6 +333,18 @@ body {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+.animate-hero-drift {
+  animation: heroDrift 12s ease-in-out infinite;
+}
+
+.animate-hero-drift-reverse {
+  animation: heroDriftReverse 14s ease-in-out infinite;
+}
+
+.animate-hero-blob {
+  animation: heroBlobDrift 16s ease-in-out infinite;
+}
+
 .animate-blob {
   animation: blob 10s ease-in-out infinite;
 }
@@ -305,6 +363,20 @@ body {
 /* Initial state for animations */
 .animate-on-scroll {
   opacity: 0;
+}
+
+/* Reduced motion: keep decorative elements visible but static */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-reverse,
+  .animate-float-slow,
+  .animate-pulse-glow,
+  .animate-blob,
+  .animate-hero-drift,
+  .animate-hero-drift-reverse,
+  .animate-hero-blob {
+    animation: none;
+  }
 }
 
 /* ==========================================================================

@@ -3,6 +3,7 @@ import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
+import HeroBackground from '@/components/landing/HeroBackground'
 import HeroDemoVideo from '@/components/landing/HeroDemoVideo'
 import {
   CheckCircleIcon,
@@ -110,13 +111,8 @@ const WelcomePage: FC = () => {
       <main className="w-full overflow-hidden">
         {/* Hero Section */}
         <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-32 lg:pb-24">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-slate-50" />
-
-          {/* Decorative blobs */}
-          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-100/40 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute top-1/4 right-0 w-80 h-80 bg-amber-100/30 rounded-full blur-3xl translate-x-1/2" />
-          <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-teal-100/30 rounded-full blur-3xl" />
+          {/* Animated background */}
+          <HeroBackground />
 
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
