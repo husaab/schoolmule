@@ -3,7 +3,6 @@ import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
-import HeroVideoBackground from '@/components/landing/HeroVideoBackground'
 import {
   CheckCircleIcon,
   ChartBarIcon,
@@ -112,9 +111,6 @@ const WelcomePage: FC = () => {
         <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-32 lg:pb-24">
           {/* Background */}
           <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-slate-50" />
-
-          {/* Video background (behind blobs + content) */}
-          <HeroVideoBackground />
 
           {/* Decorative blobs */}
           <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-100/40 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
