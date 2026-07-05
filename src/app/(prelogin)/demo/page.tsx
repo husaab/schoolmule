@@ -88,7 +88,7 @@ export default function DemoPage() {
               </h1>
 
               <p className="text-lg lg:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-                Book a personalized 60-minute demonstration tailored to your school&apos;s specific needs.
+                Book a personalized 15-minute demonstration tailored to your school&apos;s specific needs.
                 Our experts will show you exactly how SchoolMule can transform your operations.
               </p>
             </div>
@@ -143,7 +143,7 @@ export default function DemoPage() {
                   </div>
                   <div className="space-y-3">
                     {[
-                      { label: 'Duration', value: '60 minutes' },
+                      { label: 'Duration', value: '15 minutes' },
                       { label: 'Format', value: 'Video call with screen sharing' },
                       { label: 'Customized', value: 'Tailored to your school size' },
                       { label: 'Follow-up', value: 'Implementation plan provided' }
