@@ -7,10 +7,11 @@
   "private": true,
   "dependencies": {
     "@remotion/cli": "4.0.484",
+    "@remotion/tailwind-v4": "4.0.484",
+    "@remotion/transitions": "^4.0.484",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.484",
-    "@remotion/tailwind-v4": "4.0.484",
     "tailwindcss": "4.0.0"
   },
   "devDependencies": {
@@ -25,7 +26,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:mp4": "remotion render HeroLoop ../public/videos/hero-loop.mp4 --codec=h264",
+    "render:webm": "remotion render HeroLoop ../public/videos/hero-loop.webm --codec=vp8",
+    "render:poster": "remotion still HeroLoop ../public/videos/hero-loop-poster.jpg --frame=42",
+    "render:all": "mkdir -p ../public/videos && npm run render:mp4 && npm run render:webm && npm run render:poster"
   },
   "sideEffects": [
     "*.css"
