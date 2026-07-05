@@ -1,5 +1,5 @@
 'use client'
-import { FC, useRef, useState } from 'react'
+import { FC, useEffect, useRef, useState } from 'react'
 import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
@@ -11,6 +11,16 @@ const HeroDemoVideo: FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [muted, setMuted] = useState(true)
   const [playing, setPlaying] = useState(true)
+
+  // React sets the `muted` attribute but not the DOM property reliably, which can
+  // leave the video unmuted and blocked from autoplaying. Force it muted on mount.
+  useEffect(() => {
+    const v = videoRef.current
+    if (v) {
+      v.muted = true
+      void v.play().catch(() => {})
+    }
+  }, [])
 
   const toggleMute = () => {
     const v = videoRef.current
