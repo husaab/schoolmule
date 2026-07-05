@@ -27,8 +27,8 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "render:mp4": "remotion render HeroLoop ../public/videos/hero-loop.mp4 --codec=h264",
-    "render:webm": "remotion render HeroLoop ../public/videos/hero-loop.webm --codec=vp8",
+    "render:mp4": "remotion render HeroLoop ../public/videos/hero-loop.mp4 --codec=h264 --crf=30",
+    "render:webm": "remotion render HeroLoop ../public/videos/hero-loop.webm --codec=vp8 --crf=30",
     "render:poster": "remotion still HeroLoop ../public/videos/hero-loop-poster.jpg --frame=42",
     "render:all": "mkdir -p ../public/videos && npm run render:mp4 && npm run render:webm && npm run render:poster"
   },
