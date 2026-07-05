@@ -7,8 +7,10 @@
   "private": true,
   "dependencies": {
     "@remotion/cli": "4.0.484",
+    "@remotion/google-fonts": "^4.0.484",
     "@remotion/tailwind-v4": "4.0.484",
     "@remotion/transitions": "^4.0.484",
+    "lucide-react": "^1.23.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.484",
@@ -27,9 +29,9 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "render:mp4": "remotion render HeroLoop ../public/videos/hero-loop.mp4 --codec=h264 --crf=30",
-    "render:webm": "remotion render HeroLoop ../public/videos/hero-loop.webm --codec=vp8 --crf=30",
-    "render:poster": "remotion still HeroLoop ../public/videos/hero-loop-poster.jpg --frame=42",
+    "render:mp4": "remotion render FeatureTour ../public/videos/feature-tour.mp4 --codec=h264 --crf=28",
+    "render:webm": "remotion render FeatureTour ../public/videos/feature-tour.webm --codec=vp8 --crf=30",
+    "render:poster": "remotion still FeatureTour ../public/videos/feature-tour-poster.jpg --frame=150",
     "render:all": "mkdir -p ../public/videos && npm run render:mp4 && npm run render:webm && npm run render:poster"
   },
   "sideEffects": [
