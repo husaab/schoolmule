@@ -51,16 +51,16 @@ const NavBar: FC = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-25">
+        <div className="flex justify-between items-center h-28">
           {/* Logo */}
           <Link href="/" scroll={false} className="flex items-center group">
             <Image
               src="/logo/trimmedlogo.png"
               alt="SchoolMule Logo"
-              width={140}
-              height={36}
+              width={180}
+              height={48}
               quality={100}
-              className="transition-transform duration-300 group-hover:scale-105 h-20 w-auto"
+              className="transition-transform duration-300 group-hover:scale-105 h-24 w-auto"
             />
           </Link>
 
