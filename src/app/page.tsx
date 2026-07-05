@@ -174,57 +174,6 @@ const WelcomePage: FC = () => {
           </div>
         </section>
 
-        {/* Demo Video Section */}
-        <section className="py-20 lg:py-28 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="text-center mb-12 opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                See SchoolMule in Action
-              </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Watch how easily you can manage your entire school from one dashboard
-              </p>
-            </div>
-
-            <div
-              data-reveal
-              className="max-w-4xl mx-auto opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
-                <div
-                  style={{
-                    position: 'relative',
-                    paddingBottom: 'calc(52.60855982505467% + 41px)',
-                    height: 0,
-                    width: '100%'
-                  }}
-                >
-                  <iframe
-                    src="https://demo.arcade.software/fnLPYXGsuJK8SZ1yxJjH?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
-                    title="Welcome to SchoolMule"
-                    frameBorder="0"
-                    loading="lazy"
-                    allowFullScreen
-                    allow="clipboard-write"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      colorScheme: 'light',
-                      borderRadius: '0.75rem'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Stats Section */}
         <section className="py-16 lg:py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
