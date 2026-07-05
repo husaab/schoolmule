@@ -1,15 +1,14 @@
 import './index.css';
-import { AbsoluteFill, Composition } from 'remotion';
+import { Composition } from 'remotion';
+import { SceneGradebook } from './tour/SceneGradebook';
 
-// Placeholder — replaced by the FeatureTour composition in a later step.
-const Placeholder: React.FC = () => <AbsoluteFill style={{ backgroundColor: '#ffffff' }} />;
-
+// Temporary single-scene preview composition; FeatureTour is wired in a later step.
 export const RemotionRoot: React.FC = () => {
   return (
     <Composition
-      id="Placeholder"
-      component={Placeholder}
-      durationInFrames={30}
+      id="SceneGradebook"
+      component={SceneGradebook}
+      durationInFrames={360}
       fps={30}
       width={1920}
       height={1080}
