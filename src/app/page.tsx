@@ -159,22 +159,6 @@ const WelcomePage: FC = () => {
                   Start Free Trial
                 </Link>
               </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
-                <div className="flex items-center gap-2">
-                  <CheckIcon className="w-5 h-5 text-emerald-500" />
-                  <span>No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckIcon className="w-5 h-5 text-emerald-500" />
-                  <span>14-day free trial</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckIcon className="w-5 h-5 text-emerald-500" />
-                  <span>Cancel anytime</span>
-                </div>
-              </div>
             </div>
 
             {/* Hero Screenshot */}
