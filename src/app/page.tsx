@@ -3,6 +3,7 @@ import { FC, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import PreNavBar from '@/components/prenavbar/navbar/Navbar'
 import Footer from '@/components/prefooter/Footer'
+import HeroBackground from '@/components/landing/HeroBackground'
 import HeroDemoVideo from '@/components/landing/HeroDemoVideo'
 import {
   CheckCircleIcon,
@@ -110,13 +111,8 @@ const WelcomePage: FC = () => {
       <main className="w-full overflow-hidden">
         {/* Hero Section */}
         <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-32 lg:pb-24">
-          {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-slate-50" />
-
-          {/* Decorative blobs */}
-          <div className="absolute top-0 left-0 w-96 h-96 bg-cyan-100/40 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute top-1/4 right-0 w-80 h-80 bg-amber-100/30 rounded-full blur-3xl translate-x-1/2" />
-          <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-teal-100/30 rounded-full blur-3xl" />
+          {/* Animated background */}
+          <HeroBackground />
 
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
@@ -169,57 +165,6 @@ const WelcomePage: FC = () => {
 
                 {/* Glow effect */}
                 <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl -z-10" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Demo Video Section */}
-        <section className="py-20 lg:py-28 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="text-center mb-12 opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                See SchoolMule in Action
-              </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Watch how easily you can manage your entire school from one dashboard
-              </p>
-            </div>
-
-            <div
-              data-reveal
-              className="max-w-4xl mx-auto opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
-                <div
-                  style={{
-                    position: 'relative',
-                    paddingBottom: 'calc(52.60855982505467% + 41px)',
-                    height: 0,
-                    width: '100%'
-                  }}
-                >
-                  <iframe
-                    src="https://demo.arcade.software/fnLPYXGsuJK8SZ1yxJjH?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
-                    title="Welcome to SchoolMule"
-                    frameBorder="0"
-                    loading="lazy"
-                    allowFullScreen
-                    allow="clipboard-write"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      colorScheme: 'light',
-                      borderRadius: '0.75rem'
-                    }}
-                  />
-                </div>
               </div>
             </div>
           </div>
