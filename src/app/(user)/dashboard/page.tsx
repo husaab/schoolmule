@@ -9,7 +9,7 @@ import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardSer
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
 import Spinner from '@/components/Spinner'
 import StaffList from '@/components/staff/StaffList'
-import { format } from 'date-fns'
+import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
 import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
 import {
@@ -44,6 +44,10 @@ const DashboardPage: React.FC = () => {
   // Check-in flow: localStorage for instant suppression, backend as source of truth
   useEffect(() => {
     if (!user.id || user.role === 'PARENT') return
+
+    // No check-in prompt on weekends or during summer break (July/August)
+    const now = new Date()
+    if (isWeekend(now) || now.getMonth() === 6 || now.getMonth() === 7) return
 
     const localKey = `checkin_date_${user.id}`
     const todayStr = format(new Date(), 'yyyy-MM-dd')
