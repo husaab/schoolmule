@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -50,6 +50,24 @@ const adminLinks = [
     color: 'bg-rose-500',
     bgColor: 'from-rose-50 to-pink-50',
     borderColor: 'border-rose-100',
+  },
+  {
+    href: '/admin-panel/school-calendar',
+    label: 'School Calendar',
+    description: 'Manage holidays, PA days and school events for each year.',
+    icon: CalendarDaysIcon,
+    color: 'bg-teal-500',
+    bgColor: 'from-teal-50 to-emerald-50',
+    borderColor: 'border-teal-100',
+  },
+  {
+    href: '/admin-panel/agendas',
+    label: 'Agenda Editor',
+    description: 'Compose and print the yearly student agenda book.',
+    icon: BookOpenIcon,
+    color: 'bg-indigo-500',
+    bgColor: 'from-indigo-50 to-blue-50',
+    borderColor: 'border-indigo-100',
   },
   {
     href: '/admin-panel/patch-notes',
