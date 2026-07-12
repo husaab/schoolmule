@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { AgendaCustomPagePayload, AgendaAnchor } from '@/services/types/agenda';
+import type { AgendaCustomPagePayload, AgendaAnchor, AgendaFitMode } from '@/services/types/agenda';
 import {
   Bars3Icon,
   TrashIcon,
@@ -24,10 +24,11 @@ interface Props {
   monthOptions: number[];
   onMove: (pageId: string, anchor: AgendaAnchor, anchorMonth: number | null) => void;
   onRename: (pageId: string, title: string) => void;
+  onSetFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
   onDelete: (pageId: string) => void;
 }
 
-export default function CustomPageCard({ page, monthOptions, onMove, onRename, onDelete }: Props) {
+export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(page.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +141,36 @@ export default function CustomPageCard({ page, monthOptions, onMove, onRename, o
         <span title={page.sizeWarning}>
           <ExclamationTriangleIcon className="w-4 h-4 text-amber-500" />
         </span>
+      )}
+
+      {page.fileType === 'image' && (
+        <div
+          className="flex rounded-lg border border-slate-200 overflow-hidden text-[10px] font-medium"
+          title="Fit: whole image visible (white margins if needed). Fill: edge-to-edge (may crop)."
+        >
+          <button
+            type="button"
+            onClick={() => onSetFitMode(page.pageId, 'contain')}
+            className={`px-1.5 py-1 cursor-pointer transition-colors ${
+              page.fitMode !== 'cover'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            Fit
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetFitMode(page.pageId, 'cover')}
+            className={`px-1.5 py-1 cursor-pointer transition-colors ${
+              page.fitMode === 'cover'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            Fill
+          </button>
+        </div>
       )}
 
       <select

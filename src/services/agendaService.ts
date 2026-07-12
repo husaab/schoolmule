@@ -12,7 +12,8 @@ import type {
   AgendaRenderedPagesResponse,
   AgendaCloneResponse,
   AgendaReorderUpdate,
-  AgendaAnchor
+  AgendaAnchor,
+  AgendaFitMode
 } from './types/agenda';
 
 export const getAgendasBySchool = async (school: string): Promise<AgendasResponse> => {
@@ -125,14 +126,21 @@ export const reorderAgendaPages = async (
   );
 };
 
-export const renameAgendaPage = async (
+export const updateAgendaPage = async (
   agendaId: string,
   pageId: string,
-  title: string
+  payload: {
+    title?: string;
+    fitMode?: AgendaFitMode;
+    zoom?: number;
+    zoomY?: number | null;
+    offsetX?: number;
+    offsetY?: number;
+  }
 ): Promise<AgendaCustomPageResponse> => {
-  return apiClient<AgendaCustomPageResponse, { title: string }>(
+  return apiClient<AgendaCustomPageResponse, typeof payload>(
     `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}`,
-    { method: 'PATCH', body: { title } }
+    { method: 'PATCH', body: payload }
   );
 };
 

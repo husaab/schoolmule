@@ -8,13 +8,15 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import AgendaOutline, { type SlotId } from '@/components/agenda/AgendaOutline';
 import AgendaLivePreview from '@/components/agenda/AgendaLivePreview';
 import CustomPageUploadModal from '@/components/agenda/CustomPageUploadModal';
+import ImageAdjustModal from '@/components/agenda/ImageAdjustModal';
+import type { Placement } from '@/components/agenda/imagePlacement';
 import GeneratePanel from '@/components/agenda/GeneratePanel';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import {
   getAgendaById,
   getAgendaManifest,
   reorderAgendaPages,
-  renameAgendaPage,
+  updateAgendaPage,
   deleteAgendaPage,
   updateAgendaMonth,
   updateAgenda,
@@ -23,6 +25,7 @@ import type {
   AgendaDetailPayload,
   AgendaManifestPayload,
   AgendaAnchor,
+  AgendaFitMode,
 } from '@/services/types/agenda';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
@@ -35,6 +38,7 @@ const AgendaEditorPage = () => {
   const [manifest, setManifest] = useState<AgendaManifestPayload | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadSlot, setUploadSlot] = useState<SlotId | null>(null);
+  const [adjustingPageId, setAdjustingPageId] = useState<string | null>(null);
   const [jumpToSeq, setJumpToSeq] = useState<number | null>(null);
   const [footerDraft, setFooterDraft] = useState<string | null>(null);
 
@@ -126,10 +130,29 @@ const AgendaEditorPage = () => {
       ),
     });
     try {
-      await renameAgendaPage(agendaId, pageId, title);
+      await updateAgendaPage(agendaId, pageId, { title });
     } catch (error) {
       console.error('Error renaming page:', error);
       showNotification('Failed to rename the page', 'error');
+      fetchAll(false);
+    }
+  };
+
+  const handleSetPageFitMode = async (pageId: string, fitMode: AgendaFitMode) => {
+    if (!agenda) return;
+    setAgenda({
+      ...agenda,
+      customPages: agenda.customPages.map((p) =>
+        p.pageId === pageId ? { ...p, fitMode } : p
+      ),
+    });
+    try {
+      await updateAgendaPage(agendaId, pageId, { fitMode });
+      // Placement changes how the page prints — refresh manifest + preview
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error updating fit mode:', error);
+      showNotification('Failed to update image placement', 'error');
       fetchAll(false);
     }
   };
@@ -143,6 +166,24 @@ const AgendaEditorPage = () => {
     } catch (error) {
       console.error('Error deleting page:', error);
       showNotification('Failed to remove the page', 'error');
+    }
+  };
+
+  const handleSavePlacement = async (pageId: string, placement: Placement) => {
+    try {
+      await updateAgendaPage(agendaId, pageId, {
+        fitMode: placement.fitMode,
+        zoom: placement.zoom,
+        zoomY: placement.zoomY,
+        offsetX: placement.offsetX,
+        offsetY: placement.offsetY,
+      });
+      showNotification('Placement saved', 'success');
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error saving placement:', error);
+      showNotification('Failed to save placement', 'error');
+      throw error;
     }
   };
 
@@ -234,6 +275,7 @@ const AgendaEditorPage = () => {
                   onReorderSlot={handleReorderSlot}
                   onMovePage={handleMovePage}
                   onRenamePage={handleRenamePage}
+                  onSetPageFitMode={handleSetPageFitMode}
                   onDeletePage={handleDeletePage}
                   onAddPage={(slot) => setUploadSlot(slot)}
                   onSaveQuotes={handleSaveQuotes}
@@ -260,12 +302,25 @@ const AgendaEditorPage = () => {
                   refreshKey={refreshKey}
                   jumpToSeq={jumpToSeq}
                   onJumpConsumed={() => setJumpToSeq(null)}
+                  onAdjustImage={setAdjustingPageId}
                 />
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {adjustingPageId && agenda && (() => {
+        const page = agenda.customPages.find((p) => p.pageId === adjustingPageId);
+        return page ? (
+          <ImageAdjustModal
+            agendaId={agendaId}
+            page={page}
+            onClose={() => setAdjustingPageId(null)}
+            onSave={(placement) => handleSavePlacement(page.pageId, placement)}
+          />
+        ) : null;
+      })()}
 
       {uploadSlot && (
         <CustomPageUploadModal

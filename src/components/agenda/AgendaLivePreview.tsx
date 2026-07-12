@@ -12,6 +12,8 @@ import type {
   AgendaManifestItem,
 } from '@/services/types/agenda';
 import { renderAgendaMonth, getAgendaPageSignedUrl } from '@/services/agendaService';
+import { placementToCss, DEFAULT_PLACEMENT } from './imagePlacement';
+import { ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
 
 // Letter page at CSS 96dpi: 8.5in x 11in
 const PAGE_W = 816;
@@ -43,6 +45,8 @@ interface Props {
   /** Seq to scroll to (set by outline clicks); consumed once */
   jumpToSeq: number | null;
   onJumpConsumed: () => void;
+  /** Open the placement editor for an image page */
+  onAdjustImage?: (pageId: string) => void;
 }
 
 export default function AgendaLivePreview({
@@ -51,6 +55,7 @@ export default function AgendaLivePreview({
   refreshKey,
   jumpToSeq,
   onJumpConsumed,
+  onAdjustImage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -145,6 +150,7 @@ export default function AgendaLivePreview({
           }}
           getSignedUrl={getSignedUrl}
           getPdfDoc={getPdfDoc}
+          onAdjustImage={onAdjustImage}
         />
       ))}
     </div>
@@ -160,9 +166,10 @@ interface PageFrameProps {
   onNeedsContent: () => void;
   getSignedUrl: (pageId: string) => Promise<string | null>;
   getPdfDoc: (pageId: string) => Promise<PdfDocumentProxy>;
+  onAdjustImage?: (pageId: string) => void;
 }
 
-function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc }: PageFrameProps) {
+function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage }: PageFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -217,7 +224,21 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
               getPdfDoc={getPdfDoc}
             />
           ) : (
-            <ImagePageView pageId={item.pageId!} getSignedUrl={getSignedUrl} />
+            <>
+              <ImagePageView item={item} getSignedUrl={getSignedUrl} />
+              {onAdjustImage && (
+                <button
+                  type="button"
+                  onClick={() => onAdjustImage(item.pageId!)}
+                  className="group absolute inset-0 flex items-center justify-center bg-transparent hover:bg-slate-900/25 transition-colors cursor-pointer"
+                  title="Adjust size and position"
+                >
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 text-xs font-medium text-slate-700 shadow opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowsPointingOutIcon className="w-4 h-4" /> Adjust
+                  </span>
+                </button>
+              )}
+            </>
           )
         ) : (
           <div className="absolute inset-0 bg-slate-50" />
@@ -334,26 +355,48 @@ function PdfPageView({
 // ------------------------------------------------------------ ImagePageView
 
 function ImagePageView({
-  pageId,
+  item,
   getSignedUrl,
 }: {
-  pageId: string;
+  item: AgendaManifestItem;
   getSignedUrl: (pageId: string) => Promise<string | null>;
 }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    getSignedUrl(pageId).then((signed) => {
+    getSignedUrl(item.pageId!).then((signed) => {
       if (!cancelled) setUrl(signed);
     });
     return () => { cancelled = true; };
-  }, [pageId, getSignedUrl]);
+  }, [item.pageId, getSignedUrl]);
 
   if (!url) return <div className="absolute inset-0 animate-pulse bg-slate-100" />;
   return (
-    // Full-bleed cover crop, matching the assembler's placement math
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="Custom page" className="absolute inset-0 w-full h-full object-cover" />
+    <div className="absolute inset-0 bg-white overflow-hidden">
+      {/* Placement mirrors the assembler's placeImage() math exactly */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt="Custom page"
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+        }}
+        className="absolute max-w-none"
+        style={
+          natural
+            ? placementToCss(natural.w, natural.h, {
+                fitMode: item.fitMode || 'contain',
+                zoom: item.zoom ?? DEFAULT_PLACEMENT.zoom,
+                zoomY: item.zoomY ?? DEFAULT_PLACEMENT.zoomY,
+                offsetX: item.offsetX ?? DEFAULT_PLACEMENT.offsetX,
+                offsetY: item.offsetY ?? DEFAULT_PLACEMENT.offsetY,
+              })
+            : { opacity: 0 }
+        }
+      />
+    </div>
   );
 }

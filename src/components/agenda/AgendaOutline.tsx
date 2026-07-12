@@ -24,6 +24,7 @@ import type {
   AgendaCustomPagePayload,
   AgendaManifestPayload,
   AgendaAnchor,
+  AgendaFitMode,
 } from '@/services/types/agenda';
 import {
   PlusIcon,
@@ -50,6 +51,7 @@ interface Props {
   onReorderSlot: (slot: SlotId, orderedPageIds: string[]) => void;
   onMovePage: (pageId: string, anchor: AgendaAnchor, anchorMonth: number | null) => void;
   onRenamePage: (pageId: string, title: string) => void;
+  onSetPageFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
   onDeletePage: (pageId: string) => void;
   onAddPage: (slot: SlotId) => void;
   onSaveQuotes: (month: number, quotes: string[]) => void;
@@ -66,6 +68,7 @@ export default function AgendaOutline({
   onReorderSlot,
   onMovePage,
   onRenamePage,
+  onSetPageFitMode,
   onDeletePage,
   onAddPage,
   onSaveQuotes,
@@ -156,6 +159,7 @@ export default function AgendaOutline({
               monthOptions={monthOptions}
               onMove={onMovePage}
               onRename={onRenamePage}
+              onSetFitMode={onSetPageFitMode}
               onDelete={onDeletePage}
             />
           ))}

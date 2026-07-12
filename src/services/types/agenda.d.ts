@@ -2,6 +2,7 @@
 
 export type AgendaStatus = 'draft' | 'generating' | 'generated' | 'failed';
 export type AgendaAnchor = 'intro' | 'month' | 'closing';
+export type AgendaFitMode = 'contain' | 'cover';
 export type AgendaPageKind = 'custom' | 'monthOverview' | 'weekly' | 'notes' | 'evaluation';
 
 /**
@@ -46,6 +47,11 @@ export interface AgendaCustomPagePayload {
   fileType: 'pdf' | 'image';
   mimeType?: string | null;
   pageCount: number;
+  fitMode: AgendaFitMode;        // image placement baseline: fit whole page vs fill/crop
+  zoom: number;                  // horizontal scale multiplier (1 = exact fit, 0.2-4)
+  zoomY: number | null;          // vertical scale; null = uniform (follows zoom)
+  offsetX: number;               // shift from center, fraction of page width (+right)
+  offsetY: number;               // shift from center, fraction of page height (+down)
   createdAt: string;
   sizeWarning?: string | null;   // present on upload responses
 }
@@ -73,6 +79,11 @@ export interface AgendaManifestItem {
   pageId?: string;               // custom pages only
   title?: string | null;
   fileType?: 'pdf' | 'image';
+  fitMode?: AgendaFitMode;
+  zoom?: number;
+  zoomY?: number | null;
+  offsetX?: number;
+  offsetY?: number;
   sourcePageIndex?: number;
   sourcePageCount?: number;
   anchor?: AgendaAnchor;
