@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
@@ -11,6 +11,7 @@ import CustomPageUploadModal from '@/components/agenda/CustomPageUploadModal';
 import ImageAdjustModal from '@/components/agenda/ImageAdjustModal';
 import type { Placement } from '@/components/agenda/imagePlacement';
 import GeneratePanel from '@/components/agenda/GeneratePanel';
+import ThemePicker from '@/components/agenda/ThemePicker';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import {
   getAgendaById,
@@ -198,6 +199,26 @@ const AgendaEditorPage = () => {
     }
   };
 
+  const themeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleThemeChange = (background: string) => {
+    if (!agenda) return;
+    // Instant local feedback; debounce the save (the color input fires
+    // continuously while dragging the custom picker)
+    setAgenda({ ...agenda, theme: { ...agenda.theme, background } });
+    if (themeDebounceRef.current) clearTimeout(themeDebounceRef.current);
+    themeDebounceRef.current = setTimeout(async () => {
+      try {
+        await updateAgenda(agendaId, { theme: { background } });
+        showNotification('Page color updated', 'success');
+        fetchAll(true);
+      } catch (error) {
+        console.error('Error updating theme:', error);
+        showNotification('Failed to update page color', 'error');
+        fetchAll(false);
+      }
+    }, 400);
+  };
+
   const handleSaveFooter = async () => {
     if (footerDraft === null || !agenda) return;
     try {
@@ -238,6 +259,10 @@ const AgendaEditorPage = () => {
               </div>
               {agenda && (
                 <div className="flex items-center gap-2">
+                  <ThemePicker
+                    background={agenda.theme?.background || '#ffffff'}
+                    onChange={handleThemeChange}
+                  />
                   <input
                     type="text"
                     value={footerDraft ?? agenda.footerText ?? ''}

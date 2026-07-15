@@ -151,6 +151,7 @@ export default function AgendaLivePreview({
           getSignedUrl={getSignedUrl}
           getPdfDoc={getPdfDoc}
           onAdjustImage={onAdjustImage}
+          pageBackground={manifest.theme?.background}
         />
       ))}
     </div>
@@ -167,9 +168,10 @@ interface PageFrameProps {
   getSignedUrl: (pageId: string) => Promise<string | null>;
   getPdfDoc: (pageId: string) => Promise<PdfDocumentProxy>;
   onAdjustImage?: (pageId: string) => void;
+  pageBackground?: string;
 }
 
-function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage }: PageFrameProps) {
+function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, pageBackground }: PageFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -225,7 +227,11 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
             />
           ) : (
             <>
-              <ImagePageView item={item} getSignedUrl={getSignedUrl} />
+              <ImagePageView
+                item={item}
+                pageBackground={pageBackground}
+                getSignedUrl={getSignedUrl}
+              />
               {onAdjustImage && (
                 <button
                   type="button"
@@ -356,9 +362,11 @@ function PdfPageView({
 
 function ImagePageView({
   item,
+  pageBackground,
   getSignedUrl,
 }: {
   item: AgendaManifestItem;
+  pageBackground?: string;
   getSignedUrl: (pageId: string) => Promise<string | null>;
 }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -374,7 +382,10 @@ function ImagePageView({
 
   if (!url) return <div className="absolute inset-0 animate-pulse bg-slate-100" />;
   return (
-    <div className="absolute inset-0 bg-white overflow-hidden">
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ backgroundColor: pageBackground || '#ffffff' }}
+    >
       {/* Placement mirrors the assembler's placeImage() math exactly */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

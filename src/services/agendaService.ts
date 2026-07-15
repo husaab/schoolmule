@@ -40,6 +40,7 @@ export const updateAgenda = async (
     footerText?: string;
     includeNotesPage?: boolean;
     evaluationSubjects?: string[];
+    theme?: { background?: string };
   }
 ): Promise<AgendaResponse> => {
   return apiClient<AgendaResponse, typeof payload>(`/agendas/${encodeURIComponent(agendaId)}`, {

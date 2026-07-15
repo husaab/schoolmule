@@ -3,6 +3,18 @@
 export type AgendaStatus = 'draft' | 'generating' | 'generated' | 'failed';
 export type AgendaAnchor = 'intro' | 'month' | 'closing';
 export type AgendaFitMode = 'contain' | 'cover';
+
+/** Stored theme: page background hex; shading is derived server-side */
+export interface AgendaTheme {
+  background?: string;
+}
+
+/** Server-resolved theme colors (manifest payload) */
+export interface AgendaResolvedTheme {
+  background: string;
+  shade: string;
+  softShade: string;
+}
 export type AgendaPageKind = 'custom' | 'monthOverview' | 'weekly' | 'notes' | 'evaluation';
 
 /**
@@ -19,6 +31,7 @@ export interface AgendaPayload {
   footerText?: string | null;    // "School Name | www.website.ca"
   includeNotesPage: boolean;
   evaluationSubjects: string[];
+  theme: AgendaTheme;
   status: AgendaStatus;
   generatedFilePath?: string | null;
   generatedPageCount?: number | null;
@@ -92,6 +105,7 @@ export interface AgendaManifestItem {
 
 export interface AgendaManifestPayload {
   totalPages: number;
+  theme?: AgendaResolvedTheme;
   items: AgendaManifestItem[];
 }
 
