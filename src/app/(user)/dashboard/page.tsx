@@ -11,6 +11,7 @@ import Spinner from '@/components/Spinner'
 import StaffList from '@/components/staff/StaffList'
 import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
+import MyScheduleWidget from '@/components/schedulePlanner/MyScheduleWidget'
 import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
 import {
   LineChart, Line,
@@ -274,6 +275,9 @@ const DashboardPage: React.FC = () => {
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* My weekly schedule (only shows when a schedule is published) */}
+          <MyScheduleWidget />
 
           {/* Quick Actions */}
           <div className="mb-8">

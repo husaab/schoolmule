@@ -7,6 +7,7 @@ export interface SchoolPayload {
   schoolId: string;
   schoolCode: string;       // The enum value (e.g., "GREENWOOD_ACADEMY")
   name: string;
+  slug?: string;            // Public URL slug (e.g., "al-haadi-academy")
   address?: string;
   phone?: string;
   email?: string;

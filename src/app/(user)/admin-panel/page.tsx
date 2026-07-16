@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -59,6 +59,15 @@ const adminLinks = [
     color: 'bg-teal-500',
     bgColor: 'from-teal-50 to-emerald-50',
     borderColor: 'border-teal-100',
+  },
+  {
+    href: '/admin-panel/schedule-planner',
+    label: 'Schedule Planner',
+    description: 'Generate and publish weekly timetables from teacher availability.',
+    icon: TableCellsIcon,
+    color: 'bg-emerald-500',
+    bgColor: 'from-emerald-50 to-teal-50',
+    borderColor: 'border-emerald-100',
   },
   {
     href: '/admin-panel/agendas',

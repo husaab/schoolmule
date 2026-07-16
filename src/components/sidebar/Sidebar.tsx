@@ -24,6 +24,7 @@ import {
   PresentationChartLineIcon,
   UserCircleIcon,
   IdentificationIcon,
+  TableCellsIcon,
   SparklesIcon,
   TrophyIcon
 } from '@heroicons/react/24/outline';
@@ -74,6 +75,7 @@ const Sidebar = () => {
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
+  const isSchedulePlannerPath = pathname.startsWith('/admin-panel/schedule-planner');
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
@@ -307,10 +309,16 @@ const Sidebar = () => {
                 </DropdownSection>
 
                 <NavItem
+                  href="/admin-panel/schedule-planner"
+                  label="Schedule Planner"
+                  icon={TableCellsIcon}
+                  isActive={isSchedulePlannerPath}
+                />
+                <NavItem
                   href="/admin-panel"
                   label="Admin Panel"
                   icon={ShieldCheckIcon}
-                  isActive={pathname.startsWith('/admin-panel') && !isRegistrationPath}
+                  isActive={pathname.startsWith('/admin-panel') && !isRegistrationPath && !isSchedulePlannerPath}
                 />
                 <NavItem
                   href="/staff-attendance"

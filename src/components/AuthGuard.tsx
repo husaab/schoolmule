@@ -29,6 +29,12 @@ const isPublicFormPath = (path: string) => {
 
 // Per-school signup pages are public: /signup/{schoolSlug}
 const isPublicSignupPath = (path: string) => path.startsWith('/signup/');
+
+// Published schedule share links are public: /{schoolSlug}/schedule/{token}
+const isPublicSchedulePath = (path: string) => {
+  const segments = path.split('/').filter(Boolean);
+  return segments.length === 3 && segments[1] === 'schedule' && !KNOWN_APP_ROUTES.includes(segments[0]);
+};
 const PARENT_PATHS = ['/parent/dashboard', '/settings', '/parent/report-cards']
 
 // Check if path matches parent patterns (including dynamic routes)
@@ -107,7 +113,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     // Handle routing logic
-    if (!token && !PUBLIC_PATHS.includes(path) && !isPublicFormPath(path) && !isPublicSignupPath(path)) {
+    if (!token && !PUBLIC_PATHS.includes(path) && !isPublicFormPath(path) && !isPublicSignupPath(path) && !isPublicSchedulePath(path)) {
       router.replace('/')
     }
 
@@ -126,7 +132,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         router.replace('/school-approval')
       } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
-      } else if (user.role === 'PARENT' && !isParentPath(path)) {
+      } else if (user.role === 'PARENT' && !isParentPath(path) && !isPublicSchedulePath(path)) {
         router.replace("/parent/dashboard")
       }
     }
