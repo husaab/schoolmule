@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import {
@@ -58,6 +59,7 @@ type TabType = 'progress_report' | 'report_card'
 const SKGradebook = () => {
   const { classId } = useParams() as { classId: string }
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   // Core data
@@ -116,7 +118,7 @@ const SKGradebook = () => {
         if (res.status === 'success') setSubjects(res.data)
       })
       .catch(console.error)
-  }, [activeTab, user?.school])
+  }, [activeTab, user?.school, selectedYearId]) // refetch when the selected school year changes
 
   // Load student data when student or tab changes
   const loadStudentData = useCallback(async () => {

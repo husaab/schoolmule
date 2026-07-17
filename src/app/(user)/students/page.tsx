@@ -12,6 +12,7 @@ import StudentUnarchiveModal from '@/components/student/archive/studentUnarchive
 import { getAllStudents, getArchivedStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 import { getGradeOptions, getGradeNumericValue, getGradeDisplayName } from '@/lib/schoolUtils';
@@ -26,6 +27,7 @@ const StudentsContent = () => {
     // Free-text search keeps local state for snappy typing, seeded from URL.
     const [searchTerm, setSearchTerm] = useState(() => get('q'));
     const user = useUserStore((state) => state.user);
+    const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
     // Filters live in the URL so Back/refresh/share restore them.
     const gradeFilter = get('grade');
     const showArchived = get('archived') === '1';
@@ -58,7 +60,7 @@ const StudentsContent = () => {
         } finally {
             setLoading(false);
         }
-    }, [user.school, showArchived]);
+    }, [user.school, showArchived, selectedYearId]); // refetch when the selected school year changes
 
     useEffect(() => {
         loadStudents();

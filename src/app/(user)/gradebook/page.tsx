@@ -5,6 +5,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
@@ -17,6 +18,7 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 
 const GradebookDashboardContent: React.FC = () => {
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const { get, setParams } = useFilterParams()
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
@@ -75,7 +77,7 @@ const GradebookDashboardContent: React.FC = () => {
           console.error('Error loading terms:', err);
         });
     }
-  }, [user?.id, user?.school, user.role])
+  }, [user?.id, user?.school, user.role, selectedYearId]) // refetch when the selected school year changes
 
   // Build the unique list of grades for the classes this teacher teaches
   const availableGrades = getGradeOptions()

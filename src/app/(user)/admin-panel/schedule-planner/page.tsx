@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getPlannerConfig, listSchedules } from '@/services/schedulePlannerService'
 import { getSchoolByCode } from '@/services/schoolService'
 import type { PlannerConfig, ScheduleSummary } from '@/services/types/schedulePlanner'
@@ -28,6 +29,7 @@ const SchedulePlannerPage = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const hasHydrated = useUserStore((state) => state.hasHydrated)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   const [activeTab, setActiveTab] = useState<TabKey>('schedules')
   const [config, setConfig] = useState<PlannerConfig | null>(null)
@@ -67,7 +69,7 @@ const SchedulePlannerPage = () => {
         if (res.status === 'success') setSchoolSlug(res.data.slug || null)
       })
       .catch(() => {})
-  }, [hasHydrated, user, router, refresh])
+  }, [hasHydrated, user, router, refresh, selectedYearId]) // refetch when the selected school year changes
 
   return (
     <>

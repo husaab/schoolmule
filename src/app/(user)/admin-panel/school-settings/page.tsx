@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool, updateTermStatus } from '@/services/termService'
 import { getSchoolByCode, updateSchool } from '@/services/schoolService'
@@ -14,11 +15,13 @@ import { PlusIcon, PencilIcon, TrashIcon, BuildingOfficeIcon } from '@heroicons/
 import TermAddModal from '@/components/terms/add/termAddModal'
 import TermEditModal from '@/components/terms/edit/termEditModal'
 import TermDeleteModal from '@/components/terms/delete/termDeleteModal'
+import SchoolYearsSection from '@/components/school-years/SchoolYearsSection'
 
 const SchoolSettingsPage = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const hasHydrated = useUserStore((state) => state.hasHydrated)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
 
   const [terms, setTerms] = useState<TermPayload[]>([])
@@ -81,7 +84,7 @@ const SchoolSettingsPage = () => {
       console.error('Error fetching terms:', err)
       setError('Error fetching terms')
     }
-  }, [user.school]);
+  }, [user.school, selectedYearId]); // refetch when the selected school year changes
 
   useEffect(() => {
     // Wait for hydration before checking user
@@ -414,6 +417,9 @@ const SchoolSettingsPage = () => {
               )}
             </div>
           </div>
+
+          {/* School Years Section */}
+          <SchoolYearsSection />
 
           {/* Terms Management Section */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm">

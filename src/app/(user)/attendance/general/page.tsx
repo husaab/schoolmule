@@ -6,6 +6,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { format } from 'date-fns-tz';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import {
@@ -24,6 +25,7 @@ function GeneralAttendanceContent() {
   const [students, setStudents] = useState<StudentPayload[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus | null>>({});
   const user = useUserStore((state) => state.user);
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const showNotification = useNotificationStore(state => state.showNotification)
 
   // Free-text search keeps local state for snappy typing, seeded from URL.
@@ -65,7 +67,7 @@ function GeneralAttendanceContent() {
         console.error('Failed to load attendance for date:', selectedDate);
       }
     });
-  }, [selectedDate, user.school]);
+  }, [selectedDate, user.school, selectedYearId]); // refetch when the selected school year changes
   
 
   useEffect(() => {
@@ -78,7 +80,7 @@ function GeneralAttendanceContent() {
         }
       });
     }
-  }, [user.school]);
+  }, [user.school, selectedYearId]); // refetch when the selected school year changes
 
   const handleSelect = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({

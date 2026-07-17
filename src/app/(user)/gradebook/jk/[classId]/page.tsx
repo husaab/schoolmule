@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getClassById, getStudentsInClass } from '@/services/classService'
 import {
@@ -77,6 +78,7 @@ const JKGradebook = () => {
   const { classId } = useParams() as { classId: string }
   const router = useRouter()
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   // Core data
@@ -137,7 +139,7 @@ const JKGradebook = () => {
         if (res.status === 'success') setDomains(res.data)
       })
       .catch(console.error)
-  }, [activeTab, user?.school])
+  }, [activeTab, user?.school, selectedYearId]) // refetch when the selected school year changes
 
   // Load student data when student or tab changes
   const loadStudentData = useCallback(async () => {

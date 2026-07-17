@@ -9,6 +9,7 @@ import { getClassById } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService'
@@ -39,6 +40,7 @@ export default function EditClassPage() {
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   // ───── Class ─────
   const [classData, setClassData] = useState<ClassPayload | null>(null)
@@ -131,7 +133,7 @@ export default function EditClassPage() {
 
     fetchTeachers()
     fetchTerms()
-  }, [user.school, showNotification])
+  }, [user.school, showNotification, selectedYearId]) // refetch when the selected school year changes
 
   // ───── Section navigation ─────
   const grade = classData?.grade

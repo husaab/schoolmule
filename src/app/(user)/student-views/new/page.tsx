@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import CriteriaBuilder from '@/components/studentViews/CriteriaBuilder'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getAllClasses } from '@/services/classService'
@@ -35,6 +36,7 @@ export default function NewStudentViewPage() {
   const duplicateFromId = searchParams.get('duplicateFrom')
 
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const [name, setName] = useState('')
@@ -60,7 +62,7 @@ export default function NewStudentViewPage() {
         setSubjects(unique)
       })
       .catch(() => {})
-  }, [user?.school])
+  }, [user?.school, selectedYearId]) // refetch when the selected school year changes
 
   // Pre-fill state from a source view when ?duplicateFrom=<viewId> is present.
   // Visibility inherits from the source; isSystem only sticks for admins.
