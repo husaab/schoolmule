@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore, useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 import { getSchoolYears } from '@/services/schoolYearService'
-import { CalendarDaysIcon } from '@heroicons/react/24/outline'
 
 export default function SchoolYearSelector() {
   const hasHydrated = useYearStoreHydrated()
@@ -27,7 +26,6 @@ export default function SchoolYearSelector() {
 
   return (
     <div className="flex items-center gap-2">
-      <CalendarDaysIcon className="h-5 w-5 text-slate-400 hidden sm:block" />
       <select
         value={selected?.schoolYearId ?? ''}
         onChange={(e) => selectYear(e.target.value)}
