@@ -5,7 +5,7 @@ import type {
   ScheduleSession,
 } from '@/services/types/schedulePlanner';
 
-export type PlannerViewMode = 'classGroup' | 'teacher';
+export type PlannerViewMode = 'classGroup' | 'teacher' | 'day';
 
 /** Stable identity for a pinnable session within a candidate. */
 export const sessionKey = (s: ScheduleSession) => `${s.courseId}:${s.sessionIndex}`;

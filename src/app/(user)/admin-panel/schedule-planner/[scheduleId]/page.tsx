@@ -26,6 +26,7 @@ import type {
   SolverDiagnostic,
 } from '@/services/types/schedulePlanner'
 import WeeklyGrid, { type GridSession } from '@/components/schedulePlanner/WeeklyGrid'
+import { dayLabel } from '@/components/schedulePlanner/timeUtils'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
@@ -149,14 +150,20 @@ const ScheduleWorkspacePage = () => {
     [config]
   )
 
-  // Which entity is displayed
-  const classGroupIds = useMemo(
-    () => [...new Set(workingSessions.map((s) => s.classGroupId))],
-    [workingSessions]
-  )
+  // Which entity is displayed — chips follow the configured class-group order
+  // (sort_order, then name), not session-appearance order.
+  const classGroupIds = useMemo(() => {
+    const present = new Set(workingSessions.map((s) => s.classGroupId))
+    const configOrder = (config?.classGroups ?? []).map((g) => g.classGroupId).filter((id) => present.has(id))
+    const unknown = [...present].filter((id) => !configOrder.includes(id))
+    return [...configOrder, ...unknown]
+  }, [workingSessions, config])
   const teacherIds = useMemo(
-    () => [...new Set(workingSessions.map((s) => s.teacherId))],
-    [workingSessions]
+    () =>
+      [...new Set(workingSessions.map((s) => s.teacherId))].sort((a, b) =>
+        teacherName(a).localeCompare(teacherName(b))
+      ),
+    [workingSessions, teacherName]
   )
   const activeGroupId = selectedClassGroupId && classGroupIds.includes(selectedClassGroupId)
     ? selectedClassGroupId
@@ -165,23 +172,33 @@ const ScheduleWorkspacePage = () => {
   const activeTeacherId = selectedTeacher && teacherIds.includes(selectedTeacher)
     ? selectedTeacher
     : teacherIds[0] ?? null
+  const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  const activeDay = selectedDay && days.includes(selectedDay) ? selectedDay : days[0] ?? 1
 
-  const visibleSessions: GridSession[] = useMemo(() => {
-    const filtered =
-      viewMode === 'classGroup'
-        ? workingSessions.filter((s) => s.classGroupId === activeGroupId)
-        : workingSessions.filter((s) => s.teacherId === activeTeacherId)
-    return filtered.map((s) => ({
+  const toGridSession = useCallback(
+    (s: ScheduleSession, subtitle: string): GridSession => ({
       id: sessionKey(s),
       day: s.day,
       startMin: s.startMin,
       endMin: s.endMin,
       title: s.courseName,
-      subtitle: viewMode === 'classGroup' ? teacherName(s.teacherId) : groupName(s.classGroupId),
+      subtitle,
       roomName: roomName(s.roomId),
       pinned: pinnedKeys.has(sessionKey(s)),
-    }))
-  }, [workingSessions, viewMode, activeGroupId, activeTeacherId, pinnedKeys, teacherName, groupName, roomName])
+    }),
+    [roomName, pinnedKeys]
+  )
+
+  const visibleSessions: GridSession[] = useMemo(() => {
+    if (viewMode === 'day') return []
+    const filtered =
+      viewMode === 'classGroup'
+        ? workingSessions.filter((s) => s.classGroupId === activeGroupId)
+        : workingSessions.filter((s) => s.teacherId === activeTeacherId)
+    return filtered.map((s) =>
+      toGridSession(s, viewMode === 'classGroup' ? teacherName(s.teacherId) : groupName(s.classGroupId))
+    )
+  }, [workingSessions, viewMode, activeGroupId, activeTeacherId, teacherName, groupName, toGridSession])
 
   const gridFixedBlocks = useMemo(() => {
     return (config?.fixedBlocks ?? [])
@@ -192,6 +209,28 @@ const ScheduleWorkspacePage = () => {
       )
       .map((b) => ({ day: b.dayOfWeek, startMin: b.startMin, endMin: b.endMin, label: b.label }))
   }, [config, viewMode, activeGroupId])
+
+  // "By day" master view: one column per class group for the selected day,
+  // each with its own breaks and shading.
+  const dayColumns = useMemo(() => {
+    if (viewMode !== 'day') return []
+    const dayFillable = fillableRangesByDay[activeDay]
+    return classGroupIds.map((groupId) => ({
+      key: groupId,
+      label: groupName(groupId),
+      sessions: workingSessions
+        .filter((s) => s.classGroupId === groupId && s.day === activeDay)
+        .map((s) => toGridSession(s, teacherName(s.teacherId))),
+      fixedBlocks: (config?.fixedBlocks ?? [])
+        .filter(
+          (b) =>
+            b.dayOfWeek === activeDay &&
+            (b.classGroupIds.length === 0 || b.classGroupIds.includes(groupId))
+        )
+        .map((b) => ({ day: b.dayOfWeek, startMin: b.startMin, endMin: b.endMin, label: b.label })),
+      fillableRanges: dayFillable,
+    }))
+  }, [viewMode, activeDay, classGroupIds, workingSessions, config, fillableRangesByDay, groupName, teacherName, toGridSession])
 
   const handleGenerate = async () => {
     setGenerating(true)
@@ -361,6 +400,12 @@ const ScheduleWorkspacePage = () => {
                   >
                     By teacher
                   </button>
+                  <button
+                    onClick={() => setViewMode('day')}
+                    className={`px-3 py-1.5 cursor-pointer ${viewMode === 'day' ? 'bg-cyan-600 text-white' : 'bg-white text-gray-600'}`}
+                  >
+                    By day
+                  </button>
                 </div>
 
                 <button
@@ -437,48 +482,72 @@ const ScheduleWorkspacePage = () => {
               {/* Entity selector */}
               {workingSessions.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                  {viewMode === 'classGroup'
-                    ? classGroupIds.map((id) => (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedClassGroupId(id)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
-                            id === activeGroupId
-                              ? 'bg-cyan-600 text-white border-cyan-600'
-                              : 'bg-white text-gray-600 border-gray-300 hover:border-cyan-400'
-                          }`}
-                        >
-                          {groupName(id)}
-                        </button>
-                      ))
-                    : teacherIds.map((id) => (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedTeacher(id)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
-                            id === activeTeacherId
-                              ? 'bg-cyan-600 text-white border-cyan-600'
-                              : 'bg-white text-gray-600 border-gray-300 hover:border-cyan-400'
-                          }`}
-                        >
-                          {teacherName(id)}
-                        </button>
-                      ))}
+                  {viewMode === 'classGroup' &&
+                    classGroupIds.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setSelectedClassGroupId(id)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                          id === activeGroupId
+                            ? 'bg-cyan-600 text-white border-cyan-600'
+                            : 'bg-white text-gray-600 border-gray-300 hover:border-cyan-400'
+                        }`}
+                      >
+                        {groupName(id)}
+                      </button>
+                    ))}
+                  {viewMode === 'teacher' &&
+                    teacherIds.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setSelectedTeacher(id)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                          id === activeTeacherId
+                            ? 'bg-cyan-600 text-white border-cyan-600'
+                            : 'bg-white text-gray-600 border-gray-300 hover:border-cyan-400'
+                        }`}
+                      >
+                        {teacherName(id)}
+                      </button>
+                    ))}
+                  {viewMode === 'day' &&
+                    days.map((day) => (
+                      <button
+                        key={day}
+                        onClick={() => setSelectedDay(day)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                          day === activeDay
+                            ? 'bg-cyan-600 text-white border-cyan-600'
+                            : 'bg-white text-gray-600 border-gray-300 hover:border-cyan-400'
+                        }`}
+                      >
+                        {dayLabel(day)}
+                      </button>
+                    ))}
                 </div>
               )}
 
               {/* Grid */}
               {workingSessions.length > 0 ? (
                 <div className="border border-gray-200 rounded-lg p-3">
-                  <WeeklyGrid
-                    sessions={visibleSessions}
-                    days={days}
-                    rangeStartMin={rangeStartMin}
-                    rangeEndMin={rangeEndMin}
-                    fixedBlocks={gridFixedBlocks}
-                    fillableRangesByDay={fillableRangesByDay}
-                    onTogglePin={togglePin}
-                  />
+                  {viewMode === 'day' ? (
+                    <WeeklyGrid
+                      columns={dayColumns}
+                      rangeStartMin={rangeStartMin}
+                      rangeEndMin={rangeEndMin}
+                      onTogglePin={togglePin}
+                    />
+                  ) : (
+                    <WeeklyGrid
+                      sessions={visibleSessions}
+                      days={days}
+                      rangeStartMin={rangeStartMin}
+                      rangeEndMin={rangeEndMin}
+                      fixedBlocks={gridFixedBlocks}
+                      fillableRangesByDay={fillableRangesByDay}
+                      onTogglePin={togglePin}
+                    />
+                  )}
                 </div>
               ) : (
                 !generating &&
