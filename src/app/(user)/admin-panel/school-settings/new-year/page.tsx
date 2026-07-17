@@ -25,6 +25,8 @@ export default function NewYearWizard() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<RolloverSummary | null>(null)
+  const [createdYearId, setCreatedYearId] = useState<string | null>(null)
+  const [rolloverError, setRolloverError] = useState<string | null>(null)
 
   // Step 1 — year basics
   const [label, setLabel] = useState('')
@@ -86,22 +88,40 @@ export default function NewYearWizard() {
 
   const submit = async () => {
     setSubmitting(true)
+    setRolloverError(null)
     try {
-      const created = await createSchoolYear({ label, startDate, endDate })
-      const yearId = created.data.schoolYearId
-      const res = await executeRollover(yearId, {
-        students: { mode: studentsMode, excludeStudentIds: [...excluded], gradeOverrides },
-        classes: { mode: classesMode, excludeClassIds: [...excludedClasses] },
-        terms,
-        copyPlanner,
-        copyCalendar,
-      })
-      setResult(res.data)
-      const refreshed = await getSchoolYears()
-      if (refreshed.status === 'success') setYears(refreshed.data)
-      showNotification(`${label} created`, 'success')
-    } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Rollover failed — nothing was created for the new year’s data', 'error')
+      let yearId = createdYearId
+      if (!yearId) {
+        try {
+          const created = await createSchoolYear({ label, startDate, endDate })
+          yearId = created.data.schoolYearId
+          setCreatedYearId(yearId)
+        } catch (err) {
+          showNotification(err instanceof Error ? err.message : 'Failed to create the new year — nothing was created', 'error')
+          return
+        }
+      }
+
+      try {
+        const res = await executeRollover(yearId, {
+          students: { mode: studentsMode, excludeStudentIds: [...excluded], gradeOverrides },
+          classes: { mode: classesMode, excludeClassIds: [...excludedClasses] },
+          terms,
+          copyPlanner,
+          copyCalendar,
+        })
+        setResult(res.data)
+        setCreatedYearId(null)
+        const refreshed = await getSchoolYears()
+        if (refreshed.status === 'success') setYears(refreshed.data)
+        showNotification(`${label} created`, 'success')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        setRolloverError(
+          `"${label}" was created as a draft year, but copying data failed: ${message}. Fix the issue and press Create again to retry into the same year, or delete the draft in School Settings.`
+        )
+        showNotification('Copying data into the new year failed — see the message below to retry', 'error')
+      }
     } finally { setSubmitting(false) }
   }
 
@@ -240,7 +260,12 @@ export default function NewYearWizard() {
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Graduating</span>
                                 ) : null}
                                 <select value={gradeOverrides[s.studentId] ?? s.proposedGrade ?? ''}
-                                  onChange={(e) => setGradeOverrides((prev) => ({ ...prev, [s.studentId]: e.target.value }))}
+                                  onChange={(e) => setGradeOverrides((prev) => {
+                                    const value = e.target.value
+                                    const next = { ...prev }
+                                    if (value) next[s.studentId] = value; else delete next[s.studentId]
+                                    return next
+                                  })}
                                   className="ml-2 border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white">
                                   {s.isGraduating && <option value="">—</option>}
                                   {['JK', 'SK', '1', '2', '3', '4', '5', '6', '7', '8'].map((g) => (
@@ -341,6 +366,13 @@ export default function NewYearWizard() {
           )}
         </div>
 
+        {rolloverError && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 text-amber-500" />
+            <span>{rolloverError}</span>
+          </div>
+        )}
+
         <div className="flex justify-between">
           <button disabled={step === 0} onClick={() => setStep((s) => s - 1)}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm border border-slate-200 text-slate-600 disabled:opacity-40">
@@ -354,7 +386,7 @@ export default function NewYearWizard() {
           ) : (
             <button disabled={submitting} onClick={submit}
                     className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-teal-500 disabled:opacity-50">
-              {submitting ? 'Creating year…' : `Create ${label}`}
+              {submitting ? 'Creating year…' : createdYearId ? `Retry ${label}` : `Create ${label}`}
             </button>
           )}
         </div>
