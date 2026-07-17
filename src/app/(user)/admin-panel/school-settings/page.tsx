@@ -14,6 +14,7 @@ import { PlusIcon, PencilIcon, TrashIcon, BuildingOfficeIcon } from '@heroicons/
 import TermAddModal from '@/components/terms/add/termAddModal'
 import TermEditModal from '@/components/terms/edit/termEditModal'
 import TermDeleteModal from '@/components/terms/delete/termDeleteModal'
+import SchoolYearsSection from '@/components/school-years/SchoolYearsSection'
 
 const SchoolSettingsPage = () => {
   const router = useRouter()
@@ -414,6 +415,9 @@ const SchoolSettingsPage = () => {
               )}
             </div>
           </div>
+
+          {/* School Years Section */}
+          <SchoolYearsSection />
 
           {/* Terms Management Section */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
