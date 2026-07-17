@@ -203,19 +203,24 @@ export default function NewYearWizard() {
 
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
           {step === 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Year label</label>
-                <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="2026-2027" className={`${inputCls} w-full`} />
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Year label</label>
+                  <input disabled={!!createdYearId} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="2026-2027" className={`${inputCls} w-full disabled:opacity-60 disabled:cursor-not-allowed`} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">First day</label>
+                  <input disabled={!!createdYearId} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`${inputCls} w-full disabled:opacity-60 disabled:cursor-not-allowed`} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Last day</label>
+                  <input disabled={!!createdYearId} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={`${inputCls} w-full disabled:opacity-60 disabled:cursor-not-allowed`} />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">First day</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`${inputCls} w-full`} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Last day</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={`${inputCls} w-full`} />
-              </div>
+              {createdYearId && (
+                <p className="text-xs text-amber-600 mt-1">This year was already created as a draft — to change its name or dates, delete the draft in School Settings and start over.</p>
+              )}
             </div>
           )}
 
