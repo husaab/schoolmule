@@ -20,9 +20,14 @@ export const useSchoolYearStore = create<SchoolYearStore>()(
         const { selectedYearId } = get();
         const stillExists = years.some((y) => y.schoolYearId === selectedYearId);
         const active = years.find((y) => y.isActive) || null;
+        // First-year bootstrap: no active year yet, but exactly one (draft)
+        // year exists. Select it rather than leaving selection null — a
+        // null selection with a sole year would otherwise be a dead end for
+        // the selector to recover from.
+        const fallback = active?.schoolYearId ?? (years.length === 1 ? years[0].schoolYearId : null);
         set({
           years,
-          selectedYearId: stillExists ? selectedYearId : active?.schoolYearId ?? null,
+          selectedYearId: stillExists ? selectedYearId : fallback,
         });
       },
       selectYear: (id) => set({ selectedYearId: id }),
