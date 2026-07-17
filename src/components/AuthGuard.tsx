@@ -81,6 +81,10 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
               activeTerm: userData.activeTerm || null
             })
 
+            const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
+            useSchoolYearStore.getState().setYears(userData.schoolYears ?? [])
+            useSchoolYearStore.getState().selectYear(userData.activeSchoolYear?.schoolYearId ?? null)
+
             // Check for unread patch notes
             try {
               const patchRes = await getUnreadPatchNotes()

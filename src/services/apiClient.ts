@@ -1,4 +1,5 @@
 // services/apiClient.ts
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -19,12 +20,16 @@ async function apiClient<T, B = unknown>(
         { method = 'GET', body, headers = {} }: ApiClientOptions<B> = {}
 ): Promise<T> {
     const token = getToken();
-    
+
+    const selectedYearId =
+        typeof window === 'undefined' ? null : useSchoolYearStore.getState().selectedYearId;
+
     const config: RequestInit = {
         method,
         headers: {
             'Content-Type': 'application/json',
             ...(token && { Authorization: `Bearer ${token}` }),
+            ...(selectedYearId && { 'X-School-Year': selectedYearId }),
             ...headers,
         },
         // Remove credentials since we're using JWT tokens instead of cookies
@@ -48,6 +53,7 @@ async function apiClient<T, B = unknown>(
                 const { useUserStore } = await import('@/store/useUserStore');
                 const { useNotificationStore } = await import('@/store/useNotificationStore');
                 useUserStore.getState().clearUser();
+                useSchoolYearStore.getState().clearYears();
                 useNotificationStore.getState().showNotification("Your login session has expired, please login again", "error")
                 window.location.href = '/';
             }

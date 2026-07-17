@@ -95,6 +95,11 @@ const SignupForm: FC<SignupFormProps> = ({ school }) => {
           isVerifiedSchool: response.data.isVerifiedSchool,
           activeTerm: response.data.activeTerm
         })
+
+        const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
+        useSchoolYearStore.getState().setYears(response.data.schoolYears ?? [])
+        useSchoolYearStore.getState().selectYear(response.data.activeSchoolYear?.schoolYearId ?? null)
+
         router.replace('/verify-email')
       }
     } catch {
