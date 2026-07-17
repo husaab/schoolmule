@@ -9,7 +9,6 @@ import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
-import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchedulePlannerStore, sessionKey } from '@/store/useSchedulePlannerStore'
 import {
@@ -44,7 +43,6 @@ const ScheduleWorkspacePage = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const hasHydrated = useUserStore((state) => state.hasHydrated)
-  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const {
@@ -106,7 +104,7 @@ const ScheduleWorkspacePage = () => {
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, user, scheduleId, selectedYearId]) // refetch when the selected school year changes
+  }, [hasHydrated, user, scheduleId]) // scheduleId pins its year; don't reload on header year switch (would wipe unsaved workspace state)
 
   // Grid frame from config
   const days = useMemo(() => {

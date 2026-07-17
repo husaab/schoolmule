@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid';
 import EventFormModal from '@/components/calendar/EventFormModal';
 import { useUserStore } from '@/store/useUserStore';
-import { useSchoolYearStore } from '@/store/useSchoolYearStore';
+import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getEventsByAcademicYear } from '@/services/calendarEventService';
 import type { CalendarEventPayload } from '@/services/types/calendarEvent';
@@ -31,6 +31,7 @@ const buildAcademicYearOptions = (): string[] => {
 const SchoolCalendarPage = () => {
   const user = useUserStore((state) => state.user);
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
+  const selectedYear = useSelectedYear();
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const yearOptions = useMemo(buildAcademicYearOptions, []);
@@ -63,6 +64,22 @@ const SchoolCalendarPage = () => {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // ── Keep the local academic-year dropdown in sync with the header year ──
+  // The X-School-Year header already scopes the refetch correctly, but the
+  // local dropdown/date-range can still point at the old year, making the
+  // (correctly-filtered) results look empty. Skip the initial mount/hydration
+  // — only react to an actual change of selectedYearId after the page loads —
+  // and only snap the dropdown when the newly-selected year's label is one of
+  // this page's academic-year options; otherwise leave it as-is.
+  const yearIdRef = useRef(selectedYearId);
+  useEffect(() => {
+    if (yearIdRef.current === selectedYearId) return;
+    yearIdRef.current = selectedYearId;
+    if (selectedYear?.label && yearOptions.includes(selectedYear.label)) {
+      setAcademicYear(selectedYear.label);
+    }
+  }, [selectedYearId, selectedYear, yearOptions]);
 
   const monthEvents = useMemo(() => {
     const pad = (n: number) => String(n).padStart(2, '0');

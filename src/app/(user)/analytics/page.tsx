@@ -5,7 +5,7 @@
 // All drill/filter state lives in the URL (useAnalyticsParams);
 // the AI components read the current view via useAnalyticsStore.
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -67,6 +67,19 @@ const AnalyticsContent: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [terms, params.termId])
+
+  // ── Clear the (URL-persisted) term when the header year changes ───
+  // termId survives a year switch since it lives in the URL, so without this
+  // the drill-down would keep showing the old year's term data until the
+  // user manually picks a new term. Skip the initial mount/hydration — only
+  // react to an actual change of selectedYearId after the page has loaded.
+  const yearIdRef = useRef(selectedYearId)
+  useEffect(() => {
+    if (yearIdRef.current === selectedYearId) return
+    yearIdRef.current = selectedYearId
+    params.setParams({ termId: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYearId])
 
   // ── Data hooks (overview always — it powers school/grade views AND
   //    the control-bar filter lists; class/student fetch on demand) ──
