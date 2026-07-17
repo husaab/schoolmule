@@ -23,6 +23,7 @@ interface TeacherForm {
   displayName: string
   isFullTime: boolean
   maxWeeklyHours: string
+  dailySpareMinutes: string
   allowedDays: number[]
   excludedWindows: TimeWindow[]
   notes: string
@@ -33,6 +34,7 @@ const emptyForm: TeacherForm = {
   displayName: '',
   isFullTime: true,
   maxWeeklyHours: '',
+  dailySpareMinutes: '',
   allowedDays: [1, 2, 3, 4, 5],
   excludedWindows: [],
   notes: '',
@@ -66,6 +68,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
       displayName: t.displayName,
       isFullTime: t.isFullTime,
       maxWeeklyHours: t.maxWeeklyMinutes != null ? String(t.maxWeeklyMinutes / 60) : '',
+      dailySpareMinutes: t.dailySpareMinutes != null ? String(t.dailySpareMinutes) : '',
       allowedDays: t.allowedDays,
       excludedWindows: t.excludedWindows,
       notes: t.notes || '',
@@ -121,10 +124,16 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
       showNotification('Max weekly hours must be a positive number', 'error')
       return
     }
+    const spare = form.dailySpareMinutes.trim() === '' ? null : parseInt(form.dailySpareMinutes, 10)
+    if (spare !== null && (!Number.isInteger(spare) || spare <= 0)) {
+      showNotification('Daily spare must be a positive number of minutes', 'error')
+      return
+    }
     const payload = {
       displayName: form.displayName.trim(),
       isFullTime: form.isFullTime,
       maxWeeklyMinutes: maxHours === null ? null : Math.round(maxHours * 60),
+      dailySpareMinutes: spare,
       allowedDays: form.allowedDays,
       excludedWindows: form.excludedWindows,
       notes: form.notes.trim() || null,
@@ -215,6 +224,20 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
                 onChange={(e) => setForm((f) => ({ ...f, maxWeeklyHours: e.target.value }))}
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
                 placeholder="e.g. 20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Daily spare (min/day, blank = none)
+              </label>
+              <input
+                type="number"
+                min="5"
+                step="5"
+                value={form.dailySpareMinutes}
+                onChange={(e) => setForm((f) => ({ ...f, dailySpareMinutes: e.target.value }))}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                placeholder="e.g. 45"
               />
             </div>
             <div>
@@ -329,6 +352,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Type</th>
                 <th className="py-2 pr-4">Max hrs/wk</th>
+                <th className="py-2 pr-4">Spare/day</th>
                 <th className="py-2 pr-4">Days</th>
                 <th className="py-2 pr-4">Excluded times</th>
                 <th className="py-2" />
@@ -341,6 +365,9 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
                   <td className="py-2 pr-4">{t.isFullTime ? 'Full-time' : 'Part-time'}</td>
                   <td className="py-2 pr-4">
                     {t.maxWeeklyMinutes != null ? (t.maxWeeklyMinutes / 60).toFixed(1) : '—'}
+                  </td>
+                  <td className="py-2 pr-4">
+                    {t.dailySpareMinutes != null ? `${t.dailySpareMinutes} min` : '—'}
                   </td>
                   <td className="py-2 pr-4">
                     {t.allowedDays.map((d) => dayLabel(d, true)).join(', ')}

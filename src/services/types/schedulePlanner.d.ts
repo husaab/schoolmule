@@ -26,6 +26,8 @@ export interface PlannerTeacher {
   displayName: string;
   isFullTime: boolean;
   maxWeeklyMinutes?: number | null;
+  /** Contiguous free minutes required on any day this teacher teaches */
+  dailySpareMinutes?: number | null;
   allowedDays: number[];
   excludedWindows: TimeWindow[];
   notes?: string | null;
@@ -69,7 +71,8 @@ export interface DayTemplate {
 
 export interface FixedBlock {
   fixedBlockId: string;
-  classGroupId?: string | null;
+  /** Class groups this block applies to; empty = whole school */
+  classGroupIds: string[];
   label: string;
   dayOfWeek: number;
   startMin: number;

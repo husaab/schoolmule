@@ -49,8 +49,17 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
     dayOfWeek: 0, // 0 = every listed day
     startMin: 720,
     endMin: 760,
-    classGroupId: '',
+    classGroupIds: [] as string[], // empty = whole school
   })
+
+  const toggleBlockGroup = (id: string) => {
+    setBlockForm((f) => ({
+      ...f,
+      classGroupIds: f.classGroupIds.includes(id)
+        ? f.classGroupIds.filter((x) => x !== id)
+        : [...f.classGroupIds, id],
+    }))
+  }
 
   const activeDayNumbers = days.filter((d) => d.fillableRanges.length > 0).map((d) => d.dayOfWeek)
 
@@ -149,7 +158,7 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
           dayOfWeek: day,
           startMin: blockForm.startMin,
           endMin: blockForm.endMin,
-          classGroupId: blockForm.classGroupId || null,
+          classGroupIds: blockForm.classGroupIds,
         })
       }
       showNotification('Fixed block added', 'success')
@@ -329,19 +338,34 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Applies to</label>
-            <select
-              value={blockForm.classGroupId}
-              onChange={(e) => setBlockForm((f) => ({ ...f, classGroupId: e.target.value }))}
-              className="border border-gray-300 rounded px-2 py-1 text-sm"
-            >
-              <option value="">Whole school</option>
+            <label className="block text-xs text-gray-600 mb-1">
+              Applies to (none selected = whole school)
+            </label>
+            <div className="flex flex-wrap gap-1 max-w-md">
+              <button
+                onClick={() => setBlockForm((f) => ({ ...f, classGroupIds: [] }))}
+                className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                  blockForm.classGroupIds.length === 0
+                    ? 'bg-cyan-600 text-white border-cyan-600'
+                    : 'bg-white text-gray-500 border-gray-300'
+                }`}
+              >
+                Whole school
+              </button>
               {classGroups.map((g) => (
-                <option key={g.classGroupId} value={g.classGroupId}>
-                  {g.name} only
-                </option>
+                <button
+                  key={g.classGroupId}
+                  onClick={() => toggleBlockGroup(g.classGroupId)}
+                  className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                    blockForm.classGroupIds.includes(g.classGroupId)
+                      ? 'bg-cyan-600 text-white border-cyan-600'
+                      : 'bg-white text-gray-500 border-gray-300'
+                  }`}
+                >
+                  {g.name}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <button
             onClick={handleAddBlock}
@@ -363,9 +387,13 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
                 <span className="text-gray-500">
                   {dayLabel(b.dayOfWeek, true)} {formatMin(b.startMin)}–{formatMin(b.endMin)}
                 </span>
-                {b.classGroupId && (
+                {b.classGroupIds.length > 0 && (
                   <span className="text-cyan-700">
-                    ({classGroups.find((g) => g.classGroupId === b.classGroupId)?.name || '?'})
+                    (
+                    {b.classGroupIds
+                      .map((id) => classGroups.find((g) => g.classGroupId === id)?.name || '?')
+                      .join(', ')}
+                    )
                   </span>
                 )}
                 <button onClick={() => handleDeleteBlock(b)} className="cursor-pointer">

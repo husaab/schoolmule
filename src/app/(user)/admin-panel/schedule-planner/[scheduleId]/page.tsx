@@ -185,7 +185,11 @@ const ScheduleWorkspacePage = () => {
 
   const gridFixedBlocks = useMemo(() => {
     return (config?.fixedBlocks ?? [])
-      .filter((b) => !b.classGroupId || viewMode !== 'classGroup' || b.classGroupId === activeGroupId)
+      .filter(
+        (b) =>
+          b.classGroupIds.length === 0 ||
+          (viewMode === 'classGroup' && activeGroupId != null && b.classGroupIds.includes(activeGroupId))
+      )
       .map((b) => ({ day: b.dayOfWeek, startMin: b.startMin, endMin: b.endMin, label: b.label }))
   }, [config, viewMode, activeGroupId])
 
