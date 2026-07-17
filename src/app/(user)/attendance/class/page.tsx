@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService';
@@ -14,6 +15,7 @@ import { useFilterParams } from '@/hooks/useFilterParams';
 
 const ClassAttendanceDashboardContent = () => {
   const user = useUserStore((state) => state.user);
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const router = useRouter();
   const { get, setParams } = useFilterParams();
   const [classes, setClasses] = useState<ClassPayload[]>([]);
@@ -44,7 +46,7 @@ const ClassAttendanceDashboardContent = () => {
         setLoading(false);
       });
     }
-  }, [user?.id, user.role, user.school]);
+  }, [user?.id, user.role, user.school, selectedYearId]); // refetch when the selected school year changes
 
   const availableGrades = getGradeOptions();
 

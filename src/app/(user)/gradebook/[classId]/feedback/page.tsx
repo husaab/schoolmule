@@ -10,6 +10,7 @@ import { getClassById, getStudentsInClass } from '@/services/classService'
 import { getClassReportCardFeedback, upsertBulkReportCardFeedback } from '@/services/reportCardService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
@@ -49,6 +50,7 @@ const BulkFeedbackPage = () => {
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   // Data state
   const [classData, setClassData] = useState<ClassPayload | null>(null)
@@ -147,7 +149,7 @@ const BulkFeedbackPage = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, user?.school])
+  }, [classId, user?.school, selectedYearId]) // refetch when the selected school year changes
 
   // Load feedback when term changes
   useEffect(() => {

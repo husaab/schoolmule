@@ -34,6 +34,7 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
 import { getNewSubmissionCount } from '@/services/registrationService'
+import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
 
 interface NavLink {
   href: string;
@@ -217,6 +218,11 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5">
+        {/* School Year Selector (Mobile) */}
+        <div className="lg:hidden px-0 pb-2">
+          <SchoolYearSelector />
+        </div>
+
         {/* Main Links */}
         {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
           <NavItem

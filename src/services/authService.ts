@@ -1,6 +1,7 @@
 // services/authService.ts
 import apiClient from './apiClient';
 import { LoginResponse, LoginRequest, RegisterRequest, RegisterResponse } from './types/auth';
+import type { SchoolYear } from './types/schoolYear';
 
 // Token management functions
 export const getToken = (): string | null => {
@@ -78,6 +79,8 @@ export interface SessionValidationResponse {
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;
+    activeSchoolYear?: { schoolYearId: string; label: string } | null;
+    schoolYears?: SchoolYear[];
   };
 }
 

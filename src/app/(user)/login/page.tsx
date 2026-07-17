@@ -137,6 +137,11 @@ const LoginForm: FC = () => {
           activeTerm: response.data.activeTerm
         }
         setUser(user)
+
+        const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
+        useSchoolYearStore.getState().setYears(response.data.schoolYears ?? [])
+        useSchoolYearStore.getState().selectYear(response.data.activeSchoolYear?.schoolYearId ?? null)
+
         showNotification('Logged in successfully', 'success')
 
         if (!user.isVerifiedEmail) {

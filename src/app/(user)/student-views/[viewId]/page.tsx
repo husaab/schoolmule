@@ -27,12 +27,14 @@ import {
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import EmailCertificatesModal from '@/components/student-views/email/EmailCertificatesModal'
 import SingleEmailCertificateModal from '@/components/student-views/email/SingleEmailCertificateModal'
 
 export default function StudentViewDetailPage() {
   const { viewId } = useParams<{ viewId: string }>()
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const [view, setView] = useState<StudentViewPayload | null>(null)
   const [students, setStudents] = useState<EvaluatedStudent[]>([])
@@ -54,7 +56,7 @@ export default function StudentViewDetailPage() {
       })
       .catch(() => showNotification('Failed to evaluate view', 'error'))
       .finally(() => setLoading(false))
-  }, [viewId, showNotification])
+  }, [viewId, showNotification, selectedYearId]) // refetch when the selected school year changes
 
   const toggleSelect = (id: string) => {
     const next = new Set(selected)

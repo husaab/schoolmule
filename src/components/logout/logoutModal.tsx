@@ -5,6 +5,7 @@ import { useUserStore } from '@/store/useUserStore'
 import Modal from '../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { logout } from '@/services/authService'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useRouter } from 'next/navigation'
 
 const LogoutModal = () => {
@@ -23,6 +24,7 @@ const LogoutModal = () => {
     try {
       await logout()
       clearUser()
+      useSchoolYearStore.getState().clearYears()
       closeModal()
       router.push('/login')
     } catch (error) {

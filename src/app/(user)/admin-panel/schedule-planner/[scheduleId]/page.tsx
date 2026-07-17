@@ -105,7 +105,7 @@ const ScheduleWorkspacePage = () => {
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, user, scheduleId])
+  }, [hasHydrated, user, scheduleId]) // scheduleId pins its year; don't reload on header year switch (would wipe unsaved workspace state)
 
   // Grid frame from config
   const days = useMemo(() => {

@@ -37,6 +37,8 @@ export interface RegisterResponse {
     lastModifiedAt: string;
     activeTerm: string;
     token: string;
+    activeSchoolYear?: { schoolYearId: string; label: string } | null;
+    schoolYears?: import('./schoolYear').SchoolYear[];
   };
 }
 
@@ -63,5 +65,7 @@ export interface LoginResponse {
     lastModifiedAt: string;
     activeTerm: string;
     token: string;
+    activeSchoolYear?: { schoolYearId: string; label: string } | null;
+    schoolYears?: import('./schoolYear').SchoolYear[];
   };
 }

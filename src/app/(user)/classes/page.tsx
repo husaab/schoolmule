@@ -11,6 +11,7 @@ import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateMo
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { ClassPayload } from '@/services/types/class'
 import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
 import { getTermsBySchool } from '@/services/termService'
@@ -23,6 +24,7 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 const ClassesPageContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const { get, setParams } = useFilterParams()
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
@@ -65,7 +67,7 @@ const ClassesPageContent = () => {
     } finally {
       setLoading(false);
     }
-  }, [user.id, user.role, user.school]);
+  }, [user.id, user.role, user.school, selectedYearId]); // refetch when the selected school year changes
 
   const loadTerms = useCallback(async () => {
     if (!user.school) return;
@@ -78,7 +80,7 @@ const ClassesPageContent = () => {
     } catch (err) {
       console.error('Error loading terms:', err);
     }
-  }, [user.school]);
+  }, [user.school, selectedYearId]); // refetch when the selected school year changes
 
   useEffect(() => {
     loadClasses();

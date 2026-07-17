@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import { getAllStudents } from '@/services/studentService'
 import { getTermsBySchool } from '@/services/termService'
@@ -19,6 +20,7 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 
 const StudentSummaryContent = () => {
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
   const { get, setParams } = useFilterParams()
 
@@ -57,7 +59,7 @@ const StudentSummaryContent = () => {
       console.error('Error loading classes:', error)
       showNotification('Error loading classes', 'error')
     }
-  }, [user?.school, user?.id, user?.role, showNotification])
+  }, [user?.school, user?.id, user?.role, showNotification, selectedYearId]) // refetch when the selected school year changes
 
   const loadStudents = useCallback(async () => {
     if (!user?.school) return
@@ -71,7 +73,7 @@ const StudentSummaryContent = () => {
       console.error('Error loading students:', error)
       showNotification('Error loading students', 'error')
     }
-  }, [user?.school, showNotification])
+  }, [user?.school, showNotification, selectedYearId]) // refetch when the selected school year changes
 
   const loadTerms = useCallback(async () => {
     if (!user?.school) return
@@ -88,7 +90,7 @@ const StudentSummaryContent = () => {
     } catch (error) {
       console.error('Error loading terms:', error)
     }
-  }, [user?.school])
+  }, [user?.school, selectedYearId]) // refetch when the selected school year changes
 
   useEffect(() => {
     const loadData = async () => {
