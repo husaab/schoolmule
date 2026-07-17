@@ -1,22 +1,10 @@
 'use client'
 
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect } from 'react'
 import { useUserStore } from '@/store/useUserStore'
-import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
+import { useSchoolYearStore, useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 import { getSchoolYears } from '@/services/schoolYearService'
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
-
-// The year store has no hasHydrated field (unlike useUserStore), so we read
-// the persist middleware's hydration flag directly via useSyncExternalStore.
-// This avoids a flash of the pre-hydration default ([]/null) and prevents
-// setYears/selectYear from firing against stale state before rehydration.
-function useYearStoreHydrated() {
-  return useSyncExternalStore(
-    (onStoreChange) => useSchoolYearStore.persist.onFinishHydration(onStoreChange),
-    () => useSchoolYearStore.persist.hasHydrated(),
-    () => false,
-  )
-}
 
 export default function SchoolYearSelector() {
   const hasHydrated = useYearStoreHydrated()

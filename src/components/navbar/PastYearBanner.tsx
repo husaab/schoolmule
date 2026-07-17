@@ -1,20 +1,7 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
 import { useUserStore } from '@/store/useUserStore'
-import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
-
-// The year store has no hasHydrated field (unlike useUserStore), so we read
-// the persist middleware's hydration flag directly via useSyncExternalStore.
-// This avoids a flash of the pre-hydration default ([]/null) and prevents
-// rendering against stale state before rehydration.
-function useYearStoreHydrated() {
-  return useSyncExternalStore(
-    (onStoreChange) => useSchoolYearStore.persist.onFinishHydration(onStoreChange),
-    () => useSchoolYearStore.persist.hasHydrated(),
-    () => false,
-  )
-}
+import { useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 
 // Rendered once, outside any transformed ancestor (see Navbar.tsx), so that
 // `position: fixed` resolves against the viewport rather than a transformed

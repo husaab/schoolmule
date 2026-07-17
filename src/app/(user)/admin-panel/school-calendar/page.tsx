@@ -6,7 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid';
 import EventFormModal from '@/components/calendar/EventFormModal';
 import { useUserStore } from '@/store/useUserStore';
-import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore';
+import { useSchoolYearStore, useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getEventsByAcademicYear } from '@/services/calendarEventService';
 import type { CalendarEventPayload } from '@/services/types/calendarEvent';
@@ -32,6 +32,7 @@ const SchoolCalendarPage = () => {
   const user = useUserStore((state) => state.user);
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const selectedYear = useSelectedYear();
+  const hasHydrated = useYearStoreHydrated();
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const yearOptions = useMemo(buildAcademicYearOptions, []);
@@ -72,14 +73,31 @@ const SchoolCalendarPage = () => {
   // — only react to an actual change of selectedYearId after the page loads —
   // and only snap the dropdown when the newly-selected year's label is one of
   // this page's academic-year options; otherwise leave it as-is.
+  //
+  // Sequence this guards against: useSchoolYearStore's persist middleware
+  // hydrates asynchronously, post-mount. On first render selectedYearId is
+  // null (pre-hydration default), so yearIdRef.current also starts out
+  // null. When hydration finishes a moment later, selectedYearId flips to
+  // the persisted id — which looks like a "user switched years" transition
+  // to a ref-based mount-skip, so the effect below would fire on every page
+  // load. Gating on `hasHydrated` and only arming the ref on the first
+  // hydrated run (without firing) means the effect only reacts to a *real*
+  // subsequent change.
   const yearIdRef = useRef(selectedYearId);
+  const yearIdInitializedRef = useRef(false);
   useEffect(() => {
+    if (!hasHydrated) return;
+    if (!yearIdInitializedRef.current) {
+      yearIdInitializedRef.current = true;
+      yearIdRef.current = selectedYearId;
+      return;
+    }
     if (yearIdRef.current === selectedYearId) return;
     yearIdRef.current = selectedYearId;
     if (selectedYear?.label && yearOptions.includes(selectedYear.label)) {
       setAcademicYear(selectedYear.label);
     }
-  }, [selectedYearId, selectedYear, yearOptions]);
+  }, [hasHydrated, selectedYearId, selectedYear, yearOptions]);
 
   const monthEvents = useMemo(() => {
     const pad = (n: number) => String(n).padStart(2, '0');

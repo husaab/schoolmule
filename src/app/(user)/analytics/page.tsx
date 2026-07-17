@@ -10,7 +10,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
-import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useSchoolYearStore, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { getSchoolName } from '@/lib/schoolUtils'
 import { getTermsBySchool } from '@/services/termService'
@@ -41,6 +41,7 @@ import AiReportComposer from './_components/ai/AiReportComposer'
 const AnalyticsContent: React.FC = () => {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const hasHydrated = useYearStoreHydrated()
   const setSnapshot = useAnalyticsStore((s) => s.setSnapshot)
   const params = useAnalyticsParams()
 
@@ -73,13 +74,30 @@ const AnalyticsContent: React.FC = () => {
   // the drill-down would keep showing the old year's term data until the
   // user manually picks a new term. Skip the initial mount/hydration — only
   // react to an actual change of selectedYearId after the page has loaded.
+  //
+  // Sequence this guards against: useSchoolYearStore's persist middleware
+  // hydrates asynchronously, post-mount. On first render selectedYearId is
+  // null (pre-hydration default), so yearIdRef.current also starts out
+  // null. When hydration finishes a moment later, selectedYearId flips to
+  // the persisted id — which looks exactly like a "user switched years"
+  // transition to a ref-based mount-skip, so the effect below would fire
+  // and wipe a deep-linked ?termId= on every single page load. Gating on
+  // `hasHydrated` and only arming the ref on the first hydrated run (without
+  // firing) means the effect only reacts to a *real* subsequent change.
   const yearIdRef = useRef(selectedYearId)
+  const yearIdInitializedRef = useRef(false)
   useEffect(() => {
+    if (!hasHydrated) return
+    if (!yearIdInitializedRef.current) {
+      yearIdInitializedRef.current = true
+      yearIdRef.current = selectedYearId
+      return
+    }
     if (yearIdRef.current === selectedYearId) return
     yearIdRef.current = selectedYearId
     params.setParams({ termId: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYearId])
+  }, [hasHydrated, selectedYearId])
 
   // ── Data hooks (overview always — it powers school/grade views AND
   //    the control-bar filter lists; class/student fetch on demand) ──
