@@ -4,12 +4,13 @@
 // and the two solver settings (default course length + snap increment).
 
 import React, { useState } from 'react'
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import {
   replaceDayTemplates,
   updatePlannerSettings,
   createFixedBlock,
+  updateFixedBlock,
   deleteFixedBlock,
 } from '@/services/schedulePlannerService'
 import type {
@@ -18,7 +19,7 @@ import type {
   FixedBlock,
   PlannerSettings,
 } from '@/services/types/schedulePlanner'
-import { DAY_LABELS, DAY_LABELS_SHORT, dayLabel, formatMin, minToTimeStr, timeStrToMin } from './timeUtils'
+import { DAY_LABELS, dayLabel, formatMin, minToTimeStr, timeStrToMin } from './timeUtils'
 
 interface DayTemplatesTabProps {
   dayTemplates: DayTemplate[]
@@ -46,7 +47,7 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
   const [snap, setSnap] = useState(String(settings.snapMinutes))
   const [blockForm, setBlockForm] = useState({
     label: '',
-    dayOfWeek: 0, // 0 = every listed day
+    days: [] as number[], // empty = every school day
     startMin: 720,
     endMin: 760,
     classGroupIds: [] as string[], // empty = whole school
@@ -59,6 +60,127 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
         ? f.classGroupIds.filter((x) => x !== id)
         : [...f.classGroupIds, id],
     }))
+  }
+
+  const toggleBlockDay = (day: number) => {
+    setBlockForm((f) => ({
+      ...f,
+      days: f.days.includes(day)
+        ? f.days.filter((d) => d !== day)
+        : [...f.days, day].sort((a, b) => a - b),
+    }))
+  }
+
+  // Identical blocks across days (same label/time/groups — e.g. from "Every
+  // school day") are shown and edited as ONE entry.
+  const groupedBlocks = React.useMemo(() => {
+    const map = new Map<string, FixedBlock[]>()
+    for (const b of fixedBlocks) {
+      const key = `${b.label}|${b.startMin}|${b.endMin}|${[...b.classGroupIds].sort().join(',')}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(b)
+    }
+    return [...map.values()].map((blocks) => blocks.sort((a, b) => a.dayOfWeek - b.dayOfWeek))
+  }, [fixedBlocks])
+
+  const daysSummary = (blocks: FixedBlock[]) => {
+    const blockDays = blocks.map((b) => b.dayOfWeek)
+    if (
+      activeDayNumbers.length > 1 &&
+      activeDayNumbers.every((d) => blockDays.includes(d)) &&
+      blockDays.length === activeDayNumbers.length
+    ) {
+      return 'Every school day'
+    }
+    return blockDays.map((d) => dayLabel(d, true)).join(', ')
+  }
+
+  // Edit-block modal state (edits every block in the group at once)
+  const [editingBlocks, setEditingBlocks] = useState<FixedBlock[] | null>(null)
+  const [editForm, setEditForm] = useState({
+    label: '',
+    days: [] as number[],
+    startMin: 720,
+    endMin: 760,
+    classGroupIds: [] as string[],
+  })
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const startEditBlock = (blocks: FixedBlock[]) => {
+    setEditForm({
+      label: blocks[0].label,
+      days: blocks.map((b) => b.dayOfWeek),
+      startMin: blocks[0].startMin,
+      endMin: blocks[0].endMin,
+      classGroupIds: [...blocks[0].classGroupIds],
+    })
+    setEditingBlocks(blocks)
+  }
+
+  const toggleEditGroup = (id: string) => {
+    setEditForm((f) => ({
+      ...f,
+      classGroupIds: f.classGroupIds.includes(id)
+        ? f.classGroupIds.filter((x) => x !== id)
+        : [...f.classGroupIds, id],
+    }))
+  }
+
+  const toggleEditDay = (day: number) => {
+    setEditForm((f) => ({
+      ...f,
+      days: f.days.includes(day)
+        ? f.days.filter((d) => d !== day)
+        : [...f.days, day].sort((a, b) => a - b),
+    }))
+  }
+
+  // Saves the day set as a diff: kept days are updated in place, removed
+  // days are deleted, newly added days get fresh rows.
+  const handleSaveEdit = async () => {
+    if (!editingBlocks) return
+    if (!editForm.label.trim()) {
+      showNotification('Block label is required', 'error')
+      return
+    }
+    if (editForm.endMin <= editForm.startMin) {
+      showNotification('Block must end after it starts', 'error')
+      return
+    }
+    if (editForm.days.length === 0) {
+      showNotification('Select at least one day', 'error')
+      return
+    }
+    setSavingEdit(true)
+    try {
+      const existingByDay = new Map(editingBlocks.map((b) => [b.dayOfWeek, b]))
+      const shared = {
+        label: editForm.label.trim(),
+        startMin: editForm.startMin,
+        endMin: editForm.endMin,
+        classGroupIds: editForm.classGroupIds,
+      }
+      for (const day of editForm.days) {
+        const existing = existingByDay.get(day)
+        if (existing) {
+          await updateFixedBlock(existing.fixedBlockId, { ...shared, dayOfWeek: day })
+        } else {
+          await createFixedBlock({ ...shared, dayOfWeek: day })
+        }
+      }
+      for (const [day, block] of existingByDay) {
+        if (!editForm.days.includes(day)) {
+          await deleteFixedBlock(block.fixedBlockId)
+        }
+      }
+      showNotification('Fixed block updated', 'success')
+      setEditingBlocks(null)
+      onChanged()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error updating block', 'error')
+    } finally {
+      setSavingEdit(false)
+    }
   }
 
   const activeDayNumbers = days.filter((d) => d.fillableRanges.length > 0).map((d) => d.dayOfWeek)
@@ -146,7 +268,7 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
       showNotification('Block must end after it starts', 'error')
       return
     }
-    const targetDays = blockForm.dayOfWeek === 0 ? activeDayNumbers : [blockForm.dayOfWeek]
+    const targetDays = blockForm.days.length > 0 ? blockForm.days : activeDayNumbers
     if (targetDays.length === 0) {
       showNotification('Set school hours first so there are days to add the block to', 'error')
       return
@@ -169,9 +291,17 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
     }
   }
 
-  const handleDeleteBlock = async (block: FixedBlock) => {
+  const handleDeleteBlocks = async (blocks: FixedBlock[]) => {
+    if (
+      blocks.length > 1 &&
+      !confirm(`Remove "${blocks[0].label}" on all ${blocks.length} days?`)
+    ) {
+      return
+    }
     try {
-      await deleteFixedBlock(block.fixedBlockId)
+      for (const block of blocks) {
+        await deleteFixedBlock(block.fixedBlockId)
+      }
       onChanged()
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Error deleting block', 'error')
@@ -285,7 +415,7 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
       <div className="border border-gray-200 rounded-lg p-4">
         <h3 className="font-semibold mb-1">Fixed blocks</h3>
         <p className="text-xs text-gray-500 mb-3">
-          Times nothing can be scheduled — lunch, recess, prayer. School-wide or for one class group.
+          Times nothing can be scheduled — lunch, recess, prayer. School-wide or for selected class groups.
         </p>
         <div className="flex flex-wrap items-end gap-2 mb-4">
           <div>
@@ -299,19 +429,34 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Day</label>
-            <select
-              value={blockForm.dayOfWeek}
-              onChange={(e) => setBlockForm((f) => ({ ...f, dayOfWeek: parseInt(e.target.value, 10) }))}
-              className="border border-gray-300 rounded px-2 py-1 text-sm"
-            >
-              <option value={0}>Every school day</option>
-              {DAY_LABELS_SHORT.map((label, i) => (
-                <option key={label} value={i + 1}>
-                  {label}
-                </option>
+            <label className="block text-xs text-gray-600 mb-1">
+              Days (none selected = every school day)
+            </label>
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setBlockForm((f) => ({ ...f, days: [] }))}
+                className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                  blockForm.days.length === 0
+                    ? 'bg-cyan-600 text-white border-cyan-600'
+                    : 'bg-white text-gray-500 border-gray-300'
+                }`}
+              >
+                Every school day
+              </button>
+              {activeDayNumbers.map((day) => (
+                <button
+                  key={day}
+                  onClick={() => toggleBlockDay(day)}
+                  className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                    blockForm.days.includes(day)
+                      ? 'bg-cyan-600 text-white border-cyan-600'
+                      : 'bg-white text-gray-500 border-gray-300'
+                  }`}
+                >
+                  {dayLabel(day, true)}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">From</label>
@@ -378,25 +523,28 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
           <p className="text-sm text-gray-400">No fixed blocks.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {fixedBlocks.map((b) => (
+            {groupedBlocks.map((blocks) => (
               <span
-                key={b.fixedBlockId}
+                key={blocks[0].fixedBlockId}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full text-xs"
               >
-                <span className="font-medium">{b.label}</span>
+                <span className="font-medium">{blocks[0].label}</span>
                 <span className="text-gray-500">
-                  {dayLabel(b.dayOfWeek, true)} {formatMin(b.startMin)}–{formatMin(b.endMin)}
+                  {daysSummary(blocks)} {formatMin(blocks[0].startMin)}–{formatMin(blocks[0].endMin)}
                 </span>
-                {b.classGroupIds.length > 0 && (
+                {blocks[0].classGroupIds.length > 0 && (
                   <span className="text-cyan-700">
                     (
-                    {b.classGroupIds
+                    {blocks[0].classGroupIds
                       .map((id) => classGroups.find((g) => g.classGroupId === id)?.name || '?')
                       .join(', ')}
                     )
                   </span>
                 )}
-                <button onClick={() => handleDeleteBlock(b)} className="cursor-pointer">
+                <button onClick={() => startEditBlock(blocks)} className="cursor-pointer">
+                  <PencilIcon className="h-3.5 w-3.5 text-gray-400 hover:text-cyan-600" />
+                </button>
+                <button onClick={() => handleDeleteBlocks(blocks)} className="cursor-pointer">
                   <TrashIcon className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
                 </button>
               </span>
@@ -404,6 +552,123 @@ const DayTemplatesTab: React.FC<DayTemplatesTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Edit fixed block modal */}
+      {editingBlocks && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Edit fixed block</h3>
+              <button onClick={() => setEditingBlocks(null)} className="cursor-pointer">
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-600 mb-1">Label</label>
+                <input
+                  type="text"
+                  value={editForm.label}
+                  onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-600 mb-1">Days</label>
+                <div className="flex flex-wrap gap-1">
+                  {[...new Set([...activeDayNumbers, ...editingBlocks.map((b) => b.dayOfWeek)])]
+                    .sort((a, b) => a - b)
+                    .map((day) => (
+                    <button
+                      key={day}
+                      onClick={() => toggleEditDay(day)}
+                      className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                        editForm.days.includes(day)
+                          ? 'bg-cyan-600 text-white border-cyan-600'
+                          : 'bg-white text-gray-500 border-gray-300'
+                      }`}
+                    >
+                        {dayLabel(day, true)}
+                      </button>
+                    ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">From</label>
+                <input
+                  type="time"
+                  value={minToTimeStr(editForm.startMin)}
+                  onChange={(e) => {
+                    const v = timeStrToMin(e.target.value)
+                    if (v !== null) setEditForm((f) => ({ ...f, startMin: v }))
+                  }}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">To</label>
+                <input
+                  type="time"
+                  value={minToTimeStr(editForm.endMin)}
+                  onChange={(e) => {
+                    const v = timeStrToMin(e.target.value)
+                    if (v !== null) setEditForm((f) => ({ ...f, endMin: v }))
+                  }}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs text-gray-600 mb-1">
+                Applies to (none selected = whole school)
+              </label>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  onClick={() => setEditForm((f) => ({ ...f, classGroupIds: [] }))}
+                  className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                    editForm.classGroupIds.length === 0
+                      ? 'bg-cyan-600 text-white border-cyan-600'
+                      : 'bg-white text-gray-500 border-gray-300'
+                  }`}
+                >
+                  Whole school
+                </button>
+                {classGroups.map((g) => (
+                  <button
+                    key={g.classGroupId}
+                    onClick={() => toggleEditGroup(g.classGroupId)}
+                    className={`px-2 py-0.5 rounded text-xs border transition cursor-pointer ${
+                      editForm.classGroupIds.includes(g.classGroupId)
+                        ? 'bg-cyan-600 text-white border-cyan-600'
+                        : 'bg-white text-gray-500 border-gray-300'
+                    }`}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingBlocks(null)}
+                className="px-4 py-1.5 text-sm text-gray-600 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                className="px-4 py-1.5 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 transition disabled:opacity-50 cursor-pointer"
+              >
+                {savingEdit ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
