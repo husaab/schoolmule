@@ -11,7 +11,7 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
-import { getGradeOptions, GradeValue } from '@/lib/schoolUtils'
+import { getGradeDisplayName, getGradeOptions, GradeValue } from '@/lib/schoolUtils'
 
 interface ClassAddModalProps {
   isOpen: boolean
@@ -32,6 +32,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   const [subject, setSubject] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
   const [termId, setTermId] = useState<string>('')
+  const [autoEnroll, setAutoEnroll] = useState(true)
   const [teachers, setTeachers] = useState<TeacherPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [loadingTeachers, setLoadingTeachers] = useState<boolean>(false)
@@ -122,6 +123,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
       teacherId:   selectedTeacher.userId,
       termId:      selectedTerm.termId,
       termName:    selectedTerm.name,
+      autoEnroll,
     }
 
     try {
@@ -143,7 +145,10 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
         }
 
         onAdd(newClass)
-        showNotification('Class created successfully', 'success')
+        const enrolledMsg = raw.autoEnrolled && raw.enrolledCount > 0
+          ? ` — ${raw.enrolledCount} student${raw.enrolledCount === 1 ? '' : 's'} enrolled`
+          : ''
+        showNotification(`Class created successfully${enrolledMsg}`, 'success')
         onClose()
 
         // Reset fields
@@ -151,6 +156,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
         setSubject('')
         setTeacherId('')
         setTermId('')
+        setAutoEnroll(true)
       } else {
         showNotification(res.message || 'Failed to create class', 'error')
       }
@@ -240,9 +246,27 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
             </select>
           </div>
 
+          {/* Auto-enroll */}
+          <label className="flex items-start gap-3 p-3 bg-cyan-50 border border-cyan-100 rounded-xl cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoEnroll}
+              onChange={(e) => setAutoEnroll(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
+            />
+            <span className="text-sm text-slate-700">
+              {grade === ''
+                ? 'Automatically enroll all students of the selected grade'
+                : `Automatically enroll all ${getGradeDisplayName(grade)} students`}
+              <span className="block text-xs text-slate-500 mt-0.5">
+                You can adjust the roster anytime from the class&apos;s edit page.
+              </span>
+            </span>
+          </label>
+
           <p className="text-sm text-gray-600 italic">
-            Note: you can only add Assessments and Students after creating the class.
-            Once created, click “Edit” to add both.
+            Note: Assessments can be added after creating the class — click
+            &ldquo;Edit&rdquo; on the new class.
           </p>
 
           {/* Buttons */}

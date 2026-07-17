@@ -30,6 +30,15 @@ export interface ClassPayload {
 }
 
 /**
+ * Response wrapper for POST /classes — includes the auto-enrollment result
+ */
+export interface CreateClassResponse {
+  status: string;
+  data: ClassPayload & { autoEnrolled: boolean; enrolledCount: number };
+  message?: string;
+}
+
+/**
  * Response wrapper for single-class endpoints
  */
 export interface ClassResponse {

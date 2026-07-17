@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, ChangeEvent } from 'react'
+import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -22,7 +22,8 @@ import StudentAssessmentsModal from '@/components/assessments/student/studentAss
 import type { TermPayload } from '@/services/types/term'
 import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmentsModal';
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
-import AssessmentManagerModal from '@/components/assessments/manage/assessmentManagerModal';
+import AssessmentJumper from '@/components/gradebook/AssessmentJumper';
+import AssessmentsSection from '@/components/assessments/section/AssessmentsSection';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import {
   MinusCircleIcon,
@@ -81,8 +82,15 @@ const GradebookClass = () => {
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means "no entry yet")
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
 
-  // Assessment manager modal state
-  const [isAssessmentManagerOpen, setIsAssessmentManagerOpen] = useState(false)
+  // Assessment jumper: refs for horizontal scroll-to-column + transient highlight
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const thRefs = useRef<Record<string, HTMLTableCellElement | null>>({})
+  const highlightTimeoutRef = useRef<number | null>(null)
+  const [highlightedAssessmentId, setHighlightedAssessmentId] = useState<string | null>(null)
+
+  // In-page view switch: grade entry vs. assessment management
+  const [activeView, setActiveView] = useState<'grades' | 'assessments'>('grades')
+  const assessmentsChangedRef = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const [loading, setLoading] = useState(true)
@@ -494,7 +502,9 @@ const GradebookClass = () => {
     }
   }
 
-  const handleOpenAssessmentManager = async () => {
+  // Switch to the in-page Assessments view (grades must be saved first so the
+  // score matrix can't drift under edited assessments)
+  const handleGoToAssessments = async () => {
     if (hasUnsavedChanges) {
       const confirmSave = window.confirm(
         'You have unsaved grade changes. They must be saved before editing assessments. Save now?'
@@ -503,12 +513,14 @@ const GradebookClass = () => {
       const saved = await handleSaveAll()
       if (!saved) return
     }
-    setIsAssessmentManagerOpen(true)
+    setActiveView('assessments')
   }
 
-  const handleAssessmentManagerClose = async (didChange: boolean) => {
-    setIsAssessmentManagerOpen(false)
-    if (!didChange) return
+  // Return to grade entry; re-sync grid data if assessments were changed
+  const handleBackToGrades = async () => {
+    setActiveView('grades')
+    if (!assessmentsChangedRef.current) return
+    assessmentsChangedRef.current = false
 
     setRefreshing(true)
     try {
@@ -534,6 +546,24 @@ const GradebookClass = () => {
     } finally {
       setRefreshing(false)
     }
+  }
+
+  // Scroll the grid horizontally so the clicked assessment's column is centered.
+  // Manual scrollLeft math (not scrollIntoView) so the page never scrolls vertically.
+  const handleJumpToAssessment = (assessmentId: string) => {
+    const container = scrollContainerRef.current
+    const th = thRefs.current[assessmentId]
+    if (!container || !th) return
+
+    const targetLeft = th.offsetLeft - (container.clientWidth - th.clientWidth) / 2
+    container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' })
+
+    setHighlightedAssessmentId(assessmentId)
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current)
+    highlightTimeoutRef.current = window.setTimeout(
+      () => setHighlightedAssessmentId(null),
+      1500
+    )
   }
 
   const handleParentAssessmentClick = (parentAssessment: AssessmentPayload) => {
@@ -657,6 +687,7 @@ const GradebookClass = () => {
                 </p>
               </div>
 
+              {activeView === 'grades' && (
               <div className="flex items-center gap-3">
                 <button
                   onClick={navigateToBulkFeedback}
@@ -675,7 +706,7 @@ const GradebookClass = () => {
                   Progress Report Feedback
                 </button>
                 <button
-                  onClick={handleOpenAssessmentManager}
+                  onClick={handleGoToAssessments}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                   title="Add, edit, or delete this class's assessments"
                 >
@@ -702,9 +733,35 @@ const GradebookClass = () => {
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
+              )}
+            </div>
+
+            {/* View switch: Grade Entry / Assessments */}
+            <div className="mt-6 inline-flex p-1 bg-slate-100 rounded-xl">
+              <button
+                onClick={activeView === 'assessments' ? handleBackToGrades : undefined}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  activeView === 'grades'
+                    ? 'bg-white text-cyan-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Grade Entry
+              </button>
+              <button
+                onClick={activeView === 'grades' ? handleGoToAssessments : undefined}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  activeView === 'assessments'
+                    ? 'bg-white text-cyan-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Assessments
+              </button>
             </div>
 
             {/* Statistics Cards */}
+            {activeView === 'grades' && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
               <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3">
@@ -755,16 +812,31 @@ const GradebookClass = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
+          {/* Assessments management view */}
+          {activeView === 'assessments' && (
+            <AssessmentsSection
+              classId={classId}
+              onMutated={() => { assessmentsChangedRef.current = true }}
+            />
+          )}
+
           {/* Main Content Card - Gradebook Table */}
+          {activeView === 'grades' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <AssessmentJumper
+              assessments={displayedAssessments}
+              onJump={handleJumpToAssessment}
+              activeAssessmentId={highlightedAssessmentId}
+            />
             {refreshing ? (
               <div className="flex justify-center items-center py-24">
                 <Spinner size="md" />
               </div>
             ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={scrollContainerRef}>
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
@@ -774,8 +846,13 @@ const GradebookClass = () => {
                     {displayedAssessments.map((a: AssessmentPayload) => (
                       <th
                         key={a.assessmentId}
-                        className={`px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[100px] ${
+                        ref={(el) => { thRefs.current[a.assessmentId] = el }}
+                        className={`px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[100px] transition-shadow duration-300 ${
                           a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors' : ''
+                        } ${
+                          highlightedAssessmentId === a.assessmentId
+                            ? 'ring-2 ring-cyan-400 ring-inset'
+                            : ''
                         }`}
                         onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
                         title={a.isParent ? 'Click to edit individual assessments' : undefined}
@@ -868,6 +945,10 @@ const GradebookClass = () => {
                                     isExcluded
                                       ? 'bg-slate-50 text-slate-400'
                                       : 'bg-blue-50/50'
+                                  } ${
+                                    highlightedAssessmentId === a.assessmentId
+                                      ? 'ring-2 ring-cyan-400 ring-inset'
+                                      : ''
                                   }`}
                                   title={isExcluded ? 'Assessment excluded from grade calculation' : 'Click to edit individual assessments'}
                                   onClick={() => handleParentAssessmentClick(a)}
@@ -965,6 +1046,10 @@ const GradebookClass = () => {
                                   key={a.assessmentId}
                                   className={`px-2 py-2 text-center relative group ${
                                     isExcluded ? 'bg-slate-50' : ''
+                                  } ${
+                                    highlightedAssessmentId === a.assessmentId
+                                      ? 'ring-2 ring-cyan-400 ring-inset'
+                                      : ''
                                   }`}
                                 >
                                   <button
@@ -1043,6 +1128,7 @@ const GradebookClass = () => {
             </div>
             )}
           </div>
+          )}
 
           {error && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-center">
@@ -1106,13 +1192,6 @@ const GradebookClass = () => {
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}
-      />
-
-      <AssessmentManagerModal
-        isOpen={isAssessmentManagerOpen}
-        classId={classId}
-        assessments={assessments}
-        onClose={handleAssessmentManagerClose}
       />
 
       {selectedExclusionStudent && (

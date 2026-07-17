@@ -4,6 +4,7 @@ import apiClient from "./apiClient";
 import {
   ClassPayload,
   ClassResponse,
+  CreateClassResponse,
   AllClassesResponse,
 } from "./types/class";
 import { AllAssessmentsResponse } from "./types/assessment";
@@ -76,8 +77,8 @@ export const createClass = async (
   classData: Omit<
     ClassPayload,
     "classId" | "createdAt" | "lastModifiedAt" | "additionalTeachers"
-  >
-): Promise<ClassResponse> => {
+  > & { autoEnroll?: boolean }
+): Promise<CreateClassResponse> => {
   const body = {
     school:      classData.school,
     grade:       classData.grade,
@@ -86,8 +87,9 @@ export const createClass = async (
     teacherId:   classData.teacherId,
     termId:      classData.termId,
     termName:    classData.termName,
+    autoEnroll:  classData.autoEnroll ?? true,
   };
-  return apiClient<ClassResponse>(`/classes`, {
+  return apiClient<CreateClassResponse>(`/classes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body

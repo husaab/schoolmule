@@ -54,7 +54,8 @@ export interface ParentAssessmentCreateResponse {
 export interface CreateAssessmentRequest {
   classId: string
   name: string
-  weightPercent: number
+  /** @deprecated weightPoints is the real weighting field — do not write this */
+  weightPercent?: number
   isParent: boolean
   childCount?: number
   parentAssessmentId?: string | null
@@ -64,7 +65,8 @@ export interface CreateAssessmentRequest {
   date?: string | null
   childrenData?: Array<{
     name: string
-    weightPercent: number
+    /** @deprecated weightPoints is the real weighting field — do not write this */
+    weightPercent?: number
     sortOrder: number
     maxScore?: number | null
     weightPoints?: number | null
