@@ -7,6 +7,7 @@ import { useSidebarStore } from '@/store/useSidebarStore';
 import { useUserStore } from '@/store/useUserStore';
 import { getSchoolName } from '@/lib/schoolUtils';
 import SchoolLogo from '@/components/branding/SchoolLogo';
+import SchoolYearSelector from './SchoolYearSelector';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -58,6 +59,11 @@ const NavBar: FC = () => {
 
         {/* Right Side - Actions & User */}
         <div className="flex items-center gap-3">
+          {/* Desktop School Year Selector */}
+          <div className="hidden lg:block">
+            <SchoolYearSelector />
+          </div>
+
           {/* Desktop Nav Links */}
           <div className="hidden lg:block">
             <NavLinks />
