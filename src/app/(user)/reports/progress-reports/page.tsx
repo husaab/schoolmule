@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getAllStudents } from '@/services/studentService'
@@ -43,6 +44,7 @@ interface ProgressReportRecord {
 const ProgressReportsContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
   const { get, setParams } = useFilterParams()
 
@@ -103,7 +105,7 @@ const ProgressReportsContent = () => {
     } finally {
       setLoading(false)
     }
-  }, [user?.school])
+  }, [user?.school, selectedYearId]) // refetch when the selected school year changes
 
   // Default to the active term once terms load, only if the URL hasn't pinned
   // one. Kept out of fetchData so changing filters never refetches data.
@@ -125,7 +127,7 @@ const ProgressReportsContent = () => {
     } catch (err) {
       console.error('Error fetching generated reports:', err)
     }
-  }, [user?.school, selectedTerm])
+  }, [user?.school, selectedTerm, selectedYearId]) // refetch when the selected school year changes
 
   useEffect(() => {
     fetchData()

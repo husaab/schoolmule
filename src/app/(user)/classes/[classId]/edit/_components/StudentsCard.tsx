@@ -6,6 +6,7 @@ import { getStudentsInClass } from '@/services/classService'
 import { getAllStudents } from '@/services/studentService'
 import type { StudentPayload } from '@/services/types/student'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getGradeDisplayName, GradeValue } from '@/lib/schoolUtils'
 import ClassEnrollStudentModal from '@/components/classes/student/enroll/classEnrollStudentModal'
 import ClassUnenrollStudentModal from '@/components/classes/student/unenroll/classUnenrollStudentModal'
@@ -20,6 +21,7 @@ interface StudentsCardProps {
 
 const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade }) => {
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [enrolledStudents, setEnrolledStudents] = useState<StudentPayload[]>([])
@@ -45,7 +47,7 @@ const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade }) => {
       }
     }
     fetchAll()
-  }, [user.school])
+  }, [user.school, selectedYearId]) // refetch when the selected school year changes
 
   // Currently enrolled students
   useEffect(() => {

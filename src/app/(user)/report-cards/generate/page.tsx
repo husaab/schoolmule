@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { generateBulkReportCards, getGeneratedReportCardsByStudentId, getSignedReportCardUrl } from '@/services/reportCardService';
 import GenerateReportCardModal from '@/components/report-cards/generateReportCardModal';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
@@ -17,6 +18,7 @@ import { useFilterParams } from '@/hooks/useFilterParams';
 
 function GenerateReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const { get, setParams } = useFilterParams();
   const [students, setStudents] = useState<StudentPayload[]>([]);
   // Grade filter lives in the URL; search is local (seeded from URL) for snappy
@@ -101,7 +103,7 @@ function GenerateReportCardsPageContent() {
         setLoadingTerms(false);
       });
     }
-  }, [user.school, user.activeTerm, showNotification]);
+  }, [user.school, user.activeTerm, showNotification, selectedYearId]); // refetch when the selected school year changes
 
   // "Generate for All Students" is a select-all toggle derived from the current
   // selection, so the individual / per-grade checkboxes stay editable — letting

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getSchoolName } from '@/lib/schoolUtils'
 import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardService'
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
@@ -34,6 +35,7 @@ import {
 
 const DashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -96,7 +98,7 @@ const DashboardPage: React.FC = () => {
         setError('Failed to load dashboard data')
       })
       .finally(() => setLoading(false))
-  }, [user.school, daysWindow, user.activeTerm, today])
+  }, [user.school, daysWindow, user.activeTerm, today, selectedYearId]) // refetch when the selected school year changes
 
   if (loading) {
     return (

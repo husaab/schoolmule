@@ -10,6 +10,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { getSchoolName } from '@/lib/schoolUtils'
 import { getTermsBySchool } from '@/services/termService'
@@ -39,6 +40,7 @@ import AiReportComposer from './_components/ai/AiReportComposer'
 
 const AnalyticsContent: React.FC = () => {
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const setSnapshot = useAnalyticsStore((s) => s.setSnapshot)
   const params = useAnalyticsParams()
 
@@ -56,7 +58,7 @@ const AnalyticsContent: React.FC = () => {
       })
       .catch(console.error)
       .finally(() => setTermsLoading(false))
-  }, [user.school])
+  }, [user.school, selectedYearId]) // refetch when the selected school year changes
 
   useEffect(() => {
     if (!params.termId && terms.length > 0) {

@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import CriteriaBuilder from '@/components/studentViews/CriteriaBuilder'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getAllClasses } from '@/services/classService'
@@ -27,6 +28,7 @@ export default function EditStudentViewPage() {
   const { viewId } = useParams<{ viewId: string }>()
   const router = useRouter()
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const [view, setView] = useState<StudentViewPayload | null>(null)
@@ -68,7 +70,7 @@ export default function EditStudentViewPage() {
         setSubjects(unique)
       })
       .catch(() => {})
-  }, [user?.school])
+  }, [user?.school, selectedYearId]) // refetch when the selected school year changes
 
   useEffect(() => {
     if (!criteria) return

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { listStudentViews, deleteStudentView } from '@/services/studentViewService'
 import type { StudentViewPayload } from '@/services/types/studentView'
@@ -28,6 +29,7 @@ type Tab = 'dashboard' | 'mine' | 'shared' | 'system'
 
 function StudentViewsDashboardContent() {
   const user = useUserStore((s) => s.user)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const { get, setParams } = useFilterParams()
   const [views, setViews] = useState<StudentViewPayload[]>([])
@@ -50,7 +52,7 @@ function StudentViewsDashboardContent() {
 
   useEffect(() => {
     load()
-  }, [])
+  }, [selectedYearId]) // refetch when the selected school year changes
 
   const handleDelete = async (v: StudentViewPayload) => {
     const baseMsg = `Delete "${v.name}"?`

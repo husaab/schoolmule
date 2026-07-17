@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getGeneratedReportCards, getSignedReportCardUrl } from '@/services/reportCardService';
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal';
@@ -32,6 +33,7 @@ type ReportCardRow = {
 
 function ViewReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const showNotification = useNotificationStore(state => state.showNotification);
   const { get, setParams } = useFilterParams();
   const [reportCards, setReportCards] = useState<ReportCardRow[]>([]);
@@ -101,7 +103,7 @@ function ViewReportCardsPageContent() {
         setLoadingTerms(false);
       });
     }
-  }, [user.school, user.activeTerm, showNotification]);
+  }, [user.school, user.activeTerm, showNotification, selectedYearId]); // refetch when the selected school year changes
 
   // Fetch report cards when term is selected
   useEffect(() => {
@@ -113,7 +115,7 @@ function ViewReportCardsPageContent() {
         }
       });
     }
-  }, [user.school, term]);
+  }, [user.school, term, selectedYearId]); // refetch when the selected school year changes
 
   const groupedByGrade = reportCards.reduce((acc, student) => {
     const grade = `Grade ${student.grade ?? '-'}`;

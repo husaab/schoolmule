@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid';
 import EventFormModal from '@/components/calendar/EventFormModal';
 import { useUserStore } from '@/store/useUserStore';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getEventsByAcademicYear } from '@/services/calendarEventService';
 import type { CalendarEventPayload } from '@/services/types/calendarEvent';
@@ -29,6 +30,7 @@ const buildAcademicYearOptions = (): string[] => {
 
 const SchoolCalendarPage = () => {
   const user = useUserStore((state) => state.user);
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const yearOptions = useMemo(buildAcademicYearOptions, []);
@@ -56,7 +58,7 @@ const SchoolCalendarPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.school, academicYear, showNotification]);
+  }, [user?.school, academicYear, showNotification, selectedYearId]); // refetch when the selected school year changes
 
   useEffect(() => {
     fetchEvents();
