@@ -38,30 +38,21 @@ export default function SchoolYearSelector() {
   if (!hasHydrated || user?.role === 'PARENT' || years.length === 0) return null
 
   return (
-    <>
-      <div className="flex items-center gap-2">
-        <CalendarDaysIcon className="h-5 w-5 text-slate-400 hidden sm:block" />
-        <select
-          value={selected?.schoolYearId ?? ''}
-          onChange={(e) => selectYear(e.target.value)}
-          disabled={years.length < 2}
-          aria-label="School year"
-          className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer disabled:cursor-default"
-        >
-          {years.map((y) => (
-            <option key={y.schoolYearId} value={y.schoolYearId}>
-              {y.label}{y.isActive ? ' (current)' : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selected && !selected.isActive && (
-        <div className="fixed top-[5.5rem] left-1/2 -translate-x-1/2 z-40 mt-2 px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs font-medium shadow-sm whitespace-nowrap">
-          Viewing {selected.label}
-          {user?.role !== 'ADMIN' ? ' — read-only' : ' (past year — edits apply to that year)'}
-        </div>
-      )}
-    </>
+    <div className="flex items-center gap-2">
+      <CalendarDaysIcon className="h-5 w-5 text-slate-400 hidden sm:block" />
+      <select
+        value={selected?.schoolYearId ?? ''}
+        onChange={(e) => selectYear(e.target.value)}
+        disabled={years.length < 2}
+        aria-label="School year"
+        className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer disabled:cursor-default"
+      >
+        {years.map((y) => (
+          <option key={y.schoolYearId} value={y.schoolYearId}>
+            {y.label}{y.isActive ? ' (current)' : ''}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }

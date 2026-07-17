@@ -1,0 +1,37 @@
+'use client'
+
+import { useSyncExternalStore } from 'react'
+import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
+
+// The year store has no hasHydrated field (unlike useUserStore), so we read
+// the persist middleware's hydration flag directly via useSyncExternalStore.
+// This avoids a flash of the pre-hydration default ([]/null) and prevents
+// rendering against stale state before rehydration.
+function useYearStoreHydrated() {
+  return useSyncExternalStore(
+    (onStoreChange) => useSchoolYearStore.persist.onFinishHydration(onStoreChange),
+    () => useSchoolYearStore.persist.hasHydrated(),
+    () => false,
+  )
+}
+
+// Rendered once, outside any transformed ancestor (see Navbar.tsx), so that
+// `position: fixed` resolves against the viewport rather than a transformed
+// container (e.g. Sidebar's <aside>, which has `transform` for its off-canvas
+// slide animation and would otherwise become the containing block).
+export default function PastYearBanner() {
+  const hasHydrated = useYearStoreHydrated()
+  const user = useUserStore((s) => s.user)
+  const selected = useSelectedYear()
+
+  if (!hasHydrated || user?.role === 'PARENT') return null
+  if (!selected || selected.isActive) return null
+
+  return (
+    <div className="fixed top-[5.5rem] left-1/2 -translate-x-1/2 lg:left-[calc(50%+9rem)] z-40 mt-2 px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs font-medium shadow-sm whitespace-nowrap">
+      Viewing {selected.label}
+      {user?.role !== 'ADMIN' ? ' — read-only' : ' (past year — edits apply to that year)'}
+    </div>
+  )
+}
