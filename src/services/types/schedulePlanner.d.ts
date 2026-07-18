@@ -28,6 +28,8 @@ export interface PlannerTeacher {
   maxWeeklyMinutes?: number | null;
   /** Contiguous free minutes required on any day this teacher teaches */
   dailySpareMinutes?: number | null;
+  /** Cap on distinct working days per week (null = unlimited) */
+  maxDaysPerWeek?: number | null;
   allowedDays: number[];
   excludedWindows: TimeWindow[];
   notes?: string | null;
@@ -79,6 +81,23 @@ export interface FixedBlock {
   endMin: number;
 }
 
+/**
+ * Window-based scheduling rule the generator enforces:
+ * - teach: class group's sessions inside the window are taught by the teacher
+ *   on at least minPerWeek days (homeroom mornings)
+ * - free: teacher keeps at least minPerWeek period-slots free inside the
+ *   window across the week (ESL pull-outs)
+ */
+export interface PeriodRule {
+  ruleId: string;
+  teacherId: string;
+  classGroupId?: string | null;
+  kind: 'teach' | 'free';
+  startMin: number;
+  endMin: number;
+  minPerWeek: number;
+}
+
 export interface PlannerConfig {
   settings: PlannerSettings;
   teachers: PlannerTeacher[];
@@ -86,6 +105,7 @@ export interface PlannerConfig {
   classGroups: ClassGroup[];
   dayTemplates: DayTemplate[];
   fixedBlocks: FixedBlock[];
+  periodRules: PeriodRule[];
 }
 
 /** One placed session in a generated candidate or saved schedule */

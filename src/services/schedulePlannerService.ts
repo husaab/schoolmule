@@ -11,6 +11,7 @@ import type {
   GenerateFailureData,
   GenerateRequest,
   GenerateResult,
+  PeriodRule,
   PlannerConfig,
   PlannerRoom,
   PlannerSettings,
@@ -170,6 +171,30 @@ export const updateFixedBlock = async (
 
 export const deleteFixedBlock = async (fixedBlockId: string): Promise<ApiResponse<FixedBlock>> =>
   apiClient<ApiResponse<FixedBlock>>(`${BASE}/fixed-blocks/${encodeURIComponent(fixedBlockId)}`, {
+    method: 'DELETE',
+  });
+
+// ─── Period rules ─────────────────────────────────────────────────────────
+
+export type PeriodRuleInput = Partial<Omit<PeriodRule, 'ruleId'>>;
+
+export const createPeriodRule = async (payload: PeriodRuleInput): Promise<ApiResponse<PeriodRule>> =>
+  apiClient<ApiResponse<PeriodRule>, PeriodRuleInput>(`${BASE}/period-rules`, {
+    method: 'POST',
+    body: payload,
+  });
+
+export const updatePeriodRule = async (
+  ruleId: string,
+  payload: PeriodRuleInput
+): Promise<ApiResponse<PeriodRule>> =>
+  apiClient<ApiResponse<PeriodRule>, PeriodRuleInput>(
+    `${BASE}/period-rules/${encodeURIComponent(ruleId)}`,
+    { method: 'PATCH', body: payload }
+  );
+
+export const deletePeriodRule = async (ruleId: string): Promise<ApiResponse<PeriodRule>> =>
+  apiClient<ApiResponse<PeriodRule>>(`${BASE}/period-rules/${encodeURIComponent(ruleId)}`, {
     method: 'DELETE',
   });
 

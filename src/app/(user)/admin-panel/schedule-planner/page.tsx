@@ -13,6 +13,7 @@ import TeachersTab from '@/components/schedulePlanner/TeachersTab'
 import RoomsTab from '@/components/schedulePlanner/RoomsTab'
 import ClassGroupsTab from '@/components/schedulePlanner/ClassGroupsTab'
 import DayTemplatesTab from '@/components/schedulePlanner/DayTemplatesTab'
+import RulesTab from '@/components/schedulePlanner/RulesTab'
 import SchedulesTab from '@/components/schedulePlanner/SchedulesTab'
 
 const TABS = [
@@ -21,6 +22,7 @@ const TABS = [
   { key: 'rooms', label: 'Rooms' },
   { key: 'classGroups', label: 'Classes & Courses' },
   { key: 'dayTemplates', label: 'School Hours & Blocks' },
+  { key: 'rules', label: 'Rules' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -129,6 +131,14 @@ const SchedulePlannerPage = () => {
                     fixedBlocks={config.fixedBlocks}
                     classGroups={config.classGroups}
                     settings={config.settings}
+                    onChanged={refresh}
+                  />
+                )}
+                {activeTab === 'rules' && (
+                  <RulesTab
+                    periodRules={config.periodRules ?? []}
+                    teachers={config.teachers}
+                    classGroups={config.classGroups}
                     onChanged={refresh}
                   />
                 )}
