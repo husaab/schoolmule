@@ -5,9 +5,9 @@
 // mornings) or "teacher stays free in this window N times/week" (ESL).
 
 import React, { useState } from 'react'
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { createPeriodRule, deletePeriodRule } from '@/services/schedulePlannerService'
+import { createPeriodRule, updatePeriodRule, deletePeriodRule } from '@/services/schedulePlannerService'
 import type { ClassGroup, PeriodRule, PlannerTeacher } from '@/services/types/schedulePlanner'
 import { formatMin, minToTimeStr, timeStrToMin } from './timeUtils'
 
@@ -20,15 +20,34 @@ interface RulesTabProps {
 
 const RulesTab: React.FC<RulesTabProps> = ({ periodRules, teachers, classGroups, onChanged }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
-  const [form, setForm] = useState({
+  const emptyForm = {
     kind: 'teach' as 'teach' | 'free',
     teacherId: '',
     classGroupId: '',
     startMin: 535,
     endMin: 625,
     minPerWeek: 5,
-  })
+  }
+  const [form, setForm] = useState(emptyForm)
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const startEdit = (rule: PeriodRule) => {
+    setForm({
+      kind: rule.kind,
+      teacherId: rule.teacherId,
+      classGroupId: rule.classGroupId || '',
+      startMin: rule.startMin,
+      endMin: rule.endMin,
+      minPerWeek: rule.minPerWeek,
+    })
+    setEditingRuleId(rule.ruleId)
+  }
+
+  const cancelEdit = () => {
+    setEditingRuleId(null)
+    setForm(emptyForm)
+  }
 
   const teacherName = (id: string) =>
     teachers.find((t) => t.plannerTeacherId === id)?.displayName || '?'
@@ -50,18 +69,26 @@ const RulesTab: React.FC<RulesTabProps> = ({ periodRules, teachers, classGroups,
     }
     setSaving(true)
     try {
-      await createPeriodRule({
+      const payload = {
         kind: form.kind,
         teacherId: form.teacherId,
         classGroupId: form.kind === 'teach' ? form.classGroupId : null,
         startMin: form.startMin,
         endMin: form.endMin,
         minPerWeek: form.minPerWeek,
-      })
-      showNotification('Rule added', 'success')
+      }
+      if (editingRuleId) {
+        await updatePeriodRule(editingRuleId, payload)
+        showNotification('Rule updated', 'success')
+        setEditingRuleId(null)
+        setForm(emptyForm)
+      } else {
+        await createPeriodRule(payload)
+        showNotification('Rule added', 'success')
+      }
       onChanged()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Error adding rule', 'error')
+      showNotification(err instanceof Error ? err.message : 'Error saving rule', 'error')
     } finally {
       setSaving(false)
     }
@@ -177,9 +204,26 @@ const RulesTab: React.FC<RulesTabProps> = ({ periodRules, teachers, classGroups,
             disabled={saving}
             className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 transition disabled:opacity-50 cursor-pointer"
           >
-            <PlusIcon className="h-4 w-4" /> Add rule
+            {editingRuleId ? (
+              saving ? 'Saving…' : 'Save changes'
+            ) : (
+              <>
+                <PlusIcon className="h-4 w-4" /> Add rule
+              </>
+            )}
           </button>
+          {editingRuleId && (
+            <button
+              onClick={cancelEdit}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 cursor-pointer"
+            >
+              <XMarkIcon className="h-4 w-4" /> Cancel
+            </button>
+          )}
         </div>
+        {editingRuleId && (
+          <p className="text-xs text-cyan-700 mt-2">Editing an existing rule — save or cancel.</p>
+        )}
       </div>
 
       {periodRules.length === 0 ? (
@@ -201,9 +245,14 @@ const RulesTab: React.FC<RulesTabProps> = ({ periodRules, teachers, classGroups,
                 </span>
                 <span className="text-sm truncate">{describe(rule)}</span>
               </div>
-              <button onClick={() => handleDelete(rule)} className="shrink-0 cursor-pointer">
-                <TrashIcon className="h-4 w-4 text-gray-400 hover:text-red-500" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => startEdit(rule)} className="cursor-pointer">
+                  <PencilIcon className="h-4 w-4 text-gray-400 hover:text-cyan-600" />
+                </button>
+                <button onClick={() => handleDelete(rule)} className="cursor-pointer">
+                  <TrashIcon className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

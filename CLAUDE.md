@@ -131,6 +131,10 @@ School Mule is a comprehensive school management system with separate frontend a
 ## Memory Persistence
 **IMPORTANT**: Claude Code doesn't retain information between sessions. This `CLAUDE.md` file serves as persistent memory. Always reference this file when working on the School Mule system.
 
+## Development Conventions
+
+- **Every feature must support full CRUD in the UI, not just creation.** Whenever a new entity is added (rules, blocks, teachers, courses, etc.), the frontend must allow creating, editing, AND deleting it from the start — backend PATCH/DELETE endpoints alone are not enough; wire them into the UI in the same change. Never ship a list of items the user can add but not modify.
+
 ## Notes for Future Development
 - Backend project located at: `/mnt/c/Users/husse/OneDrive/Desktop/Github/schoolmule-backend`
 - Database uses UUIDs for all primary keys

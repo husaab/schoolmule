@@ -7,13 +7,14 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PlusIcon,
+  PencilIcon,
   TrashIcon,
   ArrowTopRightOnSquareIcon,
   DocumentArrowDownIcon,
   LinkIcon,
 } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { deleteSchedule, openSchedulePdf } from '@/services/schedulePlannerService'
+import { deleteSchedule, updateSchedule, openSchedulePdf } from '@/services/schedulePlannerService'
 import type { ScheduleSummary } from '@/services/types/schedulePlanner'
 
 interface SchedulesTabProps {
@@ -34,6 +35,18 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
       onChanged()
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Error deleting schedule', 'error')
+    }
+  }
+
+  const handleRename = async (schedule: ScheduleSummary) => {
+    const name = prompt('Rename schedule:', schedule.name)
+    if (!name?.trim() || name.trim() === schedule.name) return
+    try {
+      await updateSchedule(schedule.scheduleId, { name: name.trim() })
+      showNotification('Schedule renamed', 'success')
+      onChanged()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error renaming schedule', 'error')
     }
   }
 
@@ -107,6 +120,13 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                     <LinkIcon className="h-4 w-4" />
                   </button>
                 )}
+                <button
+                  onClick={() => handleRename(s)}
+                  title="Rename"
+                  className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => handlePdf(s)}
                   title="Export PDF"
