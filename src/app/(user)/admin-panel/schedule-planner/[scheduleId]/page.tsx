@@ -67,6 +67,7 @@ const ScheduleWorkspacePage = () => {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [numCandidates, setNumCandidates] = useState(20)
+  const [searchSeconds, setSearchSeconds] = useState(10)
   const [diagnostics, setDiagnostics] = useState<SolverDiagnostic[] | null>(null)
   const [scheduleName, setScheduleName] = useState('')
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(isNew ? null : scheduleId)
@@ -246,7 +247,7 @@ const ScheduleWorkspacePage = () => {
           teacherId: s.teacherId,
           roomId: s.roomId,
         }))
-      const outcome = await generateSchedules({ numCandidates, pinnedSessions })
+      const outcome = await generateSchedules({ numCandidates, pinnedSessions, timeBudgetMs: searchSeconds * 1000 })
       if (outcome.ok) {
         setCandidates(outcome.result.candidates, outcome.result.meta)
         const tight = outcome.result.meta.warnings.find((w) => w.code === 'SCHEDULE_SPACE_TIGHT')
@@ -363,6 +364,20 @@ const ScheduleWorkspacePage = () => {
                     }
                     className="w-16 border border-gray-300 rounded px-2 py-1 text-sm"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-600">Search</label>
+                  <select
+                    value={searchSeconds}
+                    onChange={(e) => setSearchSeconds(parseInt(e.target.value, 10))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  >
+                    <option value={10}>10s</option>
+                    <option value={30}>30s</option>
+                    <option value={60}>1 min</option>
+                    <option value={120}>2 min</option>
+                    <option value={180}>3 min</option>
+                  </select>
                 </div>
                 <button
                   onClick={handleGenerate}
