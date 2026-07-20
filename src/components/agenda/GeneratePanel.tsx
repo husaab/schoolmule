@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { generateAgenda, getAgendaById, getGeneratedAgendaUrl } from '@/services/agendaService';
+import { generateAgenda, getAgendaById, fetchGeneratedAgendaBlobUrl } from '@/services/agendaService';
 import type { AgendaDetailPayload } from '@/services/types/agenda';
 import {
   ArrowDownTrayIcon,
@@ -64,19 +64,24 @@ export default function GeneratePanel({ agenda, onStatusChange }: Props) {
   };
 
   const openPdf = async (download: boolean) => {
-    if (!agenda.generatedFilePath) return;
-    const url = await getGeneratedAgendaUrl(agenda.generatedFilePath);
-    if (!url) {
-      showNotification('Could not get the download link', 'error');
-      return;
-    }
-    if (download) {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `agenda-${agenda.academicYear}.pdf`;
-      link.click();
-    } else {
-      setViewerUrl(url);
+    try {
+      const url = await fetchGeneratedAgendaBlobUrl(agenda.agendaId);
+      if (download) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `agenda-${agenda.academicYear}.pdf`;
+        link.click();
+        // Give the browser a moment to start the download before revoking
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } else {
+        setViewerUrl(url);
+      }
+    } catch (error) {
+      // e.g. server restarted since generation — the file must be rebuilt
+      showNotification(
+        error instanceof Error ? error.message : 'Could not download the PDF',
+        'error'
+      );
     }
   };
 
@@ -153,7 +158,10 @@ export default function GeneratePanel({ agenda, onStatusChange }: Props) {
                 Agenda {agenda.academicYear}
               </h2>
               <button
-                onClick={() => setViewerUrl(null)}
+                onClick={() => {
+                  URL.revokeObjectURL(viewerUrl);
+                  setViewerUrl(null);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <XMarkIcon className="w-5 h-5" />

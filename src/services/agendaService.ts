@@ -190,16 +190,25 @@ export const generateAgenda = async (agendaId: string): Promise<AgendaResponse> 
 };
 
 /**
- * Signed URL for the assembled agenda PDF (10 minutes).
+ * Fetch the assembled agenda PDF (streamed from the server's disk — the
+ * final book is never stored in Supabase) and return an object URL for
+ * viewing/downloading. Caller should revoke the URL when done.
+ * Throws with the server's message (e.g. regenerate-needed after a
+ * server restart).
  */
-export const getGeneratedAgendaUrl = async (filePath: string): Promise<string | null> => {
-  try {
-    const response = await apiClient<{ url: string }>(
-      `/agendas/signed-url?path=${encodeURIComponent(filePath)}`
-    );
-    return response.url || null;
-  } catch (error) {
-    console.error('Error getting agenda signed URL:', error);
-    return null;
+export const fetchGeneratedAgendaBlobUrl = async (agendaId: string): Promise<string> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
+
+  const response = await fetch(`${baseURL}/agendas/${encodeURIComponent(agendaId)}/download`, {
+    headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || 'Failed to download the agenda PDF');
   }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 };
