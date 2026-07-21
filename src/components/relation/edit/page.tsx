@@ -1,16 +1,18 @@
-// File: src/components/relation/edit/EditRelationModal.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../../shared/modal';
+import RelationFormFields, { useRelationForm } from '../RelationFormFields';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getAllParents } from '@/services/parentService';
 import { updateParentStudent } from '@/services/parentStudentService';
 import type {
   ParentStudentPayload,
-  UpdateParentStudentRequest
+  UpdateParentStudentRequest,
 } from '@/services/types/parentStudent';
 import type { ParentPayload } from '@/services/types/parent';
+import { getGradeDisplayName } from '@/lib/schoolUtils';
+import { UserIcon } from '@heroicons/react/24/outline';
 
 interface EditRelationModalProps {
   isOpen: boolean;
@@ -27,80 +29,45 @@ const EditRelationModal: React.FC<EditRelationModalProps> = ({
 }) => {
   const showNotification = useNotificationStore(s => s.showNotification);
 
-  // all parents in the school
   const [parents, setParents] = useState<ParentPayload[]>([]);
   const [loadingParents, setLoadingParents] = useState(false);
-
-  // form fields
-  const [search, setSearch] = useState('');
-  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
-  const [parentName, setParentName] = useState('');
-  const [parentEmail, setParentEmail] = useState('');
-  const [parentNumber, setParentNumber] = useState('');
+  const { form, setForm, relationValue, validate, buildParentFields, buildParentUser } =
+    useRelationForm(relation);
   const [saving, setSaving] = useState(false);
 
-  // When modal opens, prefill from `relation` and load parents
   useEffect(() => {
     if (!isOpen) return;
 
-    setSearch('');
-    setSelectedParentId(relation.parentId ?? null);
-    setParentName(relation.parentName ?? '');
-    setParentEmail(relation.parentEmail ?? '');
-    setParentNumber(relation.parentNumber ?? '');
-
     setLoadingParents(true);
-    getAllParents(relation.school)
+    getAllParents()
       .then(r => {
-        if (r.status === 'success' && r.data) {
-          setParents(r.data);
-        } else {
-          showNotification('Failed to load parents', 'error');
-        }
+        if (r.status === 'success' && r.data) setParents(r.data);
+        else showNotification('Failed to load parents', 'error');
       })
       .catch(() => showNotification('Error fetching parents', 'error'))
       .finally(() => setLoadingParents(false));
-  }, [isOpen, relation, showNotification]);
+  }, [isOpen, showNotification]);
 
-  // Filter by name
-  const filteredParents = useMemo(() => {
-    const q = search.toLowerCase();
-    return parents.filter(p =>
-      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q)
-    );
-  }, [parents, search]);
-
-  // Save handler
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const error = validate();
+    if (error) {
+      return showNotification(error, 'error');
+    }
 
     const payload: UpdateParentStudentRequest = {
-      parentId:      selectedParentId,
-      parentName:    parentName.trim() || null,
-      parentEmail:   parentEmail.trim() || null,
-      parentNumber:  parentNumber.trim() || null,
-      relation:      relation.relation, // unchanged
+      relation: relationValue(),
+      ...buildParentFields(),
     };
 
+    setSaving(true);
     try {
-      const res = await updateParentStudent(
-        relation.parentStudentLinkId,
-        payload
-      );
+      const res = await updateParentStudent(relation.parentStudentLinkId, payload);
       if (res.status === 'success' && res.data) {
-        // Look up the selected parent to populate parentUser
-        const par = parents.find(p => p.userId === selectedParentId!);
         const updated: ParentStudentPayload = {
           ...res.data,
-          student:    relation.student!,          // keep existing student info
-          parentUser: par
-            ? {
-                firstName: par.firstName,
-                lastName:  par.lastName,
-                email:     par.email,
-              }
-            : null,
-          parentNumber,                           // carry through edited phone
+          student: relation.student,
+          parentUser: buildParentUser(),
         };
         onUpdated(updated);
         showNotification('Relation updated', 'success');
@@ -108,111 +75,60 @@ const EditRelationModal: React.FC<EditRelationModalProps> = ({
       } else {
         showNotification(res.message || 'Failed to update', 'error');
       }
-    } catch {
-      showNotification('Error updating relation', 'error');
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error updating relation', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-lg w-11/12">
-      <h2 className="text-xl mb-4 text-black">Edit Parent-Student Relation</h2>
-      <p className="text-black mb-4">
-        Student:{' '}
-        <strong>
-          {relation.student?.name} (Grade {relation.student?.grade})
-        </strong>
-      </p>
-
-      {/* Parent selector */}
-      <div className="space-y-4 text-black">
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Relation" size="lg">
+      <form onSubmit={handleSave} className="p-6 space-y-5">
+        {/* Student (fixed) */}
         <div>
-          <label className="block text-sm font-medium mb-1">Parent</label>
-          <input
-            type="text"
-            placeholder="Search…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full mb-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          />
-          <div className="max-h-36 overflow-y-auto border rounded-lg p-2 bg-white">
-            {loadingParents ? (
-              <p className="text-gray-600">Loading…</p>
-            ) : filteredParents.length === 0 ? (
-              <p className="text-gray-600">No parents found.</p>
-            ) : (
-              filteredParents.map(p => (
-                <div key={p.userId} className="flex items-center mb-1">
-                  <input
-                    type="radio"
-                    id={`par-${p.userId}`}
-                    name="parent"
-                    value={p.userId}
-                    checked={selectedParentId === p.userId}
-                    onChange={() => {
-                      setSelectedParentId(p.userId);
-                      setParentName(`${p.firstName} ${p.lastName}`);
-                      setParentEmail(p.email);
-                      // leave parentNumber untouched or clear if you prefer:
-                      // setParentNumber('');
-                    }}
-                    className="mr-2"
-                  />
-                  <label htmlFor={`par-${p.userId}`} className="text-black">
-                    {p.firstName} {p.lastName} ({p.email})
-                  </label>
-                </div>
-              ))
-            )}
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Student</label>
+          <div className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+              <UserIcon className="w-4 h-4 text-cyan-700" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-slate-900 truncate">
+                {relation.student?.name || 'Unknown Student'}
+              </span>
+              <span className="block text-xs text-slate-500">
+                {getGradeDisplayName(relation.student?.grade)}
+              </span>
+            </span>
           </div>
         </div>
 
-        {/* Fallback contact info */}
-        <div>
-          <label className="block text-sm">Parent Name</label>
-          <input
-            value={parentName}
-            onChange={e => setParentName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Parent Email</label>
-          <input
-            type="email"
-            value={parentEmail}
-            onChange={e => setParentEmail(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Parent Phone</label>
-          <input
-            value={parentNumber}
-            onChange={e => setParentNumber(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
+        <RelationFormFields
+          form={form}
+          setForm={setForm}
+          parents={parents}
+          loadingParents={loadingParents}
+        />
 
         {/* Actions */}
-        <div className="flex justify-end space-x-4 pt-4">
+        <div className="flex justify-end gap-3 pt-2">
           <button
+            type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 cursor-pointer"
+            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium text-sm cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={handleSave}
+            type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 cursor-pointer"
+            className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium text-sm cursor-pointer disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 };

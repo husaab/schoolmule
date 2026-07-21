@@ -28,7 +28,6 @@ export interface CreateParentStudentRequest {
   parentEmail?: string | null;
   parentNumber?: string | null;
   relation: string;
-  school: string;
 }
 
 export interface UpdateParentStudentRequest {

@@ -327,14 +327,14 @@ const Sidebar = () => {
                   isActive={isAdminPanelPath}
                 >
                   <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
-                  <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
-                  <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
-                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
-                  <SubNavItem href="/admin-panel/school-assets" label="School Assets" icon={PhotoIcon} />
-                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
                   <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
                   <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
                   <SubNavItem href="/staff-attendance" label="Staff Attendance" icon={IdentificationIcon} />
+                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
+                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
+                  <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
+                  <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
+                  <SubNavItem href="/admin-panel/school-assets" label="School Assets" icon={PhotoIcon} />
                 </DropdownSection>
               </>
             )}

@@ -5,15 +5,11 @@ import {
 } from "./types/parent";
 
 /**
- * Fetch all parents for a given school
- * @param school The school identifier
+ * Fetch all parents for the authenticated user's school
+ * GET /parents
  */
-export const getAllParents = async (
-  school: string
-): Promise<AllParentsResponse> => {
-  return apiClient<AllParentsResponse>(
-    `/parents?school=${encodeURIComponent(school)}`
-  );
+export const getAllParents = async (): Promise<AllParentsResponse> => {
+  return apiClient<AllParentsResponse>(`/parents`);
 };
 
 /**

@@ -22,50 +22,65 @@ const DeleteRelationModal: React.FC<DeleteRelationModalProps> = ({
   const showNotification = useNotificationStore(s => s.showNotification);
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen || !relation) return null;
-
   const handleDelete = async () => {
     setLoading(true);
     try {
       const res = await deleteParentStudent(relation.parentStudentLinkId);
       if (res.status === 'success') {
-        showNotification('Relation deleted successfully', 'success');
+        showNotification('Relation removed', 'success');
         onDeleted(relation.parentStudentLinkId);
         onClose();
       } else {
-        showNotification(res.message || 'Failed to delete relation', 'error');
+        showNotification(res.message || 'Failed to remove relation', 'error');
       }
     } catch (err) {
-      console.error(err);
-      showNotification('Error deleting relation', 'error');
+      showNotification(err instanceof Error ? err.message : 'Error removing relation', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-xl mb-4 text-black">Confirm Delete</h2>
-      <p className="text-black">
-        Are you sure you want to delete the relation between{' '}
-        <span className="font-semibold">{relation.student?.name}</span> and{' '}
-        <span className="font-semibold">{relation.parentName}</span>?
-      </p>
-      <div className="flex justify-end space-x-4 pt-6">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={loading}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition cursor-pointer"
-        >
-          {loading ? 'Deleting...' : 'Delete'}
-        </button>
+    <Modal isOpen={isOpen} onClose={onClose} title="Remove Relation" size="sm">
+      <div className="p-6">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          This removes the link between the parent and student. It does not delete the
+          parent&apos;s account or the student.
+          {relation.parentUser && (
+            <span className="block mt-1">
+              The linked account will lose access to this student.
+            </span>
+          )}
+        </div>
+
+        <p className="mt-4 text-sm text-slate-600">
+          Remove{' '}
+          <span className="font-semibold text-slate-900">
+            {relation.parentName ||
+              (relation.parentUser
+                ? `${relation.parentUser.firstName} ${relation.parentUser.lastName}`
+                : 'this parent')}
+          </span>{' '}
+          ({relation.relation}) from{' '}
+          <span className="font-semibold text-slate-900">{relation.student?.name}</span>?
+        </p>
+
+        <div className="flex justify-end gap-3 pt-6">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium text-sm cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-medium text-sm cursor-pointer disabled:opacity-50"
+          >
+            {loading ? 'Removing…' : 'Remove'}
+          </button>
+        </div>
       </div>
     </Modal>
   );

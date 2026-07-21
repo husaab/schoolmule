@@ -8,15 +8,11 @@ import {
 } from './types/parentStudent';
 
 /**
- * Fetch all parent-student relations for a given school
- * GET /parent-students?school=X
+ * Fetch all parent-student relations for the authenticated user's school
+ * GET /parent-students
  */
-export const getAllParentStudents = async (
-  school: string
-): Promise<ParentStudentListResponse> => {
-  return apiClient<ParentStudentListResponse>(
-    `/parent-students?school=${encodeURIComponent(school)}`
-  );
+export const getAllParentStudents = async (): Promise<ParentStudentListResponse> => {
+  return apiClient<ParentStudentListResponse>(`/parent-students`);
 };
 
 /**

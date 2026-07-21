@@ -2,15 +2,31 @@
 
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
+import Spinner from '@/components/Spinner';
 import { useUserStore } from '@/store/useUserStore';
 import { useEffect, useState, useMemo } from 'react';
 import { getAllParentStudents } from '@/services/parentStudentService';
 import { ParentStudentPayload } from '@/services/types/parentStudent';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import AddRelationModal from '@/components/relation/add/page';
+import AddRelationModal, { PresetStudent } from '@/components/relation/add/page';
 import DeleteRelationModal from '@/components/relation/delete/page';
 import EditRelationModal from '@/components/relation/edit/page';
-import { getGradeNumericValue } from '@/lib/schoolUtils';
+import { getGradeDisplayName, getGradeNumericValue, GradeValue } from '@/lib/schoolUtils';
+import {
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+  UserIcon,
+  UsersIcon,
+} from '@heroicons/react/24/outline';
+
+interface FamilyGroup {
+  studentId: string;
+  name: string;
+  grade: GradeValue | null;
+  relations: ParentStudentPayload[];
+}
 
 const ParentStudentRelationsPage = () => {
   const user = useUserStore((state) => state.user);
@@ -20,6 +36,7 @@ const ParentStudentRelationsPage = () => {
   const [gradeFilter, setGradeFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addPresetStudent, setAddPresetStudent] = useState<PresetStudent | null>(null);
   const [deletingRelation, setDeletingRelation] = useState<ParentStudentPayload | null>(null);
   const [editingRelation, setEditingRelation] = useState<ParentStudentPayload | null>(null);
 
@@ -28,7 +45,7 @@ const ParentStudentRelationsPage = () => {
       if (!user.school || user.school === 'null') return;
 
       try {
-        const res = await getAllParentStudents(user.school);
+        const res = await getAllParentStudents();
         if (res.status === 'success' && res.data) {
           setRelations(res.data);
         } else {
@@ -49,26 +66,46 @@ const ParentStudentRelationsPage = () => {
     relations.forEach(r => {
       if (r.student?.grade != null) set.add(String(r.student.grade));
     });
-    return Array.from(set).sort((a, b) => {
-      // Parse string back to GradeValue for numeric comparison
-      const gradeA = a === 'JK' || a === 'SK' ? a : parseInt(a);
-      const gradeB = b === 'JK' || b === 'SK' ? b : parseInt(b);
-      const numA = getGradeNumericValue(gradeA);
-      const numB = getGradeNumericValue(gradeB);
-      return numA - numB;
-    });
+    return Array.from(set).sort(
+      (a, b) => getGradeNumericValue(a) - getGradeNumericValue(b)
+    );
   }, [relations]);
 
-   const filteredRelations = relations
-    .filter(relation =>
-      relation.student?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      relation.parentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      relation.relation.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(relation =>
-      gradeFilter === '' ||
-      String(relation.student?.grade) === gradeFilter
-    )
+  const filteredRelations = useMemo(() => {
+    const q = searchTerm.toLowerCase();
+    return relations
+      .filter(r =>
+        (r.student?.name ?? '').toLowerCase().includes(q) ||
+        r.parentName?.toLowerCase().includes(q) ||
+        (r.parentUser &&
+          `${r.parentUser.firstName} ${r.parentUser.lastName}`.toLowerCase().includes(q)) ||
+        r.relation.toLowerCase().includes(q)
+      )
+      .filter(r => gradeFilter === '' || String(r.student?.grade) === gradeFilter);
+  }, [relations, searchTerm, gradeFilter]);
+
+  // Group the filtered relations into one card per student
+  const groups = useMemo<FamilyGroup[]>(() => {
+    const map = new Map<string, FamilyGroup>();
+    for (const r of filteredRelations) {
+      const existing = map.get(r.studentId);
+      if (existing) {
+        existing.relations.push(r);
+      } else {
+        map.set(r.studentId, {
+          studentId: r.studentId,
+          name: r.student?.name ?? 'Unknown Student',
+          grade: r.student?.grade ?? null,
+          relations: [r],
+        });
+      }
+    }
+    return [...map.values()].sort(
+      (a, b) =>
+        getGradeNumericValue(a.grade) - getGradeNumericValue(b.grade) ||
+        a.name.localeCompare(b.name)
+    );
+  }, [filteredRelations]);
 
   const handleAdd = (newRel: ParentStudentPayload) => {
     setRelations((prev) => [newRel, ...prev]);
@@ -84,138 +121,189 @@ const ParentStudentRelationsPage = () => {
     );
   };
 
+  const openAdd = (preset: PresetStudent | null) => {
+    setAddPresetStudent(preset);
+    setShowAddModal(true);
+  };
+
+  const hasFilters = searchTerm !== '' || gradeFilter !== '';
+
   return (
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black">
-        <div className="mb-6">
-          <h1 className="text-2xl lg:text-3xl font-bold text-center mb-2">
-            {user.school} - Parent-Student Relations
-          </h1>
-          <p className="text-center text-gray-600">
-            Manage parent-student mappings and contact information
-          </p>
-        </div>
-
-        {/* Search and Controls */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center">
-          <input
-            type="text"
-            placeholder="Search by student name, parent name, or relation..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          />
-          <select
-            value={gradeFilter}
-            onChange={e => setGradeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          >
-            <option value="">All Grades</option>
-            {grades.map(g => (
-              <option key={g} value={g}>
-                Grade {g}
-              </option>
-            ))}
-          </select>
-          <button onClick={() => setShowAddModal(true)} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg cursor-pointer">
-            + Add Relation
-          </button>
-        </div>
-
-        {/* Relations List */}
-        {loading ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600">Loading parent-student relations...</p>
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                Parent-Student Relations
+              </h1>
+              <p className="text-slate-500 mt-1">
+                {loading
+                  ? 'Manage parent contacts and linked accounts'
+                  : `${groups.length} student${groups.length !== 1 ? 's' : ''} · ${filteredRelations.length} relation${filteredRelations.length !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+            <button
+              onClick={() => openAdd(null)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl font-medium cursor-pointer"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Add Relation
+            </button>
           </div>
-        ) : filteredRelations.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600">
-              {searchTerm ? 'No relations found matching your search.' : 'No parent-student relations found.'}
-            </p>
+
+          {/* Search and filters */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by student, parent, or relation…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              />
+            </div>
+            <select
+              value={gradeFilter}
+              onChange={e => setGradeFilter(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer"
+            >
+              <option value="">All Grades</option>
+              {grades.map(g => (
+                <option key={g} value={g}>
+                  {getGradeDisplayName(g)}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <div className="overflow-y-auto max-h-[60vh] space-y-4 pr-2">
-            {filteredRelations.map((relation) => (
-              <div
-                key={relation.parentStudentLinkId}
-                className="bg-white border border-cyan-200 rounded-lg p-4 lg:p-6 shadow-sm hover:shadow-md transition"
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Student Info */}
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-800 mb-1">
-                      {relation.student?.name || 'Unknown Student'}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Grade {relation.student?.grade || 'N/A'}
-                    </p>
-                  </div>
 
-                  {/* Parent Info */}
-                  <div>
-                    <h4 className="font-medium text-gray-800 mb-1">
-                      {relation.parentName || 'Unknown Parent'}
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      <span className="font-medium">Relation:</span> {relation.relation}
-                    </p>
-                    {relation.parentEmail && (
-                      <p className="text-sm text-gray-600 mb-1">
-                        <span className="font-medium">Email:</span> {relation.parentEmail}
-                      </p>
-                    )}
-                    {relation.parentNumber && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Phone:</span> {relation.parentNumber}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end space-x-2">
-                    <button onClick={() => setEditingRelation(relation)} className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-sm cursor-pointer">
-                      Edit
-                    </button>
-                    <button onClick={() => setDeletingRelation(relation)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm cursor-pointer">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                {/* User Account Info (if linked) */}
-                {relation.parentUser && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-sm text-green-600">
-                      <span className="font-medium">Linked Account:</span> {' '}
-                      {relation.parentUser.firstName} {relation.parentUser.lastName} ({relation.parentUser.email})
-                    </p>
-                  </div>
-                )}
-
-                {/* Created Date */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-xs text-gray-500">
-                    Created: {new Date(relation.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+          {/* Family cards */}
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 text-center py-16 px-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+                <UsersIcon className="h-8 w-8 text-slate-400" />
               </div>
-            ))}
-          </div>
-        )}
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                {hasFilters ? 'No matching relations' : 'No relations yet'}
+              </h3>
+              <p className="text-sm text-slate-500 mb-6">
+                {hasFilters
+                  ? 'Try a different search or grade filter.'
+                  : 'Link parents to students to manage contacts and portal access.'}
+              </p>
+              {!hasFilters && (
+                <button
+                  onClick={() => openAdd(null)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl font-medium cursor-pointer"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  Add your first relation
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {groups.map((group) => (
+                <div
+                  key={group.studentId}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
+                >
+                  {/* Student header */}
+                  <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
+                      <UserIcon className="w-5 h-5 text-cyan-700" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 truncate">{group.name}</h3>
+                    <span className="text-xs px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 font-medium flex-shrink-0">
+                      {getGradeDisplayName(group.grade)}
+                    </span>
+                  </div>
 
-        {/* Stats */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
-            Showing {filteredRelations.length} of {relations.length} parent-student relations
-          </p>
+                  {/* Parent rows */}
+                  <div className="p-4 space-y-2">
+                    {group.relations.map((relation) => (
+                      <div
+                        key={relation.parentStudentLinkId}
+                        className="flex items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-slate-900">
+                              {relation.parentName ||
+                                (relation.parentUser
+                                  ? `${relation.parentUser.firstName} ${relation.parentUser.lastName}`
+                                  : 'Unnamed parent')}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700">
+                              {relation.relation}
+                            </span>
+                            {relation.parentUser && (
+                              <span className="text-xs px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">
+                                ✓ Linked account
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5 truncate">
+                            {[relation.parentEmail ?? relation.parentUser?.email, relation.parentNumber]
+                              .filter(Boolean)
+                              .join(' · ') || 'No contact info'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => setEditingRelation(relation)}
+                            aria-label="Edit relation"
+                            className="p-2 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingRelation(relation)}
+                            aria-label="Remove relation"
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={() =>
+                        openAdd({
+                          studentId: group.studentId,
+                          name: group.name,
+                          grade: group.grade,
+                        })
+                      }
+                      className="w-full flex items-center justify-center gap-1.5 p-2.5 border border-dashed border-slate-200 rounded-xl text-sm text-slate-500 hover:text-cyan-600 hover:border-cyan-300 hover:bg-cyan-50/50 transition-colors cursor-pointer"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      Add parent
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
       <AddRelationModal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        presetStudent={addPresetStudent}
+        onClose={() => {
+          setShowAddModal(false);
+          setAddPresetStudent(null);
+        }}
         onAdd={handleAdd}
       />
       {deletingRelation && (
