@@ -26,7 +26,11 @@ import {
   IdentificationIcon,
   TableCellsIcon,
   SparklesIcon,
-  TrophyIcon
+  TrophyIcon,
+  CogIcon,
+  PhotoIcon,
+  CalendarDaysIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -76,11 +80,12 @@ const Sidebar = () => {
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
-  const isSchedulePlannerPath = pathname.startsWith('/admin-panel/schedule-planner');
+  const isAdminPanelPath = (pathname.startsWith('/admin-panel') && !isRegistrationPath) || pathname === '/staff-attendance';
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
   const [registrationOpen, setRegistrationOpen] = useState(isRegistrationPath);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(isAdminPanelPath);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -161,7 +166,7 @@ const Sidebar = () => {
           <ChevronRightIcon className="w-4 h-4 text-slate-400" />
         )}
       </button>
-      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="ml-4 mt-1 pl-4 border-l-2 border-slate-100 space-y-1">
           {children}
         </div>
@@ -314,24 +319,23 @@ const Sidebar = () => {
                   </div>
                 </DropdownSection>
 
-                <NavItem
-                  href="/admin-panel/schedule-planner"
-                  label="Schedule Planner"
-                  icon={TableCellsIcon}
-                  isActive={isSchedulePlannerPath}
-                />
-                <NavItem
-                  href="/admin-panel"
+                <DropdownSection
                   label="Admin Panel"
                   icon={ShieldCheckIcon}
-                  isActive={pathname.startsWith('/admin-panel') && !isRegistrationPath && !isSchedulePlannerPath}
-                />
-                <NavItem
-                  href="/staff-attendance"
-                  label="Staff Attendance"
-                  icon={IdentificationIcon}
-                  isActive={pathname === '/staff-attendance'}
-                />
+                  isOpen={adminPanelOpen}
+                  onToggle={() => setAdminPanelOpen(!adminPanelOpen)}
+                  isActive={isAdminPanelPath}
+                >
+                  <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
+                  <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
+                  <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
+                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
+                  <SubNavItem href="/admin-panel/school-assets" label="School Assets" icon={PhotoIcon} />
+                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
+                  <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
+                  <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
+                  <SubNavItem href="/staff-attendance" label="Staff Attendance" icon={IdentificationIcon} />
+                </DropdownSection>
               </>
             )}
           </>
