@@ -18,13 +18,17 @@ const ParentAssessmentTable: React.FC<{ scores: AssessmentScore[] }> = ({ scores
     return <p className="text-sm text-slate-500 py-3">No assessments recorded yet.</p>
   }
 
+  // Many teachers don't date their assessments — drop the column entirely
+  // rather than render a stack of dashes.
+  const hasDates = scores.some((s) => s.date)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-stone-200/70">
             <th className="py-2 pr-4 font-semibold">Assessment</th>
-            <th className="py-2 pr-4 font-semibold">Date</th>
+            {hasDates && <th className="py-2 pr-4 font-semibold">Date</th>}
             <th className="py-2 pr-4 font-semibold text-right">Score</th>
             <th className="py-2 pr-4 font-semibold text-right">Out of</th>
             <th className="py-2 pr-4 font-semibold text-right">%</th>
@@ -39,7 +43,11 @@ const ParentAssessmentTable: React.FC<{ scores: AssessmentScore[] }> = ({ scores
             return (
               <tr key={s.assessmentId} className="border-b border-stone-100 last:border-0">
                 <td className="py-2.5 pr-4 text-slate-700">{s.name}</td>
-                <td className="py-2.5 pr-4 text-slate-500 whitespace-nowrap">{formatDate(s.date)}</td>
+                {hasDates && (
+                  <td className="py-2.5 pr-4 text-slate-500 whitespace-nowrap">
+                    {formatDate(s.date)}
+                  </td>
+                )}
                 <td className="py-2.5 pr-4 text-right text-slate-700">{s.score ?? '—'}</td>
                 <td className="py-2.5 pr-4 text-right text-slate-500">{s.maxScore ?? '—'}</td>
                 <td className={`py-2.5 pr-4 text-right font-medium ${gradeTextColor(pct)}`}>
