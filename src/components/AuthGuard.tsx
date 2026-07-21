@@ -35,7 +35,7 @@ const isPublicSchedulePath = (path: string) => {
   const segments = path.split('/').filter(Boolean);
   return segments.length === 3 && segments[1] === 'schedule' && !KNOWN_APP_ROUTES.includes(segments[0]);
 };
-const PARENT_PATHS = ['/parent/dashboard', '/settings', '/parent/report-cards']
+const PARENT_PATHS = ['/parent', '/settings', '/support', '/contact-us']
 
 // Check if path matches parent patterns (including dynamic routes)
 const isParentPath = (path: string) => {

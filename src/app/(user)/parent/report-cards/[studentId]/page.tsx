@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import Navbar from '@/components/navbar/Navbar'
-import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getStudentsByParentId } from '@/services/parentStudentService'
 import { getSignedReportCardUrl, getGeneratedReportCardsByStudentId } from '@/services/reportCardService'
@@ -12,8 +11,17 @@ import { getTermsBySchool } from '@/services/termService'
 import { ParentStudentPayload } from '@/services/types/parentStudent'
 import { TermPayload } from '@/services/types/term'
 import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal'
+import ParentPageShell from '@/components/parent/ParentPageShell'
+import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
-import { EyeIcon, ArrowDownTrayIcon, ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { childColor, childInitial } from '@/components/parent/childColors'
+import {
+  EyeIcon,
+  ArrowDownTrayIcon,
+  ArrowLeftIcon,
+  DocumentChartBarIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline'
 
 type ReportCardRow = {
   student_id: string
@@ -39,6 +47,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
 
   // Verify the student belongs to this parent and fetch initial data
   useEffect(() => {
@@ -61,9 +70,12 @@ const ParentStudentReportCardsPage: React.FC = () => {
       .then((termsRes) => {
         if (termsRes?.status === 'success') {
           setTerms(termsRes.data)
-          
-          // Set default term to active term
-          if (user.activeTerm) {
+
+          // Default term: the JWT's active term only if it exists in this
+          // (year-scoped) list, else the list's active term, else the first —
+          // a past year has no active term and may not contain activeTerm's name.
+          const names = termsRes.data.map(t => t.name)
+          if (user.activeTerm && names.includes(user.activeTerm)) {
             setTerm(user.activeTerm)
           } else {
             const activeTerm = termsRes.data.find(t => t.isActive)
@@ -71,6 +83,8 @@ const ParentStudentReportCardsPage: React.FC = () => {
               setTerm(activeTerm.name)
             } else if (termsRes.data.length > 0) {
               setTerm(termsRes.data[0].name)
+            } else {
+              setTerm('')
             }
           }
         } else {
@@ -85,7 +99,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
         setLoading(false)
         setLoadingTerms(false)
       })
-  }, [user.id, user.school, user.activeTerm, studentId, showNotification])
+  }, [user.id, user.school, user.activeTerm, studentId, showNotification, selectedYearId])
 
   // Fetch report cards when term is selected
   useEffect(() => {
@@ -148,118 +162,91 @@ const ParentStudentReportCardsPage: React.FC = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-          <div className="flex justify-center items-center h-32">
-            <Spinner />
-          </div>
-        </main>
-      </>
-    )
-  }
-
-  if (error) {
-    return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-          <div className="text-center">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-              <p className="text-red-600 font-medium">{error}</p>
-              <button
-                onClick={() => router.push('/parent/report-cards')}
-                className="mt-4 px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"
-              >
-                Back to Report Cards
-              </button>
-            </div>
-          </div>
-        </main>
-      </>
-    )
-  }
+  const color = childColor(studentId)
+  const childName = student?.student?.name || 'Report Cards'
 
   return (
-    <>
-      <Navbar />
-      <Sidebar />
-      <main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen p-4 lg:p-10">
-        {/* Header */}
-        <div className="text-black text-center mb-6">
-          <button
-            onClick={() => router.push('/parent/report-cards')}
-            className="flex items-center space-x-2 text-cyan-600 hover:text-cyan-700 mb-4 mx-auto cursor-pointer"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span>Back to Report Cards</span>
-          </button>
-          <h1 className="text-2xl lg:text-3xl font-semibold">
-            Report Cards - {student?.student?.name} - Grade {student?.student?.grade}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            View and download report cards
-          </p>
-          
-        </div>
+    <ParentPageShell
+      title={student ? `${childName}'s Report Cards` : 'Report Cards'}
+      subtitle={
+        student?.student?.grade != null
+          ? `Grade ${student.student.grade} · View and download report cards.`
+          : 'View and download report cards.'
+      }
+      badge={{ icon: DocumentChartBarIcon, label: 'Report Cards' }}
+    >
+      <button
+        onClick={() => router.push('/parent/report-cards')}
+        className="flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 mb-6 cursor-pointer"
+      >
+        <ArrowLeftIcon className="h-4 w-4" />
+        Back to Report Cards
+      </button>
 
-        {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-md max-w-4xl mx-auto">
-          {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <DocumentTextIcon className="h-8 w-8 text-cyan-600" />
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {student?.student?.name}&apos;s Report Cards
-                  </h2>
-                  <p className="text-sm text-gray-600">Select a term to view available report cards</p>
-                </div>
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="lg" />
+        </div>
+      )}
+
+      {error && (
+        <ParentEmptyState icon={DocumentTextIcon} title="Something went wrong" message={error} />
+      )}
+
+      {!loading && !error && student && (
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70">
+          {/* Header with term selector */}
+          <div className="p-6 border-b border-stone-100">
+            <div className="flex items-center gap-4 mb-5">
+              <span
+                className={`w-12 h-12 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-lg font-semibold flex-shrink-0`}
+              >
+                {childInitial(childName)}
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">{childName}</h2>
+                <p className="text-sm text-slate-500">Select a term to view available report cards</p>
               </div>
-              
-              <div className="max-w-sm">
-                <label className="block text-sm font-medium mb-2 text-black">Select term:</label>
-                {loadingTerms ? (
-                  <p className="text-gray-600">Loading terms...</p>
-                ) : (
-                  <select
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                    className="w-full border border-gray-300 text-black rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="" disabled>Select term</option>
-                    {terms.map((t) => (
-                      <option key={t.termId} value={t.name}>
-                        {t.name} ({t.academicYear})
-                        {t.isActive && ' - Active'}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+            </div>
+
+            <div className="max-w-sm">
+              {loadingTerms ? (
+                <p className="text-sm text-slate-500">Loading terms...</p>
+              ) : (
+                <select
+                  value={term}
+                  onChange={(e) => setTerm(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>Select term</option>
+                  {terms.map((t) => (
+                    <option key={t.termId} value={t.name}>
+                      {t.name} ({t.academicYear})
+                      {t.isActive && ' - Active'}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
-          {/* Report Cards Content */}
+          {/* Report cards list */}
           <div className="p-6">
             {loadingReports ? (
               <div className="flex justify-center items-center h-32">
                 <Spinner />
               </div>
             ) : reportCards.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                  <DocumentTextIcon className="w-8 h-8 text-gray-400" />
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center">
+                  <DocumentTextIcon className="w-8 h-8 text-amber-400" />
                 </div>
-                <p className="text-lg font-medium">No report cards found</p>
-                <p className="text-sm">
-                  {term ? `No report cards have been generated for ${term}.` : 'Please select a term to view report cards.'}
+                <p className="text-lg font-semibold text-slate-900 mb-1">No report cards found</p>
+                <p className="text-sm text-slate-500">
+                  {term
+                    ? `No report cards have been generated for ${term} yet.`
+                    : 'Please select a term to view report cards.'}
                 </p>
               </div>
             ) : (
@@ -267,12 +254,13 @@ const ParentStudentReportCardsPage: React.FC = () => {
                 {reportCards.map((report) => (
                   <div
                     key={report.file_path}
-                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between gap-4 p-4 bg-stone-50 border border-stone-100 rounded-xl hover:bg-stone-100 transition-colors"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800">{report.student_name}</p>
-                      <p className="text-gray-600 text-sm">
-                        Generated: {new Date(report.generated_at).toLocaleDateString('en-US', {
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-900 truncate">{report.student_name}</p>
+                      <p className="text-sm text-slate-500">
+                        Generated{' '}
+                        {new Date(report.generated_at).toLocaleDateString('en-CA', {
                           month: 'long',
                           day: 'numeric',
                           year: 'numeric',
@@ -280,20 +268,20 @@ const ParentStudentReportCardsPage: React.FC = () => {
                           minute: '2-digit'
                         })}
                       </p>
-                      <p className="text-gray-500 text-xs">Term: {term}</p>
+                      <p className="text-xs text-slate-400">Term: {term}</p>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handlePreview(report.file_path)}
                         title="View PDF"
-                        className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <EyeIcon className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDownload(report.file_path)}
                         title="Download PDF"
-                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <ArrowDownTrayIcon className="h-5 w-5" />
                       </button>
@@ -304,26 +292,12 @@ const ParentStudentReportCardsPage: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
+      )}
 
       {viewingUrl && (
         <ReportCardViewerModal url={viewingUrl} onClose={() => setViewingUrl(null)} />
       )}
-
-      <style jsx global>{`
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(0, 0, 0, 0.2);
-          border-radius: 3px;
-        }
-      `}</style>
-    </>
+    </ParentPageShell>
   )
 }
 

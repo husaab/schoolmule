@@ -52,8 +52,10 @@ async function apiClient<T, B = unknown>(
                 // Clear user store and show notification
                 const { useUserStore } = await import('@/store/useUserStore');
                 const { useNotificationStore } = await import('@/store/useNotificationStore');
+                const { useSelectedChildStore } = await import('@/store/useSelectedChildStore');
                 useUserStore.getState().clearUser();
                 useSchoolYearStore.getState().clearYears();
+                useSelectedChildStore.getState().clearChildren();
                 useNotificationStore.getState().showNotification("Your login session has expired, please login again", "error")
                 window.location.href = '/';
             }

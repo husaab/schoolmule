@@ -22,7 +22,7 @@ export default function SchoolYearSelector() {
       .catch(() => { /* keep whatever is persisted */ })
   }, [hasHydrated, user?.school, setYears])
 
-  if (!hasHydrated || user?.role === 'PARENT' || years.length === 0) return null
+  if (!hasHydrated || years.length === 0) return null
 
   return (
     <div className="flex items-center gap-2">

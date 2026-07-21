@@ -30,7 +30,8 @@ import {
   CogIcon,
   PhotoIcon,
   CalendarDaysIcon,
-  Squares2X2Icon
+  Squares2X2Icon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -39,6 +40,7 @@ import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
 import { getNewSubmissionCount } from '@/services/registrationService'
 import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
+import ChildSwitcher from '@/components/parent/ChildSwitcher'
 
 interface NavLink {
   href: string;
@@ -59,8 +61,13 @@ const teacherLinks: NavLink[] = [
 ];
 
 const parentLinks: NavLink[] = [
-  { href: '/parent/dashboard', label: 'Dashboard', icon: HomeIcon },
-  { href: '/parent/report-cards', label: 'Report Cards', icon: DocumentChartBarIcon }
+  { href: '/parent/dashboard', label: 'Overview', icon: HomeIcon },
+  { href: '/parent/grades', label: 'Grades', icon: BookOpenIcon },
+  { href: '/parent/attendance', label: 'Attendance', icon: ClipboardDocumentCheckIcon },
+  { href: '/parent/calendar', label: 'Calendar', icon: CalendarDaysIcon },
+  { href: '/parent/feedback', label: 'Feedback', icon: ChatBubbleLeftRightIcon },
+  { href: '/parent/report-cards', label: 'Report Cards', icon: DocumentChartBarIcon },
+  { href: '/parent/staff', label: 'Staff Directory', icon: UserGroupIcon }
 ];
 
 const supportLinks: NavLink[] = [
@@ -228,6 +235,9 @@ const Sidebar = () => {
           <SchoolYearSelector />
         </div>
 
+        {/* Child Switcher (Parents) */}
+        {user?.role === 'PARENT' && <ChildSwitcher />}
+
         {/* Main Links */}
         {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
           <NavItem
@@ -235,7 +245,11 @@ const Sidebar = () => {
             href={link.href}
             label={link.label}
             icon={link.icon}
-            isActive={pathname === link.href}
+            isActive={
+              user?.role === 'PARENT'
+                ? pathname === link.href || pathname.startsWith(link.href + '/')
+                : pathname === link.href
+            }
           />
         ))}
 
@@ -319,6 +333,18 @@ const Sidebar = () => {
                   </div>
                 </DropdownSection>
 
+                <NavItem
+                  href="/admin-panel/schedule-planner"
+                  label="Schedule Planner"
+                  icon={TableCellsIcon}
+                  isActive={pathname.startsWith('/admin-panel/schedule-planner')}
+                />
+                <NavItem
+                  href="/admin-panel/agendas"
+                  label="Agenda Editor"
+                  icon={BookOpenIcon}
+                  isActive={pathname.startsWith('/admin-panel/agendas')}
+                />
                 <DropdownSection
                   label="Admin Panel"
                   icon={ShieldCheckIcon}
@@ -346,18 +372,20 @@ const Sidebar = () => {
           <div className="border-t border-slate-100" />
         </div>
 
-        {/* What's New */}
-        <div className="relative">
-          <NavItem
-            href="/whats-new"
-            icon={SparklesIcon}
-            label="What's New"
-            isActive={pathname === '/whats-new'}
-          />
-          {hasUnread && (
-            <span className="absolute top-1/2 -translate-y-1/2 right-4 h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-          )}
-        </div>
+        {/* What's New (not shown to parents) */}
+        {user?.role !== 'PARENT' && (
+          <div className="relative">
+            <NavItem
+              href="/whats-new"
+              icon={SparklesIcon}
+              label="What's New"
+              isActive={pathname === '/whats-new'}
+            />
+            {hasUnread && (
+              <span className="absolute top-1/2 -translate-y-1/2 right-4 h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+            )}
+          </div>
+        )}
 
         {/* Settings */}
         <NavItem
