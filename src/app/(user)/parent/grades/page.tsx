@@ -1,20 +1,24 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BookOpenIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline'
-import { ChildLite } from '@/store/useSelectedChildStore'
+import { ChildLite, useVisibleChildren } from '@/store/useSelectedChildStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getChildGrades } from '@/services/parentPortalService'
 import { ChildGrades, ChildClassGrades } from '@/services/types/parentPortal'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ChildSections from '@/components/parent/ChildSections'
+import ChildJumpNav from '@/components/parent/ChildJumpNav'
+import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import ParentAssessmentTable from '@/components/parent/ParentAssessmentTable'
+import ClassGradesBarChart from '@/components/parent/ClassGradesBarChart'
 import TermPicker from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
 import TrendLineChart from '@/app/(user)/analytics/_components/charts/TrendLineChart'
@@ -84,7 +88,19 @@ const ClassCard: React.FC<{ cls: ChildClassGrades }> = ({ cls }) => {
   )
 }
 
-const ChildGradesSection: React.FC<{ child: ChildLite; termId: string }> = ({ child, termId }) => {
+interface ChildGradesSectionProps {
+  child: ChildLite
+  termId: string
+  subjectFilter: string
+  onSubjectsLoaded: (studentId: string, subjects: string[]) => void
+}
+
+const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
+  child,
+  termId,
+  subjectFilter,
+  onSubjectsLoaded,
+}) => {
   const [grades, setGrades] = useState<ChildGrades | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -94,13 +110,17 @@ const ChildGradesSection: React.FC<{ child: ChildLite; termId: string }> = ({ ch
     setLoading(true)
     setError(null)
     getChildGrades(child.studentId, termId || undefined)
-      .then((res) => setGrades(res.data || null))
+      .then((res) => {
+        const data = res.data || null
+        setGrades(data)
+        onSubjectsLoaded(child.studentId, data?.classes.map((c) => c.subject) ?? [])
+      })
       .catch((err) => {
         console.error(err)
         setError('Failed to load grades.')
       })
       .finally(() => setLoading(false))
-  }, [child.studentId, termId, selectedYearId])
+  }, [child.studentId, termId, selectedYearId, onSubjectsLoaded])
 
   if (loading) {
     return (
@@ -122,43 +142,67 @@ const ChildGradesSection: React.FC<{ child: ChildLite; termId: string }> = ({ ch
     )
   }
 
+  const classes = subjectFilter
+    ? grades.classes.filter((c) => c.subject === subjectFilter)
+    : grades.classes
+  const missingWork = subjectFilter
+    ? grades.missingWork.filter((m) => m.subject === subjectFilter)
+    : grades.missingWork
+
+  if (classes.length === 0) {
+    return (
+      <ParentEmptyState
+        icon={FunnelIcon}
+        title={`No ${subjectFilter} class`}
+        message={`${child.name.split(' ')[0]} doesn't have a ${subjectFilter} class this term.`}
+      />
+    )
+  }
+
   return (
     <div className="space-y-4">
-      {/* Stat row */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
-            Overall Average
-          </p>
-          <p className={`text-2xl font-bold ${gradeTextColor(grades.overall?.avg)}`}>
-            {grades.overall?.avg != null ? `${grades.overall.avg}%` : '—'}
-          </p>
+      {/* Overall stat row only makes sense unfiltered */}
+      {!subjectFilter && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+              Overall Average
+            </p>
+            <p className={`text-2xl font-bold ${gradeTextColor(grades.overall?.avg)}`}>
+              {grades.overall?.avg != null ? `${grades.overall.avg}%` : '—'}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+              Classes
+            </p>
+            <p className="text-2xl font-bold text-slate-900">{grades.overall?.classCount ?? 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+              Missing Work
+            </p>
+            <p
+              className={`text-2xl font-bold ${grades.missingWork.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}
+            >
+              {grades.missingWork.length}
+            </p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">Classes</p>
-          <p className="text-2xl font-bold text-slate-900">{grades.overall?.classCount ?? 0}</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
-            Missing Work
-          </p>
-          <p
-            className={`text-2xl font-bold ${grades.missingWork.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}
-          >
-            {grades.missingWork.length}
-          </p>
-        </div>
-      </div>
+      )}
+
+      {/* Grades-by-class chart (unfiltered view only — one bar is no chart) */}
+      {!subjectFilter && <ClassGradesBarChart classes={grades.classes} />}
 
       {/* Missing work callout */}
-      {grades.missingWork.length > 0 && (
+      {missingWork.length > 0 && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <ExclamationTriangleIcon className="w-5 h-5 text-amber-600" />
             <h4 className="text-sm font-semibold text-amber-800">Missing Work</h4>
           </div>
           <ul className="space-y-1">
-            {grades.missingWork.map((m) => (
+            {missingWork.map((m) => (
               <li key={`${m.classId}-${m.assessmentId}`} className="text-sm text-slate-700">
                 <span className="font-medium">{m.subject}:</span> {m.assessmentName}
               </li>
@@ -168,7 +212,7 @@ const ChildGradesSection: React.FC<{ child: ChildLite; termId: string }> = ({ ch
       )}
 
       {/* Class cards */}
-      {grades.classes.map((cls) => (
+      {classes.map((cls) => (
         <ClassCard key={cls.classId} cls={cls} />
       ))}
     </div>
@@ -177,6 +221,9 @@ const ChildGradesSection: React.FC<{ child: ChildLite; termId: string }> = ({ ch
 
 const ParentGradesPage: React.FC = () => {
   const [termId, setTermId] = useState('')
+  const [subjectFilter, setSubjectFilter] = useState('')
+  const [subjectsByChild, setSubjectsByChild] = useState<Record<string, string[]>>({})
+  const visibleChildren = useVisibleChildren()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   // A term from one year is meaningless in another — snap back to the
@@ -185,16 +232,59 @@ const ParentGradesPage: React.FC = () => {
     setTermId('')
   }, [selectedYearId])
 
+  const onSubjectsLoaded = useCallback((studentId: string, subjects: string[]) => {
+    setSubjectsByChild((prev) =>
+      prev[studentId]?.join('|') === subjects.join('|')
+        ? prev
+        : { ...prev, [studentId]: subjects },
+    )
+  }, [])
+
+  const subjects = useMemo(() => {
+    const all = visibleChildren.flatMap((c) => subjectsByChild[c.studentId] ?? [])
+    return [...new Set(all)].sort((a, b) => a.localeCompare(b))
+  }, [visibleChildren, subjectsByChild])
+
+  // Drop a stale subject filter when it no longer exists (term/year/child change).
+  useEffect(() => {
+    if (subjectFilter && subjects.length > 0 && !subjects.includes(subjectFilter)) {
+      setSubjectFilter('')
+    }
+  }, [subjects, subjectFilter])
+
   return (
     <ParentPageShell
       title="Grades"
       subtitle="Every assessment, average and trend — the same numbers as the report card."
       badge={{ icon: BookOpenIcon, label: 'Grades' }}
-      actions={<TermPicker value={termId} onChange={setTermId} />}
     >
+      <ParentFilterBar>
+        <select
+          value={subjectFilter}
+          onChange={(e) => setSubjectFilter(e.target.value)}
+          className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
+        >
+          <option value="">All classes</option>
+          {subjects.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <TermPicker value={termId} onChange={setTermId} />
+      </ParentFilterBar>
+
       <ChildSections
-        renderChild={(child) => <ChildGradesSection child={child} termId={termId} />}
+        renderChild={(child) => (
+          <ChildGradesSection
+            child={child}
+            termId={termId}
+            subjectFilter={subjectFilter}
+            onSubjectsLoaded={onSubjectsLoaded}
+          />
+        )}
       />
+      <ChildJumpNav />
     </ParentPageShell>
   )
 }

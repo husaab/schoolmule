@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ChatBubbleLeftRightIcon,
   DocumentArrowDownIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline'
-import { ChildLite } from '@/store/useSelectedChildStore'
+import { ChildLite, useVisibleChildren } from '@/store/useSelectedChildStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
 import { getChildFeedback } from '@/services/parentPortalService'
@@ -19,10 +20,10 @@ import {
 import { useNotificationStore } from '@/store/useNotificationStore'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ChildSections from '@/components/parent/ChildSections'
+import ChildJumpNav from '@/components/parent/ChildJumpNav'
+import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
-
-const ALL_TERMS_FILTER = ''
 
 const Chip: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-stone-50 border border-stone-200 text-slate-600">
@@ -55,9 +56,18 @@ const FeedbackCard: React.FC<{
   </div>
 )
 
-const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> = ({
+interface ChildFeedbackSectionProps {
+  child: ChildLite
+  termFilter: string
+  subjectFilter: string
+  onSubjectsLoaded: (studentId: string, subjects: string[]) => void
+}
+
+const ChildFeedbackSection: React.FC<ChildFeedbackSectionProps> = ({
   child,
   termFilter,
+  subjectFilter,
+  onSubjectsLoaded,
 }) => {
   const [feedback, setFeedback] = useState<ChildFeedback | null>(null)
   const [loading, setLoading] = useState(true)
@@ -69,13 +79,21 @@ const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> =
     setLoading(true)
     setError(null)
     getChildFeedback(child.studentId)
-      .then((res) => setFeedback(res.data || null))
+      .then((res) => {
+        const data = res.data || null
+        setFeedback(data)
+        const subjects = [
+          ...(data?.progressFeedback.map((f) => f.subject) ?? []),
+          ...(data?.reportCardFeedback.map((f) => f.subject) ?? []),
+        ]
+        onSubjectsLoaded(child.studentId, [...new Set(subjects)])
+      })
       .catch((err) => {
         console.error(err)
         setError('Failed to load feedback.')
       })
       .finally(() => setLoading(false))
-  }, [child.studentId, selectedYearId])
+  }, [child.studentId, selectedYearId, onSubjectsLoaded])
 
   const openProgressReport = async (filePath: string | null) => {
     if (!filePath) return
@@ -105,26 +123,33 @@ const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> =
     )
   }
 
-  const byTerm = <T extends { term: string }>(items: T[]) =>
-    termFilter === ALL_TERMS_FILTER ? items : items.filter((i) => i.term === termFilter)
+  const matches = <T extends { term: string; subject?: string }>(items: T[]) =>
+    items
+      .filter((i) => !termFilter || i.term === termFilter)
+      .filter((i) => !subjectFilter || i.subject === subjectFilter)
 
-  const progressReports = byTerm(feedback?.progressReports ?? [])
-  const progressFeedback = byTerm(feedback?.progressFeedback ?? [])
-  const reportCardFeedback = byTerm(feedback?.reportCardFeedback ?? [])
+  // Progress report PDFs are whole-student documents — term filter applies,
+  // subject filter doesn't.
+  const progressReports = (feedback?.progressReports ?? []).filter(
+    (r) => !termFilter || r.term === termFilter,
+  )
+  const progressFeedback = matches(feedback?.progressFeedback ?? [])
+  const reportCardFeedback = matches(feedback?.reportCardFeedback ?? [])
 
   if (
     progressReports.length === 0 &&
     progressFeedback.length === 0 &&
     reportCardFeedback.length === 0
   ) {
+    const filtered = termFilter || subjectFilter
     return (
       <ParentEmptyState
-        icon={ChatBubbleLeftRightIcon}
-        title="No feedback yet"
+        icon={filtered ? FunnelIcon : ChatBubbleLeftRightIcon}
+        title={filtered ? 'Nothing matches these filters' : 'No feedback yet'}
         message={
-          termFilter === ALL_TERMS_FILTER
-            ? "Teachers haven't added feedback yet. It will appear here as progress reports and report cards are prepared."
-            : `No feedback for ${termFilter} yet.`
+          filtered
+            ? `No feedback for ${child.name.split(' ')[0]} matches the selected filters.`
+            : "Teachers haven't added feedback yet. It will appear here as progress reports and report cards are prepared."
         }
       />
     )
@@ -170,7 +195,7 @@ const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> =
           <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">
             Progress Feedback
           </h4>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {progressFeedback.map((item: ProgressFeedbackItem) => (
               <FeedbackCard
                 key={`${item.classId}-${item.term}`}
@@ -191,7 +216,7 @@ const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> =
           <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">
             Report Card Comments
           </h4>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {reportCardFeedback.map((item: ReportCardFeedbackItem) => (
               <FeedbackCard
                 key={`${item.classId}-${item.term}`}
@@ -210,7 +235,7 @@ const ChildFeedbackSection: React.FC<{ child: ChildLite; termFilter: string }> =
   )
 }
 
-/** Term-name filter for feedback (feedback rows store term names, not ids). */
+/** Term-name filter (feedback rows store term names, not ids). */
 const TermNameFilter: React.FC<{
   value: string
   onChange: (name: string) => void
@@ -243,26 +268,70 @@ const TermNameFilter: React.FC<{
 }
 
 const ParentFeedbackPage: React.FC = () => {
-  const [termFilter, setTermFilter] = useState(ALL_TERMS_FILTER)
+  const [termFilter, setTermFilter] = useState('')
+  const [subjectFilter, setSubjectFilter] = useState('')
+  const [subjectsByChild, setSubjectsByChild] = useState<Record<string, string[]>>({})
+  const visibleChildren = useVisibleChildren()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
-  // A term name from one year may not exist in another — reset the filter
-  // when the selected school year changes.
+  // Filter values from one year may not exist in another — reset on year change.
   useEffect(() => {
-    setTermFilter(ALL_TERMS_FILTER)
+    setTermFilter('')
+    setSubjectFilter('')
   }, [selectedYearId])
+
+  const onSubjectsLoaded = useCallback((studentId: string, subjects: string[]) => {
+    setSubjectsByChild((prev) =>
+      prev[studentId]?.join('|') === subjects.join('|')
+        ? prev
+        : { ...prev, [studentId]: subjects },
+    )
+  }, [])
+
+  const subjects = useMemo(() => {
+    const all = visibleChildren.flatMap((c) => subjectsByChild[c.studentId] ?? [])
+    return [...new Set(all)].sort((a, b) => a.localeCompare(b))
+  }, [visibleChildren, subjectsByChild])
+
+  useEffect(() => {
+    if (subjectFilter && subjects.length > 0 && !subjects.includes(subjectFilter)) {
+      setSubjectFilter('')
+    }
+  }, [subjects, subjectFilter])
 
   return (
     <ParentPageShell
       title="Teacher Feedback"
       subtitle="Work habits, behavior and comments from your children's teachers."
       badge={{ icon: ChatBubbleLeftRightIcon, label: 'Feedback' }}
-      actions={<TermNameFilter value={termFilter} onChange={setTermFilter} />}
     >
+      <ParentFilterBar>
+        <select
+          value={subjectFilter}
+          onChange={(e) => setSubjectFilter(e.target.value)}
+          className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
+        >
+          <option value="">All classes</option>
+          {subjects.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <TermNameFilter value={termFilter} onChange={setTermFilter} />
+      </ParentFilterBar>
+
       <ChildSections
-        layout="grid"
-        renderChild={(child) => <ChildFeedbackSection child={child} termFilter={termFilter} />}
+        renderChild={(child) => (
+          <ChildFeedbackSection
+            child={child}
+            termFilter={termFilter}
+            subjectFilter={subjectFilter}
+            onSubjectsLoaded={onSubjectsLoaded}
+          />
+        )}
       />
+      <ChildJumpNav />
     </ParentPageShell>
   )
 }

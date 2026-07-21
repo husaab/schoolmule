@@ -11,24 +11,22 @@ import {
 import ChildSectionHeader from './ChildSectionHeader'
 import ParentEmptyState from './ParentEmptyState'
 
+/** Anchor id for a child's section — shared with ChildJumpNav. */
+export const childSectionId = (studentId: string) => `child-section-${studentId}`
+
 interface ChildSectionsProps {
   renderChild: (child: ChildLite) => React.ReactNode
   /** Hide the per-child avatar headers when the rendered card is already self-identifying */
   withHeaders?: boolean
-  /** 'grid' shows children side by side on large screens instead of stacked */
-  layout?: 'stack' | 'grid'
 }
 
 /**
  * The single place "All children vs one child" behavior lives: renders one
  * section per visible child, with an avatar header per section whenever more
- * than one child is shown.
+ * than one child is shown. Sections carry anchor ids so ChildJumpNav can
+ * scroll to them.
  */
-const ChildSections: React.FC<ChildSectionsProps> = ({
-  renderChild,
-  withHeaders = true,
-  layout = 'stack',
-}) => {
+const ChildSections: React.FC<ChildSectionsProps> = ({ renderChild, withHeaders = true }) => {
   const visible = useVisibleChildren()
   const selectedChildId = useSelectedChildStore((s) => s.selectedChildId)
   const showHeaders = withHeaders && selectedChildId === ALL_CHILDREN && visible.length > 1
@@ -43,15 +41,10 @@ const ChildSections: React.FC<ChildSectionsProps> = ({
     )
   }
 
-  const wrapperClass =
-    layout === 'grid' && visible.length > 1
-      ? 'grid grid-cols-1 lg:grid-cols-2 gap-6 items-start'
-      : 'space-y-10'
-
   return (
-    <div className={wrapperClass}>
+    <div className="space-y-10">
       {visible.map((child) => (
-        <section key={child.studentId} className="min-w-0">
+        <section key={child.studentId} id={childSectionId(child.studentId)} className="scroll-mt-36">
           {showHeaders && <ChildSectionHeader child={child} />}
           {renderChild(child)}
         </section>

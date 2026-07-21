@@ -19,6 +19,7 @@ import { useVisibleChildren, useSelectedChildStore } from '@/store/useSelectedCh
 import { getParentSummary } from '@/services/parentPortalService'
 import { ChildSummary } from '@/services/types/parentPortal'
 import ParentPageShell from '@/components/parent/ParentPageShell'
+import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
 import { childColor, childInitial, gradeTextColor } from '@/components/parent/childColors'
@@ -173,6 +174,8 @@ const ParentDashboardPage: React.FC = () => {
       subtitle="Here's how your children are doing."
       badge={{ icon: HomeIcon, label: 'Parent Portal' }}
     >
+      <ParentFilterBar />
+
       {loading && (
         <div className="flex justify-center items-center py-12">
           <Spinner size="lg" />

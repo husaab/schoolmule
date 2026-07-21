@@ -12,8 +12,11 @@ import { getChildAttendance } from '@/services/parentPortalService'
 import { ChildAttendance } from '@/services/types/parentPortal'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ChildSections from '@/components/parent/ChildSections'
+import ChildJumpNav from '@/components/parent/ChildJumpNav'
+import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import AttendanceMonthGrid from '@/components/parent/AttendanceMonthGrid'
+import TermPicker from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
 
 type Month = { year: number; month: number } // month 1-12
@@ -45,7 +48,10 @@ const StatTile: React.FC<{ label: string; value: string; accent?: string }> = ({
   </div>
 )
 
-const ChildAttendanceSection: React.FC<{ child: ChildLite }> = ({ child }) => {
+const ChildAttendanceSection: React.FC<{ child: ChildLite; termId: string }> = ({
+  child,
+  termId,
+}) => {
   const [attendance, setAttendance] = useState<ChildAttendance | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,8 +61,8 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite }> = ({ child }) => {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    // One fetch for the whole active term; month paging slices client-side.
-    getChildAttendance(child.studentId)
+    // One fetch for the whole term; month paging slices client-side.
+    getChildAttendance(child.studentId, termId ? { termId } : undefined)
       .then((res) => {
         const data = res.data || null
         setAttendance(data)
@@ -74,7 +80,7 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite }> = ({ child }) => {
         setError('Failed to load attendance.')
       })
       .finally(() => setLoading(false))
-  }, [child.studentId, selectedYearId])
+  }, [child.studentId, termId, selectedYearId])
 
   const range = useMemo(() => {
     if (!attendance?.from || !attendance?.to) return null
@@ -160,14 +166,33 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite }> = ({ child }) => {
   )
 }
 
-const ParentAttendancePage: React.FC = () => (
-  <ParentPageShell
-    title="Attendance"
-    subtitle="Day-by-day attendance for the current term."
-    badge={{ icon: ClipboardDocumentCheckIcon, label: 'Attendance' }}
-  >
-    <ChildSections renderChild={(child) => <ChildAttendanceSection child={child} />} />
-  </ParentPageShell>
-)
+const ParentAttendancePage: React.FC = () => {
+  const [termId, setTermId] = useState('')
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+
+  // A term from one year is meaningless in another — snap back to the
+  // year's default term whenever the selected school year changes.
+  useEffect(() => {
+    setTermId('')
+  }, [selectedYearId])
+
+  return (
+    <ParentPageShell
+      title="Attendance"
+      subtitle="Day-by-day attendance, term by term."
+      badge={{ icon: ClipboardDocumentCheckIcon, label: 'Attendance' }}
+    >
+      <ParentFilterBar>
+        {/* Attendance is a per-term day grid — no "all terms" view */}
+        <TermPicker value={termId} onChange={setTermId} includeAll={false} />
+      </ParentFilterBar>
+
+      <ChildSections
+        renderChild={(child) => <ChildAttendanceSection child={child} termId={termId} />}
+      />
+      <ChildJumpNav />
+    </ParentPageShell>
+  )
+}
 
 export default ParentAttendancePage
