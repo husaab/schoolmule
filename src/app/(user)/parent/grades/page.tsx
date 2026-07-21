@@ -27,14 +27,18 @@ import { gradeTextColor } from '@/components/parent/childColors'
 const ClassCard: React.FC<{ cls: ChildClassGrades }> = ({ cls }) => {
   const [expanded, setExpanded] = useState(false)
 
-  const trendData = cls.assessmentScores
-    .filter((s) => !s.isExcluded && s.score != null && s.maxScore)
-    .slice()
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .map((s) => ({
-      label: s.name,
-      value: Math.round(((s.score as number) / (s.maxScore as number)) * 1000) / 10,
-    }))
+  const scored = cls.assessmentScores.filter(
+    (s) => !s.isExcluded && s.score != null && s.maxScore,
+  )
+  // Chronological only when every assessment is dated; otherwise keep the
+  // teacher's gradebook order (rows already arrive sorted by sort_order).
+  const ordered = scored.every((s) => s.date)
+    ? scored.slice().sort((a, b) => (a.date as string).localeCompare(b.date as string))
+    : scored
+  const trendData = ordered.map((s) => ({
+    label: s.name,
+    value: Math.round(((s.score as number) / (s.maxScore as number)) * 1000) / 10,
+  }))
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 overflow-hidden">
