@@ -3,10 +3,9 @@
 import { useUserStore } from '@/store/useUserStore'
 import { useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 
-// Rendered once, outside any transformed ancestor (see Navbar.tsx), so that
-// `position: fixed` resolves against the viewport rather than a transformed
-// container (e.g. Sidebar's <aside>, which has `transform` for its off-canvas
-// slide animation and would otherwise become the containing block).
+// Inline navbar chip shown while a non-active school year is selected.
+// Lives inside the navbar's action row (next to the year selector) so it
+// never floats over page content.
 export default function PastYearBanner() {
   const hasHydrated = useYearStoreHydrated()
   const user = useUserStore((s) => s.user)
@@ -15,14 +14,20 @@ export default function PastYearBanner() {
   if (!hasHydrated) return null
   if (!selected || selected.isActive) return null
 
+  const suffix =
+    user?.role === 'ADMIN'
+      ? ' (past year — edits apply to that year)'
+      : user?.role === 'PARENT'
+        ? ''
+        : ' — read-only'
+
   return (
-    <div className="fixed top-[5.5rem] left-1/2 -translate-x-1/2 lg:left-[calc(50%+9rem)] z-40 mt-2 px-4 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs font-medium shadow-sm whitespace-nowrap">
+    <div
+      className="flex items-center px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs font-medium whitespace-nowrap"
+      title={`Viewing ${selected.label}${suffix}`}
+    >
       Viewing {selected.label}
-      {user?.role === 'ADMIN'
-        ? ' (past year — edits apply to that year)'
-        : user?.role === 'PARENT'
-          ? ''
-          : ' — read-only'}
+      {suffix && <span className="hidden xl:inline">{suffix}</span>}
     </div>
   )
 }

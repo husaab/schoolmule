@@ -61,6 +61,9 @@ const NavBar: FC = () => {
 
           {/* Right Side - Actions & User */}
           <div className="flex items-center gap-3">
+            {/* Past-year indicator (inline so it never overlaps page content) */}
+            <PastYearBanner />
+
             {/* Desktop School Year Selector */}
             <div className="hidden lg:block">
               <SchoolYearSelector />
@@ -81,11 +84,6 @@ const NavBar: FC = () => {
           </div>
         </div>
       </nav>
-
-      {/* Rendered as a sibling of <nav> (not inside it, not inside Sidebar's
-          transformed <aside>) so its `position: fixed` resolves against the
-          viewport. See PastYearBanner.tsx for why this placement matters. */}
-      <PastYearBanner />
     </>
   );
 };

@@ -174,6 +174,8 @@ export interface GenerateRequest {
   timeBudgetMs?: number;
   seed?: number;
   pinnedSessions?: PinnedSessionInput[];
+  /** Warm-start the solver from this saved schedule — returns variations of it in seconds. */
+  baseScheduleId?: string;
 }
 
 export interface ScheduleSummary {

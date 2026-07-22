@@ -4,7 +4,7 @@
 // regenerate around the pins, save as draft, publish, export PDF.
 // scheduleId === 'new' starts a fresh generate session.
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -233,7 +233,8 @@ const ScheduleWorkspacePage = () => {
     }))
   }, [viewMode, activeDay, classGroupIds, workingSessions, config, fillableRangesByDay, groupName, teacherName, toGridSession])
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (opts?: { baseScheduleId?: string }) => {
+    const baseScheduleId = opts?.baseScheduleId
     setGenerating(true)
     setDiagnostics(null)
     try {
@@ -247,12 +248,18 @@ const ScheduleWorkspacePage = () => {
           teacherId: s.teacherId,
           roomId: s.roomId,
         }))
-      const outcome = await generateSchedules({ numCandidates, pinnedSessions, timeBudgetMs: searchSeconds * 1000 })
+      const outcome = await generateSchedules({
+        numCandidates,
+        pinnedSessions,
+        timeBudgetMs: searchSeconds * 1000,
+        ...(baseScheduleId ? { baseScheduleId } : {}),
+      })
       if (outcome.ok) {
         setCandidates(outcome.result.candidates, outcome.result.meta)
         const tight = outcome.result.meta.warnings.find((w) => w.code === 'SCHEDULE_SPACE_TIGHT')
+        const noun = baseScheduleId ? 'variation' : 'schedule'
         showNotification(
-          `Generated ${outcome.result.meta.returned} schedule${outcome.result.meta.returned === 1 ? '' : 's'}` +
+          `Generated ${outcome.result.meta.returned} ${noun}${outcome.result.meta.returned === 1 ? '' : 's'}` +
             (tight ? ' — constraints are tight, few variations exist' : ''),
           'success'
         )
@@ -321,6 +328,20 @@ const ScheduleWorkspacePage = () => {
     }
   }
 
+  // Arriving via "Generate variations" in the Schedules tab (?variations=1):
+  // run one variations pass automatically once the schedule has loaded.
+  // window.location is read directly (not useSearchParams) to avoid the
+  // Suspense-boundary requirement on this fully-client page.
+  const autoVariationsRan = useRef(false)
+  useEffect(() => {
+    if (loading || isNew || !currentScheduleId || autoVariationsRan.current) return
+    if (new URLSearchParams(window.location.search).get('variations') !== '1') return
+    autoVariationsRan.current = true
+    router.replace(`/admin-panel/schedule-planner/${currentScheduleId}`)
+    handleGenerate({ baseScheduleId: currentScheduleId })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, isNew, currentScheduleId])
+
   const pinCount = pinnedKeys.size
 
   return (
@@ -380,7 +401,7 @@ const ScheduleWorkspacePage = () => {
                   </select>
                 </div>
                 <button
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate()}
                   disabled={generating}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-cyan-600 text-white text-sm font-medium rounded-lg hover:bg-cyan-700 transition disabled:opacity-50 cursor-pointer"
                 >
@@ -399,6 +420,16 @@ const ScheduleWorkspacePage = () => {
                     </>
                   )}
                 </button>
+                {currentScheduleId && workingSessions.length > 0 && (
+                  <button
+                    onClick={() => handleGenerate({ baseScheduleId: currentScheduleId })}
+                    disabled={generating}
+                    title="Fast: seeds the search from this saved schedule and returns distinct alternatives"
+                    className="flex items-center gap-1.5 px-4 py-1.5 border border-cyan-600 text-cyan-700 text-sm font-medium rounded-lg hover:bg-cyan-50 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    <SparklesIcon className="h-4 w-4" /> Variations
+                  </button>
+                )}
 
                 <div className="flex-1" />
 

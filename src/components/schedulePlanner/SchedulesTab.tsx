@@ -12,6 +12,7 @@ import {
   ArrowTopRightOnSquareIcon,
   DocumentArrowDownIcon,
   LinkIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteSchedule, updateSchedule, openSchedulePdf } from '@/services/schedulePlannerService'
@@ -120,6 +121,15 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                     <LinkIcon className="h-4 w-4" />
                   </button>
                 )}
+                <button
+                  onClick={() =>
+                    router.push(`/admin-panel/schedule-planner/${s.scheduleId}?variations=1`)
+                  }
+                  title="Generate variations of this schedule"
+                  className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
+                >
+                  <SparklesIcon className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => handleRename(s)}
                   title="Rename"
