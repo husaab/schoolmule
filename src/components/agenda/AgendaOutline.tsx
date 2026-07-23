@@ -52,6 +52,7 @@ interface Props {
   onMovePage: (pageId: string, anchor: AgendaAnchor, anchorMonth: number | null) => void;
   onRenamePage: (pageId: string, title: string) => void;
   onSetPageFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
+  onTogglePageNumber: (pageId: string, showPageNumber: boolean) => void;
   onDeletePage: (pageId: string) => void;
   onAddPage: (slot: SlotId) => void;
   onSaveQuotes: (month: number, quotes: string[]) => void;
@@ -69,6 +70,7 @@ export default function AgendaOutline({
   onMovePage,
   onRenamePage,
   onSetPageFitMode,
+  onTogglePageNumber,
   onDeletePage,
   onAddPage,
   onSaveQuotes,
@@ -160,6 +162,7 @@ export default function AgendaOutline({
               onMove={onMovePage}
               onRename={onRenamePage}
               onSetFitMode={onSetPageFitMode}
+              onToggleNumber={onTogglePageNumber}
               onDelete={onDeletePage}
             />
           ))}

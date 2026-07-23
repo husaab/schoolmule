@@ -9,6 +9,26 @@ export interface AgendaTheme {
   background?: string;
 }
 
+/** Style for the page-number chip on uploaded pages */
+export interface AgendaStampStyle {
+  background?: string;   // hex
+  opacity?: number;      // 0-1
+  enabled?: boolean;     // per-page override only
+}
+
+/** Per-document chip settings: document default style + per-source-page overrides */
+export interface AgendaStampConfig {
+  style?: AgendaStampStyle;
+  pages?: Record<string, AgendaStampStyle>;   // keyed by 0-based source page index
+}
+
+/** Server-resolved chip style for one manifest item */
+export interface AgendaResolvedStampStyle {
+  background: string;
+  opacity: number;
+  textColor: string;     // auto black/white by chip luminance
+}
+
 /** Server-resolved theme colors (manifest payload) */
 export interface AgendaResolvedTheme {
   background: string;
@@ -65,6 +85,8 @@ export interface AgendaCustomPagePayload {
   zoomY: number | null;          // vertical scale; null = uniform (follows zoom)
   offsetX: number;               // shift from center, fraction of page width (+right)
   offsetY: number;               // shift from center, fraction of page height (+down)
+  showPageNumber: boolean;       // stamp global page number chip on this uploaded page
+  stampConfig: AgendaStampConfig; // chip style + per-source-page overrides
   createdAt: string;
   sizeWarning?: string | null;   // present on upload responses
 }
@@ -84,7 +106,9 @@ export interface AgendaManifestItem {
   seq: number;                   // 1-based global page position
   kind: AgendaPageKind;
   pageNumber: number;
-  numbered: boolean;             // custom pages carry no printed number
+  numbered: boolean;             // generated pages print the number in their footer
+  stampNumber?: boolean;         // custom pages: chip stamped bottom-right
+  stampStyle?: AgendaResolvedStampStyle;
   month?: number;
   year?: number;
   weekIndex?: number;

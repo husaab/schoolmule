@@ -13,7 +13,8 @@ import type {
   AgendaCloneResponse,
   AgendaReorderUpdate,
   AgendaAnchor,
-  AgendaFitMode
+  AgendaFitMode,
+  AgendaStampConfig
 } from './types/agenda';
 
 export const getAgendasBySchool = async (school: string): Promise<AgendasResponse> => {
@@ -137,6 +138,8 @@ export const updateAgendaPage = async (
     zoomY?: number | null;
     offsetX?: number;
     offsetY?: number;
+    showPageNumber?: boolean;
+    stampConfig?: AgendaStampConfig;
   }
 ): Promise<AgendaCustomPageResponse> => {
   return apiClient<AgendaCustomPageResponse, typeof payload>(

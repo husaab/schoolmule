@@ -47,6 +47,8 @@ interface Props {
   onJumpConsumed: () => void;
   /** Open the placement editor for an image page */
   onAdjustImage?: (pageId: string) => void;
+  /** Open the page-number chip settings for a custom page */
+  onEditChip?: (item: AgendaManifestItem) => void;
 }
 
 export default function AgendaLivePreview({
@@ -56,6 +58,7 @@ export default function AgendaLivePreview({
   jumpToSeq,
   onJumpConsumed,
   onAdjustImage,
+  onEditChip,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -151,6 +154,7 @@ export default function AgendaLivePreview({
           getSignedUrl={getSignedUrl}
           getPdfDoc={getPdfDoc}
           onAdjustImage={onAdjustImage}
+          onEditChip={onEditChip}
           pageBackground={manifest.theme?.background}
         />
       ))}
@@ -168,10 +172,11 @@ interface PageFrameProps {
   getSignedUrl: (pageId: string) => Promise<string | null>;
   getPdfDoc: (pageId: string) => Promise<PdfDocumentProxy>;
   onAdjustImage?: (pageId: string) => void;
+  onEditChip?: (item: AgendaManifestItem) => void;
   pageBackground?: string;
 }
 
-function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, pageBackground }: PageFrameProps) {
+function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, onEditChip, pageBackground }: PageFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -213,9 +218,41 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
         <span className="text-[11px] font-medium text-slate-300">p.{item.seq}</span>
       </div>
       <div
-        className="relative w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"
+        className="group relative w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"
         style={{ aspectRatio: '8.5 / 11' }}
       >
+        {/* Page-number chip on uploaded pages — mirrors the print stamp
+            (30pt right, 18pt bottom on a 612x792 page). Click to edit
+            this page's number visibility/color/transparency. */}
+        {visible && item.kind === 'custom' && (
+          item.stampNumber ? (
+            <button
+              type="button"
+              onClick={() => onEditChip?.(item)}
+              title="Click to edit this page's number"
+              className="absolute z-20 rounded-[2px] px-1.5 py-0.5 text-[9px] font-medium shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-400"
+              style={{
+                right: '4.9%',
+                bottom: '2.27%',
+                backgroundColor: item.stampStyle?.background || '#ffffff',
+                opacity: item.stampStyle?.opacity ?? 0.82,
+                color: item.stampStyle?.textColor || '#262626',
+              }}
+            >
+              {item.pageNumber}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEditChip?.(item)}
+              title="Page number hidden — click to enable"
+              className="absolute z-20 rounded-[2px] border border-dashed border-slate-400 bg-white/60 px-1.5 py-0.5 text-[9px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              style={{ right: '4.9%', bottom: '2.27%' }}
+            >
+              #
+            </button>
+          )
+        )}
         {visible ? (
           item.kind !== 'custom' ? (
             <GeneratedPageView html={html} />

@@ -11,6 +11,7 @@ import {
   PhotoIcon,
   ExclamationTriangleIcon,
   PencilSquareIcon,
+  HashtagIcon,
 } from '@heroicons/react/24/outline';
 
 const MONTH_NAMES = [
@@ -25,10 +26,11 @@ interface Props {
   onMove: (pageId: string, anchor: AgendaAnchor, anchorMonth: number | null) => void;
   onRename: (pageId: string, title: string) => void;
   onSetFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
+  onToggleNumber: (pageId: string, showPageNumber: boolean) => void;
   onDelete: (pageId: string) => void;
 }
 
-export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onDelete }: Props) {
+export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onToggleNumber, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(page.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +144,21 @@ export default function CustomPageCard({ page, monthOptions, onMove, onRename, o
           <ExclamationTriangleIcon className="w-4 h-4 text-amber-500" />
         </span>
       )}
+
+      <button
+        type="button"
+        onClick={() => onToggleNumber(page.pageId, !page.showPageNumber)}
+        title={page.showPageNumber
+          ? 'Page number is printed on this page — click to hide'
+          : 'Page number hidden on this page — click to print it'}
+        className={`p-1 rounded-lg cursor-pointer transition-colors ${
+          page.showPageNumber
+            ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+            : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+        }`}
+      >
+        <HashtagIcon className="w-4 h-4" />
+      </button>
 
       {page.fileType === 'image' && (
         <div

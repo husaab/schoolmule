@@ -9,6 +9,7 @@ import AgendaOutline, { type SlotId } from '@/components/agenda/AgendaOutline';
 import AgendaLivePreview from '@/components/agenda/AgendaLivePreview';
 import CustomPageUploadModal from '@/components/agenda/CustomPageUploadModal';
 import ImageAdjustModal from '@/components/agenda/ImageAdjustModal';
+import ChipSettingsModal from '@/components/agenda/ChipSettingsModal';
 import type { Placement } from '@/components/agenda/imagePlacement';
 import GeneratePanel from '@/components/agenda/GeneratePanel';
 import ThemePicker from '@/components/agenda/ThemePicker';
@@ -25,6 +26,7 @@ import {
 import type {
   AgendaDetailPayload,
   AgendaManifestPayload,
+  AgendaManifestItem,
   AgendaAnchor,
   AgendaFitMode,
 } from '@/services/types/agenda';
@@ -40,6 +42,7 @@ const AgendaEditorPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadSlot, setUploadSlot] = useState<SlotId | null>(null);
   const [adjustingPageId, setAdjustingPageId] = useState<string | null>(null);
+  const [editingChip, setEditingChip] = useState<AgendaManifestItem | null>(null);
   const [jumpToSeq, setJumpToSeq] = useState<number | null>(null);
   const [footerDraft, setFooterDraft] = useState<string | null>(null);
 
@@ -167,6 +170,24 @@ const AgendaEditorPage = () => {
     } catch (error) {
       console.error('Error deleting page:', error);
       showNotification('Failed to remove the page', 'error');
+    }
+  };
+
+  const handleTogglePageNumber = async (pageId: string, showPageNumber: boolean) => {
+    if (!agenda) return;
+    setAgenda({
+      ...agenda,
+      customPages: agenda.customPages.map((p) =>
+        p.pageId === pageId ? { ...p, showPageNumber } : p
+      ),
+    });
+    try {
+      await updateAgendaPage(agendaId, pageId, { showPageNumber });
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error toggling page number:', error);
+      showNotification('Failed to update page numbering', 'error');
+      fetchAll(false);
     }
   };
 
@@ -301,6 +322,7 @@ const AgendaEditorPage = () => {
                   onMovePage={handleMovePage}
                   onRenamePage={handleRenamePage}
                   onSetPageFitMode={handleSetPageFitMode}
+                  onTogglePageNumber={handleTogglePageNumber}
                   onDeletePage={handleDeletePage}
                   onAddPage={(slot) => setUploadSlot(slot)}
                   onSaveQuotes={handleSaveQuotes}
@@ -328,12 +350,27 @@ const AgendaEditorPage = () => {
                   jumpToSeq={jumpToSeq}
                   onJumpConsumed={() => setJumpToSeq(null)}
                   onAdjustImage={setAdjustingPageId}
+                  onEditChip={setEditingChip}
                 />
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {editingChip && agenda && (() => {
+        const page = agenda.customPages.find((p) => p.pageId === editingChip.pageId);
+        return page ? (
+          <ChipSettingsModal
+            agendaId={agendaId}
+            page={page}
+            sourcePageIndex={editingChip.sourcePageIndex ?? 0}
+            pageNumber={editingChip.pageNumber}
+            onClose={() => setEditingChip(null)}
+            onSaved={() => fetchAll(true)}
+          />
+        ) : null;
+      })()}
 
       {adjustingPageId && agenda && (() => {
         const page = agenda.customPages.find((p) => p.pageId === adjustingPageId);
