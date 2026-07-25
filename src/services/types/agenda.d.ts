@@ -88,6 +88,7 @@ export interface AgendaCustomPagePayload {
   showPageNumber: boolean;       // stamp global page number chip on this uploaded page
   stampConfig: AgendaStampConfig; // chip style + per-source-page overrides
   pageFrom: number;              // first source page (0-based) this row covers (split ranges)
+  excludedPages: number[];       // hidden-but-restorable pages (absolute file indices)
   createdAt: string;
   sizeWarning?: string | null;   // present on upload responses
 }
@@ -104,10 +105,11 @@ export interface AgendaDetailPayload extends AgendaPayload {
  * One output page in the computed sequence (GET /agendas/:agendaId/manifest)
  */
 export interface AgendaManifestItem {
-  seq: number;                   // 1-based global page position
+  seq: number;                   // 1-based position among ALL items (incl. hidden placeholders)
   kind: AgendaPageKind;
-  pageNumber: number;
+  pageNumber: number | null;     // printed page number; null for hidden placeholders
   numbered: boolean;             // generated pages print the number in their footer
+  excluded?: boolean;            // hidden-but-restorable custom page
   stampNumber?: boolean;         // custom pages: chip stamped bottom-right
   stampStyle?: AgendaResolvedStampStyle;
   month?: number;

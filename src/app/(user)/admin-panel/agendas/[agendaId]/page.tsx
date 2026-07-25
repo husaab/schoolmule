@@ -21,6 +21,7 @@ import {
   reorderAgendaPages,
   updateAgendaPage,
   excludeAgendaPagePage,
+  restoreAgendaPagePage,
   deleteAgendaPage,
   updateAgendaMonth,
   updateAgenda,
@@ -164,23 +165,40 @@ const AgendaEditorPage = () => {
     }
   };
 
+  // No confirm needed — hiding is non-destructive and the placeholder
+  // strip left behind has a Restore button
   const handleRemovePage = async (item: AgendaManifestItem) => {
-    if (!item.pageId || !agenda) return;
-    const row = agenda.customPages.find((p) => p.pageId === item.pageId);
-    if (!row) return;
-    const pageInRow = (item.sliceIndex ?? 0) + 1;
-    const label = row.pageCount > 1
-      ? `Remove page ${pageInRow} of "${row.title || 'this document'}" from the agenda?`
-      : `Remove "${row.title || 'this page'}" from the agenda?`;
-    if (!window.confirm(label)) return;
-
+    if (!item.pageId) return;
     try {
-      await excludeAgendaPagePage(agendaId, item.pageId, pageInRow);
-      showNotification('Page removed', 'success');
+      await excludeAgendaPagePage(agendaId, item.pageId, (item.sliceIndex ?? 0) + 1);
+      showNotification('Page hidden — restore it anytime from the placeholder', 'success');
       fetchAll(true);
     } catch (error) {
-      console.error('Error removing page:', error);
-      showNotification('Failed to remove the page', 'error');
+      console.error('Error hiding page:', error);
+      showNotification('Failed to hide the page', 'error');
+    }
+  };
+
+  const handleRestorePage = async (item: AgendaManifestItem) => {
+    if (!item.pageId || item.sourcePageIndex === undefined) return;
+    try {
+      await restoreAgendaPagePage(agendaId, item.pageId, item.sourcePageIndex);
+      showNotification('Page restored', 'success');
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error restoring page:', error);
+      showNotification('Failed to restore the page', 'error');
+    }
+  };
+
+  const handleRestoreAllPages = async (pageId: string) => {
+    try {
+      await restoreAgendaPagePage(agendaId, pageId);
+      showNotification('All hidden pages restored', 'success');
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error restoring pages:', error);
+      showNotification('Failed to restore pages', 'error');
     }
   };
 
@@ -347,6 +365,7 @@ const AgendaEditorPage = () => {
                   onSetPageFitMode={handleSetPageFitMode}
                   onTogglePageNumber={handleTogglePageNumber}
                   onSplitPage={setSplittingPageId}
+                  onRestoreAllPages={handleRestoreAllPages}
                   onDeletePage={handleDeletePage}
                   onAddPage={(slot) => setUploadSlot(slot)}
                   onSaveQuotes={handleSaveQuotes}
@@ -376,6 +395,7 @@ const AgendaEditorPage = () => {
                   onAdjustImage={setAdjustingPageId}
                   onEditChip={setEditingChip}
                   onRemovePage={handleRemovePage}
+                  onRestorePage={handleRestorePage}
                 />
               </div>
             </div>
@@ -402,7 +422,7 @@ const AgendaEditorPage = () => {
             agendaId={agendaId}
             page={page}
             sourcePageIndex={editingChip.sourcePageIndex ?? 0}
-            pageNumber={editingChip.pageNumber}
+            pageNumber={editingChip.pageNumber ?? 0}
             onClose={() => setEditingChip(null)}
             onSaved={() => fetchAll(true)}
           />

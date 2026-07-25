@@ -49,8 +49,10 @@ interface Props {
   onAdjustImage?: (pageId: string) => void;
   /** Open the page-number chip settings for a custom page */
   onEditChip?: (item: AgendaManifestItem) => void;
-  /** Remove a single page of an uploaded document from the book */
+  /** Hide a single page of an uploaded document from the book */
   onRemovePage?: (item: AgendaManifestItem) => void;
+  /** Restore a hidden page back into the book */
+  onRestorePage?: (item: AgendaManifestItem) => void;
 }
 
 export default function AgendaLivePreview({
@@ -62,6 +64,7 @@ export default function AgendaLivePreview({
   onAdjustImage,
   onEditChip,
   onRemovePage,
+  onRestorePage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -159,6 +162,7 @@ export default function AgendaLivePreview({
           onAdjustImage={onAdjustImage}
           onEditChip={onEditChip}
           onRemovePage={onRemovePage}
+          onRestorePage={onRestorePage}
           pageBackground={manifest.theme?.background}
         />
       ))}
@@ -178,10 +182,11 @@ interface PageFrameProps {
   onAdjustImage?: (pageId: string) => void;
   onEditChip?: (item: AgendaManifestItem) => void;
   onRemovePage?: (item: AgendaManifestItem) => void;
+  onRestorePage?: (item: AgendaManifestItem) => void;
   pageBackground?: string;
 }
 
-function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, onEditChip, onRemovePage, pageBackground }: PageFrameProps) {
+function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, onEditChip, onRemovePage, onRestorePage, pageBackground }: PageFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -199,6 +204,31 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
   useEffect(() => {
     if (visible) onNeedsContent();
   }, [visible, onNeedsContent]);
+
+  // Hidden-but-restorable page: collapsed strip instead of a page frame
+  if (item.excluded) {
+    return (
+      <div ref={registerRef}>
+        <div className="flex items-center justify-between rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2">
+          <span className="text-xs text-slate-400 truncate">
+            {item.title || 'Custom page'}
+            {(item.sourcePageCount ?? 1) > 1
+              ? ` — page ${(item.sliceIndex ?? 0) + 1} hidden`
+              : ' — hidden'}
+          </span>
+          {onRestorePage && (
+            <button
+              type="button"
+              onClick={() => onRestorePage(item)}
+              className="ml-3 flex-shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+            >
+              Restore
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const label =
     item.kind === 'custom'
@@ -220,7 +250,7 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
     >
       <div className="flex items-baseline justify-between px-1 mb-1">
         <span className="text-[11px] text-slate-400 truncate">{label}</span>
-        <span className="text-[11px] font-medium text-slate-300">p.{item.seq}</span>
+        <span className="text-[11px] font-medium text-slate-300">p.{item.pageNumber}</span>
       </div>
       <div
         className="group relative w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"

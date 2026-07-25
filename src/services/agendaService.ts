@@ -166,19 +166,34 @@ export const splitAgendaPage = async (
 };
 
 /**
- * Remove ONE page of an uploaded document from the agenda (the stored
- * file is untouched — the row's page range shrinks or splits around it).
- * page is 1-based within the row. Returns removedItem: true when the
- * row's last page was excluded and the whole item was deleted.
+ * Hide ONE page of an uploaded document from the agenda. Non-destructive:
+ * the page becomes a restorable placeholder (see restoreAgendaPagePage).
+ * page is 1-based within the row's range.
  */
 export const excludeAgendaPagePage = async (
   agendaId: string,
   pageId: string,
   page: number
-): Promise<{ status: string; data: { removedItem: boolean } }> => {
-  return apiClient<{ status: string; data: { removedItem: boolean } }, { page: number }>(
+): Promise<AgendaCustomPageResponse> => {
+  return apiClient<AgendaCustomPageResponse, { page: number }>(
     `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}/exclude`,
     { method: 'POST', body: { page } }
+  );
+};
+
+/**
+ * Restore a hidden page (fileIndex = absolute page within the stored
+ * file, from excludedPages / manifest sourcePageIndex). Omit fileIndex
+ * to restore every hidden page of the row.
+ */
+export const restoreAgendaPagePage = async (
+  agendaId: string,
+  pageId: string,
+  fileIndex?: number
+): Promise<AgendaCustomPageResponse> => {
+  return apiClient<AgendaCustomPageResponse, { fileIndex?: number }>(
+    `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}/restore`,
+    { method: 'POST', body: fileIndex === undefined ? {} : { fileIndex } }
   );
 };
 

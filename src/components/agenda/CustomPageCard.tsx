@@ -29,10 +29,11 @@ interface Props {
   onSetFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
   onToggleNumber: (pageId: string, showPageNumber: boolean) => void;
   onSplit: (pageId: string) => void;
+  onRestoreAll: (pageId: string) => void;
   onDelete: (pageId: string) => void;
 }
 
-export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onToggleNumber, onSplit, onDelete }: Props) {
+export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onToggleNumber, onSplit, onRestoreAll, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(page.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +141,16 @@ export default function CustomPageCard({ page, monthOptions, onMove, onRename, o
           {page.pageFrom > 0
             ? `pages ${page.pageFrom + 1}–${page.pageFrom + page.pageCount} of file`
             : `${page.pageCount} ${page.pageCount === 1 ? 'page' : 'pages'}`} · {page.fileType.toUpperCase()}
+          {(page.excludedPages?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => onRestoreAll(page.pageId)}
+              title="Some pages are hidden from the agenda — click to restore all of them"
+              className="ml-1.5 rounded-full bg-amber-50 border border-amber-200 px-1.5 py-px text-[10px] font-medium text-amber-700 hover:bg-amber-100 cursor-pointer"
+            >
+              {page.excludedPages.length} hidden — restore
+            </button>
+          )}
         </p>
       </div>
 

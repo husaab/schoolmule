@@ -54,6 +54,7 @@ interface Props {
   onSetPageFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
   onTogglePageNumber: (pageId: string, showPageNumber: boolean) => void;
   onSplitPage: (pageId: string) => void;
+  onRestoreAllPages: (pageId: string) => void;
   onDeletePage: (pageId: string) => void;
   onAddPage: (slot: SlotId) => void;
   onSaveQuotes: (month: number, quotes: string[]) => void;
@@ -73,6 +74,7 @@ export default function AgendaOutline({
   onSetPageFitMode,
   onTogglePageNumber,
   onSplitPage,
+  onRestoreAllPages,
   onDeletePage,
   onAddPage,
   onSaveQuotes,
@@ -102,7 +104,7 @@ export default function AgendaOutline({
 
   // Generated rows per month from the manifest (page numbers included)
   const generatedByMonth = useMemo(() => {
-    const map = new Map<number, { seq: number; label: string }[]>();
+    const map = new Map<number, { seq: number; pageNumber: number; label: string }[]>();
     if (!manifest) return map;
     for (const item of manifest.items) {
       if (item.kind === 'custom' || item.month === undefined) continue;
@@ -112,7 +114,7 @@ export default function AgendaOutline({
       else if (item.kind === 'weekly') label = `Week of ${item.mondayIso}`;
       else if (item.kind === 'notes') label = 'Notes / communication';
       else label = 'Monthly evaluation report';
-      map.get(item.month)!.push({ seq: item.seq, label });
+      map.get(item.month)!.push({ seq: item.seq, pageNumber: item.pageNumber ?? 0, label });
     }
     return map;
   }, [manifest]);
@@ -166,6 +168,7 @@ export default function AgendaOutline({
               onSetFitMode={onSetPageFitMode}
               onToggleNumber={onTogglePageNumber}
               onSplit={onSplitPage}
+              onRestoreAll={onRestoreAllPages}
               onDelete={onDeletePage}
             />
           ))}
@@ -229,7 +232,7 @@ export default function AgendaOutline({
                 {MONTH_NAMES[month - 1]}{year ? ` ${year}` : ''}
                 {generated.length > 0 && (
                   <span className="ml-auto text-xs font-normal text-slate-400">
-                    p.{generated[0].seq}–{generated[generated.length - 1].seq}
+                    p.{generated[0].pageNumber}–{generated[generated.length - 1].pageNumber}
                   </span>
                 )}
               </button>
@@ -248,7 +251,7 @@ export default function AgendaOutline({
                         title="Show in preview"
                       >
                         <span className="text-xs text-slate-500">{row.label}</span>
-                        <span className="text-[10px] font-medium text-slate-300">p.{row.seq}</span>
+                        <span className="text-[10px] font-medium text-slate-300">p.{row.pageNumber}</span>
                       </button>
                     ))}
                   </div>
