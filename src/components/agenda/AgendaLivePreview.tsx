@@ -197,7 +197,7 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
 
   const label =
     item.kind === 'custom'
-      ? `${item.title || 'Custom page'}${(item.sourcePageCount ?? 1) > 1 ? ` (${(item.sourcePageIndex ?? 0) + 1}/${item.sourcePageCount})` : ''}`
+      ? `${item.title || 'Custom page'}${(item.sourcePageCount ?? 1) > 1 ? ` (${(item.sliceIndex ?? item.sourcePageIndex ?? 0) + 1}/${item.sourcePageCount})` : ''}`
       : item.kind === 'monthOverview'
         ? 'Month overview'
         : item.kind === 'weekly'

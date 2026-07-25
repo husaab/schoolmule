@@ -10,6 +10,7 @@ import AgendaLivePreview from '@/components/agenda/AgendaLivePreview';
 import CustomPageUploadModal from '@/components/agenda/CustomPageUploadModal';
 import ImageAdjustModal from '@/components/agenda/ImageAdjustModal';
 import ChipSettingsModal from '@/components/agenda/ChipSettingsModal';
+import SplitPageModal from '@/components/agenda/SplitPageModal';
 import type { Placement } from '@/components/agenda/imagePlacement';
 import GeneratePanel from '@/components/agenda/GeneratePanel';
 import ThemePicker from '@/components/agenda/ThemePicker';
@@ -43,6 +44,7 @@ const AgendaEditorPage = () => {
   const [uploadSlot, setUploadSlot] = useState<SlotId | null>(null);
   const [adjustingPageId, setAdjustingPageId] = useState<string | null>(null);
   const [editingChip, setEditingChip] = useState<AgendaManifestItem | null>(null);
+  const [splittingPageId, setSplittingPageId] = useState<string | null>(null);
   const [jumpToSeq, setJumpToSeq] = useState<number | null>(null);
   const [footerDraft, setFooterDraft] = useState<string | null>(null);
 
@@ -323,6 +325,7 @@ const AgendaEditorPage = () => {
                   onRenamePage={handleRenamePage}
                   onSetPageFitMode={handleSetPageFitMode}
                   onTogglePageNumber={handleTogglePageNumber}
+                  onSplitPage={setSplittingPageId}
                   onDeletePage={handleDeletePage}
                   onAddPage={(slot) => setUploadSlot(slot)}
                   onSaveQuotes={handleSaveQuotes}
@@ -357,6 +360,18 @@ const AgendaEditorPage = () => {
           </div>
         </div>
       </main>
+
+      {splittingPageId && agenda && (() => {
+        const page = agenda.customPages.find((p) => p.pageId === splittingPageId);
+        return page ? (
+          <SplitPageModal
+            agendaId={agendaId}
+            page={page}
+            onClose={() => setSplittingPageId(null)}
+            onSplit={() => fetchAll(true)}
+          />
+        ) : null;
+      })()}
 
       {editingChip && agenda && (() => {
         const page = agenda.customPages.find((p) => p.pageId === editingChip.pageId);

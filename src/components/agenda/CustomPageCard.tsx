@@ -12,6 +12,7 @@ import {
   ExclamationTriangleIcon,
   PencilSquareIcon,
   HashtagIcon,
+  ScissorsIcon,
 } from '@heroicons/react/24/outline';
 
 const MONTH_NAMES = [
@@ -27,10 +28,11 @@ interface Props {
   onRename: (pageId: string, title: string) => void;
   onSetFitMode: (pageId: string, fitMode: AgendaFitMode) => void;
   onToggleNumber: (pageId: string, showPageNumber: boolean) => void;
+  onSplit: (pageId: string) => void;
   onDelete: (pageId: string) => void;
 }
 
-export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onToggleNumber, onDelete }: Props) {
+export default function CustomPageCard({ page, monthOptions, onMove, onRename, onSetFitMode, onToggleNumber, onSplit, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(page.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +137,9 @@ export default function CustomPageCard({ page, monthOptions, onMove, onRename, o
           </button>
         )}
         <p className="text-xs text-slate-400">
-          {page.pageCount} {page.pageCount === 1 ? 'page' : 'pages'} · {page.fileType.toUpperCase()}
+          {page.pageFrom > 0
+            ? `pages ${page.pageFrom + 1}–${page.pageFrom + page.pageCount} of file`
+            : `${page.pageCount} ${page.pageCount === 1 ? 'page' : 'pages'}`} · {page.fileType.toUpperCase()}
         </p>
       </div>
 
@@ -143,6 +147,17 @@ export default function CustomPageCard({ page, monthOptions, onMove, onRename, o
         <span title={page.sizeWarning}>
           <ExclamationTriangleIcon className="w-4 h-4 text-amber-500" />
         </span>
+      )}
+
+      {page.fileType === 'pdf' && page.pageCount > 1 && (
+        <button
+          type="button"
+          onClick={() => onSplit(page.pageId)}
+          title="Split this PDF so pages can be inserted in the middle"
+          className="p-1 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors"
+        >
+          <ScissorsIcon className="w-4 h-4" />
+        </button>
       )}
 
       <button

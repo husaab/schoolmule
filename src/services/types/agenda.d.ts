@@ -87,6 +87,7 @@ export interface AgendaCustomPagePayload {
   offsetY: number;               // shift from center, fraction of page height (+down)
   showPageNumber: boolean;       // stamp global page number chip on this uploaded page
   stampConfig: AgendaStampConfig; // chip style + per-source-page overrides
+  pageFrom: number;              // first source page (0-based) this row covers (split ranges)
   createdAt: string;
   sizeWarning?: string | null;   // present on upload responses
 }
@@ -121,8 +122,9 @@ export interface AgendaManifestItem {
   zoomY?: number | null;
   offsetX?: number;
   offsetY?: number;
-  sourcePageIndex?: number;
-  sourcePageCount?: number;
+  sourcePageIndex?: number;      // absolute page within the stored file
+  sliceIndex?: number;           // position within this row's range (display)
+  sourcePageCount?: number;      // pages covered by this row
   anchor?: AgendaAnchor;
   anchorMonth?: number | null;
 }

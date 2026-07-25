@@ -91,6 +91,9 @@ export default function ChipSettingsModal({
   };
 
   const isMultiPage = page.pageCount > 1;
+  // sourcePageIndex is absolute within the stored file; display relative
+  // to this row's range (split rows cover a slice of the file)
+  const displayPage = sourcePageIndex - (page.pageFrom || 0) + 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -100,7 +103,7 @@ export default function ChipSettingsModal({
             <h2 className="text-base font-semibold text-slate-900">Page number</h2>
             <p className="text-xs text-slate-400">
               {page.title || 'Uploaded page'}
-              {isMultiPage ? ` — page ${sourcePageIndex + 1} of ${page.pageCount}` : ''}
+              {isMultiPage ? ` — page ${displayPage} of ${page.pageCount}` : ''}
               {' '}(prints as {pageNumber})
             </p>
           </div>

@@ -14,7 +14,8 @@ import type {
   AgendaReorderUpdate,
   AgendaAnchor,
   AgendaFitMode,
-  AgendaStampConfig
+  AgendaStampConfig,
+  AgendaCustomPagePayload
 } from './types/agenda';
 
 export const getAgendasBySchool = async (school: string): Promise<AgendasResponse> => {
@@ -145,6 +146,22 @@ export const updateAgendaPage = async (
   return apiClient<AgendaCustomPageResponse, typeof payload>(
     `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}`,
     { method: 'PATCH', body: payload }
+  );
+};
+
+/**
+ * Split a multi-page PDF row into two rows (same stored file, adjacent
+ * page ranges) so other pages can be inserted between them.
+ * afterPage is 1-based within the row's pages.
+ */
+export const splitAgendaPage = async (
+  agendaId: string,
+  pageId: string,
+  afterPage: number
+): Promise<{ status: string; data: { secondHalf: AgendaCustomPagePayload } }> => {
+  return apiClient<{ status: string; data: { secondHalf: AgendaCustomPagePayload } }, { afterPage: number }>(
+    `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}/split`,
+    { method: 'POST', body: { afterPage } }
   );
 };
 
