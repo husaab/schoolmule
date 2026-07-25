@@ -49,6 +49,8 @@ interface Props {
   onAdjustImage?: (pageId: string) => void;
   /** Open the page-number chip settings for a custom page */
   onEditChip?: (item: AgendaManifestItem) => void;
+  /** Remove a single page of an uploaded document from the book */
+  onRemovePage?: (item: AgendaManifestItem) => void;
 }
 
 export default function AgendaLivePreview({
@@ -59,6 +61,7 @@ export default function AgendaLivePreview({
   onJumpConsumed,
   onAdjustImage,
   onEditChip,
+  onRemovePage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -155,6 +158,7 @@ export default function AgendaLivePreview({
           getPdfDoc={getPdfDoc}
           onAdjustImage={onAdjustImage}
           onEditChip={onEditChip}
+          onRemovePage={onRemovePage}
           pageBackground={manifest.theme?.background}
         />
       ))}
@@ -173,10 +177,11 @@ interface PageFrameProps {
   getPdfDoc: (pageId: string) => Promise<PdfDocumentProxy>;
   onAdjustImage?: (pageId: string) => void;
   onEditChip?: (item: AgendaManifestItem) => void;
+  onRemovePage?: (item: AgendaManifestItem) => void;
   pageBackground?: string;
 }
 
-function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, onEditChip, pageBackground }: PageFrameProps) {
+function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getPdfDoc, onAdjustImage, onEditChip, onRemovePage, pageBackground }: PageFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -221,6 +226,17 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
         className="group relative w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"
         style={{ aspectRatio: '8.5 / 11' }}
       >
+        {/* Remove-this-page button on uploaded pages (hover) */}
+        {visible && item.kind === 'custom' && onRemovePage && (
+          <button
+            type="button"
+            onClick={() => onRemovePage(item)}
+            title="Remove this page from the agenda"
+            className="absolute top-2 right-2 z-30 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 hover:text-rose-600 cursor-pointer text-sm leading-none"
+          >
+            ×
+          </button>
+        )}
         {/* Page-number chip on uploaded pages — mirrors the print stamp
             (30pt right, 18pt bottom on a 612x792 page). Click to edit
             this page's number visibility/color/transparency. */}

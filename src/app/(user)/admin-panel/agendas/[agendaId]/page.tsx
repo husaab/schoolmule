@@ -20,6 +20,7 @@ import {
   getAgendaManifest,
   reorderAgendaPages,
   updateAgendaPage,
+  excludeAgendaPagePage,
   deleteAgendaPage,
   updateAgendaMonth,
   updateAgenda,
@@ -160,6 +161,26 @@ const AgendaEditorPage = () => {
       console.error('Error updating fit mode:', error);
       showNotification('Failed to update image placement', 'error');
       fetchAll(false);
+    }
+  };
+
+  const handleRemovePage = async (item: AgendaManifestItem) => {
+    if (!item.pageId || !agenda) return;
+    const row = agenda.customPages.find((p) => p.pageId === item.pageId);
+    if (!row) return;
+    const pageInRow = (item.sliceIndex ?? 0) + 1;
+    const label = row.pageCount > 1
+      ? `Remove page ${pageInRow} of "${row.title || 'this document'}" from the agenda?`
+      : `Remove "${row.title || 'this page'}" from the agenda?`;
+    if (!window.confirm(label)) return;
+
+    try {
+      await excludeAgendaPagePage(agendaId, item.pageId, pageInRow);
+      showNotification('Page removed', 'success');
+      fetchAll(true);
+    } catch (error) {
+      console.error('Error removing page:', error);
+      showNotification('Failed to remove the page', 'error');
     }
   };
 
@@ -354,6 +375,7 @@ const AgendaEditorPage = () => {
                   onJumpConsumed={() => setJumpToSeq(null)}
                   onAdjustImage={setAdjustingPageId}
                   onEditChip={setEditingChip}
+                  onRemovePage={handleRemovePage}
                 />
               </div>
             </div>

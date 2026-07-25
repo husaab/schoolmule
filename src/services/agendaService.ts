@@ -165,6 +165,23 @@ export const splitAgendaPage = async (
   );
 };
 
+/**
+ * Remove ONE page of an uploaded document from the agenda (the stored
+ * file is untouched — the row's page range shrinks or splits around it).
+ * page is 1-based within the row. Returns removedItem: true when the
+ * row's last page was excluded and the whole item was deleted.
+ */
+export const excludeAgendaPagePage = async (
+  agendaId: string,
+  pageId: string,
+  page: number
+): Promise<{ status: string; data: { removedItem: boolean } }> => {
+  return apiClient<{ status: string; data: { removedItem: boolean } }, { page: number }>(
+    `/agendas/${encodeURIComponent(agendaId)}/pages/${encodeURIComponent(pageId)}/exclude`,
+    { method: 'POST', body: { page } }
+  );
+};
+
 export const deleteAgendaPage = async (
   agendaId: string,
   pageId: string
