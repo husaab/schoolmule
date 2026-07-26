@@ -145,7 +145,12 @@ export default function AgendaLivePreview({
     <div ref={containerRef} className="space-y-4">
       {items.map((item) => (
         <PageFrame
-          key={`${refreshKey}-${item.seq}`}
+          // Stable identity across structural edits — React updates frames
+          // in place instead of remounting the whole list, which would
+          // throw the scroll position back to the top
+          key={item.kind === 'custom'
+            ? `c-${item.pageId}-${item.sourcePageIndex ?? 0}`
+            : `g-${item.kind}-${item.month ?? 0}-${item.weekIndex ?? 0}`}
           item={item}
           registerRef={(el) => {
             if (el) pageRefs.current.set(item.seq, el);
@@ -199,7 +204,9 @@ function PageFrame({ item, registerRef, html, onNeedsContent, getSignedUrl, getP
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+    // Re-attach when a hidden strip (no frame element) becomes a full
+    // page again in place — same key, different markup
+  }, [item.excluded]);
 
   useEffect(() => {
     if (visible) onNeedsContent();
