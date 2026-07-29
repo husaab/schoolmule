@@ -19,6 +19,10 @@ import { ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
 const PAGE_W = 816;
 const PAGE_H = 1056;
 
+// Signed URLs expire server-side after 1 hour; refresh a cached one just
+// before that so long editing sessions don't hit dead links.
+const SIGNED_URL_TTL_MS = 50 * 60 * 1000;
+
 // pdfjs is loaded once, lazily, on the client
 type PdfJsModule = typeof import('pdfjs-dist');
 type PdfDocumentProxy = import('pdfjs-dist').PDFDocumentProxy;
@@ -75,15 +79,25 @@ export default function AgendaLivePreview({
 
   // pageId -> pdfjs document promise / signed url
   const pdfDocsRef = useRef<Map<string, Promise<PdfDocumentProxy>>>(new Map());
-  const signedUrlsRef = useRef<Map<string, Promise<string | null>>>(new Map());
+  const signedUrlsRef = useRef<Map<string, { promise: Promise<string | null>; fetchedAt: number }>>(new Map());
 
-  // Flush all caches when the agenda changes structurally
+  // Structural edits only invalidate the rendered month HTML. The uploaded
+  // files themselves are immutable (UUID-named, replaced never mutated), so
+  // signed URLs and parsed PDF documents survive refreshes — flushing them
+  // on every edit re-downloaded every custom page (several MB each) and was
+  // the main source of Supabase storage egress.
+  useEffect(() => {
+    setHtmlBySeq(new Map());
+    fetchedMonthsRef.current = new Set();
+  }, [refreshKey]);
+
+  // Switching agendas invalidates everything
   useEffect(() => {
     setHtmlBySeq(new Map());
     fetchedMonthsRef.current = new Set();
     pdfDocsRef.current = new Map();
     signedUrlsRef.current = new Map();
-  }, [refreshKey, agendaId]);
+  }, [agendaId]);
 
   const ensureMonthHtml = useCallback(async (month: number) => {
     if (fetchedMonthsRef.current.has(month)) return;
@@ -102,11 +116,17 @@ export default function AgendaLivePreview({
   }, [agendaId]);
 
   const getSignedUrl = useCallback((pageId: string) => {
-    let promise = signedUrlsRef.current.get(pageId);
-    if (!promise) {
-      promise = getAgendaPageSignedUrl(agendaId, pageId);
-      signedUrlsRef.current.set(pageId, promise);
+    const cached = signedUrlsRef.current.get(pageId);
+    if (cached && Date.now() - cached.fetchedAt < SIGNED_URL_TTL_MS) {
+      return cached.promise;
     }
+    const promise = getAgendaPageSignedUrl(agendaId, pageId).then((url) => {
+      // null means the fetch failed — evict so the next render can retry
+      // (previously the every-edit cache flush provided the retry path)
+      if (url === null) signedUrlsRef.current.delete(pageId);
+      return url;
+    });
+    signedUrlsRef.current.set(pageId, { promise, fetchedAt: Date.now() });
     return promise;
   }, [agendaId]);
 
@@ -118,6 +138,8 @@ export default function AgendaLivePreview({
         if (!url) throw new Error('No signed URL');
         return pdfjs.getDocument({ url }).promise;
       })();
+      // Evict failed loads so the next render can retry
+      promise.catch(() => pdfDocsRef.current.delete(pageId));
       pdfDocsRef.current.set(pageId, promise);
     }
     return promise;
