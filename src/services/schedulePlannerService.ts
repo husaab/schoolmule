@@ -2,6 +2,7 @@
 // Admin Schedule Planner API (all endpoints are school-scoped by the JWT).
 
 import apiClient from './apiClient';
+import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import type {
   ApiResponse,
   ClassGroup,
@@ -207,15 +208,20 @@ export type GenerateOutcome =
 /**
  * POST /generate — custom fetch (not apiClient) so that 422 infeasibility
  * responses keep their full diagnostics payload instead of collapsing to a
- * single error message.
+ * single error message. Must mirror apiClient's X-School-Year header, or the
+ * backend falls back to the ACTIVE year and generates against different
+ * planner data than the rest of the UI is showing.
  */
 export const generateSchedules = async (payload: GenerateRequest): Promise<GenerateOutcome> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const selectedYearId =
+    typeof window === 'undefined' ? null : useSchoolYearStore.getState().selectedYearId;
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(selectedYearId ? { 'X-School-Year': selectedYearId } : {}),
     },
     body: JSON.stringify(payload),
   });

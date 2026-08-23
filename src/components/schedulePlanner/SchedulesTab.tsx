@@ -9,7 +9,6 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  ArrowTopRightOnSquareIcon,
   DocumentArrowDownIcon,
   LinkIcon,
   SparklesIcon,
@@ -92,7 +91,8 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
           {schedules.map((s) => (
             <div
               key={s.scheduleId}
-              className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3"
+              onClick={() => router.push(`/admin-panel/schedule-planner/${s.scheduleId}`)}
+              className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-50 transition"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -111,10 +111,14 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                   Updated {new Date(s.updatedAt).toLocaleDateString()}
                 </div>
               </div>
+              {/* Row click opens the workspace; action buttons must not bubble */}
               <div className="flex items-center gap-2 shrink-0">
                 {s.status === 'published' && (
                   <button
-                    onClick={() => copyShareLink(s)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      copyShareLink(s)
+                    }}
                     title="Copy public link"
                     className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
                   >
@@ -122,37 +126,40 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                   </button>
                 )}
                 <button
-                  onClick={() =>
+                  onClick={(e) => {
+                    e.stopPropagation()
                     router.push(`/admin-panel/schedule-planner/${s.scheduleId}?variations=1`)
-                  }
+                  }}
                   title="Generate variations of this schedule"
                   className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
                 >
                   <SparklesIcon className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleRename(s)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRename(s)
+                  }}
                   title="Rename"
                   className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handlePdf(s)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlePdf(s)
+                  }}
                   title="Export PDF"
                   className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
                 >
                   <DocumentArrowDownIcon className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => router.push(`/admin-panel/schedule-planner/${s.scheduleId}`)}
-                  title="Open in workspace"
-                  className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
-                >
-                  <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(s)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(s)
+                  }}
                   title="Delete"
                   className="p-1.5 text-gray-400 hover:text-red-500 cursor-pointer"
                 >
