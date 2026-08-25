@@ -117,6 +117,15 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   const hourMarks: number[] = []
   for (let m = Math.ceil(rangeStartMin / 60) * 60; m <= rangeEndMin; m += 60) hourMarks.push(m)
 
+  // Half-hour marks between the hours ("9:30", "10:30") — hour-only rulers are
+  // hard to read against 45-minute periods. Hidden in compact (widget) mode.
+  const halfHourMarks: number[] = []
+  for (let m = Math.ceil(rangeStartMin / 30) * 30; m <= rangeEndMin; m += 30) {
+    if (m % 60 !== 0) halfHourMarks.push(m)
+  }
+  // "9:30" without AM/PM — the neighboring hour labels carry the period.
+  const formatHalf = (m: number) => formatMin(m).replace(/\s[AP]M$/, '')
+
   const gridHeight = compact ? 220 : Math.max(640, (span / 60) * 118)
 
   return (
@@ -134,6 +143,16 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
               {formatMin(m)}
             </div>
           ))}
+          {!compact &&
+            halfHourMarks.map((m) => (
+              <div
+                key={m}
+                className="absolute right-1.5 -translate-y-1/2 text-[9px] text-gray-300"
+                style={{ top: `${topPct(m)}%` }}
+              >
+                {formatHalf(m)}
+              </div>
+            ))}
         </div>
       </div>
 
@@ -166,6 +185,15 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
                   style={{ top: `${topPct(m)}%` }}
                 />
               ))}
+              {/* Half-hour lines (lighter, dashed) */}
+              {!compact &&
+                halfHourMarks.map((m) => (
+                  <div
+                    key={m}
+                    className="absolute left-0 right-0 border-t border-dashed border-gray-100/80"
+                    style={{ top: `${topPct(m)}%` }}
+                  />
+                ))}
               {/* Fixed blocks */}
               {col.fixedBlocks.map((b, i) => (
                 <div

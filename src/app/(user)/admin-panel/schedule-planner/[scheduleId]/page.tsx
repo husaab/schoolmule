@@ -205,7 +205,13 @@ const ScheduleWorkspacePage = () => {
       .filter(
         (b) =>
           b.classGroupIds.length === 0 ||
-          (viewMode === 'classGroup' && activeGroupId != null && b.classGroupIds.includes(activeGroupId))
+          (viewMode === 'classGroup' && activeGroupId != null && b.classGroupIds.includes(activeGroupId)) ||
+          // Teacher view: also show group-scoped blocks (the staggered lunches
+          // and snacks). They aren't teacher breaks — a teacher can be in
+          // class with the OTHER band during one — but hiding them left
+          // unexplained holes in the day. Labels carry the grade range, and
+          // real sessions render on top of the band.
+          viewMode === 'teacher'
       )
       .map((b) => ({ day: b.dayOfWeek, startMin: b.startMin, endMin: b.endMin, label: b.label }))
   }, [config, viewMode, activeGroupId])
