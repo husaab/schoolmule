@@ -55,6 +55,8 @@ export interface CourseRequirement {
   sessionsPerWeek: number;
   durationMinutes?: number | null;
   maxPerDay: number;
+  /** Max days per week that may hold 2+ sessions of this course (null = unlimited) */
+  maxRepeatDays?: number | null;
   assignedTeacherId?: string | null;
   candidateTeacherIds: string[];
   requiredRoomId?: string | null;

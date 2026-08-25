@@ -39,6 +39,7 @@ interface CourseForm {
   sessionsPerWeek: string
   durationMinutes: string
   maxPerDay: string
+  maxRepeatDays: string
   teacherMode: 'assigned' | 'pool'
   assignedTeacherId: string
   candidateTeacherIds: string[]
@@ -50,6 +51,7 @@ const emptyCourseForm: CourseForm = {
   sessionsPerWeek: '3',
   durationMinutes: '',
   maxPerDay: '1',
+  maxRepeatDays: '',
   teacherMode: 'assigned',
   assignedTeacherId: '',
   candidateTeacherIds: [],
@@ -132,6 +134,7 @@ const ClassGroupsTab: React.FC<ClassGroupsTabProps> = ({
       sessionsPerWeek: String(course.sessionsPerWeek),
       durationMinutes: course.durationMinutes != null ? String(course.durationMinutes) : '',
       maxPerDay: String(course.maxPerDay),
+      maxRepeatDays: course.maxRepeatDays != null ? String(course.maxRepeatDays) : '',
       teacherMode: course.assignedTeacherId ? 'assigned' : 'pool',
       assignedTeacherId: course.assignedTeacherId || teachers[0]?.plannerTeacherId || '',
       candidateTeacherIds: course.candidateTeacherIds || [],
@@ -158,6 +161,12 @@ const ClassGroupsTab: React.FC<ClassGroupsTabProps> = ({
     }
     const durationMinutes =
       courseForm.durationMinutes.trim() === '' ? null : parseInt(courseForm.durationMinutes, 10)
+    const maxRepeatDays =
+      courseForm.maxRepeatDays.trim() === '' ? null : parseInt(courseForm.maxRepeatDays, 10)
+    if (maxRepeatDays !== null && (!Number.isInteger(maxRepeatDays) || maxRepeatDays < 0)) {
+      showNotification('Max repeat days must be 0 or more', 'error')
+      return
+    }
     const payload = {
       name: courseForm.name.trim(),
       sessionsPerWeek,
@@ -166,6 +175,7 @@ const ClassGroupsTab: React.FC<ClassGroupsTabProps> = ({
       assignedTeacherId: courseForm.teacherMode === 'assigned' ? courseForm.assignedTeacherId : null,
       candidateTeacherIds: courseForm.teacherMode === 'pool' ? courseForm.candidateTeacherIds : [],
       requiredRoomId: courseForm.requiredRoomId || null,
+      maxRepeatDays,
     }
     setSaving(true)
     try {
@@ -309,7 +319,7 @@ const ClassGroupsTab: React.FC<ClassGroupsTabProps> = ({
                     <XMarkIcon className="h-4 w-4 text-gray-500" />
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-2">
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">Course</label>
                     <input
@@ -350,6 +360,19 @@ const ClassGroupsTab: React.FC<ClassGroupsTabProps> = ({
                       min="1"
                       value={courseForm.maxPerDay}
                       onChange={(e) => setCourseForm((f) => ({ ...f, maxPerDay: e.target.value }))}
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1" title="How many days a week may hold two or more of this course. Blank = no limit.">
+                      Repeat days
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="any"
+                      value={courseForm.maxRepeatDays}
+                      onChange={(e) => setCourseForm((f) => ({ ...f, maxRepeatDays: e.target.value }))}
                       className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
                     />
                   </div>
