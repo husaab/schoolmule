@@ -26,6 +26,10 @@ export interface GridFixedBlock {
   startMin: number
   endMin: number
   label: string
+  /** Render as a slim low-contrast strip instead of a hatched band — for
+   * blocks that are context, not a break for the column's subject (e.g.
+   * class-group lunches in the by-teacher view). */
+  subtle?: boolean
 }
 
 /** One rendered column (a day, or a class group in the by-day view). */
@@ -195,20 +199,34 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
                   />
                 ))}
               {/* Fixed blocks */}
-              {col.fixedBlocks.map((b, i) => (
-                <div
-                  key={`${b.label}-${i}`}
-                  className="absolute left-0 right-0 bg-gray-200/70 border-y border-gray-300 flex items-center justify-center overflow-hidden"
-                  style={{
-                    top: `${topPct(b.startMin)}%`,
-                    height: `${heightPct(b.startMin, b.endMin)}%`,
-                    backgroundImage:
-                      'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.05) 6px, rgba(0,0,0,0.05) 12px)',
-                  }}
-                >
-                  <span className={`${compact ? 'text-[9px]' : 'text-[11px]'} font-medium text-gray-500 truncate px-1`}>{b.label}</span>
-                </div>
-              ))}
+              {col.fixedBlocks.map((b, i) =>
+                b.subtle ? (
+                  // Context-only strip: no hatching, barely-there tint, quiet label.
+                  <div
+                    key={`${b.label}-${i}`}
+                    className="absolute left-0 right-0 bg-gray-50/70 border-y border-dashed border-gray-200 flex items-center justify-center overflow-hidden"
+                    style={{
+                      top: `${topPct(b.startMin)}%`,
+                      height: `${heightPct(b.startMin, b.endMin)}%`,
+                    }}
+                  >
+                    <span className="text-[9px] italic text-gray-300 truncate px-1">{b.label}</span>
+                  </div>
+                ) : (
+                  <div
+                    key={`${b.label}-${i}`}
+                    className="absolute left-0 right-0 bg-gray-200/70 border-y border-gray-300 flex items-center justify-center overflow-hidden"
+                    style={{
+                      top: `${topPct(b.startMin)}%`,
+                      height: `${heightPct(b.startMin, b.endMin)}%`,
+                      backgroundImage:
+                        'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.05) 6px, rgba(0,0,0,0.05) 12px)',
+                    }}
+                  >
+                    <span className={`${compact ? 'text-[9px]' : 'text-[11px]'} font-medium text-gray-500 truncate px-1`}>{b.label}</span>
+                  </div>
+                )
+              )}
               {/* Sessions */}
               {col.sessions.map((s) => {
                 const { lane, lanes: laneCount } = lanes.get(s.id) ?? { lane: 0, lanes: 1 }
