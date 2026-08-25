@@ -30,6 +30,10 @@ export interface PlannerTeacher {
   dailySpareMinutes?: number | null;
   /** Cap on distinct working days per week (null = unlimited) */
   maxDaysPerWeek?: number | null;
+  /** Max free period-slots BETWEEN the first and last session of a day (null = unlimited) */
+  maxSparesPerDay?: number | null;
+  /** Prefer no two consecutive spare slots. Soft: the solver trades it away if it must */
+  avoidAdjacentSpares?: boolean | null;
   allowedDays: number[];
   excludedWindows: TimeWindow[];
   notes?: string | null;

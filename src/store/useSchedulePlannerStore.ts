@@ -39,7 +39,7 @@ const initialState = {
   activeCandidateIndex: 0,
   workingSessions: [] as ScheduleSession[],
   pinnedKeys: new Set<string>(),
-  viewMode: 'classGroup' as PlannerViewMode,
+  viewMode: 'day' as PlannerViewMode,
   selectedClassGroupId: null as string | null,
   selectedTeacherId: null as string | null,
   dirty: false,
