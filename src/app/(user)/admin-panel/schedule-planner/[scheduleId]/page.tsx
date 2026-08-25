@@ -18,7 +18,6 @@ import {
   saveSchedule,
   updateSchedule,
   publishSchedule,
-  openSchedulePdf,
 } from '@/services/schedulePlannerService'
 import type {
   PlannerConfig,
@@ -26,13 +25,13 @@ import type {
   SolverDiagnostic,
 } from '@/services/types/schedulePlanner'
 import WeeklyGrid, { type GridSession } from '@/components/schedulePlanner/WeeklyGrid'
+import PrintMenu from '@/components/schedulePlanner/PrintMenu'
 import { dayLabel } from '@/components/schedulePlanner/timeUtils'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  DocumentArrowDownIcon,
   MapPinIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
@@ -60,6 +59,8 @@ const ScheduleWorkspacePage = () => {
     togglePin,
     setViewMode,
     setSelectedClassGroupId,
+    dirty,
+    setDirty,
     reset,
   } = useSchedulePlannerStore()
 
@@ -304,12 +305,14 @@ const ScheduleWorkspacePage = () => {
     try {
       if (currentScheduleId) {
         await updateSchedule(currentScheduleId, { name, sessions: sessionsWithPinFlags() })
+        setDirty(false)
         showNotification('Schedule saved', 'success')
       } else {
         const res = await saveSchedule({ name, sessions: sessionsWithPinFlags() })
         if (res.status === 'success') {
           setCurrentScheduleId(res.data.scheduleId)
           setScheduleStatus(res.data.status)
+          setDirty(false)
           showNotification('Schedule saved', 'success')
           router.replace(`/admin-panel/schedule-planner/${res.data.scheduleId}`)
         }
@@ -353,6 +356,24 @@ const ScheduleWorkspacePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, isNew, currentScheduleId])
 
+  // Warn on tab close / refresh while generated or edited work is unsaved.
+  // (Browsers show their own generic "leave site?" dialog.)
+  useEffect(() => {
+    if (!dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [dirty])
+
+  const confirmLeave = () =>
+    !dirty ||
+    confirm(
+      "This schedule isn't saved as a draft — if you leave now, it will be lost. Leave without saving?"
+    )
+
   const pinCount = pinnedKeys.size
 
   return (
@@ -363,7 +384,9 @@ const ScheduleWorkspacePage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
             <button
-              onClick={() => router.push('/admin-panel/schedule-planner')}
+              onClick={() => {
+                if (confirmLeave()) router.push('/admin-panel/schedule-planner')
+              }}
               className="p-1.5 rounded hover:bg-gray-100 cursor-pointer"
             >
               <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
@@ -468,15 +491,7 @@ const ScheduleWorkspacePage = () => {
                 >
                   {scheduleStatus === 'published' ? 'Published' : 'Publish'}
                 </button>
-                {currentScheduleId && (
-                  <button
-                    onClick={() => openSchedulePdf(currentScheduleId).catch(() => showNotification('Error exporting PDF', 'error'))}
-                    title="Export PDF"
-                    className="p-1.5 text-gray-500 hover:text-cyan-600 cursor-pointer"
-                  >
-                    <DocumentArrowDownIcon className="h-5 w-5" />
-                  </button>
-                )}
+                {currentScheduleId && <PrintMenu scheduleId={currentScheduleId} />}
               </div>
 
               {/* Infeasibility diagnostics */}

@@ -277,15 +277,17 @@ export const publishSchedule = async (scheduleId: string): Promise<ApiResponse<S
     { method: 'POST' }
   );
 
-export const getSchedulePdfUrl = (scheduleId: string, view?: 'teacher' | 'classGroup'): string =>
+export type SchedulePdfView = 'class' | 'teacher' | 'day';
+
+export const getSchedulePdfUrl = (scheduleId: string, view?: SchedulePdfView): string =>
   `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/schedules/${encodeURIComponent(scheduleId)}/pdf${
-    view === 'teacher' ? '?view=teacher' : ''
+    view === 'teacher' || view === 'day' ? `?view=${view}` : ''
   }`;
 
 /** Downloads the PDF with the auth token and opens it in a new tab. */
 export const openSchedulePdf = async (
   scheduleId: string,
-  view?: 'teacher' | 'classGroup'
+  view?: SchedulePdfView
 ): Promise<void> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   const res = await fetch(getSchedulePdfUrl(scheduleId, view), {

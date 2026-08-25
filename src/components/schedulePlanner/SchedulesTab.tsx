@@ -9,13 +9,13 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
-  DocumentArrowDownIcon,
   LinkIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { deleteSchedule, updateSchedule, openSchedulePdf } from '@/services/schedulePlannerService'
+import { deleteSchedule, updateSchedule } from '@/services/schedulePlannerService'
 import type { ScheduleSummary } from '@/services/types/schedulePlanner'
+import PrintMenu from './PrintMenu'
 
 interface SchedulesTabProps {
   schedules: ScheduleSummary[]
@@ -58,14 +58,6 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
     const url = `${window.location.origin}/${schoolSlug}/schedule/${schedule.shareToken}`
     navigator.clipboard.writeText(url)
     showNotification('Public link copied to clipboard', 'success')
-  }
-
-  const handlePdf = async (schedule: ScheduleSummary) => {
-    try {
-      await openSchedulePdf(schedule.scheduleId)
-    } catch {
-      showNotification('Error exporting PDF', 'error')
-    }
   }
 
   return (
@@ -145,16 +137,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handlePdf(s)
-                  }}
-                  title="Export PDF"
-                  className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
-                >
-                  <DocumentArrowDownIcon className="h-4 w-4" />
-                </button>
+                <PrintMenu scheduleId={s.scheduleId} iconOnly />
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
