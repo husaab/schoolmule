@@ -256,7 +256,20 @@ const StudentsContent = () => {
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {filteredStudents.map((student) => (
-                                                <tr key={student.studentId} className={`hover:bg-slate-50 transition-colors ${showArchived ? 'opacity-75' : ''} group`}>
+                                                <tr
+                                                    key={student.studentId}
+                                                    onClick={() => setViewStudent(student)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault()
+                                                            setViewStudent(student)
+                                                        }
+                                                    }}
+                                                    tabIndex={0}
+                                                    role="button"
+                                                    aria-label={`View ${student.name}`}
+                                                    className={`hover:bg-slate-50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500 ${showArchived ? 'opacity-75' : ''} group`}
+                                                >
                                                     <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
@@ -303,7 +316,8 @@ const StudentsContent = () => {
                                                         </td>
                                                     )}
                                                     <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                                        <div className="flex items-center gap-1">
+                                                        {/* Row itself opens the view modal, so keep these actions from bubbling into it. */}
+                                                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                             <button
                                                                 onClick={() => setViewStudent(student)}
                                                                 className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -369,6 +383,10 @@ const StudentsContent = () => {
                         isOpen={!!viewStudent}
                         onClose={() => setViewStudent(null)}
                         student={viewStudent}
+                        onEdit={showArchived ? undefined : () => {
+                            setEditStudent(viewStudent)
+                            setViewStudent(null)
+                        }}
                     />
                 )}
 
