@@ -13,6 +13,7 @@ import ScheduleDownloadMenu from '@/components/schedulePlanner/ScheduleDownloadM
 import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { dayLabel, formatMin } from '@/components/schedulePlanner/timeUtils'
 import {
   closureOn,
   dateForDay,
