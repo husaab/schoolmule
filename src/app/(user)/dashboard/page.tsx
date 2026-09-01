@@ -1,5 +1,10 @@
 'use client'
 
+// Schedule-first dashboard. The day ribbon leads because the first question a
+// teacher has at 8:40 AM is "where am I supposed to be", not "what is the
+// school's average class size". School-wide figures sit below it as a quiet
+// row rather than nine gradient tiles competing with the schedule.
+
 import React, { useEffect, useState, useCallback } from 'react'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -9,29 +14,39 @@ import { getSchoolName } from '@/lib/schoolUtils'
 import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardService'
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
 import Spinner from '@/components/Spinner'
-import StaffList from '@/components/staff/StaffList'
+import Card from '@/components/ui/Card'
+import StatTile from '@/components/ui/StatTile'
+import SectionHeader from '@/components/ui/SectionHeader'
 import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
-import MyScheduleWidget from '@/components/schedulePlanner/MyScheduleWidget'
+import DayRibbon from '@/components/schedulePlanner/DayRibbon'
 import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
-import {
-  LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import Link from 'next/link'
+import StaffList from '@/components/staff/StaffList'
 import {
-  UserGroupIcon,
   AcademicCapIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
-  CalendarDaysIcon,
   ChartBarIcon,
-  DocumentChartBarIcon,
-  ArrowTrendingUpIcon,
   ArrowRightIcon,
+  ChevronDownIcon,
   UsersIcon,
-  ClockIcon
 } from '@heroicons/react/24/outline'
+
+/** Time-of-day greeting — the dashboard is opened at a specific moment. */
+const greetingFor = (date: Date): string => {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+const QUICK_ACTIONS = [
+  { href: '/classes', label: 'Open classes', icon: AcademicCapIcon },
+  { href: '/gradebook', label: 'Enter grades', icon: BookOpenIcon },
+  { href: '/attendance/general', label: 'Take attendance', icon: ClipboardDocumentCheckIcon },
+]
 
 const DashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
@@ -43,6 +58,7 @@ const DashboardPage: React.FC = () => {
   const [trend, setTrend] = useState<AttendanceTrendPoint[]>([])
   const [daysWindow, setDaysWindow] = useState<number>(7)
   const [showCheckIn, setShowCheckIn] = useState(false)
+  const [staffOpen, setStaffOpen] = useState(false)
 
   // Check-in flow: localStorage for instant suppression, backend as source of truth
   useEffect(() => {
@@ -133,40 +149,26 @@ const DashboardPage: React.FC = () => {
     )
   }
 
-  const metrics = [
-    { label: 'Total Students', value: summary.totalStudents || 0, icon: UserGroupIcon, color: 'from-blue-500 to-blue-600' },
-    { label: 'Total Teachers', value: summary.totalTeachers || 0, icon: UsersIcon, color: 'from-purple-500 to-purple-600' },
-    { label: 'Total Classes', value: summary.totalClasses || 0, icon: AcademicCapIcon, color: 'from-emerald-500 to-emerald-600' },
-    { label: "Today's Attendance", value: summary.todaysAttendance ? (summary.todaysAttendance * 100).toFixed(1) + '%' : 'N/A', icon: ClipboardDocumentCheckIcon, color: 'from-cyan-500 to-cyan-600' },
-    { label: 'Weekly Attendance', value: summary.weeklyAttendance ? (summary.weeklyAttendance * 100).toFixed(1) + '%' : 'N/A', icon: CalendarDaysIcon, color: 'from-amber-500 to-amber-600' },
-    { label: 'Monthly Attendance', value: summary.monthlyAttendance ? (summary.monthlyAttendance * 100).toFixed(1) + '%' : 'N/A', icon: ClockIcon, color: 'from-rose-500 to-rose-600' },
-    { label: 'Avg. Grade', value: summary.averageStudentGrade ? summary.averageStudentGrade.toFixed(1) + '%' : 'N/A', icon: ChartBarIcon, color: 'from-indigo-500 to-indigo-600' },
-    { label: 'Report Cards', value: summary.reportCardsCount || 0, icon: DocumentChartBarIcon, color: 'from-teal-500 to-teal-600' },
-    { label: 'Avg. Class Size', value: summary.avgClassSize || 0, icon: BookOpenIcon, color: 'from-orange-500 to-orange-600' }
+  const pct = (v: number | null | undefined) => (v ? `${(v * 100).toFixed(1)}%` : '—')
+
+  // Four figures carry the headline; the rest stay available without adding
+  // eight more boxes to scan past.
+  const headline = [
+    { label: 'Students', value: summary.totalStudents || 0 },
+    { label: 'Classes', value: summary.totalClasses || 0 },
+    { label: 'Here today', value: pct(summary.todaysAttendance) },
+    {
+      label: 'Average grade',
+      value: summary.averageStudentGrade ? `${summary.averageStudentGrade.toFixed(1)}%` : '—',
+    },
   ]
 
-  const quickActions = [
-    {
-      href: '/classes',
-      title: 'Explore Classes',
-      description: 'View and manage all your classes',
-      icon: AcademicCapIcon,
-      color: 'bg-gradient-to-br from-cyan-500 to-teal-500'
-    },
-    {
-      href: '/gradebook',
-      title: 'Grade Students',
-      description: 'Record or update student grades',
-      icon: BookOpenIcon,
-      color: 'bg-gradient-to-br from-purple-500 to-indigo-500'
-    },
-    {
-      href: '/attendance/general',
-      title: 'Take Attendance',
-      description: "Mark today's attendance",
-      icon: ClipboardDocumentCheckIcon,
-      color: 'bg-gradient-to-br from-emerald-500 to-green-500'
-    }
+  const secondary = [
+    { label: 'teachers', value: summary.totalTeachers || 0 },
+    { label: 'this week', value: pct(summary.weeklyAttendance) },
+    { label: 'this month', value: pct(summary.monthlyAttendance) },
+    { label: 'report cards', value: summary.reportCardsCount || 0 },
+    { label: 'avg. class size', value: summary.avgClassSize || 0 },
   ]
 
   return (
@@ -176,147 +178,140 @@ const DashboardPage: React.FC = () => {
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              Welcome back, {user.username}
-            </h1>
-            <p className="text-slate-500 mt-1">
-              Here&apos;s what&apos;s happening at {user.school ? getSchoolName(user.school) : 'your school'} today.
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <div>
+              <h1 className="font-display text-2xl lg:text-3xl font-semibold text-slate-900 tracking-tight">
+                {greetingFor(new Date())}, {user.username}
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                {format(new Date(), 'EEEE, MMMM d')}
+                {user.school ? ` · ${getSchoolName(user.school)}` : ''}
+              </p>
+            </div>
           </div>
 
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-8">
-            {metrics.map((m) => (
-              <div
-                key={m.label}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
-                      {m.label}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900">{m.value}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${m.color} flex items-center justify-center flex-shrink-0`}>
-                    <m.icon className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-              </div>
+          {/* Today, as a proportional strip of the school day */}
+          <DayRibbon />
+
+          {/* School-wide figures */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            {headline.map((m) => (
+              <StatTile key={m.label} label={m.label} value={m.value} />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6 px-1">
+            {secondary.map((m) => (
+              <StatTile key={m.label} label={m.label} value={m.value} compact />
             ))}
           </div>
 
-          {/* Attendance Trend Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <ArrowTrendingUpIcon className="w-5 h-5 text-cyan-500" />
-                  Attendance Trend
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">Track attendance patterns over time</p>
+          {/* Trend + actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <Card className="lg:col-span-2">
+              <SectionHeader
+                title="Attendance"
+                hint="Share of students present each day"
+                action={
+                  <select
+                    value={daysWindow}
+                    onChange={(e) => setDaysWindow(Number(e.target.value))}
+                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
+                  >
+                    {[7, 14, 30].map((d) => (
+                      <option key={d} value={d}>Last {d} days</option>
+                    ))}
+                  </select>
+                }
+              />
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer>
+                  <LineChart data={trend} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(d) => format(new Date(d), 'MM/dd')}
+                      tick={{ fill: '#94a3b8', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      padding={{ left: 20, right: 20 }}
+                    />
+                    <YAxis
+                      domain={[0, 1]}
+                      tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                      tick={{ fill: '#94a3b8', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={42}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
+                      labelFormatter={(label) => format(new Date(label), 'EEEE, MMM do')}
+                      formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, 'Present']}
+                      labelStyle={{ color: '#1e293b', fontWeight: 600 }}
+                      itemStyle={{ color: '#0891b2' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="rate"
+                      stroke="#0891b2"
+                      strokeWidth={2.5}
+                      dot={{ r: 3.5, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <select
-                value={daysWindow}
-                onChange={(e) => setDaysWindow(Number(e.target.value))}
-                className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer"
-              >
-                {[7, 14, 30].map((d) => (
-                  <option key={d} value={d}>Last {d} days</option>
+            </Card>
+
+            <Card>
+              <SectionHeader title="Quick actions" />
+              <div className="space-y-2">
+                {QUICK_ACTIONS.map((action) => (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="group flex items-center gap-3 rounded-xl border border-slate-200/70 px-4 py-3 hover:border-cyan-300 hover:bg-cyan-50/40 transition-colors"
+                  >
+                    <action.icon className="h-5 w-5 text-slate-400 group-hover:text-cyan-600 transition-colors" />
+                    <span className="text-sm font-medium text-slate-800">{action.label}</span>
+                    <ArrowRightIcon className="h-4 w-4 ml-auto text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
+                  </Link>
                 ))}
-              </select>
-            </div>
-            <div style={{ width: '100%', height: 280 }}>
-              <ResponsiveContainer>
-                <LineChart data={trend} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="attendanceGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0891b2" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#0891b2" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(d) => format(new Date(d), 'MM/dd')}
-                    tick={{ fill: '#64748b', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    padding={{ left: 20, right: 20 }}
-                  />
-                  <YAxis
-                    domain={[0, 1]}
-                    tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                    tick={{ fill: '#64748b', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={45}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                    }}
-                    labelFormatter={(label) => format(new Date(label), 'EEEE, MMM do')}
-                    formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, 'Attendance Rate']}
-                    labelStyle={{ color: '#1e293b', fontWeight: 600 }}
-                    itemStyle={{ color: '#0891b2' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="rate"
-                    stroke="#0891b2"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
-                    fill="url(#attendanceGradient)"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* My weekly schedule (only shows when a schedule is published) */}
-          <MyScheduleWidget />
-
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-lg hover:border-slate-200 transition-all"
-                >
-                  <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <action.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                    {action.title}
-                    <ArrowRightIcon className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
-                  </h3>
-                  <p className="text-sm text-slate-500">{action.description}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Staff Directory */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <UsersIcon className="w-5 h-5 text-purple-500" />
-                  Staff Directory
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">View and manage school staff members</p>
               </div>
-            </div>
-            <StaffList school={user.school!} showContactInfo={true} showActions={true} />
+            </Card>
           </div>
+
+          {/* Staff directory: still here for everyone who needs a colleague's
+              contact details, but folded away so it stops burying the page. */}
+          <Card flush>
+            <button
+              onClick={() => setStaffOpen((open) => !open)}
+              aria-expanded={staffOpen}
+              className="group flex w-full items-center gap-3 px-5 py-4 text-left cursor-pointer"
+            >
+              <UsersIcon className="h-5 w-5 text-slate-400 group-hover:text-cyan-600 transition-colors" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">Staff directory</p>
+                <p className="text-xs text-slate-500">
+                  {summary.totalTeachers || 0} staff members and their contact details
+                </p>
+              </div>
+              <ChevronDownIcon
+                className={`h-4 w-4 ml-auto text-slate-400 transition-transform ${
+                  staffOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {staffOpen && (
+              <div className="border-t border-slate-200/70 p-5 lg:p-6">
+                <StaffList school={user.school!} showContactInfo showActions />
+              </div>
+            )}
+          </Card>
         </div>
       </main>
       <CheckInModal

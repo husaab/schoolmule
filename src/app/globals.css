@@ -128,6 +128,19 @@ body {
    Animations & Keyframes
    ========================================================================== */
 
+/* Dashboard day ribbon: a short rise, sized for small blocks rather than
+   full sections (fadeInUp's 30px travel is far too much at this scale). */
+@keyframes ribbonIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

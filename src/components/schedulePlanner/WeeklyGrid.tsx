@@ -194,7 +194,9 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
     mode: 'move' | 'resize'
   ) => {
     if (!editable) return
-    e.preventDefault()
+    // No preventDefault: it suppresses the follow-up click in some browsers,
+    // which is how a session is opened for editing. Text selection is already
+    // off via the grid's select-none, and touch scrolling via touch-none.
     e.stopPropagation()
     setDrag({
       id: session.id,

@@ -16,6 +16,11 @@ import {
   PencilIcon,
   PhoneIcon,
   UserIcon,
+  CakeIcon,
+  HomeIcon,
+  IdentificationIcon,
+  HeartIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 interface StudentViewModalProps {
@@ -174,6 +179,11 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
   }, [student.homeroomTeacherId]);
 
   const emergency = clean(student.emergencyContact);
+  const dob = clean(student.dateOfBirth);
+  const address = clean(student.address);
+  const healthCard = clean(student.healthCardNumber);
+  const medical = clean(student.medicalNotes);
+  const hasDetails = dob || address || healthCard;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
@@ -236,6 +246,44 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
           </div>
         </section>
 
+        {/* Details captured at registration */}
+        {hasDetails && (
+          <section className="space-y-2">
+            <SectionLabel>Details</SectionLabel>
+            <div className="space-y-2 text-sm">
+              {dob && (
+                <div className="flex items-center gap-2">
+                  <CakeIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  <span className="text-slate-700">{formatDate(dob)}</span>
+                </div>
+              )}
+              {healthCard && (
+                <div className="flex items-center gap-2">
+                  <IdentificationIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  <span className="font-mono text-slate-700">{healthCard}</span>
+                </div>
+              )}
+              {address && (
+                <div className="flex items-start gap-2">
+                  <HomeIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                  <span className="text-slate-700">{address}</span>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Medical */}
+        {medical && (
+          <section className="space-y-2">
+            <SectionLabel>Medical</SectionLabel>
+            <div className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+              <HeartIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-rose-500" />
+              <span className="text-sm text-rose-900">{medical}</span>
+            </div>
+          </section>
+        )}
+
         {/* Emergency */}
         <section className="space-y-2">
           <SectionLabel>Emergency contact</SectionLabel>
@@ -252,9 +300,15 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
 
       {/* Record trail + actions */}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
-        <p className="text-xs text-slate-400">
-          Added {formatDate(student.createdAt)} · Updated {formatDate(student.lastModifiedAt)}
-        </p>
+        <div className="text-xs text-slate-400">
+          <p>Added {formatDate(student.createdAt)} · Updated {formatDate(student.lastModifiedAt)}</p>
+          {student.sourceSubmissionId && (
+            <p className="mt-0.5 inline-flex items-center gap-1 text-slate-500">
+              <DocumentTextIcon className="h-3.5 w-3.5" />
+              Imported from a registration form
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {onEdit && (
             <button

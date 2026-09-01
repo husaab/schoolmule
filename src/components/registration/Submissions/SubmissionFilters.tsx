@@ -1,6 +1,6 @@
 'use client';
 
-import type { SubmissionStatus, SubmissionFilters as FiltersType } from '@/services/types/registration';
+import type { SubmissionStatus, SubmissionFilters as FiltersType, ImportState } from '@/services/types/registration';
 
 interface Props {
   filters: FiltersType;
@@ -20,6 +20,17 @@ export default function SubmissionFilters({ filters, onChange }: Props) {
         <option value="new">New</option>
         <option value="reviewed">Reviewed</option>
         <option value="archived">Archived</option>
+      </select>
+
+      {/* Import state — which submissions have already become students */}
+      <select
+        value={filters.importState || 'all'}
+        onChange={(e) => onChange({ ...filters, importState: e.target.value as ImportState, page: 1 })}
+        className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
+      >
+        <option value="all">All Submissions</option>
+        <option value="not_imported">Not yet imported</option>
+        <option value="imported">Imported</option>
       </select>
 
       {/* Date from */}
@@ -45,7 +56,8 @@ export default function SubmissionFilters({ filters, onChange }: Props) {
       </div>
 
       {/* Clear filters */}
-      {(filters.status || filters.dateFrom || filters.dateTo) && (
+      {(filters.status || filters.dateFrom || filters.dateTo ||
+        (filters.importState && filters.importState !== 'all')) && (
         <button
           onClick={() => onChange({ page: 1, limit: 25 })}
           className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"

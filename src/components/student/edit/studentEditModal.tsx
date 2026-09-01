@@ -29,6 +29,10 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
   const [fatherEmail, setFatherEmail] = useState('');
   const [fatherPhone, setFatherPhone] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [address, setAddress] = useState('');
+  const [healthCardNumber, setHealthCardNumber] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState('');
   const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
   const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
 
@@ -47,6 +51,11 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       setFatherEmail(student.father?.email || '');
       setFatherPhone(student.father?.phone || '');
       setEmergencyContact(student.emergencyContact || '');
+      // The API returns a full ISO timestamp; <input type="date"> needs YYYY-MM-DD.
+      setDateOfBirth(student.dateOfBirth ? student.dateOfBirth.slice(0, 10) : '');
+      setAddress(student.address || '');
+      setHealthCardNumber(student.healthCardNumber || '');
+      setMedicalNotes(student.medicalNotes || '');
       setHomeroomTeacherId(student.homeroomTeacherId || '');
     }
   }, [isOpen, student]);
@@ -91,7 +100,11 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
         email: fatherEmail || null,
         phone: fatherPhone || null
       },
-      emergencyContact: emergencyContact || null
+      emergencyContact: emergencyContact || null,
+      dateOfBirth: dateOfBirth || null,
+      address: address || null,
+      healthCardNumber: healthCardNumber || null,
+      medicalNotes: medicalNotes || null
     };
 
     const res = await updateStudent(student.studentId, updateData);
@@ -139,6 +152,23 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
           <input
             value={oen}
             onChange={(e) => setOen(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Date of Birth</label>
+          <input
+            type="date"
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Health Card Number</label>
+          <input
+            value={healthCardNumber}
+            onChange={(e) => setHealthCardNumber(e.target.value)}
             className="w-full border rounded px-2 py-1"
           />
         </div>
@@ -211,6 +241,24 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
             value={emergencyContact}
             onChange={(e) => setEmergencyContact(e.target.value)}
             className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Address</label>
+          <textarea
+            rows={2}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full border rounded px-2 py-1 resize-y"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Medical / Allergy Notes</label>
+          <textarea
+            rows={2}
+            value={medicalNotes}
+            onChange={(e) => setMedicalNotes(e.target.value)}
+            className="w-full border rounded px-2 py-1 resize-y"
           />
         </div>
         <div className="flex justify-end space-x-4 pt-4">

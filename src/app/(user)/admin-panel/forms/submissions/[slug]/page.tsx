@@ -10,6 +10,10 @@ import SortControls from '@/components/registration/Submissions/SortControls';
 import FieldValueFilters from '@/components/registration/Submissions/FieldValueFilters';
 import FilterSummaryChip from '@/components/registration/Submissions/FilterSummaryChip';
 import ExportButton from '@/components/registration/Submissions/ExportButton';
+import FieldMappingEditor from '@/components/registration/Import/FieldMappingEditor';
+import ImportPreviewModal from '@/components/registration/Import/ImportPreviewModal';
+import ImportedBadge from '@/components/registration/Import/ImportedBadge';
+import UndoImportModal from '@/components/registration/Import/UndoImportModal';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
@@ -22,6 +26,7 @@ import type {
   SortSpec,
   FieldFilter,
 } from '@/services/types/registration';
+import type { ImportScope } from '@/services/types/registrationImport';
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -32,6 +37,8 @@ import {
   InboxStackIcon,
   ArrowUpIcon,
   ArrowDownIcon,
+  Cog6ToothIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 
 const statusColors: Record<string, string> = {
@@ -139,6 +146,15 @@ export default function FormSubmissionsPage() {
     }
   }, [filters.sorts, filters.fieldFilters]);
 
+  // ─── Import ────────────────────────────────────────────────────────
+  // Row selection drives the "bulk" entry point; the batch entry point sends
+  // the current filters to the server instead of a list of ids.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importScope, setImportScope] = useState<ImportScope | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [undoSubmissionId, setUndoSubmissionId] = useState<string | null>(null);
+
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -230,6 +246,55 @@ export default function FormSubmissionsPage() {
   useEffect(() => {
     fetchSubmissions();
   }, [fetchSubmissions]);
+
+  // Selecting rows only makes sense against the rows on screen, so clear the
+  // selection whenever the underlying list changes.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filters.page, filters.limit, filters.status, filters.importState, filters.dateFrom, filters.dateTo]);
+
+  const toggleSelected = (submissionId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(submissionId)) next.delete(submissionId);
+      else next.add(submissionId);
+      return next;
+    });
+  };
+
+  const allOnPageSelected = submissions.length > 0 && submissions.every((s) => selectedIds.has(s.submissionId));
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      if (allOnPageSelected) {
+        const next = new Set(prev);
+        submissions.forEach((s) => next.delete(s.submissionId));
+        return next;
+      }
+      return new Set([...prev, ...submissions.map((s) => s.submissionId)]);
+    });
+  };
+
+  // Bulk: exactly the ticked rows.
+  const openImportSelected = () => {
+    setImportScope({ mode: 'selected', submissionIds: [...selectedIds] });
+    setImportOpen(true);
+  };
+
+  // Batch: everything the current filters match, resolved server-side using the
+  // same query builder the list itself uses.
+  const openImportFiltered = () => {
+    setImportScope({
+      mode: 'filtered',
+      status: filters.status,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      fieldFilters: filters.fieldFilters,
+      importState: filters.importState,
+      sorts: filters.sorts,
+    });
+    setImportOpen(true);
+  };
 
   const handleStatusChange = async (submissionId: string, status: string) => {
     try {
@@ -351,7 +416,26 @@ export default function FormSubmissionsPage() {
                 />
               </div>
             </div>
-            <ExportButton formId={form.formId} filters={filters} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setMappingOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Choose which form questions map to which student fields"
+              >
+                <Cog6ToothIcon className="w-4 h-4" />
+                Import setup
+              </button>
+              <button
+                onClick={openImportFiltered}
+                disabled={pagination.total === 0}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                title="Import every submission matching the current filters"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4" />
+                Import all {pagination.total > 0 ? `(${pagination.total})` : ''}
+              </button>
+              <ExportButton formId={form.formId} filters={filters} />
+            </div>
           </div>
 
           {/* Filters + Sort */}
@@ -390,10 +474,37 @@ export default function FormSubmissionsPage() {
               <InboxStackIcon className="w-14 h-14 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-slate-700 mb-1">No submissions found</h3>
               <p className="text-sm text-slate-500">
-                {filters.status || filters.dateFrom || filters.dateTo || (filters.fieldFilters?.some((f) => f.values.length > 0))
+                {filters.status || filters.dateFrom || filters.dateTo ||
+                 (filters.importState && filters.importState !== 'all') ||
+                 (filters.fieldFilters?.some((f) => f.values.length > 0))
                   ? 'Try adjusting your filters.'
                   : 'Submissions will appear here once parents fill out this form.'}
               </p>
+            </div>
+          )}
+
+          {/* Bulk import bar — only while rows are selected */}
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3 bg-cyan-50 border border-cyan-200 rounded-xl">
+              <p className="text-sm text-cyan-900">
+                <span className="font-semibold">{selectedIds.size}</span>{' '}
+                submission{selectedIds.size === 1 ? '' : 's'} selected
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-cyan-700 hover:text-cyan-900 font-medium transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={openImportSelected}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                  Import {selectedIds.size} selected
+                </button>
+              </div>
             </div>
           )}
 
@@ -404,8 +515,18 @@ export default function FormSubmissionsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/80">
+                      <th className="w-10 px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={allOnPageSelected}
+                          onChange={toggleSelectAllOnPage}
+                          title="Select all on this page"
+                          className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
+                        />
+                      </th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Imported</th>
                       {displayedFields.map((f) => {
                         const sortInfo = sortByField.get(f.fieldId);
                         const isSorted = !!sortInfo;
@@ -436,8 +557,18 @@ export default function FormSubmissionsPage() {
                       <tr
                         key={sub.submissionId}
                         onClick={() => openDetail(sub)}
-                        className="border-b border-slate-50 hover:bg-cyan-50/30 cursor-pointer transition-colors"
+                        className={`border-b border-slate-50 hover:bg-cyan-50/30 cursor-pointer transition-colors ${
+                          selectedIds.has(sub.submissionId) ? 'bg-cyan-50/50' : ''
+                        }`}
                       >
+                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(sub.submissionId)}
+                            onChange={() => toggleSelected(sub.submissionId)}
+                            className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
+                          />
+                        </td>
                         <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">
                           {new Date(sub.submittedAt).toLocaleDateString('en-CA')}
                         </td>
@@ -452,6 +583,12 @@ export default function FormSubmissionsPage() {
                             <option value="reviewed">Reviewed</option>
                             <option value="archived">Archived</option>
                           </select>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <ImportedBadge
+                            submission={sub}
+                            onUndo={(s) => setUndoSubmissionId(s.submissionId)}
+                          />
                         </td>
                         {displayedFields.map((f) => {
                           const isSorted = sortByField.has(f.fieldId);
@@ -546,6 +683,40 @@ export default function FormSubmissionsPage() {
           )}
         </div>
       </main>
+
+      {/* Import field mapping */}
+      <Modal
+        isOpen={mappingOpen}
+        onClose={() => setMappingOpen(false)}
+        title="Student import mapping"
+        size="2xl"
+      >
+        {mappingOpen && (
+          <FieldMappingEditor
+            formId={form.formId}
+            onSaved={() => setMappingOpen(false)}
+            onCancel={() => setMappingOpen(false)}
+          />
+        )}
+      </Modal>
+
+      {/* Import preview + run */}
+      <ImportPreviewModal
+        formId={form.formId}
+        scope={importScope}
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => { setSelectedIds(new Set()); fetchSubmissions(); }}
+        onConfigureMapping={() => setMappingOpen(true)}
+      />
+
+      {/* Undo a previous import */}
+      <UndoImportModal
+        submissionId={undoSubmissionId}
+        isOpen={!!undoSubmissionId}
+        onClose={() => setUndoSubmissionId(null)}
+        onUndone={fetchSubmissions}
+      />
 
       {/* Detail Modal */}
       <Modal isOpen={detailOpen} onClose={() => setDetailOpen(false)} title="Submission Detail" size="lg">

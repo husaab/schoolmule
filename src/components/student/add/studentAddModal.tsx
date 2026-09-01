@@ -28,6 +28,10 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
   const [fatherEmail, setFatherEmail] = useState('');
   const [fatherPhone, setFatherPhone] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [address, setAddress] = useState('');
+  const [healthCardNumber, setHealthCardNumber] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState('');
 
   const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
   const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
@@ -76,7 +80,11 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
         email: fatherEmail || null,
         phone: fatherPhone || null
       },
-      emergencyContact: emergencyContact || null
+      emergencyContact: emergencyContact || null,
+      dateOfBirth: dateOfBirth || null,
+      address: address || null,
+      healthCardNumber: healthCardNumber || null,
+      medicalNotes: medicalNotes || null
     };
 
     const res = await createStudent(payload);
@@ -96,6 +104,10 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       setFatherEmail('');
       setFatherPhone('');
       setEmergencyContact('');
+      setDateOfBirth('');
+      setAddress('');
+      setHealthCardNumber('');
+      setMedicalNotes('');
       setHomeroomTeacherId('');
     } else {
       showNotification('Failed to add student', 'error');
@@ -135,6 +147,23 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             value={oen}
             placeholder='e.g. 423-654-432'
             onChange={(e) => setOen(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Date of Birth</label>
+          <input
+            type="date"
+            value={dateOfBirth}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Health Card Number</label>
+          <input
+            value={healthCardNumber}
+            onChange={(e) => setHealthCardNumber(e.target.value)}
             className="w-full border rounded px-2 py-1"
           />
         </div>
@@ -210,6 +239,25 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             placeholder='Phone Number'
             onChange={(e) => setEmergencyContact(e.target.value)}
             className="w-full border rounded px-2 py-1"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Address</label>
+          <textarea
+            rows={2}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full border rounded px-2 py-1 resize-y"
+          />
+        </div>
+        <div>
+          <label className="block text-sm">Medical / Allergy Notes</label>
+          <textarea
+            rows={2}
+            value={medicalNotes}
+            placeholder='e.g. Peanut allergy'
+            onChange={(e) => setMedicalNotes(e.target.value)}
+            className="w-full border rounded px-2 py-1 resize-y"
           />
         </div>
         <div className="flex justify-end space-x-4 pt-4">
