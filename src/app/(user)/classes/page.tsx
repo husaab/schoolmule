@@ -394,6 +394,7 @@ const ClassesPageContent = () => {
           isOpen={!!viewClass}
           onClose={() => setViewClass(null)}
           classData={viewClass}
+          onEdit={() => router.push(`/classes/${viewClass.classId}/edit`)}
         />
       )}
 

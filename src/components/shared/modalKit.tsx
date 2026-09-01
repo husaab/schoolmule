@@ -15,13 +15,14 @@ import React from 'react'
  * keeps its title and its Save button in view while the fields scroll.
  */
 
-type Tone = 'brand' | 'danger' | 'warning' | 'success'
+type Tone = 'brand' | 'danger' | 'warning' | 'success' | 'violet'
 
 const headerToneClasses: Record<Tone, string> = {
   brand: 'from-cyan-50 via-white to-teal-50',
   danger: 'from-rose-50 via-white to-rose-50/40',
   warning: 'from-amber-50 via-white to-amber-50/40',
   success: 'from-emerald-50 via-white to-emerald-50/40',
+  violet: 'from-violet-50 via-white to-purple-50/40',
 }
 
 const iconToneClasses: Record<Tone, string> = {
@@ -29,6 +30,7 @@ const iconToneClasses: Record<Tone, string> = {
   danger: 'bg-rose-100 text-rose-600',
   warning: 'bg-amber-100 text-amber-600',
   success: 'bg-emerald-100 text-emerald-600',
+  violet: 'bg-violet-100 text-violet-600',
 }
 
 interface ModalHeaderProps {
@@ -127,6 +129,8 @@ const variantClasses = {
   danger: 'bg-rose-600 text-white shadow-sm hover:bg-rose-700',
   warning: 'bg-amber-600 text-white shadow-sm hover:bg-amber-700',
   success: 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700',
+  violet:
+    'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-sm hover:from-violet-600 hover:to-purple-600',
 } as const
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -179,6 +183,7 @@ export const ConfirmBody = ({
     danger: 'border-rose-100 bg-rose-50/70 text-rose-900',
     warning: 'border-amber-100 bg-amber-50/70 text-amber-900',
     success: 'border-emerald-100 bg-emerald-50/70 text-emerald-900',
+    violet: 'border-violet-100 bg-violet-50/70 text-violet-900',
   }
 
   return (

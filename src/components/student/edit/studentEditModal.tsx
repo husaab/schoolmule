@@ -1,4 +1,4 @@
-// File: src/components/student/edit/StudentEditModal.tsx
+// File: src/components/student/edit/studentEditModal.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +9,9 @@ import { updateStudent } from '@/services/studentService';
 import { getTeachersBySchool } from '@/services/teacherService';
 import { StudentPayload } from '@/services/types/student';
 import { TeacherPayload } from '@/services/types/teacher';
-import { getGradeOptions, GradeValue } from '@/lib/schoolUtils';
+import StudentFormFields, { StudentFormValues } from '../StudentFormFields';
+import { Button, ModalBody, ModalFooter, ModalHeader } from '../../shared/modalKit';
+import { PencilSquareIcon } from '@heroicons/react/24/outline';
 
 interface StudentEditModalProps {
   isOpen: boolean;
@@ -18,46 +20,38 @@ interface StudentEditModalProps {
   onUpdate: (updated: StudentPayload) => void;
 }
 
+const toFormValues = (student: StudentPayload): StudentFormValues => ({
+  name: student.name || '',
+  grade: student.grade ?? '',
+  oen: student.oen || '',
+  // The API returns a full ISO timestamp; <input type="date"> needs YYYY-MM-DD.
+  dateOfBirth: student.dateOfBirth ? student.dateOfBirth.slice(0, 10) : '',
+  healthCardNumber: student.healthCardNumber || '',
+  homeroomTeacherId: student.homeroomTeacherId || '',
+  motherName: student.mother?.name || '',
+  motherEmail: student.mother?.email || '',
+  motherPhone: student.mother?.phone || '',
+  fatherName: student.father?.name || '',
+  fatherEmail: student.father?.email || '',
+  fatherPhone: student.father?.phone || '',
+  emergencyContact: student.emergencyContact || '',
+  address: student.address || '',
+  medicalNotes: student.medicalNotes || '',
+});
+
 const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, student, onUpdate }) => {
-  const [name, setName] = useState('');
-  const [grade, setGrade] = useState<GradeValue | ''>('');
-  const [oen, setOen] = useState('');
-  const [motherName, setMotherName] = useState('');
-  const [motherEmail, setMotherEmail] = useState('');
-  const [motherPhone, setMotherPhone] = useState('');
-  const [fatherName, setFatherName] = useState('');
-  const [fatherEmail, setFatherEmail] = useState('');
-  const [fatherPhone, setFatherPhone] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [address, setAddress] = useState('');
-  const [healthCardNumber, setHealthCardNumber] = useState('');
-  const [medicalNotes, setMedicalNotes] = useState('');
-  const [homeroomTeacherId, setHomeroomTeacherId] = useState('');
+  const [values, setValues] = useState<StudentFormValues>(() => toFormValues(student));
   const [teachers, setTeachers] = useState<TeacherPayload[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore((state) => state.showNotification);
 
+  const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
+    setValues((prev) => ({ ...prev, [field]: value }));
+
   useEffect(() => {
-    if (isOpen) {
-      setName(student.name || '');
-      setGrade(student.grade ?? '');
-      setOen(student.oen || '');
-      setMotherName(student.mother?.name || '');
-      setMotherEmail(student.mother?.email || '');
-      setMotherPhone(student.mother?.phone || '');
-      setFatherName(student.father?.name || '');
-      setFatherEmail(student.father?.email || '');
-      setFatherPhone(student.father?.phone || '');
-      setEmergencyContact(student.emergencyContact || '');
-      // The API returns a full ISO timestamp; <input type="date"> needs YYYY-MM-DD.
-      setDateOfBirth(student.dateOfBirth ? student.dateOfBirth.slice(0, 10) : '');
-      setAddress(student.address || '');
-      setHealthCardNumber(student.healthCardNumber || '');
-      setMedicalNotes(student.medicalNotes || '');
-      setHomeroomTeacherId(student.homeroomTeacherId || '');
-    }
+    if (isOpen) setValues(toFormValues(student));
   }, [isOpen, student]);
 
   useEffect(() => {
@@ -79,203 +73,74 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || grade === '') {
+    if (!values.name.trim() || values.grade === '') {
       showNotification('Name and grade are required', 'error');
       return;
     }
 
     const updateData: Partial<Omit<StudentPayload, 'studentId' | 'createdAt' | 'lastModifiedAt'>> = {
-      name: name.trim(),
-      grade: grade,
-      oen: oen || null,
+      name: values.name.trim(),
+      grade: values.grade,
+      oen: values.oen || null,
       school: user?.school || '',
-      homeroomTeacherId: homeroomTeacherId || null,
+      homeroomTeacherId: values.homeroomTeacherId || null,
       mother: {
-        name: motherName || null,
-        email: motherEmail || null,
-        phone: motherPhone || null
+        name: values.motherName || null,
+        email: values.motherEmail || null,
+        phone: values.motherPhone || null
       },
       father: {
-        name: fatherName || null,
-        email: fatherEmail || null,
-        phone: fatherPhone || null
+        name: values.fatherName || null,
+        email: values.fatherEmail || null,
+        phone: values.fatherPhone || null
       },
-      emergencyContact: emergencyContact || null,
-      dateOfBirth: dateOfBirth || null,
-      address: address || null,
-      healthCardNumber: healthCardNumber || null,
-      medicalNotes: medicalNotes || null
+      emergencyContact: values.emergencyContact || null,
+      dateOfBirth: values.dateOfBirth || null,
+      address: values.address || null,
+      healthCardNumber: values.healthCardNumber || null,
+      medicalNotes: values.medicalNotes || null
     };
 
-    const res = await updateStudent(student.studentId, updateData);
-    // Backend now returns camelCase data
-    const updated = res.data as StudentPayload;
+    setSubmitting(true);
+    try {
+      const res = await updateStudent(student.studentId, updateData);
+      // Backend now returns camelCase data
+      const updated = res.data as StudentPayload;
 
-    if (res.status === 'success') {
-      onUpdate(updated);
-      showNotification('Student updated successfully', 'success');
-      onClose();
-    } else {
-      showNotification('Failed to update student', 'error');
+      if (res.status === 'success') {
+        onUpdate(updated);
+        showNotification('Student updated successfully', 'success');
+        onClose();
+      } else {
+        showNotification('Failed to update student', 'error');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
-      <h2 className="text-xl mb-4 text-black">Edit Student</h2>
-      <form onSubmit={handleSubmit} className="space-y-4 text-black">
-        <div>
-          <label className="block text-sm">Name</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader title="Edit student" subtitle={student.name} icon={PencilSquareIcon} />
+
+      <form onSubmit={handleSubmit}>
+        <ModalBody className="space-y-6">
+          <StudentFormFields
+            values={values}
+            onChange={setField}
+            teachers={teachers}
+            idPrefix="student-edit"
           />
-        </div>
-        <div>
-          <label className="block text-sm">Grade</label>
-          <select
-            required
-            value={grade}
-            onChange={(e) => setGrade(e.target.value as GradeValue)}
-            className="w-full border rounded px-2 py-1"
-          >
-            <option value="" disabled>Select grade</option>
-            {getGradeOptions().map((gradeOption) => (
-              <option key={gradeOption.value} value={gradeOption.value}>{gradeOption.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm">OEN</label>
-          <input
-            value={oen}
-            onChange={(e) => setOen(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Date of Birth</label>
-          <input
-            type="date"
-            value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Health Card Number</label>
-          <input
-            value={healthCardNumber}
-            onChange={(e) => setHealthCardNumber(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Homeroom Teacher</label>
-          <select
-            value={homeroomTeacherId}
-            onChange={(e) => setHomeroomTeacherId(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          >
-            <option value="">Select teacher</option>
-            {teachers.map((t) => (
-              <option key={t.userId} value={t.userId}>{t.fullName}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm">Mother Name</label>
-          <input
-            value={motherName}
-            onChange={(e) => setMotherName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Mother Email</label>
-          <input
-            type="email"
-            value={motherEmail}
-            onChange={(e) => setMotherEmail(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Mother Phone</label>
-          <input
-            value={motherPhone}
-            onChange={(e) => setMotherPhone(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Father Name</label>
-          <input
-            value={fatherName}
-            onChange={(e) => setFatherName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Father Email</label>
-          <input
-            type="email"
-            value={fatherEmail}
-            onChange={(e) => setFatherEmail(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Father Phone</label>
-          <input
-            value={fatherPhone}
-            onChange={(e) => setFatherPhone(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Emergency Contact</label>
-          <input
-            value={emergencyContact}
-            onChange={(e) => setEmergencyContact(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Address</label>
-          <textarea
-            rows={2}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full border rounded px-2 py-1 resize-y"
-          />
-        </div>
-        <div>
-          <label className="block text-sm">Medical / Allergy Notes</label>
-          <textarea
-            rows={2}
-            value={medicalNotes}
-            onChange={(e) => setMedicalNotes(e.target.value)}
-            className="w-full border rounded px-2 py-1 resize-y"
-          />
-        </div>
-        <div className="flex justify-end space-x-4 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-red-500 text-white rounded-md cursor-pointer"
-          >
+        </ModalBody>
+
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-cyan-600 text-white rounded-md cursor-pointer"
-          >
-            Save Changes
-          </button>
-        </div>
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting}>
+            {submitting ? 'Saving' : 'Save changes'}
+          </Button>
+        </ModalFooter>
       </form>
     </Modal>
   );
