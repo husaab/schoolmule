@@ -316,6 +316,11 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
  * Proposes a target value for one answer option, so switching a field to an
  * enum target starts from something sensible.
  * "Junior Kindergarten (born in 2022)" → 'JK'; "Grade 3" → '3'.
+ *
+ * Deliberately mirrors suggestGradeValue() in the backend's
+ * studentImportTarget.js: that one seeds the initial server-side suggestion,
+ * this one re-seeds instantly when the admin re-points a field mid-edit, with
+ * no round-trip. Keep the two regexes in sync.
  */
 function guessEnumValue(option: string, enumValues: string[]): string | null {
   const l = option.toLowerCase();

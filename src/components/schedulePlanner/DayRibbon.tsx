@@ -94,9 +94,10 @@ const DayRibbon: React.FC = () => {
   // No published schedule at all: say what will fill the space, and who fills it.
   if (!data || data.sessions.length === 0) {
     return (
-      <Card className="mb-6">
+      <Card className="mb-6 !bg-gradient-to-br from-cyan-50/80 via-white to-teal-50/60 border-cyan-200/60">
         <EmptyState
           icon={CalendarDaysIcon}
+          iconClassName="text-cyan-500"
           title="Your day will appear here"
           description={
             user?.role === 'ADMIN'

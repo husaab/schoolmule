@@ -89,6 +89,8 @@ export default function ImportPreviewModal({
       setAutoEnroll(false);
       setRows([]);
       setSummary(null);
+      setNeedsMapping(false);
+      setTruncated(false);
     }
   }, [isOpen]);
 

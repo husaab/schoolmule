@@ -306,7 +306,16 @@ export default function FormSubmissionsPage() {
   };
 
   const handleDelete = async (submissionId: string) => {
-    if (!confirm('Are you sure you want to delete this submission?')) return;
+    // Deleting a submission that was imported destroys the original answers and
+    // nulls the student's "imported from" link, so name the consequence rather
+    // than showing the same generic prompt used for an untouched submission.
+    const sub = submissions.find((s) => s.submissionId === submissionId);
+    const message = sub?.importedStudentId
+      ? `This submission was imported as ${sub.importedStudentName || 'a student'}. `
+        + 'Deleting it keeps the student but permanently removes these answers and the link between them.\n\n'
+        + 'Delete anyway?'
+      : 'Are you sure you want to delete this submission?';
+    if (!confirm(message)) return;
     try {
       await registrationService.deleteSubmission(submissionId);
       setDetailOpen(false);

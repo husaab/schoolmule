@@ -11,6 +11,8 @@ interface EmptyStateProps {
   description?: string
   action?: React.ReactNode
   className?: string
+  /** Tailwind colour classes for the icon chip, when a plain grey mark is too quiet. */
+  iconClassName?: string
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -19,9 +21,10 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   action,
   className = '',
+  iconClassName = 'text-slate-300',
 }) => (
   <div className={`text-center py-10 ${className}`}>
-    <Icon className="h-9 w-9 mx-auto mb-3 text-slate-300" />
+    <Icon className={`h-9 w-9 mx-auto mb-3 ${iconClassName}`} />
     <p className="text-sm font-medium text-slate-700">{title}</p>
     {description && <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{description}</p>}
     {action && <div className="mt-4">{action}</div>}

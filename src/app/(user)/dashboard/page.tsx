@@ -15,13 +15,15 @@ import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardSer
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
 import Spinner from '@/components/Spinner'
 import Card from '@/components/ui/Card'
-import StatTile from '@/components/ui/StatTile'
+import StatTile, { toneForRate, toneForScore } from '@/components/ui/StatTile'
+import DailyBriefing from '@/components/dashboard/DailyBriefing'
+import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import SectionHeader from '@/components/ui/SectionHeader'
 import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
 import DayRibbon from '@/components/schedulePlanner/DayRibbon'
 import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import Link from 'next/link'
 import StaffList from '@/components/staff/StaffList'
 import {
@@ -42,10 +44,30 @@ const greetingFor = (date: Date): string => {
   return 'Good evening'
 }
 
+// Each action keeps its own hue so the row is scannable by colour, not just
+// by reading three near-identical labels.
 const QUICK_ACTIONS = [
-  { href: '/classes', label: 'Open classes', icon: AcademicCapIcon },
-  { href: '/gradebook', label: 'Enter grades', icon: BookOpenIcon },
-  { href: '/attendance/general', label: 'Take attendance', icon: ClipboardDocumentCheckIcon },
+  {
+    href: '/classes',
+    label: 'Open classes',
+    icon: AcademicCapIcon,
+    icon_class: 'text-cyan-600 bg-cyan-50',
+    hover: 'hover:border-cyan-300 hover:bg-cyan-50/40',
+  },
+  {
+    href: '/gradebook',
+    label: 'Enter grades',
+    icon: BookOpenIcon,
+    icon_class: 'text-violet-600 bg-violet-50',
+    hover: 'hover:border-violet-300 hover:bg-violet-50/40',
+  },
+  {
+    href: '/attendance/general',
+    label: 'Take attendance',
+    icon: ClipboardDocumentCheckIcon,
+    icon_class: 'text-emerald-600 bg-emerald-50',
+    hover: 'hover:border-emerald-300 hover:bg-emerald-50/40',
+  },
 ]
 
 const DashboardPage: React.FC = () => {
@@ -59,6 +81,9 @@ const DashboardPage: React.FC = () => {
   const [daysWindow, setDaysWindow] = useState<number>(7)
   const [showCheckIn, setShowCheckIn] = useState(false)
   const [staffOpen, setStaffOpen] = useState(false)
+  // Already loaded by the day ribbon; read it so the briefing can flag a
+  // school that has never published a timetable.
+  const mySchedule = useMyScheduleStore((s) => s.data)
 
   // Check-in flow: localStorage for instant suppression, backend as source of truth
   useEffect(() => {
@@ -154,21 +179,26 @@ const DashboardPage: React.FC = () => {
   // Four figures carry the headline; the rest stay available without adding
   // eight more boxes to scan past.
   const headline = [
-    { label: 'Students', value: summary.totalStudents || 0 },
-    { label: 'Classes', value: summary.totalClasses || 0 },
-    { label: 'Here today', value: pct(summary.todaysAttendance) },
+    { label: 'Students', value: summary.totalStudents || 0, tone: 'neutral' as const },
+    { label: 'Classes', value: summary.totalClasses || 0, tone: 'neutral' as const },
+    {
+      label: 'Here today',
+      value: pct(summary.todaysAttendance),
+      tone: toneForRate(summary.todaysAttendance),
+    },
     {
       label: 'Average grade',
       value: summary.averageStudentGrade ? `${summary.averageStudentGrade.toFixed(1)}%` : '—',
+      tone: toneForScore(summary.averageStudentGrade),
     },
   ]
 
   const secondary = [
-    { label: 'teachers', value: summary.totalTeachers || 0 },
-    { label: 'this week', value: pct(summary.weeklyAttendance) },
-    { label: 'this month', value: pct(summary.monthlyAttendance) },
-    { label: 'report cards', value: summary.reportCardsCount || 0 },
-    { label: 'avg. class size', value: summary.avgClassSize || 0 },
+    { label: 'teachers', value: summary.totalTeachers || 0, tone: 'neutral' as const },
+    { label: 'this week', value: pct(summary.weeklyAttendance), tone: toneForRate(summary.weeklyAttendance) },
+    { label: 'this month', value: pct(summary.monthlyAttendance), tone: toneForRate(summary.monthlyAttendance) },
+    { label: 'report cards', value: summary.reportCardsCount || 0, tone: 'neutral' as const },
+    { label: 'avg. class size', value: summary.avgClassSize || 0, tone: 'neutral' as const },
   ]
 
   return (
@@ -176,7 +206,7 @@ const DashboardPage: React.FC = () => {
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
           {/* Header */}
           <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
             <div>
@@ -196,18 +226,30 @@ const DashboardPage: React.FC = () => {
           {/* School-wide figures */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             {headline.map((m) => (
-              <StatTile key={m.label} label={m.label} value={m.value} />
+              <StatTile key={m.label} label={m.label} value={m.value} tone={m.tone} />
             ))}
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6 px-1">
             {secondary.map((m) => (
-              <StatTile key={m.label} label={m.label} value={m.value} compact />
+              <StatTile key={m.label} label={m.label} value={m.value} tone={m.tone} compact />
             ))}
           </div>
 
-          {/* Trend + actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <Card className="lg:col-span-2">
+          {/* Two columns on wide screens: the narrative and the chart carry the
+              main column, short reference blocks sit in a right rail. */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6 items-start">
+            <div className="xl:col-span-2 space-y-4">
+              {user.school && (
+                <DailyBriefing
+                  summary={summary}
+                  trend={trend}
+                  schoolName={getSchoolName(user.school)}
+                  schoolCode={user.school}
+                  today={today}
+                  hasPublishedSchedule={Boolean(mySchedule?.schedule)}
+                />
+              )}
+              <Card>
               <SectionHeader
                 title="Attendance"
                 hint="Share of students present each day"
@@ -225,7 +267,13 @@ const DashboardPage: React.FC = () => {
               />
               <div style={{ width: '100%', height: 260 }}>
                 <ResponsiveContainer>
-                  <LineChart data={trend} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
+                  <AreaChart data={trend} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="attendanceFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.28} />
+                        <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
                     <XAxis
                       dataKey="date"
                       tickFormatter={(d) => format(new Date(d), 'MM/dd')}
@@ -254,19 +302,29 @@ const DashboardPage: React.FC = () => {
                       labelStyle={{ color: '#1e293b', fontWeight: 600 }}
                       itemStyle={{ color: '#0891b2' }}
                     />
-                    <Line
+                    {/* The line schools are trying to stay above. */}
+                    <ReferenceLine
+                      y={0.9}
+                      stroke="#f59e0b"
+                      strokeDasharray="4 4"
+                      label={{ value: '90% target', position: 'right', fill: '#b45309', fontSize: 10 }}
+                    />
+                    <Area
                       type="monotone"
                       dataKey="rate"
                       stroke="#0891b2"
                       strokeWidth={2.5}
+                      fill="url(#attendanceFill)"
                       dot={{ r: 3.5, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
                       activeDot={{ r: 6, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </Card>
+              </Card>
+            </div>
 
+            <div className="space-y-4">
             <Card>
               <SectionHeader title="Quick actions" />
               <div className="space-y-2">
@@ -274,20 +332,21 @@ const DashboardPage: React.FC = () => {
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="group flex items-center gap-3 rounded-xl border border-slate-200/70 px-4 py-3 hover:border-cyan-300 hover:bg-cyan-50/40 transition-colors"
+                    className={`group flex items-center gap-3 rounded-xl border border-slate-200/70 px-4 py-3 transition-colors ${action.hover}`}
                   >
-                    <action.icon className="h-5 w-5 text-slate-400 group-hover:text-cyan-600 transition-colors" />
+                    <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${action.icon_class}`}>
+                      <action.icon className="h-5 w-5" />
+                    </span>
                     <span className="text-sm font-medium text-slate-800">{action.label}</span>
-                    <ArrowRightIcon className="h-4 w-4 ml-auto text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRightIcon className="h-4 w-4 ml-auto text-slate-300 group-hover:translate-x-0.5 transition-all" />
                   </Link>
                 ))}
               </div>
             </Card>
-          </div>
 
-          {/* Staff directory: still here for everyone who needs a colleague's
-              contact details, but folded away so it stops burying the page. */}
-          <Card flush>
+            {/* Staff directory: still here for everyone who needs a colleague's
+                contact details, but folded away so it stops burying the page. */}
+            <Card flush>
             <button
               onClick={() => setStaffOpen((open) => !open)}
               aria-expanded={staffOpen}
@@ -306,12 +365,14 @@ const DashboardPage: React.FC = () => {
                 }`}
               />
             </button>
-            {staffOpen && (
-              <div className="border-t border-slate-200/70 p-5 lg:p-6">
-                <StaffList school={user.school!} showContactInfo showActions />
-              </div>
-            )}
-          </Card>
+              {staffOpen && (
+                <div className="border-t border-slate-200/70 p-5 lg:p-6 max-h-[32rem] overflow-y-auto">
+                  <StaffList school={user.school!} showContactInfo showActions />
+                </div>
+              )}
+            </Card>
+            </div>
+          </div>
         </div>
       </main>
       <CheckInModal

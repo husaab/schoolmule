@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   PlusCircleIcon,
   ArrowPathIcon,
@@ -34,6 +34,13 @@ const ACTION_STYLE: Record<string, { Icon: typeof PlusCircleIcon; cls: string; l
  */
 export default function ImportPreviewRow({ row, onDecision, onPickMatch, pickedMatchId }: Props) {
   const [expanded, setExpanded] = useState(false);
+
+  // A row blocked only because the admin has not said which student to update
+  // can't be fixed from the collapsed view, so open it for them.
+  const awaitingMatchChoice = row.action === 'error' && row.matchCandidates.length > 1;
+  useEffect(() => {
+    if (awaitingMatchChoice) setExpanded(true);
+  }, [awaitingMatchChoice]);
   const style = ACTION_STYLE[row.action] || ACTION_STYLE.skip;
   const { Icon } = style;
 
@@ -76,8 +83,13 @@ export default function ImportPreviewRow({ row, onDecision, onPickMatch, pickedM
           <select
             value={row.action === 'error' ? '' : row.action}
             onChange={(e) => onDecision(row.submissionId, (e.target.value || null) as ImportDecision | null)}
-            className="w-28 shrink-0 px-2 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
+            className={`w-28 shrink-0 px-2 py-1.5 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer ${
+              row.action === 'error' ? 'border-rose-300 text-rose-700' : 'border-slate-300'
+            }`}
           >
+            {/* Without a matching option the browser would display the first one
+                ("Create"), contradicting the Blocked badge beside it. */}
+            {row.action === 'error' && <option value="">Choose match…</option>}
             <option value="create">Create</option>
             <option value="update" disabled={!row.matchedEntityId && !needsMatchChoice}>Update</option>
             <option value="skip">Skip</option>
