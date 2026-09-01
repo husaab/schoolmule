@@ -85,9 +85,32 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
       </div>
 
       {schedules.length === 0 ? (
-        <p className="text-sm text-gray-400 py-6 text-center">
-          No saved schedules yet. Configure teachers, classes, and school hours, then generate.
-        </p>
+        // Two equal ways in: let the solver find a timetable, or enter the one
+        // the school already runs. Neither should require trying the other first.
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">No schedules yet.</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Set up teachers, class groups and school hours first, then start one of two ways.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 mt-5">
+            <button
+              onClick={() => router.push('/admin-panel/schedule-planner/new?manual=1')}
+              className="flex items-center gap-1.5 px-4 py-2 border border-cyan-600 text-cyan-700 text-sm font-medium rounded-lg hover:bg-cyan-50 transition cursor-pointer"
+            >
+              <PencilSquareIcon className="h-4 w-4" /> Build manually
+            </button>
+            <button
+              onClick={() => router.push('/admin-panel/schedule-planner/new')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white text-sm font-medium rounded-lg hover:bg-cyan-700 transition cursor-pointer"
+            >
+              <SparklesIcon className="h-4 w-4" /> Generate options
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            Building manually places every period yourself. Generating searches for
+            timetables that satisfy your rules.
+          </p>
+        </div>
       ) : (
         <div className="space-y-2">
           {schedules.map((s) => (

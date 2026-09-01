@@ -131,7 +131,9 @@ const SessionEditorModal: React.FC<Props> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={session ? 'Edit session' : 'Add session'} size="lg">
-      <div className="space-y-4">
+      {/* The shared Modal deliberately ships no content padding — each consumer
+          sets its own, matching EventFormModal's p-6. */}
+      <div className="p-6 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={label}>Class group</label>

@@ -293,12 +293,19 @@ export const getSchedulePdfUrl = (
   )}/pdf${qs ? `?${qs}` : ''}`;
 };
 
-/** Fetches a binary export with the auth token attached. */
+/**
+ * Fetches a binary export. Must mirror apiClient's X-School-Year header — the
+ * backend falls back to the ACTIVE year when it is absent, so a download taken
+ * while viewing a past year would silently contain the current year's
+ * schedule instead of the one on screen.
+ */
 const fetchWithAuth = async (url: string, errorMessage: string): Promise<Blob> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
+  const yearId = useSchoolYearStore.getState().selectedYearId;
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (yearId) headers['X-School-Year'] = yearId;
+  const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(errorMessage);
   return res.blob();
 };

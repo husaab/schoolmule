@@ -1,11 +1,14 @@
-// File: src/components/class/delete/ClassDeleteModal.tsx
+// File: src/components/classes/delete/classDeleteModal.tsx
 'use client'
 
 import React, { useState } from 'react'
-import Modal from '../../shared/modal' // adjust the path if needed
+import Modal from '../../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteClass } from '@/services/classService'
 import { ClassPayload } from '@/services/types/class'
+import { getGradeDisplayName } from '@/lib/schoolUtils'
+import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader, RecordFacts } from '../../shared/modalKit'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface ClassDeleteModalProps {
   isOpen: boolean
@@ -43,29 +46,48 @@ const ClassDeleteModal: React.FC<ClassDeleteModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-xl mb-4 text-black">Confirm Delete</h2>
-      <p className="text-black">
-        Are you sure you want to delete the class &ldquo;
-        <span className="font-semibold">{classData.subject}</span>&rdquo; (Grade{' '}
-        {classData.grade})?
-      </p>
-      <div className="flex justify-end space-x-4 pt-6">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Delete class"
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
+      />
+
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'Deleting this class also removes:',
+            items: [
+              'Its assessments and every student score on them',
+              'Attendance taken for this class',
+              'The enrolment of every student in it',
+            ],
+          }}
         >
+          <strong className="font-semibold text-slate-900">{classData.subject}</strong> will be
+          permanently removed. Students themselves are not affected — only their place in this class.
+        </ConfirmBody>
+
+        <RecordFacts
+          facts={[
+            { label: 'Grade', value: classData.grade ? getGradeDisplayName(classData.grade) : '—' },
+            { label: 'Teacher', value: classData.teacherName || 'Unassigned' },
+            { label: 'Term', value: classData.termName || 'Not assigned' },
+            { label: 'Subject', value: classData.subject },
+          ]}
+        />
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={loading}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition cursor-pointer"
-        >
-          {loading ? 'Deleting...' : 'Delete'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={handleDelete} loading={loading}>
+          {loading ? 'Deleting' : 'Delete class'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

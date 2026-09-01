@@ -1,8 +1,8 @@
-// File: src/components/classes/add/ClassAddModal.tsx
+// File: src/components/classes/add/classAddModal.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Modal from '../../shared/modal' // adjust path if needed
+import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createClass } from '@/services/classService'
@@ -12,6 +12,17 @@ import type { TeacherPayload } from '@/services/types/teacher'
 import { getTermsBySchool } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
 import { getGradeDisplayName, getGradeOptions, GradeValue } from '@/lib/schoolUtils'
+import {
+  Button,
+  Field,
+  FieldRow,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  inputClass,
+  selectClass,
+} from '../../shared/modalKit'
+import { BookOpenIcon } from '@heroicons/react/24/outline'
 
 interface ClassAddModalProps {
   isOpen: boolean
@@ -19,15 +30,10 @@ interface ClassAddModalProps {
   onAdd: (newClass: ClassPayload) => void
 }
 
-const ClassAddModal: React.FC<ClassAddModalProps> = ({
-  isOpen,
-  onClose,
-  onAdd,
-}) => {
+const ClassAddModal: React.FC<ClassAddModalProps> = ({ isOpen, onClose, onAdd }) => {
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore((state) => state.showNotification)
 
-  // ------ LOCAL STATE ------
   const [grade, setGrade] = useState<GradeValue | ''>('')
   const [subject, setSubject] = useState('')
   const [teacherId, setTeacherId] = useState<string>('')
@@ -37,9 +43,9 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [loadingTeachers, setLoadingTeachers] = useState<boolean>(false)
   const [loadingTerms, setLoadingTerms] = useState<boolean>(false)
-  // --------------------------
+  const [submitting, setSubmitting] = useState(false)
 
-  // 1) When the modal opens (and user.school is known), fetch all teachers in that school
+  // When the modal opens (and user.school is known), fetch teachers and terms
   useEffect(() => {
     if (!isOpen) return
 
@@ -90,7 +96,6 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // 2) Validate required fields
     if (grade === '' || subject.trim() === '' || teacherId === '' || termId === '') {
       showNotification('Grade, subject, teacher, and term are required', 'error')
       return
@@ -100,21 +105,18 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
       return
     }
 
-    // 3) Find the teacher’s full name from the array
     const selectedTeacher = teachers.find((t) => t.userId === teacherId)
     if (!selectedTeacher) {
       showNotification('Selected teacher not found', 'error')
       return
     }
 
-    // 4) Find the selected term's name
     const selectedTerm = terms.find((t) => t.termId === termId)
     if (!selectedTerm) {
       showNotification('Selected term not found', 'error')
       return
     }
 
-    // 5) Build the payload for createClass()
     const payload = {
       school:      user.school,
       grade:       grade,
@@ -126,6 +128,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
       autoEnroll,
     }
 
+    setSubmitting(true)
     try {
       const res = await createClass(payload)
       if (res.status === 'success') {
@@ -163,130 +166,137 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({
     } catch (err) {
       console.error('Error creating class:', err)
       showNotification('Error creating class', 'error')
+    } finally {
+      setSubmitting(false)
     }
   }
 
+  const loadingOptions = loadingTeachers || loadingTerms
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
-      <h2 className="text-xl mb-4 text-black">Add New Class</h2>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title="Add a class"
+        subtitle="Assessments come later — add them from the class once it exists."
+        icon={BookOpenIcon}
+      />
 
-      {/* If teachers or terms are still loading, show a spinner or message */}
-      {loadingTeachers || loadingTerms ? (
-        <p className="text-gray-600">Loading data…</p>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4 text-black">
-          {/* Grade */}
-          <div>
-            <label className="block text-sm">Grade</label>
-            <select
-              required
-              value={grade}
-              onChange={(e) => setGrade(e.target.value as GradeValue)}
-              className="w-full border rounded px-2 py-1"
-            >
-              <option value="" disabled>
-                Select grade
-              </option>
-              {getGradeOptions().map((gradeOption) => (
-                <option key={gradeOption.value} value={gradeOption.value}>
-                  {gradeOption.label}
-                </option>
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          {loadingOptions ? (
+            <div className="space-y-4" aria-label="Loading teachers and terms">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="h-3.5 w-20 animate-pulse rounded bg-slate-100" />
+                  <div className="h-10 w-full animate-pulse rounded-xl bg-slate-100" />
+                </div>
               ))}
-            </select>
-          </div>
+            </div>
+          ) : (
+            <>
+              <FieldRow>
+                <Field label="Grade" htmlFor="class-grade" required>
+                  <select
+                    id="class-grade"
+                    required
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value as GradeValue)}
+                    className={selectClass}
+                  >
+                    <option value="" disabled>
+                      Select grade
+                    </option>
+                    {getGradeOptions().map((gradeOption) => (
+                      <option key={gradeOption.value} value={gradeOption.value}>
+                        {gradeOption.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
 
-          {/* Subject */}
-          <div>
-            <label className="block text-sm">Subject</label>
-            <input
-              required
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-            />
-          </div>
+                <Field label="Term" htmlFor="class-term" required>
+                  <select
+                    id="class-term"
+                    required
+                    value={termId}
+                    onChange={(e) => setTermId(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="" disabled>
+                      Select term
+                    </option>
+                    {terms.map((t) => (
+                      <option key={t.termId} value={t.termId}>
+                        {t.name} ({t.academicYear})
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </FieldRow>
 
-          {/* Teacher Dropdown */}
-          <div>
-            <label className="block text-sm">Teacher</label>
-            <select
-              required
-              value={teacherId}
-              onChange={(e) => setTeacherId(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-            >
-              <option value="" disabled>
-                Select teacher
-              </option>
-              {teachers.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.fullName}
-                </option>
-              ))}
-            </select>
-          </div>
+              <Field label="Subject" htmlFor="class-subject" required>
+                <input
+                  id="class-subject"
+                  required
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="e.g. Islamic Studies"
+                  className={inputClass}
+                />
+              </Field>
 
-          {/* Term Dropdown */}
-          <div>
-            <label className="block text-sm">Term</label>
-            <select
-              required
-              value={termId}
-              onChange={(e) => setTermId(e.target.value)}
-              className="w-full border rounded px-2 py-1 text-black"
-            >
-              <option value="" disabled className="text-black">
-                Select term
-              </option>
-              {terms.map((t) => (
-                <option key={t.termId} value={t.termId} className="text-black">
-                  {t.name} ({t.academicYear})
-                </option>
-              ))}
-            </select>
-          </div>
+              <Field label="Teacher" htmlFor="class-teacher" required>
+                <select
+                  id="class-teacher"
+                  required
+                  value={teacherId}
+                  onChange={(e) => setTeacherId(e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="" disabled>
+                    Select teacher
+                  </option>
+                  {teachers.map((t) => (
+                    <option key={t.userId} value={t.userId}>
+                      {t.fullName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
-          {/* Auto-enroll */}
-          <label className="flex items-start gap-3 p-3 bg-cyan-50 border border-cyan-100 rounded-xl cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoEnroll}
-              onChange={(e) => setAutoEnroll(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
-            />
-            <span className="text-sm text-slate-700">
-              {grade === ''
-                ? 'Automatically enroll all students of the selected grade'
-                : `Automatically enroll all ${getGradeDisplayName(grade)} students`}
-              <span className="block text-xs text-slate-500 mt-0.5">
-                You can adjust the roster anytime from the class&apos;s edit page.
-              </span>
-            </span>
-          </label>
+              {/* Auto-enroll — the one decision here that quietly does a lot,
+                  so it gets its own surface rather than sitting in the field flow. */}
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-cyan-100 bg-cyan-50/60 p-3.5 transition-colors hover:bg-cyan-50">
+                <input
+                  type="checkbox"
+                  checked={autoEnroll}
+                  onChange={(e) => setAutoEnroll(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-slate-800">
+                    {grade === ''
+                      ? 'Enroll every student in the selected grade'
+                      : `Enroll every ${getGradeDisplayName(grade)} student`}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    You can adjust the roster anytime from the class.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
+        </ModalBody>
 
-          <p className="text-sm text-gray-600 italic">
-            Note: Assessments can be added after creating the class — click
-            &ldquo;Edit&rdquo; on the new class.
-          </p>
-
-          {/* Buttons */}
-          <div className="flex justify-end space-x-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-red-500 text-white rounded-md cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-green-400 text-white rounded-md cursor-pointer"
-            >
-              Add Class
-            </button>
-          </div>
-        </form>
-      )}
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting} disabled={loadingOptions}>
+            {submitting ? 'Creating' : 'Add class'}
+          </Button>
+        </ModalFooter>
+      </form>
     </Modal>
   )
 }

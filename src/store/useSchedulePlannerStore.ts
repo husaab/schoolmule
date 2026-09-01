@@ -112,14 +112,35 @@ export const useSchedulePlannerStore = create<SchedulePlannerState>((set, get) =
     }),
 
   updateSession: (key, patch) =>
-    set((state) => ({
-      workingSessions: state.workingSessions.map((s) =>
-        sessionKey(s) === key ? { ...s, ...patch } : s
-      ),
-      candidates: [],
-      meta: null,
-      dirty: true,
-    })),
+    set((state) => {
+      let newKey = key;
+      const workingSessions = state.workingSessions.map((s) => {
+        if (sessionKey(s) !== key) return s;
+        const next = { ...s, ...patch };
+        // sessionKey is courseId:sessionIndex, so re-pointing a session at a
+        // different course must also claim a free index in that course —
+        // otherwise it collides with an existing session and the two become
+        // indistinguishable to delete, edit and React's key.
+        if (patch.courseId && patch.courseId !== s.courseId) {
+          const used = state.workingSessions
+            .filter((other) => other.courseId === patch.courseId && sessionKey(other) !== key)
+            .map((other) => other.sessionIndex);
+          next.sessionIndex = used.length === 0 ? 0 : Math.max(...used) + 1;
+        }
+        newKey = sessionKey(next);
+        return next;
+      });
+
+      // Carry any pin over to the new identity rather than orphaning it.
+      let pinnedKeys = state.pinnedKeys;
+      if (newKey !== key && pinnedKeys.has(key)) {
+        pinnedKeys = new Set(pinnedKeys);
+        pinnedKeys.delete(key);
+        pinnedKeys.add(newKey);
+      }
+
+      return { workingSessions, pinnedKeys, candidates: [], meta: null, dirty: true };
+    }),
 
   removeSession: (key) =>
     set((state) => {

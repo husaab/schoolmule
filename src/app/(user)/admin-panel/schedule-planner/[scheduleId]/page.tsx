@@ -39,6 +39,7 @@ import {
   ExclamationTriangleIcon,
   MapPinIcon,
   PencilSquareIcon,
+  PlusIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 
@@ -290,6 +291,18 @@ const ScheduleWorkspacePage = () => {
             startMin,
           }
     )
+    setEditorOpen(true)
+  }
+
+  /** Opens the editor without a clicked slot — seeds the current view's
+   *  class group, the first day, and the start of the school day. */
+  const handleAddSession = () => {
+    setEditingKey(null)
+    setEditorSeed({
+      classGroupId: viewMode === 'day' ? activeGroupId : viewMode === 'classGroup' ? activeGroupId : null,
+      day: viewMode === 'day' ? activeDay : days[0] ?? 1,
+      startMin: rangeStartMin,
+    })
     setEditorOpen(true)
   }
 
@@ -567,6 +580,15 @@ const ScheduleWorkspacePage = () => {
                   {manualMode ? 'Editing by hand' : 'Build manually'}
                 </button>
 
+                {manualMode && (
+                  <button
+                    onClick={handleAddSession}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-cyan-600 text-white text-sm font-medium rounded-lg hover:bg-cyan-700 transition cursor-pointer"
+                  >
+                    <PlusIcon className="h-4 w-4" /> Add session
+                  </button>
+                )}
+
                 <div className="flex-1" />
 
                 <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
@@ -629,8 +651,8 @@ const ScheduleWorkspacePage = () => {
                   <div className="flex items-center gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     <PencilSquareIcon className="h-4 w-4 shrink-0" />
                     <span>
-                      Click empty time to add a session, click a session to edit it, drag to move,
-                      or drag its bottom edge to change the end time.
+                      Add a session with the button above, or click empty time on the grid. Click a
+                      session to edit it, drag to move, or drag its bottom edge to change the end time.
                     </span>
                   </div>
                   {conflicts && conflicts.count > 0 && (

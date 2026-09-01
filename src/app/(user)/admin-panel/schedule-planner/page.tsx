@@ -82,7 +82,8 @@ const SchedulePlannerPage = () => {
           <div className="mb-6">
             <h1 className="text-2xl lg:text-3xl font-bold">Schedule Planner</h1>
             <p className="text-gray-600 text-sm mt-1">
-              Define teachers, classes, and school hours, then generate weekly timetable options.
+              Define teachers, classes and school hours, then build a weekly timetable by hand or
+              generate options that satisfy your rules.
             </p>
           </div>
 
