@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ChangeEvent } from 'react'
+import React, { ChangeEvent, useState } from 'react'
 import Modal from '../../shared/modal'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
@@ -54,6 +54,21 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   onPublish,
 }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
+
+  // Individual items are publishable on their own, so they get the same
+  // select-then-publish affordance as the columns in the main gradebook.
+  const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
+
+  const toggleChildSelected = (assessmentId: string) => {
+    setSelectedChildIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(assessmentId)) next.delete(assessmentId)
+      else next.add(assessmentId)
+      return next
+    })
+  }
+
+  const selectedChildren = childAssessments.filter((c) => selectedChildIds.has(c.assessmentId))
   // Build lookups for existing scores and exclusions
   const existingScoreMap: Record<string, number | null> = {}
   const exclusionMap: Record<string, boolean> = {}
@@ -192,15 +207,29 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
               )}
             </p>
           </div>
-          <button
-            onClick={() => onPublish([parentAssessment])}
-            className="px-4 py-2 text-sm font-medium rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer shadow-sm flex-shrink-0"
-            title="Publish this category and its graded items to parents"
-          >
-            {publications[parentAssessment.assessmentId]?.isPublished
-              ? 'Manage publishing'
-              : 'Publish category'}
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {selectedChildren.length > 0 && (
+              <button
+                onClick={() => {
+                  onPublish(selectedChildren)
+                  setSelectedChildIds(new Set())
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer shadow-sm"
+                title="Publish only the selected individual assessments"
+              >
+                Publish {selectedChildren.length} selected
+              </button>
+            )}
+            <button
+              onClick={() => onPublish([parentAssessment])}
+              className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer shadow-sm"
+              title="Publish this category and every graded item inside it"
+            >
+              {publications[parentAssessment.assessmentId]?.isPublished
+                ? 'Manage category'
+                : 'Publish category'}
+            </button>
+          </div>
         </div>
 
         {childAssessments.length === 0 ? (
@@ -220,29 +249,39 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                       key={child.assessmentId}
                       className="px-4 py-2 text-center text-gray-700 whitespace-nowrap"
                     >
-                      <div className="truncate">{child.name}</div>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedChildIds.has(child.assessmentId)}
+                          onChange={() => toggleChildSelected(child.assessmentId)}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-400 cursor-pointer"
+                          title="Select this assessment to publish on its own"
+                        />
+                        <div className="truncate">{child.name}</div>
+                      </div>
                       <div className="text-xs text-gray-500">
                         ({child.weightPoints || child.weightPercent || 0} pts)
                       </div>
                       <div className="text-xs text-gray-400">
                         Order: {child.sortOrder || '-'}
                       </div>
-                      {/* Children can be published on their own, without
-                          releasing the whole category. */}
+                      {/* Status, and a way straight into managing just this
+                          one — an individual item can be published or pulled
+                          back without touching the rest of the category. */}
                       <button
                         onClick={() => onPublish([child])}
-                        className={`mt-1 inline-block px-1.5 py-0.5 text-xs font-medium rounded cursor-pointer ${
+                        className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border cursor-pointer transition-colors ${
                           publications[child.assessmentId]?.isPublished
-                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-white text-slate-500 border-slate-300 border-dashed hover:bg-slate-50'
                         }`}
                         title={
                           publications[child.assessmentId]?.isPublished
-                            ? 'Live to parents — click to manage or unpublish'
-                            : 'Not visible to parents — click to publish just this one'
+                            ? 'Live to parents — click to manage or unpublish this item'
+                            : 'Not visible to parents — click to publish just this item'
                         }
                       >
-                        {publications[child.assessmentId]?.isPublished ? '● Live' : 'Publish'}
+                        {publications[child.assessmentId]?.isPublished ? '● Live · manage' : '+ Publish'}
                       </button>
                     </th>
                   ))}
