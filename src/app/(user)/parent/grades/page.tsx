@@ -24,7 +24,10 @@ import Spinner from '@/components/Spinner'
 import TrendLineChart from '@/app/(user)/analytics/_components/charts/TrendLineChart'
 import { gradeTextColor } from '@/components/parent/childColors'
 
-const ClassCard: React.FC<{ cls: ChildClassGrades }> = ({ cls }) => {
+const ClassCard: React.FC<{ cls: ChildClassGrades; missingCount: number }> = ({
+  cls,
+  missingCount,
+}) => {
   const [expanded, setExpanded] = useState(false)
 
   const scored = cls.assessmentScores.filter(
@@ -54,9 +57,9 @@ const ClassCard: React.FC<{ cls: ChildClassGrades }> = ({ cls }) => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          {cls.missingCount > 0 && (
+          {missingCount > 0 && (
             <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-100">
-              {cls.missingCount} missing
+              {missingCount} missing
             </span>
           )}
           <span className={`text-xl font-bold ${gradeTextColor(cls.finalPct)}`}>
@@ -111,19 +114,30 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
 
   useEffect(() => {
+    // ChildSections keys on studentId, so this component survives a term
+    // change — two quick TermPicker clicks can otherwise resolve out of order
+    // and leave the previous term's grades on screen.
+    let cancelled = false
     setLoading(true)
     setError(null)
     getChildGrades(child.studentId, termId || undefined)
       .then((res) => {
+        if (cancelled) return
         const data = res.data || null
         setGrades(data)
         onSubjectsLoaded(child.studentId, data?.classes.map((c) => c.subject) ?? [])
       })
       .catch((err) => {
+        if (cancelled) return
         console.error(err)
         setError('Failed to load grades.')
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [child.studentId, termId, selectedYearId, onSubjectsLoaded])
 
   if (loading) {
@@ -149,9 +163,13 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   const classes = subjectFilter
     ? grades.classes.filter((c) => c.subject === subjectFilter)
     : grades.classes
-  const missingWork = subjectFilter
-    ? grades.missingWork.filter((m) => m.subject === subjectFilter)
-    : grades.missingWork
+  // Categories are never real missing work — a category has no score of its
+  // own, so it looks ungraded even when every item under it is marked.
+  const missingWork = (
+    subjectFilter
+      ? grades.missingWork.filter((m) => m.subject === subjectFilter)
+      : grades.missingWork
+  ).filter((m) => !m.isParent)
 
   if (classes.length === 0) {
     return (
@@ -187,9 +205,9 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
               Missing Work
             </p>
             <p
-              className={`text-2xl font-bold ${grades.missingWork.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}
+              className={`text-2xl font-bold ${missingWork.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}
             >
-              {grades.missingWork.length}
+              {missingWork.length}
             </p>
           </div>
         </div>
@@ -217,7 +235,11 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
 
       {/* Class cards */}
       {classes.map((cls) => (
-        <ClassCard key={cls.classId} cls={cls} />
+        <ClassCard
+          key={cls.classId}
+          cls={cls}
+          missingCount={missingWork.filter((m) => m.classId === cls.classId).length}
+        />
       ))}
     </div>
   )

@@ -56,6 +56,22 @@ export interface AssessmentScore {
   isExcluded: boolean;
   isParent: boolean;
   parentAssessmentId: string | null;
+  /**
+   * Category (isParent) rows have no score of their own — they never get a
+   * student_assessments row — so this weighted rollup over their graded
+   * children is the only percentage they have. null when nothing under the
+   * category is graded yet. Always null for standalone assessments and
+   * children; use score/maxScore for those.
+   */
+  rollupPct: number | null;
+  /** Teacher's note about this assessment, written when publishing. */
+  parentComment: string | null;
+  /**
+   * When this became visible to parents. Non-null for everything in the
+   * payload — the API only returns published work — and drives the
+   * dashboard's recently-published feed.
+   */
+  publishedAt: string | null;
 }
 
 export interface ChildClassGrades {
@@ -76,6 +92,8 @@ export interface MissingWorkItem {
   assessmentName: string;
   assessmentDate: string | null;
   weightPoints: number | null;
+  /** Categories are never shown to parents as missing work — filter these out. */
+  isParent: boolean;
 }
 
 export interface ChildGrades {
@@ -137,8 +155,43 @@ export interface ChildFeedback {
   progressReports: ProgressReportItem[];
 }
 
+/** One newly published mark, for the dashboard feed. */
+export interface RecentPublicationItem {
+  studentId: string;
+  childName: string;
+  classId: string;
+  subject: string;
+  assessmentId: string;
+  assessmentName: string;
+  score: number | null;
+  maxScore: number | null;
+  pct: number;
+  comment: string | null;
+  publishedAt: string;
+  /** Computed server-side against last_seen_at, so a wrong client clock can't skew it. */
+  isNew: boolean;
+}
+
+export interface RecentPublicationsFeed {
+  items: RecentPublicationItem[];
+  newCount: number;
+}
+
+export interface ChildWeeklySummary {
+  studentId: string;
+  content: string | null;
+  weekStart: string | null;
+  weekEnd: string | null;
+  generatedAt: string | null;
+  /** true when generation failed or no AI key is configured — render without it. */
+  unavailable: boolean;
+}
+
 export type ParentSummaryResponse = ParentPortalResponse<ParentSummary>;
 export type ChildGradesResponse = ParentPortalResponse<ChildGrades>;
 export type ChildAttendanceResponse = ParentPortalResponse<ChildAttendance>;
 export type ChildFeedbackResponse = ParentPortalResponse<ChildFeedback>;
 export type ParentCalendarResponse = ParentPortalResponse<CalendarEventPayload[]>;
+export type RecentPublicationsResponse = ParentPortalResponse<RecentPublicationsFeed>;
+export type MarkPublicationsSeenResponse = ParentPortalResponse<{ seenAt: string }>;
+export type ChildWeeklySummaryResponse = ParentPortalResponse<ChildWeeklySummary>;

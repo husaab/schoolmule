@@ -5,6 +5,9 @@ import {
   ChildAttendanceResponse,
   ChildFeedbackResponse,
   ParentCalendarResponse,
+  RecentPublicationsResponse,
+  MarkPublicationsSeenResponse,
+  ChildWeeklySummaryResponse,
 } from './types/parentPortal';
 
 /**
@@ -75,4 +78,39 @@ export const getParentCalendar = async (
   if (opts.to) params.set('to', opts.to);
   const query = params.toString() ? `?${params.toString()}` : '';
   return apiClient<ParentCalendarResponse>(`/parent-portal/calendar${query}`);
+};
+
+/**
+ * Newest published marks across every linked child, for the dashboard feed.
+ * GET /parent-portal/recent-publications
+ */
+export const getRecentPublications = async (limit = 8): Promise<RecentPublicationsResponse> => {
+  return apiClient<RecentPublicationsResponse>(
+    `/parent-portal/recent-publications?limit=${encodeURIComponent(String(limit))}`
+  );
+};
+
+/**
+ * Clear the NEW badges for every linked child.
+ * POST /parent-portal/recent-publications/seen
+ */
+export const markPublicationsSeen = async (): Promise<MarkPublicationsSeenResponse> => {
+  return apiClient<MarkPublicationsSeenResponse>('/parent-portal/recent-publications/seen', {
+    method: 'POST',
+  });
+};
+
+/**
+ * AI-written summary of one child's past week. Always resolves; check
+ * `unavailable` rather than relying on it to throw.
+ * GET /parent-portal/students/:studentId/weekly-summary
+ */
+export const getChildWeeklySummary = async (
+  studentId: string,
+  termId?: string
+): Promise<ChildWeeklySummaryResponse> => {
+  const query = termId ? `?termId=${encodeURIComponent(termId)}` : '';
+  return apiClient<ChildWeeklySummaryResponse>(
+    `/parent-portal/students/${encodeURIComponent(studentId)}/weekly-summary${query}`
+  );
 };

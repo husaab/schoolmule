@@ -24,6 +24,9 @@ import ChildAssessmentsModal from '@/components/assessments/child/ChildAssessmen
 import ExcludedAssessmentsModal from '@/components/assessments/excluded/excludedAssessmentsModal';
 import AssessmentJumper from '@/components/gradebook/AssessmentJumper';
 import AssessmentsSection from '@/components/assessments/section/AssessmentsSection';
+import PublishAssessmentsModal from '@/components/gradebook/publish/PublishAssessmentsModal';
+import { getPublicationState } from '@/services/assessmentPublicationService';
+import type { AssessmentPublicationState } from '@/services/types/assessmentPublication';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import {
   MinusCircleIcon,
@@ -36,7 +39,8 @@ import {
   CalendarDaysIcon,
   ChatBubbleBottomCenterTextIcon,
   ClipboardDocumentCheckIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  MegaphoneIcon
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 
@@ -88,6 +92,13 @@ const GradebookClass = () => {
   const highlightTimeoutRef = useRef<number | null>(null)
   const [highlightedAssessmentId, setHighlightedAssessmentId] = useState<string | null>(null)
 
+  // Parent publishing: which assessments are live, and which are ticked for
+  // the next publish action.
+  const [publications, setPublications] = useState<Record<string, AssessmentPublicationState>>({})
+  const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<Set<string>>(new Set())
+  const [publishTargets, setPublishTargets] = useState<AssessmentPayload[]>([])
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
+
   // In-page view switch: grade entry vs. assessment management
   const [activeView, setActiveView] = useState<'grades' | 'assessments'>('grades')
   const assessmentsChangedRef = useRef(false)
@@ -119,6 +130,28 @@ const GradebookClass = () => {
     }
   }, [classId])
 
+  // Selection for publishing. Mirrors the Set<string> pattern used by the
+  // report-card generator's student picker.
+  const toggleAssessmentSelected = (assessmentId: string) => {
+    setSelectedAssessmentIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(assessmentId)) next.delete(assessmentId)
+      else next.add(assessmentId)
+      return next
+    })
+  }
+
+  const openPublishModal = (targets: AssessmentPayload[]) => {
+    if (targets.length === 0) return
+    setPublishTargets(targets)
+    setIsPublishModalOpen(true)
+  }
+
+  const handlePublishChanged = async () => {
+    await loadPublications()
+    setSelectedAssessmentIds(new Set())
+  }
+
   // Refresh exclusions data AND scores matrix to update visual indicators
   const refreshExclusionsData = async () => {
     await Promise.all([
@@ -126,6 +159,24 @@ const GradebookClass = () => {
       refreshScoresMatrix()
     ])
   }
+
+  // Publish state drives the Live / Not sent badges on each column header.
+  const loadPublications = useCallback(async () => {
+    try {
+      const res = await getPublicationState(classId)
+      if (res.status === 'success' && res.data) {
+        setPublications(
+          Object.fromEntries(res.data.map((p) => [p.assessmentId, p])) as Record<
+            string,
+            AssessmentPublicationState
+          >
+        )
+      }
+    } catch (error) {
+      // Badges are informational — a failure here must not block grade entry.
+      console.error('Error loading publication state:', error)
+    }
+  }, [classId])
 
   // Refresh scores matrix from backend
   const refreshScoresMatrix = async () => {
@@ -173,6 +224,7 @@ const GradebookClass = () => {
         setScoresMatrix(scoreRes.data as ScoreRow[])
 
         loadExclusionsData()
+        loadPublications()
       })
       .catch((err) => {
         console.error(err)
@@ -181,7 +233,7 @@ const GradebookClass = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, loadExclusionsData])
+  }, [classId, loadExclusionsData, loadPublications])
 
   // Fetch term details when classData becomes available
   useEffect(() => {
@@ -537,6 +589,13 @@ const GradebookClass = () => {
           const entries = Object.entries(prev).filter(([key]) => validIds.has(key.split('|')[1]))
           return entries.length === Object.keys(prev).length ? prev : Object.fromEntries(entries)
         })
+        // Same for the publish selection, or the sticky bar keeps offering to
+        // publish an assessment that was just deleted.
+        setSelectedAssessmentIds((prev) => {
+          const kept = [...prev].filter((id) => validIds.has(id))
+          return kept.length === prev.size ? prev : new Set(kept)
+        })
+        loadPublications()
       } else {
         throw new Error(assessRes.message || 'Failed to refresh assessments')
       }
@@ -706,6 +765,25 @@ const GradebookClass = () => {
                   Progress Report Feedback
                 </button>
                 <button
+                  onClick={() =>
+                    openPublishModal(
+                      displayedAssessments.filter((a: AssessmentPayload) =>
+                        selectedAssessmentIds.has(a.assessmentId)
+                      )
+                    )
+                  }
+                  disabled={selectedAssessmentIds.size === 0}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm ${
+                    selectedAssessmentIds.size === 0
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer'
+                  }`}
+                  title="Publish the selected assessments to parents"
+                >
+                  <MegaphoneIcon className="h-4 w-4" />
+                  Publish{selectedAssessmentIds.size > 0 ? ` (${selectedAssessmentIds.size})` : ''}
+                </button>
+                <button
                   onClick={handleGoToAssessments}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                   title="Add, edit, or delete this class's assessments"
@@ -857,8 +935,20 @@ const GradebookClass = () => {
                         onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
                         title={a.isParent ? 'Click to edit individual assessments' : undefined}
                       >
-                        <div className="truncate max-w-[120px] mx-auto">
-                          {a.name}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* stopPropagation: the <th> itself opens the child
+                              assessments modal for a category column. */}
+                          <input
+                            type="checkbox"
+                            checked={selectedAssessmentIds.has(a.assessmentId)}
+                            onChange={() => toggleAssessmentSelected(a.assessmentId)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-400 cursor-pointer"
+                            title="Select for publishing to parents"
+                          />
+                          <div className="truncate max-w-[100px]">
+                            {a.name}
+                          </div>
                         </div>
                         {a.isParent && (
                           <span className="inline-block mt-0.5 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-600 rounded">
@@ -868,6 +958,22 @@ const GradebookClass = () => {
                         <div className="text-xs font-normal text-slate-400 mt-0.5">
                           {a.weightPoints || a.weightPercent || 0} pts
                         </div>
+                        {publications[a.assessmentId]?.isPublished ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openPublishModal([a]) }}
+                            className="inline-block mt-1 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded cursor-pointer hover:bg-emerald-200"
+                            title="Live to parents — click to manage or unpublish"
+                          >
+                            ● Live
+                          </button>
+                        ) : (
+                          <span
+                            className="inline-block mt-1 px-1.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-400 rounded"
+                            title="Not visible to parents yet"
+                          >
+                            Not sent
+                          </span>
+                        )}
                       </th>
                     ))}
                     <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700 min-w-[80px] bg-emerald-50">
@@ -1137,22 +1243,57 @@ const GradebookClass = () => {
           )}
         </div>
 
-        {/* Sticky Action Bar at Bottom */}
-        {hasUnsavedChanges && (
-          <div className="fixed bottom-0 left-0 right-0 lg:left-72 z-20 p-4 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
-            <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
-              <span className="text-sm text-amber-600 font-medium">
-                You have {Object.keys(editedScores).length} unsaved changes
-              </span>
-              <button
-                onClick={handleSaveAll}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer shadow-lg"
-              >
-                <CheckCircleIcon className="h-4 w-4" />
-                {saving ? 'Saving...' : 'Save All Changes'}
-              </button>
-            </div>
+        {/* Sticky action bars. Unsaved grades and a pending publish selection
+            are independent concerns, so both can be showing at once. */}
+        {(hasUnsavedChanges || selectedAssessmentIds.size > 0) && activeView === 'grades' && (
+          <div className="fixed bottom-0 left-0 right-0 lg:left-72 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
+            {selectedAssessmentIds.size > 0 && (
+              <div className="p-3 border-b border-slate-100">
+                <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
+                  <span className="text-sm text-cyan-700 font-medium">
+                    {selectedAssessmentIds.size} assessment
+                    {selectedAssessmentIds.size === 1 ? '' : 's'} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedAssessmentIds(new Set())}
+                    className="text-sm text-slate-500 hover:text-slate-700 cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() =>
+                      openPublishModal(
+                        displayedAssessments.filter((a: AssessmentPayload) =>
+                          selectedAssessmentIds.has(a.assessmentId)
+                        )
+                      )
+                    }
+                    className="inline-flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-all font-medium cursor-pointer shadow"
+                  >
+                    <MegaphoneIcon className="h-4 w-4" />
+                    Publish to Parents
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {hasUnsavedChanges && (
+              <div className="p-4">
+                <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
+                  <span className="text-sm text-amber-600 font-medium">
+                    You have {Object.keys(editedScores).length} unsaved changes
+                  </span>
+                  <button
+                    onClick={handleSaveAll}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer shadow-lg"
+                  >
+                    <CheckCircleIcon className="h-4 w-4" />
+                    {saving ? 'Saving...' : 'Save All Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -1172,6 +1313,11 @@ const GradebookClass = () => {
           onScoreChange={handleScoreChange}
           classId={classId}
           onRefreshExclusions={refreshExclusionsData}
+          publications={publications}
+          onPublish={(targets) => {
+            setIsChildAssessmentsModalOpen(false)
+            openPublishModal(targets)
+          }}
         />
       )}
 
@@ -1192,6 +1338,18 @@ const GradebookClass = () => {
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}
+      />
+
+      <PublishAssessmentsModal
+        isOpen={isPublishModalOpen}
+        onClose={() => {
+          setIsPublishModalOpen(false)
+          setPublishTargets([])
+        }}
+        classId={classId}
+        assessments={publishTargets}
+        publications={publications}
+        onChanged={handlePublishChanged}
       />
 
       {selectedExclusionStudent && (

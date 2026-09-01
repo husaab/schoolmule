@@ -6,6 +6,7 @@ import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
 import { createExclusion, deleteExclusion } from '@/services/excludedAssessmentService'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import type { AssessmentPublicationState } from '@/services/types/assessmentPublication'
 
 interface ScoreRow {
   student_id: string
@@ -32,6 +33,10 @@ interface ChildAssessmentsModalProps {
   onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
   classId: string
   onRefreshExclusions: () => Promise<void>
+  /** Publish state keyed by assessmentId, for the per-child Publish controls. */
+  publications: Record<string, AssessmentPublicationState>
+  /** Opens the publish modal for the given assessments (children here). */
+  onPublish: (assessments: AssessmentPayload[]) => void
 }
 
 const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
@@ -45,6 +50,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   onScoreChange,
   classId,
   onRefreshExclusions,
+  publications,
+  onPublish,
 }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
   // Build lookups for existing scores and exclusions
@@ -177,7 +184,23 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                 ⚠️ Individual points total {totalChildPoints} (should equal multiple assessment {parentPoints})
               </p>
             )}
+            <p className="text-sm mt-1">
+              {publications[parentAssessment.assessmentId]?.isPublished ? (
+                <span className="text-emerald-600">✓ This category is live to parents.</span>
+              ) : (
+                <span className="text-gray-400">This category is not published to parents yet.</span>
+              )}
+            </p>
           </div>
+          <button
+            onClick={() => onPublish([parentAssessment])}
+            className="px-4 py-2 text-sm font-medium rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer shadow-sm flex-shrink-0"
+            title="Publish this category and its graded items to parents"
+          >
+            {publications[parentAssessment.assessmentId]?.isPublished
+              ? 'Manage publishing'
+              : 'Publish category'}
+          </button>
         </div>
 
         {childAssessments.length === 0 ? (
@@ -204,6 +227,23 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                       <div className="text-xs text-gray-400">
                         Order: {child.sortOrder || '-'}
                       </div>
+                      {/* Children can be published on their own, without
+                          releasing the whole category. */}
+                      <button
+                        onClick={() => onPublish([child])}
+                        className={`mt-1 inline-block px-1.5 py-0.5 text-xs font-medium rounded cursor-pointer ${
+                          publications[child.assessmentId]?.isPublished
+                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                        title={
+                          publications[child.assessmentId]?.isPublished
+                            ? 'Live to parents — click to manage or unpublish'
+                            : 'Not visible to parents — click to publish just this one'
+                        }
+                      >
+                        {publications[child.assessmentId]?.isPublished ? '● Live' : 'Publish'}
+                      </button>
                     </th>
                   ))}
                   <th className="px-4 py-2 text-center text-gray-700 bg-blue-50">
