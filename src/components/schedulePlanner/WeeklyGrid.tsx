@@ -5,7 +5,7 @@
 // like class groups (the "by day" master view). Powers the admin workspace
 // (interactive pinning), the public share page, and the dashboard widget.
 
-import React from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { MapPinIcon } from '@heroicons/react/24/solid'
 import { colorForLabel, dayLabel, formatMin } from './timeUtils'
 import type { TimeRange } from '@/services/types/schedulePlanner'
@@ -54,6 +54,33 @@ interface WeeklyGridProps {
   rangeEndMin: number
   onTogglePin?: (id: string) => void
   compact?: boolean
+
+  // ─── Manual editing (admin builder) ───────────────────────────────────
+  // All optional: without them the grid behaves exactly as a read-only view.
+  /** Click empty time in a column to place a new session there. */
+  onSlotClick?: (columnKey: string, startMin: number) => void
+  /** Click an existing session (edit/delete). Takes precedence over pinning. */
+  onSessionClick?: (id: string) => void
+  /** Drag a session to a new column and/or start time. */
+  onSessionMove?: (id: string, columnKey: string, startMin: number) => void
+  /** Drag a session's bottom edge to change its end time. */
+  onSessionResize?: (id: string, endMin: number) => void
+  /** Minute granularity for click placement and dragging. */
+  snapMinutes?: number
+  /** Sessions to outline in red (double-booked teacher, class or room). */
+  conflictIds?: Set<string>
+}
+
+/** Live drag being previewed before it is committed on pointer-up. */
+interface DragState {
+  id: string
+  mode: 'move' | 'resize'
+  originY: number
+  originStartMin: number
+  originEndMin: number
+  columnKey: string
+  startMin: number
+  endMin: number
 }
 
 /** Assigns overlapping sessions of one column to side-by-side lanes. */
@@ -102,7 +129,15 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   rangeEndMin,
   onTogglePin,
   compact = false,
+  onSlotClick,
+  onSessionClick,
+  onSessionMove,
+  onSessionResize,
+  snapMinutes = 5,
+  conflictIds,
 }) => {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [drag, setDrag] = useState<DragState | null>(null)
   const span = Math.max(rangeEndMin - rangeStartMin, 1)
   const topPct = (min: number) => ((min - rangeStartMin) / span) * 100
   const heightPct = (from: number, to: number) => ((to - from) / span) * 100
@@ -132,8 +167,105 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
 
   const gridHeight = compact ? 220 : Math.max(640, (span / 60) * 118)
 
+  // ─── Drag/resize plumbing ───────────────────────────────────────────────
+  // Column bodies are `gridHeight` minus the sticky header, so a pixel delta
+  // converts to minutes through that height, not the whole grid's.
+  const headerHeight = compact ? 24 : 36
+  const bodyHeight = Math.max(gridHeight - headerHeight, 1)
+  const minutesPerPixel = span / bodyHeight
+  const editable = Boolean(onSessionMove || onSessionResize)
+
+  const snap = useCallback(
+    (min: number) => Math.round(min / snapMinutes) * snapMinutes,
+    [snapMinutes]
+  )
+
+  /** Column under the pointer, so a drag can cross day columns. */
+  const columnKeyAt = (clientX: number, clientY: number): string | null => {
+    const el = document.elementFromPoint(clientX, clientY)
+    const body = el?.closest('[data-col-key]')
+    return body?.getAttribute('data-col-key') ?? null
+  }
+
+  const startDrag = (
+    e: React.PointerEvent,
+    session: GridSession,
+    columnKey: string,
+    mode: 'move' | 'resize'
+  ) => {
+    if (!editable) return
+    e.preventDefault()
+    e.stopPropagation()
+    setDrag({
+      id: session.id,
+      mode,
+      originY: e.clientY,
+      originStartMin: session.startMin,
+      originEndMin: session.endMin,
+      columnKey,
+      startMin: session.startMin,
+      endMin: session.endMin,
+    })
+  }
+
+  useEffect(() => {
+    if (!drag) return
+
+    const onMove = (e: PointerEvent) => {
+      const deltaMin = snap((e.clientY - drag.originY) * minutesPerPixel)
+      setDrag((prev) => {
+        if (!prev) return prev
+        if (prev.mode === 'resize') {
+          // Never shorter than one snap step, never past the end of the day.
+          const endMin = Math.min(
+            Math.max(prev.originEndMin + deltaMin, prev.startMin + snapMinutes),
+            rangeEndMin
+          )
+          return { ...prev, endMin }
+        }
+        const duration = prev.originEndMin - prev.originStartMin
+        const startMin = Math.min(
+          Math.max(prev.originStartMin + deltaMin, rangeStartMin),
+          rangeEndMin - duration
+        )
+        const columnKey = columnKeyAt(e.clientX, e.clientY) ?? prev.columnKey
+        return { ...prev, startMin, endMin: startMin + duration, columnKey }
+      })
+    }
+
+    const onUp = () => {
+      setDrag((prev) => {
+        if (prev) {
+          const moved =
+            prev.startMin !== prev.originStartMin || prev.columnKey !== drag.columnKey
+          if (prev.mode === 'resize' && prev.endMin !== prev.originEndMin) {
+            onSessionResize?.(prev.id, prev.endMin)
+          } else if (prev.mode === 'move' && moved) {
+            onSessionMove?.(prev.id, prev.columnKey, prev.startMin)
+          }
+        }
+        return null
+      })
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [drag, minutesPerPixel, snap, snapMinutes, rangeStartMin, rangeEndMin, onSessionMove, onSessionResize])
+
+  /** Minute the pointer landed on inside a column body. */
+  const handleSlotClick = (e: React.MouseEvent<HTMLDivElement>, columnKey: string) => {
+    if (!onSlotClick || drag) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const minute = rangeStartMin + ((e.clientY - rect.top) / rect.height) * span
+    onSlotClick(columnKey, Math.max(rangeStartMin, Math.min(snap(minute), rangeEndMin - snapMinutes)))
+  }
+
   return (
-    <div className="flex w-full select-none" style={{ height: gridHeight }}>
+    <div ref={rootRef} className="flex w-full select-none" style={{ height: gridHeight }}>
       {/* Hour ruler */}
       <div className={`${compact ? 'w-10' : 'w-16'} shrink-0 flex flex-col`}>
         <div className={`${compact ? 'h-6' : 'h-9'}`} />
@@ -170,7 +302,11 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
             >
               {col.label}
             </div>
-            <div className="relative flex-1 bg-white">
+            <div
+              className={`relative flex-1 bg-white ${onSlotClick ? 'cursor-copy' : ''}`}
+              data-col-key={col.key}
+              onClick={onSlotClick ? (e) => handleSlotClick(e, col.key) : undefined}
+            >
               {/* Non-fillable shading */}
               {col.fillableRanges && (
                 <NonFillableShading
@@ -231,27 +367,54 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
               {col.sessions.map((s) => {
                 const { lane, lanes: laneCount } = lanes.get(s.id) ?? { lane: 0, lanes: 1 }
                 const width = 100 / laneCount
+                // While dragging, the block follows the pointer; the commit
+                // happens on pointer-up so the parent only sees final values.
+                const dragging = drag?.id === s.id
+                const startMin = dragging ? drag!.startMin : s.startMin
+                const endMin = dragging ? drag!.endMin : s.endMin
+                const interactive = Boolean(onSessionClick || onTogglePin)
+                const conflicted = conflictIds?.has(s.id)
                 return (
                   <div
                     key={s.id}
                     className={`absolute rounded-md border border-black/10 overflow-hidden group ${
                       compact ? 'px-1 py-0.5' : 'px-2 py-1'
-                    } ${
-                      onTogglePin ? 'cursor-pointer hover:ring-2 hover:ring-cyan-400' : ''
+                    } ${interactive ? 'cursor-pointer hover:ring-2 hover:ring-cyan-400' : ''} ${
+                      editable ? 'touch-none' : ''
+                    } ${dragging ? 'z-20 opacity-90 shadow-lg ring-2 ring-cyan-500' : ''} ${
+                      conflicted ? 'ring-2 ring-red-500' : ''
                     } ${s.pinned ? 'ring-2 ring-cyan-600' : ''}`}
                     style={{
-                      top: `${topPct(s.startMin)}%`,
-                      height: `${heightPct(s.startMin, s.endMin)}%`,
+                      top: `${topPct(startMin)}%`,
+                      height: `${heightPct(startMin, endMin)}%`,
                       left: `calc(${lane * width}% + 2px)`,
                       width: `calc(${width}% - 4px)`,
                       background: colorForLabel(s.title),
                     }}
-                    onClick={onTogglePin ? () => onTogglePin(s.id) : undefined}
+                    onPointerDown={
+                      onSessionMove ? (e) => startDrag(e, s, col.key, 'move') : undefined
+                    }
+                    onClick={
+                      onSessionClick || onTogglePin
+                        ? (e) => {
+                            e.stopPropagation()
+                            if (onSessionClick) onSessionClick(s.id)
+                            else onTogglePin?.(s.id)
+                          }
+                        : undefined
+                    }
                     title={
-                      `${s.title} · ${formatMin(s.startMin)}–${formatMin(s.endMin)}` +
+                      `${s.title} · ${formatMin(startMin)}–${formatMin(endMin)}` +
                       (s.subtitle ? ` · ${s.subtitle}` : '') +
                       (s.roomName ? ` · ${s.roomName}` : '') +
-                      (onTogglePin ? (s.pinned ? ' — click to unpin' : ' — click to pin') : '')
+                      (conflicted ? ' — conflict' : '') +
+                      (onSessionClick
+                        ? ' — click to edit, drag to move'
+                        : onTogglePin
+                          ? s.pinned
+                            ? ' — click to unpin'
+                            : ' — click to pin'
+                          : '')
                     }
                   >
                     {s.pinned && (
@@ -270,6 +433,13 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
                     )}
                     {!compact && s.roomName && (
                       <div className="text-[11px] text-gray-500 truncate">{s.roomName}</div>
+                    )}
+                    {onSessionResize && (
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize touch-none opacity-0 group-hover:opacity-100 bg-cyan-600/60"
+                        onPointerDown={(e) => startDrag(e, s, col.key, 'resize')}
+                        title="Drag to change the end time"
+                      />
                     )}
                   </div>
                 )

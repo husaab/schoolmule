@@ -80,6 +80,10 @@ const serializeSortAndFilters = (params: URLSearchParams, filters: SubmissionFil
   if (active.length > 0) {
     params.set('fieldFilters', JSON.stringify(active));
   }
+  // 'all' is the default, so only the narrowing values are worth sending.
+  if (filters.importState && filters.importState !== 'all') {
+    params.set('importState', filters.importState);
+  }
 };
 
 export const getSubmissions = (formId: string, filters: SubmissionFilters = {}) => {

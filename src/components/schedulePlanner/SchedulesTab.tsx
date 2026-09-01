@@ -7,6 +7,7 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PlusIcon,
+  PencilSquareIcon,
   PencilIcon,
   TrashIcon,
   LinkIcon,
@@ -66,12 +67,21 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
         <p className="text-sm text-gray-600">
           Saved schedules. Publish one to make it live for teachers and the public link.
         </p>
-        <button
-          onClick={() => router.push('/admin-panel/schedule-planner/new')}
-          className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 transition cursor-pointer"
-        >
-          <PlusIcon className="h-4 w-4" /> Generate new schedule
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push('/admin-panel/schedule-planner/new?manual=1')}
+            title="Enter a timetable you already run, without the solver"
+            className="flex items-center gap-1 px-3 py-1.5 border border-cyan-600 text-cyan-700 text-sm rounded-lg hover:bg-cyan-50 transition cursor-pointer"
+          >
+            <PencilSquareIcon className="h-4 w-4" /> Build manually
+          </button>
+          <button
+            onClick={() => router.push('/admin-panel/schedule-planner/new')}
+            className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 transition cursor-pointer"
+          >
+            <PlusIcon className="h-4 w-4" /> Generate new schedule
+          </button>
+        </div>
       </div>
 
       {schedules.length === 0 ? (

@@ -26,13 +26,19 @@ import type {
 } from '@/services/types/schedulePlanner'
 import WeeklyGrid, { type GridSession } from '@/components/schedulePlanner/WeeklyGrid'
 import PrintMenu from '@/components/schedulePlanner/PrintMenu'
+import SessionEditorModal, {
+  type SessionDraft,
+} from '@/components/schedulePlanner/SessionEditorModal'
+import { findConflicts } from '@/components/schedulePlanner/conflicts'
 import { dayLabel } from '@/components/schedulePlanner/timeUtils'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ExclamationTriangleIcon,
   MapPinIcon,
+  PencilSquareIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 
@@ -59,6 +65,9 @@ const ScheduleWorkspacePage = () => {
     togglePin,
     setViewMode,
     setSelectedClassGroupId,
+    addSession,
+    updateSession,
+    removeSession,
     dirty,
     setDirty,
     reset,
@@ -74,6 +83,16 @@ const ScheduleWorkspacePage = () => {
   const [scheduleStatus, setScheduleStatus] = useState<'draft' | 'published' | null>(null)
   const [showPublishConfirm, setShowPublishConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Manual builder: hand-place sessions instead of (or on top of) generating.
+  const [manualMode, setManualMode] = useState(false)
+  const [editorSeed, setEditorSeed] = useState<{
+    classGroupId: string | null
+    day: number
+    startMin: number
+  } | null>(null)
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
 
   // Load config + (existing draft or clean slate)
   useEffect(() => {
@@ -243,6 +262,63 @@ const ScheduleWorkspacePage = () => {
     }))
   }, [viewMode, activeDay, classGroupIds, workingSessions, config, fillableRangesByDay, groupName, teacherName, toGridSession])
 
+  // ─── Manual builder handlers ──────────────────────────────────────────
+  // Column keys are days in the by-class/by-teacher views and class groups in
+  // the by-day view, so every handler resolves them against the active view.
+
+  const conflicts = useMemo(
+    () =>
+      manualMode
+        ? findConflicts(workingSessions, { teacher: teacherName, group: groupName, room: roomName })
+        : null,
+    [manualMode, workingSessions, teacherName, groupName, roomName]
+  )
+
+  const editingSession = useMemo(
+    () => workingSessions.find((s) => sessionKey(s) === editingKey) ?? null,
+    [workingSessions, editingKey]
+  )
+
+  const handleSlotClick = (columnKey: string, startMin: number) => {
+    setEditingKey(null)
+    setEditorSeed(
+      viewMode === 'day'
+        ? { classGroupId: columnKey, day: activeDay, startMin }
+        : {
+            classGroupId: viewMode === 'classGroup' ? activeGroupId : null,
+            day: parseInt(columnKey, 10),
+            startMin,
+          }
+    )
+    setEditorOpen(true)
+  }
+
+  const handleSessionMove = (id: string, columnKey: string, startMin: number) => {
+    const session = workingSessions.find((s) => sessionKey(s) === id)
+    if (!session) return
+    const duration = session.endMin - session.startMin
+    // In the by-day view the columns are class groups; moving a session into
+    // another group's column would orphan it from its course, so only the
+    // time changes there.
+    const day = viewMode === 'day' ? session.day : parseInt(columnKey, 10)
+    updateSession(id, { day, startMin, endMin: startMin + duration })
+  }
+
+  const handleSessionResize = (id: string, endMin: number) => updateSession(id, { endMin })
+
+  const handleEditorSave = (draft: SessionDraft) => {
+    if (editingKey) updateSession(editingKey, draft)
+    else addSession({ ...draft, pinned: false })
+    setEditorOpen(false)
+    setEditingKey(null)
+  }
+
+  const handleEditorDelete = () => {
+    if (editingKey) removeSession(editingKey)
+    setEditorOpen(false)
+    setEditingKey(null)
+  }
+
   const handleGenerate = async (opts?: { baseScheduleId?: string }) => {
     const baseScheduleId = opts?.baseScheduleId
     setGenerating(true)
@@ -342,6 +418,13 @@ const ScheduleWorkspacePage = () => {
     }
   }
 
+  // Arriving via "Build manually" in the Schedules tab (?manual=1): open the
+  // empty grid straight into hand-editing rather than the Generate prompt.
+  useEffect(() => {
+    if (loading) return
+    if (new URLSearchParams(window.location.search).get('manual') === '1') setManualMode(true)
+  }, [loading])
+
   // Arriving via "Generate variations" in the Schedules tab (?variations=1):
   // run one variations pass automatically once the schedule has loaded.
   // window.location is read directly (not useSearchParams) to avoid the
@@ -375,6 +458,23 @@ const ScheduleWorkspacePage = () => {
     )
 
   const pinCount = pinnedKeys.size
+
+  // Manual mode swaps pinning for editing on the shared grid; outside it the
+  // grid keeps its original read-only-plus-pinning behaviour.
+  const gridEditingProps = manualMode
+    ? {
+        onSlotClick: handleSlotClick,
+        onSessionClick: (id: string) => {
+          setEditorSeed(null)
+          setEditingKey(id)
+          setEditorOpen(true)
+        },
+        onSessionMove: handleSessionMove,
+        onSessionResize: handleSessionResize,
+        snapMinutes: config?.settings.snapMinutes || 5,
+        conflictIds: new Set(conflicts?.byKey.keys() ?? []),
+      }
+    : { onTogglePin: togglePin }
 
   return (
     <>
@@ -454,6 +554,19 @@ const ScheduleWorkspacePage = () => {
                   </button>
                 )}
 
+                <button
+                  onClick={() => setManualMode((on) => !on)}
+                  title="Place, move and resize sessions by hand instead of generating them"
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg border transition cursor-pointer ${
+                    manualMode
+                      ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                  {manualMode ? 'Editing by hand' : 'Build manually'}
+                </button>
+
                 <div className="flex-1" />
 
                 <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
@@ -491,7 +604,9 @@ const ScheduleWorkspacePage = () => {
                 >
                   {scheduleStatus === 'published' ? 'Published' : 'Publish'}
                 </button>
-                {currentScheduleId && <PrintMenu scheduleId={currentScheduleId} />}
+                {currentScheduleId && (
+                  <PrintMenu scheduleId={currentScheduleId} teachers={config?.teachers} />
+                )}
               </div>
 
               {/* Infeasibility diagnostics */}
@@ -505,6 +620,32 @@ const ScheduleWorkspacePage = () => {
                       <li key={i}>{d.message}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Manual editing hint + conflicts */}
+              {manualMode && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <PencilSquareIcon className="h-4 w-4 shrink-0" />
+                    <span>
+                      Click empty time to add a session, click a session to edit it, drag to move,
+                      or drag its bottom edge to change the end time.
+                    </span>
+                  </div>
+                  {conflicts && conflicts.count > 0 && (
+                    <div className="border border-red-200 bg-red-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                        <ExclamationTriangleIcon className="h-4 w-4" />
+                        {conflicts.count} session{conflicts.count === 1 ? '' : 's'} in conflict
+                      </div>
+                      <ul className="list-disc ml-6 mt-1 text-xs text-red-700 space-y-0.5">
+                        {[...new Set([...conflicts.byKey.values()].flat())].map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -589,14 +730,14 @@ const ScheduleWorkspacePage = () => {
               )}
 
               {/* Grid */}
-              {workingSessions.length > 0 ? (
+              {workingSessions.length > 0 || manualMode ? (
                 <div className="border border-gray-200 rounded-lg p-3">
                   {viewMode === 'day' ? (
                     <WeeklyGrid
                       columns={dayColumns}
                       rangeStartMin={rangeStartMin}
                       rangeEndMin={rangeEndMin}
-                      onTogglePin={togglePin}
+                      {...gridEditingProps}
                     />
                   ) : (
                     <WeeklyGrid
@@ -606,7 +747,7 @@ const ScheduleWorkspacePage = () => {
                       rangeEndMin={rangeEndMin}
                       fixedBlocks={gridFixedBlocks}
                       fillableRangesByDay={fillableRangesByDay}
-                      onTogglePin={togglePin}
+                      {...gridEditingProps}
                     />
                   )}
                 </div>
@@ -619,6 +760,16 @@ const ScheduleWorkspacePage = () => {
                       Hit <span className="font-semibold">Generate</span> to create {numCandidates}{' '}
                       different weekly schedules from your setup.
                     </p>
+                    <p className="text-sm mt-2">
+                      Already know this year&apos;s timetable?{' '}
+                      <button
+                        onClick={() => setManualMode(true)}
+                        className="font-semibold text-cyan-700 hover:underline cursor-pointer"
+                      >
+                        Build it manually
+                      </button>
+                      .
+                    </p>
                   </div>
                 )
               )}
@@ -626,6 +777,22 @@ const ScheduleWorkspacePage = () => {
           )}
         </div>
       </main>
+
+      {config && (
+        <SessionEditorModal
+          isOpen={editorOpen}
+          config={config}
+          days={days}
+          session={editingSession}
+          seed={editorSeed}
+          onSave={handleEditorSave}
+          onDelete={editingKey ? handleEditorDelete : undefined}
+          onClose={() => {
+            setEditorOpen(false)
+            setEditingKey(null)
+          }}
+        />
+      )}
 
       {/* Publish confirm */}
       {showPublishConfirm && (

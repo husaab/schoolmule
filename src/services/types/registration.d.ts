@@ -46,7 +46,17 @@ export interface FormSubmission {
   submittedAt: string;
   ipAddress: string | null;
   status: SubmissionStatus;
+  // Import provenance. Null until this submission has been imported as a
+  // student; `status` stays a separate human workflow field.
+  importedStudentId: string | null;
+  importedAt: string | null;
+  importedBy: string | null;
+  importedStudentName: string | null;
 }
+
+// Whether to show all submissions, only those already imported, or only those
+// still waiting to be imported.
+export type ImportState = 'all' | 'imported' | 'not_imported';
 
 export interface SubmissionPagination {
   total: number;
@@ -146,6 +156,8 @@ export interface SubmissionFilters {
   sorts?: SortSpec[];
   // Per-field answer-value filters.
   fieldFilters?: FieldFilter[];
+  // Restricts the list to imported / not-yet-imported submissions.
+  importState?: ImportState;
   // Legacy single-sort params (still honored by the backend; not emitted by the UI).
   sortFieldId?: string;
   sortDir?: 'asc' | 'desc';

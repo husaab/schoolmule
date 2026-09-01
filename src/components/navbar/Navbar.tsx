@@ -9,6 +9,7 @@ import { getSchoolName } from '@/lib/schoolUtils';
 import SchoolLogo from '@/components/branding/SchoolLogo';
 import SchoolYearSelector from './SchoolYearSelector';
 import PastYearBanner from './PastYearBanner';
+import ScheduleMenu from '@/components/schedulePlanner/ScheduleMenu';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -63,6 +64,9 @@ const NavBar: FC = () => {
           <div className="flex items-center gap-3">
             {/* Past-year indicator (inline so it never overlaps page content) */}
             <PastYearBanner />
+
+            {/* Today's schedule — reachable from every page */}
+            <ScheduleMenu />
 
             {/* Desktop School Year Selector */}
             <div className="hidden lg:block">

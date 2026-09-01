@@ -9,7 +9,7 @@ interface ModalProps {
   onClose: () => void
   children: ReactNode
   title?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
 }
 
 const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalProps) => {
@@ -20,7 +20,11 @@ const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalPr
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
-    xl: 'max-w-xl'
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    // Wide enough for the import preview table, which needs name, grade,
+    // match, action and reason side by side.
+    '4xl': 'max-w-5xl'
   }
 
   useEffect(() => {

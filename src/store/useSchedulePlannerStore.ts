@@ -26,6 +26,10 @@ interface SchedulePlannerState {
   selectCandidate: (index: number) => void;
   loadSessions: (sessions: ScheduleSession[]) => void;
   togglePin: (key: string) => void;
+  /** Manual builder: place a new session (sessionIndex is assigned here). */
+  addSession: (session: Omit<ScheduleSession, 'sessionIndex'>) => void;
+  updateSession: (key: string, patch: Partial<ScheduleSession>) => void;
+  removeSession: (key: string) => void;
   setViewMode: (mode: PlannerViewMode) => void;
   setSelectedClassGroupId: (id: string | null) => void;
   setSelectedTeacherId: (id: string | null) => void;
@@ -87,6 +91,47 @@ export const useSchedulePlannerStore = create<SchedulePlannerState>((set, get) =
       if (pinnedKeys.has(key)) pinnedKeys.delete(key);
       else pinnedKeys.add(key);
       return { pinnedKeys, dirty: true };
+    }),
+
+  // ─── Manual builder ─────────────────────────────────────────────────────
+  // Manual edits invalidate the generated candidate set: the working sessions
+  // no longer match any candidate, so paging back through them would silently
+  // discard the edit.
+  addSession: (session) =>
+    set((state) => {
+      const used = state.workingSessions
+        .filter((s) => s.courseId === session.courseId)
+        .map((s) => s.sessionIndex);
+      const sessionIndex = used.length === 0 ? 0 : Math.max(...used) + 1;
+      return {
+        workingSessions: [...state.workingSessions, { ...session, sessionIndex }],
+        candidates: [],
+        meta: null,
+        dirty: true,
+      };
+    }),
+
+  updateSession: (key, patch) =>
+    set((state) => ({
+      workingSessions: state.workingSessions.map((s) =>
+        sessionKey(s) === key ? { ...s, ...patch } : s
+      ),
+      candidates: [],
+      meta: null,
+      dirty: true,
+    })),
+
+  removeSession: (key) =>
+    set((state) => {
+      const pinnedKeys = new Set(state.pinnedKeys);
+      pinnedKeys.delete(key);
+      return {
+        workingSessions: state.workingSessions.filter((s) => sessionKey(s) !== key),
+        pinnedKeys,
+        candidates: [],
+        meta: null,
+        dirty: true,
+      };
     }),
 
   setViewMode: (viewMode) => set({ viewMode }),

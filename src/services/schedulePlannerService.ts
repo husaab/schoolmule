@@ -17,7 +17,7 @@ import type {
   PlannerRoom,
   PlannerSettings,
   PlannerTeacher,
-  PublishedSession,
+  MySchedule,
   ScheduleDraft,
   ScheduleSession,
   ScheduleSummary,
@@ -279,27 +279,69 @@ export const publishSchedule = async (scheduleId: string): Promise<ApiResponse<S
 
 export type SchedulePdfView = 'class' | 'teacher' | 'day';
 
-export const getSchedulePdfUrl = (scheduleId: string, view?: SchedulePdfView): string =>
-  `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/schedules/${encodeURIComponent(scheduleId)}/pdf${
-    view === 'teacher' || view === 'day' ? `?view=${view}` : ''
-  }`;
+export const getSchedulePdfUrl = (
+  scheduleId: string,
+  view?: SchedulePdfView,
+  teacherId?: string
+): string => {
+  const params = new URLSearchParams();
+  if (view === 'teacher' || view === 'day') params.set('view', view);
+  if (teacherId) params.set('teacherId', teacherId);
+  const qs = params.toString();
+  return `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/schedules/${encodeURIComponent(
+    scheduleId
+  )}/pdf${qs ? `?${qs}` : ''}`;
+};
+
+/** Fetches a binary export with the auth token attached. */
+const fetchWithAuth = async (url: string, errorMessage: string): Promise<Blob> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!res.ok) throw new Error(errorMessage);
+  return res.blob();
+};
 
 /** Downloads the PDF with the auth token and opens it in a new tab. */
 export const openSchedulePdf = async (
   scheduleId: string,
-  view?: SchedulePdfView
+  view?: SchedulePdfView,
+  teacherId?: string
 ): Promise<void> => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const res = await fetch(getSchedulePdfUrl(scheduleId, view), {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!res.ok) throw new Error('Failed to export PDF');
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  const blob = await fetchWithAuth(
+    getSchedulePdfUrl(scheduleId, view, teacherId),
+    'Failed to export PDF'
+  );
+  window.open(URL.createObjectURL(blob), '_blank');
 };
 
 // ─── Teacher widget ───────────────────────────────────────────────────────
 
-export const getMySchedule = async (): Promise<ApiResponse<{ sessions: PublishedSession[] }>> =>
-  apiClient<ApiResponse<{ sessions: PublishedSession[] }>>(`${BASE}/my-schedule`);
+export const getMySchedule = async (): Promise<ApiResponse<MySchedule>> =>
+  apiClient<ApiResponse<MySchedule>>(`${BASE}/my-schedule`);
+
+/** Opens the logged-in teacher's own weekly schedule as a PDF. */
+export const openMySchedulePdf = async (): Promise<void> => {
+  const blob = await fetchWithAuth(
+    `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/my-schedule/pdf`,
+    'Failed to export PDF'
+  );
+  window.open(URL.createObjectURL(blob), '_blank');
+};
+
+/** Downloads the logged-in teacher's schedule as an .ics calendar file. */
+export const downloadMyScheduleIcs = async (): Promise<void> => {
+  const blob = await fetchWithAuth(
+    `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/my-schedule/ics`,
+    'Failed to export calendar'
+  );
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'my-schedule.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};

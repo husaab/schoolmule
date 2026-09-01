@@ -217,6 +217,29 @@ export interface PublishedSession {
   endMin: number;
 }
 
+/** A day the school is closed (holiday, PA day) from the school calendar. */
+export interface ScheduleClosure {
+  title: string;
+  category: string;
+  /** yyyy-mm-dd, inclusive */
+  startDate: string;
+  /** yyyy-mm-dd, inclusive */
+  endDate: string;
+}
+
+/** Everything a teacher needs to render their own published timetable. */
+export interface MySchedule {
+  sessions: PublishedSession[];
+  /** Breaks snapshotted at publish time (Snack, Lunch, Salat) */
+  fixedBlocks: FixedBlock[];
+  dayTemplates: DayTemplate[];
+  schedule: { scheduleId: string; name: string; publishedAt: string } | null;
+  /** Monday of the current week, yyyy-mm-dd */
+  weekStart: string;
+  /** School closures overlapping the current week */
+  closures: ScheduleClosure[];
+}
+
 export interface PublicSchedule {
   schoolName: string;
   scheduleName: string;

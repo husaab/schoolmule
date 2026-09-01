@@ -23,6 +23,15 @@ export interface StudentPayload {
     phone: string | null;
   };
   emergencyContact: string | null;
+  dateOfBirth: string | null;
+  address: string | null;
+  healthCardNumber: string | null;
+  medicalNotes: string | null;
+  /**
+   * The registration form submission this student was imported from, or null
+   * when the record was entered manually.
+   */
+  sourceSubmissionId?: string | null;
   createdAt: string;
   lastModifiedAt: string;
   // Archive fields - optional to maintain backward compatibility
