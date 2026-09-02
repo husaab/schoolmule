@@ -17,6 +17,8 @@ import UndoImportModal from '@/components/registration/Import/UndoImportModal';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
+import * as statusService from '@/services/registrationStatusService';
+import { statusBadgeClass } from '@/lib/statusColors';
 import type {
   RegistrationForm,
   FormField,
@@ -27,6 +29,7 @@ import type {
   FieldFilter,
 } from '@/services/types/registration';
 import type { ImportScope } from '@/services/types/registrationImport';
+import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -39,13 +42,8 @@ import {
   ArrowDownIcon,
   Cog6ToothIcon,
   ArrowDownTrayIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline';
-
-const statusColors: Record<string, string> = {
-  new: 'bg-cyan-100 text-cyan-700',
-  reviewed: 'bg-emerald-100 text-emerald-700',
-  archived: 'bg-slate-100 text-slate-600',
-};
 
 // ─── URL (de)serialization for sort + field filters ──────────────────
 // sort=fieldId:dir,fieldId:dir   ·   fieldFilters=<JSON array of { fieldId, values }>
@@ -87,6 +85,10 @@ export default function FormSubmissionsPage() {
   // Form resolution
   const [form, setForm] = useState<RegistrationForm | null>(null);
   const [formLoading, setFormLoading] = useState(true);
+
+  // The school's status vocabulary, shared by every form. Drives the row
+  // dropdown, the filter, and each badge's colour.
+  const [statuses, setStatuses] = useState<SubmissionStatusDef[]>([]);
 
   // Submissions data
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
@@ -223,6 +225,25 @@ export default function FormSubmissionsPage() {
       }
     })();
   }, [slug, router, showNotification]);
+
+  const loadStatuses = useCallback(async () => {
+    try {
+      const res = await statusService.getStatuses();
+      setStatuses(res.data);
+    } catch {
+      // The table still works without labels — it falls back to the raw key —
+      // so this shouldn't interrupt the page with an error toast.
+    }
+  }, []);
+
+  useEffect(() => { loadStatuses(); }, [loadStatuses]);
+
+  // Look up a status by the key stored on a submission. Falls back to showing
+  // the raw key so a submission is never rendered blank.
+  const statusFor = useCallback(
+    (key: string) => statuses.find((s) => s.key === key),
+    [statuses],
+  );
 
   // Fetch submissions when form or filters change
   const fetchSubmissions = useCallback(async () => {
@@ -426,6 +447,14 @@ export default function FormSubmissionsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/admin-panel/forms/statuses"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors"
+                title="Add or rename submission statuses"
+              >
+                <TagIcon className="w-4 h-4" />
+                Statuses
+              </Link>
               <button
                 onClick={() => setMappingOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
@@ -449,7 +478,7 @@ export default function FormSubmissionsPage() {
 
           {/* Filters + Sort */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col gap-4">
-            <SubmissionFiltersComponent filters={filters} onChange={setFilters} />
+            <SubmissionFiltersComponent filters={filters} onChange={setFilters} statuses={statuses} />
 
             <div className="flex flex-col lg:flex-row lg:items-start gap-6 border-t border-slate-100 pt-4">
               <div className="lg:w-1/2">
@@ -586,11 +615,17 @@ export default function FormSubmissionsPage() {
                             value={sub.status}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => { e.stopPropagation(); handleStatusChange(sub.submissionId, e.target.value); }}
-                            className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusColors[sub.status] || 'bg-slate-100 text-slate-600'}`}
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer ${statusBadgeClass(statusFor(sub.status)?.color)}`}
                           >
-                            <option value="new">New</option>
-                            <option value="reviewed">Reviewed</option>
-                            <option value="archived">Archived</option>
+                            {/* A submission can hold a status an admin has since
+                                deleted from the list; keep it selectable rather
+                                than silently showing the wrong one. */}
+                            {!statusFor(sub.status) && (
+                              <option value={sub.status}>{sub.status}</option>
+                            )}
+                            {statuses.map((st) => (
+                              <option key={st.statusId} value={st.key}>{st.label}</option>
+                            ))}
                           </select>
                         </td>
                         <td className="px-5 py-3.5">
@@ -734,8 +769,8 @@ export default function FormSubmissionsPage() {
             <div className="space-y-4 px-6 py-4">
             <div className="flex items-center justify-between text-sm text-slate-500">
               <span>Submitted: {new Date(detailSubmission.submittedAt).toLocaleString('en-CA')}</span>
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[detailSubmission.status]}`}>
-                {detailSubmission.status}
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadgeClass(statusFor(detailSubmission.status)?.color)}`}>
+                {statusFor(detailSubmission.status)?.label || detailSubmission.status}
               </span>
             </div>
 
@@ -794,15 +829,15 @@ export default function FormSubmissionsPage() {
                     >
                       <PencilIcon className="w-4 h-4" /> Edit
                     </button>
-                    {detailSubmission.status === 'new' && (
+                    {detailSubmission.status === 'new' && statusFor('reviewed') && (
                       <button
                         onClick={() => {
                           handleStatusChange(detailSubmission.submissionId, 'reviewed');
                           setDetailOpen(false);
                         }}
-                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer"
                       >
-                        Mark as Reviewed
+                        Mark as {statusFor('reviewed')!.label}
                       </button>
                     )}
                     <button

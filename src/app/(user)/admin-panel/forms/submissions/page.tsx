@@ -16,6 +16,7 @@ import {
   PlusIcon,
   InboxStackIcon,
   PencilSquareIcon,
+  TagIcon,
 } from '@heroicons/react/24/outline';
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -78,13 +79,23 @@ function SubmissionsContent() {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Form Submissions</h1>
               <p className="text-slate-500 mt-1">Select a form to view and manage its submissions</p>
             </div>
-            <Link
-              href="/admin-panel/forms"
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-xl transition-colors shadow-sm"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Build a Form
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin-panel/forms/statuses"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-xl transition-colors"
+                title="Add or rename the statuses used across your forms"
+              >
+                <TagIcon className="w-4 h-4" />
+                Statuses
+              </Link>
+              <Link
+                href="/admin-panel/forms"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-xl transition-colors shadow-sm"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Build a Form
+              </Link>
+            </div>
           </div>
 
           {/* Loading */}

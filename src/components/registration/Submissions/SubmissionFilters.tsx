@@ -1,13 +1,16 @@
 'use client';
 
 import type { SubmissionStatus, SubmissionFilters as FiltersType, ImportState } from '@/services/types/registration';
+import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
 
 interface Props {
   filters: FiltersType;
   onChange: (filters: FiltersType) => void;
+  /** The school's status vocabulary. Replaces a hardcoded new/reviewed/archived list. */
+  statuses: SubmissionStatusDef[];
 }
 
-export default function SubmissionFilters({ filters, onChange }: Props) {
+export default function SubmissionFilters({ filters, onChange, statuses }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Status filter */}
@@ -17,9 +20,9 @@ export default function SubmissionFilters({ filters, onChange }: Props) {
         className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
       >
         <option value="">All Statuses</option>
-        <option value="new">New</option>
-        <option value="reviewed">Reviewed</option>
-        <option value="archived">Archived</option>
+        {statuses.map((s) => (
+          <option key={s.statusId} value={s.key}>{s.label}</option>
+        ))}
       </select>
 
       {/* Import state — which submissions have already become students */}
