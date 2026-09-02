@@ -14,6 +14,8 @@ import FieldMappingEditor from '@/components/registration/Import/FieldMappingEdi
 import ImportPreviewModal from '@/components/registration/Import/ImportPreviewModal';
 import ImportedBadge from '@/components/registration/Import/ImportedBadge';
 import UndoImportModal from '@/components/registration/Import/UndoImportModal';
+import LinkSheetModal from '@/components/registration/Sheets/LinkSheetModal';
+import SheetSyncStatus from '@/components/registration/Sheets/SheetSyncStatus';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
@@ -156,6 +158,11 @@ export default function FormSubmissionsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [mappingOpen, setMappingOpen] = useState(false);
   const [undoSubmissionId, setUndoSubmissionId] = useState<string | null>(null);
+
+  // Google Sheet link. `sheetRefreshKey` nudges the status pill to refetch
+  // after the modal changes the link.
+  const [sheetModalOpen, setSheetModalOpen] = useState(false);
+  const [sheetRefreshKey, setSheetRefreshKey] = useState(0);
 
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
@@ -447,6 +454,11 @@ export default function FormSubmissionsPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <SheetSyncStatus
+                formId={form.formId}
+                refreshKey={sheetRefreshKey}
+                onOpenSettings={() => setSheetModalOpen(true)}
+              />
               <Link
                 href="/admin-panel/forms/statuses"
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors"
@@ -727,6 +739,15 @@ export default function FormSubmissionsPage() {
           )}
         </div>
       </main>
+
+      {/* Google Sheet link */}
+      <LinkSheetModal
+        formId={form.formId}
+        formTitle={form.title}
+        isOpen={sheetModalOpen}
+        onClose={() => setSheetModalOpen(false)}
+        onChanged={() => setSheetRefreshKey((k) => k + 1)}
+      />
 
       {/* Import field mapping */}
       <Modal
