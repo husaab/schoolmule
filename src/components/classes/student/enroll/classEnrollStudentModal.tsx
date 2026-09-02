@@ -6,6 +6,16 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { bulkEnrollStudentsToClass } from '@/services/classService'
 import { StudentPayload } from '@/services/types/student'
 import { GradeValue, getGradeOptions, getGradeDisplayName } from '@/lib/schoolUtils'
+import {
+  Button,
+  Field,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  inputClass,
+  selectClass,
+} from '../../../shared/modalKit'
+import { MagnifyingGlassIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 
 interface ClassEnrollStudentModalProps {
   /** Whether the modal is open */
@@ -72,10 +82,12 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
       // Exclude already‐enrolled
       .filter((stu) => !enrolledStudentIds.includes(stu.studentId))
       // Apply grade‐filter dropdown if set
+      // A student with no grade on file matches only the "all grades" option —
+      // never a specific one. (Reading .toString() off a null grade used to throw.)
       .filter((stu) =>
         filterGradeValue === ''
           ? true
-          : stu.grade!.toString() === filterGradeValue
+          : String(stu.grade ?? '') === filterGradeValue
       )
       // Apply name search (case‐insensitive substring)
       .filter((stu) =>
@@ -133,112 +145,168 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
     (enrollAllInGrade && eligibleForFullGradeEnroll) ||
     (!enrollAllInGrade && selectedStudentIds.length > 0)
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-lg w-11/12">
-      <h2 className="text-xl mb-4 text-black">Enroll Students</h2>
+  // Only used to tell an empty search apart from a fully enrolled school,
+  // so the empty state can say which one the reader is looking at.
+  const isFiltering = searchTerm.trim() !== '' || filterGradeValue !== ''
+  const selectedCount = selectedStudentIds.length
 
-      {/* 1) “Enroll All in Grade” Checkbox */}
-      <div className="flex items-center mb-2">
-        <input
-          id="enrollAll"
-          type="checkbox"
-          checked={enrollAllInGrade}
-          onChange={() => setEnrollAllInGrade((prev) => !prev)}
-          disabled={!eligibleForFullGradeEnroll}
-          className="mr-2"
-        />
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title="Enroll students"
+        subtitle="Pick students one by one, or take the whole grade at once."
+        icon={UserPlusIcon}
+      />
+
+      <ModalBody>
+        {/* 1) “Enroll All in Grade” — the shortcut that does the most work,
+            so it gets its own surface above the manual list. */}
         <label
-          htmlFor="enrollAll"
-          className={`text-black ${
-            !eligibleForFullGradeEnroll ? 'opacity-50 cursor-not-allowed' : ''
+          className={`flex items-start gap-3 rounded-xl border p-3.5 transition-colors ${
+            eligibleForFullGradeEnroll
+              ? 'cursor-pointer border-cyan-100 bg-cyan-50/60 hover:bg-cyan-50'
+              : 'cursor-not-allowed border-slate-100 bg-slate-50/70'
           }`}
         >
-          Enroll all students in grade {classGrade}
-        </label>
-      </div>
-      {/* If none are eligible, show a warning underneath */}
-      {!eligibleForFullGradeEnroll && (
-        <p className="text-red-600 mb-4">
-          All students in grade {classGrade} are already enrolled.
-        </p>
-      )}
-
-      {/* 2) If not “Enroll all,” show search + filter + checkboxes */}
-      {!enrollAllInGrade && (
-        <>
-          {/* 2a) Search by name */}
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="text"
-              placeholder="Search by name…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white text-black"
-            />
-
-            {/* 2b) Filter by grade */}
-            <select
-              value={filterGradeValue}
-              onChange={(e) => setFilterGradeValue(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white text-black"
+          <input
+            id="enrollAll"
+            type="checkbox"
+            checked={enrollAllInGrade}
+            onChange={() => setEnrollAllInGrade((prev) => !prev)}
+            disabled={!eligibleForFullGradeEnroll}
+            className="mt-0.5 h-4 w-4 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 disabled:cursor-not-allowed"
+          />
+          <span className="text-sm">
+            <span
+              className={`font-medium ${
+                eligibleForFullGradeEnroll ? 'text-slate-800' : 'text-slate-400'
+              }`}
             >
-              <option value="">All Grades</option>
-              {getGradeOptions().map((gradeOption) => (
-                <option key={gradeOption.value} value={gradeOption.value.toString()}>
-                  {getGradeDisplayName(gradeOption.value)}
-                </option>
-              ))}
-            </select>
-          </div>
+              Enroll every {getGradeDisplayName(classGrade)} student
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              {eligibleForFullGradeEnroll
+                ? 'Anyone already on the roster is skipped.'
+                : `Every ${getGradeDisplayName(classGrade)} student is already enrolled — pick from another grade below.`}
+            </span>
+          </span>
+        </label>
 
-          {/* 2c) Scrollable student list with checkboxes */}
-          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 mb-4 bg-white">
-            {availableStudents.length === 0 ? (
-              <p className="text-gray-600">No students match your filters.</p>
-            ) : (
-              availableStudents.map((stu) => (
-                <div key={stu.studentId} className="flex items-center mb-2">
-                  <input
-                    id={`stu-${stu.studentId}`}
-                    type="checkbox"
-                    checked={selectedStudentIds.includes(stu.studentId)}
-                    onChange={() => toggleStudentSelection(stu.studentId)}
-                    className="mr-2"
-                  />
-                  <label
-                    htmlFor={`stu-${stu.studentId}`}
-                    className="text-black"
+        {/* 2) If not “Enroll all,” show search + filter + checkboxes */}
+        {!enrollAllInGrade && (
+          <>
+            {/* 2a) Search by name + 2b) filter by grade */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <Field label="Find a student" htmlFor="enroll-search">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="enroll-search"
+                      type="text"
+                      placeholder="Search by name"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className={`${inputClass} pl-9`}
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              <div className="w-40">
+                <Field label="Grade" htmlFor="enroll-grade-filter">
+                  <select
+                    id="enroll-grade-filter"
+                    value={filterGradeValue}
+                    onChange={(e) => setFilterGradeValue(e.target.value)}
+                    className={selectClass}
                   >
-                    {stu.name} ({getGradeDisplayName(stu.grade)})
-                  </label>
+                    <option value="">All grades</option>
+                    {getGradeOptions().map((gradeOption) => (
+                      <option key={gradeOption.value} value={gradeOption.value.toString()}>
+                        {getGradeDisplayName(gradeOption.value)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+
+            {/* 2c) Scrollable student list with checkboxes */}
+            <section className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Not yet enrolled
+                </h3>
+                <p className="text-xs font-medium text-slate-500">
+                  {selectedCount === 0
+                    ? 'None selected'
+                    : `${selectedCount} selected`}
+                </p>
+              </div>
+
+              {availableStudents.length === 0 ? (
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-slate-600">
+                    {isFiltering
+                      ? 'No students match that search'
+                      : 'Everyone is already enrolled'}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {isFiltering
+                      ? 'Try a different name, or set the grade filter back to all grades.'
+                      : 'Every student in the school is on this roster already. Add a new student first, then enroll them here.'}
+                  </p>
                 </div>
-              ))
-            )}
-          </div>
-        </>
-      )}
+              ) : (
+                <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                  {availableStudents.map((stu) => {
+                    const isSelected = selectedStudentIds.includes(stu.studentId)
+                    return (
+                      <label
+                        key={stu.studentId}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
+                          isSelected
+                            ? 'border-cyan-200 bg-cyan-50/70'
+                            : 'border-slate-100 bg-slate-50/70 hover:bg-white'
+                        }`}
+                      >
+                        <input
+                          id={`stu-${stu.studentId}`}
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleStudentSelection(stu.studentId)}
+                          className="h-4 w-4 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
+                          {stu.name}
+                        </span>
+                        <span className="flex-shrink-0 text-xs text-slate-500">
+                          {getGradeDisplayName(stu.grade) || 'No grade'}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </ModalBody>
 
       {/* 3) Actions */}
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
-        >
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleEnroll}
-          disabled={!canSubmit || loading}
-          className={`px-4 py-2 rounded-md transition cursor-pointer ${
-            canSubmit
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {loading ? 'Enrolling…' : 'Enroll'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="primary" onClick={handleEnroll} loading={loading} disabled={!canSubmit}>
+          {loading
+            ? 'Enrolling'
+            : !enrollAllInGrade && selectedCount > 0
+              ? `Enroll ${selectedCount} student${selectedCount === 1 ? '' : 's'}`
+              : 'Enroll students'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

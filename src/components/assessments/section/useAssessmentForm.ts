@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   batchUpdateAssessments,
   createAssessment,
-  deleteAssessment,
   updateAssessment,
 } from '@/services/assessmentService'
 import type {
@@ -284,48 +283,23 @@ export function useAssessmentForm({
     if (assessment.isParent && childrenData.length > 0) {
       const childrenToDelete = childrenData.filter((child) => child.toDelete && !child.isNew)
       const newChildren = childrenData.filter((child) => child.isNew && !child.toDelete)
-
-      // Step 1: delete removed children
-      for (const child of childrenToDelete) {
-        try {
-          await deleteAssessment(child.assessmentId)
-        } catch (err) {
-          console.error('Error deleting child assessment:', err)
-          showNotification(`Failed to delete assessment "${child.name}"`, 'error')
-          return
-        }
-      }
-
-      // Step 2: create new children
-      const createdChildren: AssessmentPayload[] = []
-      for (const newChild of newChildren) {
-        try {
-          const createRes = await createAssessment({
-            classId: assessment.classId,
-            name: newChild.name.trim(),
-            weightPoints: parseFloat(newChild.weightPoints),
-            maxScore: parseFloat(newChild.maxScore),
-            parentAssessmentId: assessment.assessmentId,
-            sortOrder: newChild.sortOrder,
-            isParent: false,
-            date: newChild.date || null,
-          })
-          if (createRes.status === 'success') {
-            createdChildren.push(createRes.data as AssessmentPayload)
-          } else {
-            showNotification(`Failed to create assessment "${newChild.name}"`, 'error')
-            return
-          }
-        } catch (err) {
-          console.error('Error creating child assessment:', err)
-          showNotification(`Failed to create assessment "${newChild.name}"`, 'error')
-          return
-        }
-      }
-
-      // Step 3: batch update parent + remaining existing children
       const existingChildren = childrenData.filter((c) => !c.toDelete && !c.isNew)
+
+      // One transactional call. Previously this deleted removed children, then
+      // created new ones, then updated the rest as three separate requests — so
+      // a failure after step 1 left the deletions committed with no way back.
       const res = await batchUpdateAssessments({
+        deleteIds: childrenToDelete.map((child) => child.assessmentId),
+        creates: newChildren.map((newChild) => ({
+          classId: assessment.classId,
+          name: newChild.name.trim(),
+          weightPoints: parseFloat(newChild.weightPoints),
+          maxScore: parseFloat(newChild.maxScore),
+          parentAssessmentId: assessment.assessmentId,
+          sortOrder: newChild.sortOrder,
+          isParent: false,
+          date: newChild.date || null,
+        })),
         updates: [
           {
             assessmentId: assessment.assessmentId,
@@ -351,7 +325,7 @@ export function useAssessmentForm({
       }
 
       onSuccess({
-        updated: [...res.data, ...createdChildren],
+        updated: [...res.data, ...(res.created ?? [])],
         deletedIds: childrenToDelete.map((c) => c.assessmentId),
         needsRefetch: true,
       })

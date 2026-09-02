@@ -5,6 +5,14 @@ import React, { useState } from 'react';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { deleteBulkReportCards } from '@/services/reportCardService';
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from '@/components/shared/modalKit';
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 interface BulkDeleteReportCardModalProps {
   isOpen: boolean;
@@ -23,6 +31,7 @@ const BulkDeleteReportCardModal: React.FC<BulkDeleteReportCardModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   const count = filePaths.length;
+  const noun = `report card${count !== 1 ? 's' : ''}`;
 
   const handleDelete = async () => {
     if (count === 0) return;
@@ -45,28 +54,46 @@ const BulkDeleteReportCardModal: React.FC<BulkDeleteReportCardModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-lg font-semibold mb-4 text-black">Delete Report Cards</h2>
-      <p className="text-black mb-6">
-        Are you sure you want to delete <strong>{count} report card{count !== 1 ? 's' : ''}</strong>?
-        This action cannot be undone.
-      </p>
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 cursor-pointer disabled:cursor-not-allowed"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title={`Delete ${count} ${noun}?`}
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
+      />
+
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: `Deleting these ${noun}:`,
+            items: [
+              'Removes the generated PDFs from storage',
+              'Removes their entries from the generated report cards list',
+              'Leaves grades and teacher feedback intact, so you can generate them again',
+            ],
+          }}
         >
+          <strong className="font-semibold text-slate-900">
+            {count} {noun}
+          </strong>{' '}
+          will be permanently removed.
+        </ConfirmBody>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="danger"
           onClick={handleDelete}
-          disabled={loading || count === 0}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 cursor-pointer disabled:bg-red-400 disabled:cursor-not-allowed"
+          loading={loading}
+          disabled={count === 0}
         >
-          {loading ? 'Deleting…' : `Delete ${count}`}
-        </button>
-      </div>
+          {loading ? 'Deleting' : `Delete ${count} ${noun}`}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };

@@ -6,7 +6,15 @@ import { deleteStaff } from '@/services/staffService'
 import { StaffPayload } from '@/services/types/staff'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RecordFacts
+} from '@/components/shared/modalKit'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface StaffDeleteModalProps {
   isOpen: boolean
@@ -45,47 +53,51 @@ const StaffDeleteModal: React.FC<StaffDeleteModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-md w-11/12">
-      <div className="text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-          <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-        </div>
-        
-        <h2 className="text-lg font-medium text-gray-900 mb-2">Delete Staff Member</h2>
-        
-        <p className="text-sm text-gray-500 mb-4">
-          Are you sure you want to delete <strong>{staff.fullName}</strong>? 
-          This action cannot be undone.
-        </p>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Delete staff member"
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
+      />
 
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
-          <div className="text-sm text-gray-700 space-y-1">
-            <div><strong>Name:</strong> {staff.fullName}</div>
-            <div><strong>Role:</strong> {staff.staffRole}</div>
-            {staff.email && <div><strong>Email:</strong> {staff.email}</div>}
-            {staff.homeroomGrade && <div><strong>Homeroom:</strong> Grade {staff.homeroomGrade}</div>}
-          </div>
-        </div>
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'Deleting removes this directory entry:',
+            items: [
+              'Their email, phone, and contact hours',
+              'Their teaching assignments and homeroom listing',
+              'The card parents and teachers see in the staff directory'
+            ]
+          }}
+        >
+          <strong className="font-semibold text-slate-900">{staff.fullName}</strong> will be
+          permanently removed from the staff directory. Their School Mule login and any classes
+          they are attached to are untouched.
+        </ConfirmBody>
 
-        <div className="flex justify-center space-x-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 cursor-pointer"
-            disabled={deleting}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
-            disabled={deleting}
-          >
-            {deleting ? 'Deleting...' : 'Delete Staff Member'}
-          </button>
-        </div>
-      </div>
+        <RecordFacts
+          facts={[
+            { label: 'Role', value: staff.staffRole },
+            {
+              label: 'Homeroom',
+              value: staff.homeroomGrade ? `Grade ${staff.homeroomGrade}` : 'Not assigned'
+            },
+            { label: 'Email', value: staff.email || 'Not provided' }
+          ]}
+        />
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={deleting}>
+          Cancel
+        </Button>
+        <Button variant="danger" onClick={handleDelete} loading={deleting}>
+          {deleting ? 'Deleting' : 'Delete staff member'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

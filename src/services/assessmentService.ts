@@ -115,7 +115,7 @@ export const getStudentAssessment = async (
  * PATCH /assessments/batch
  */
 export interface BatchUpdateRequest {
-  updates: Array<{
+  updates?: Array<{
     assessmentId: string
     name?: string
     weightPercent?: number
@@ -124,12 +124,37 @@ export interface BatchUpdateRequest {
     sortOrder?: number
     date?: string | null
   }>
+  /** Assessments to remove. Applied before creates and updates. */
+  deleteIds?: string[]
+  /** New assessments to insert (e.g. children added while editing a parent). */
+  creates?: Array<{
+    classId: string
+    name: string
+    weightPercent?: number
+    weightPoints?: number
+    maxScore?: number
+    parentAssessmentId?: string | null
+    isParent?: boolean
+    sortOrder?: number
+    date?: string | null
+  }>
 }
 
+/** What the batch endpoint returns: updated rows, plus anything it created. */
+export interface BatchUpdateResponse extends AllAssessmentsResponse {
+  created?: AssessmentPayload[]
+  deletedIds?: string[]
+}
+
+/**
+ * Deletes, creates and updates are applied server-side in a single
+ * transaction, so a partial failure cannot leave children deleted with the
+ * rest of the edit unsaved.
+ */
 export const batchUpdateAssessments = async (
   payload: BatchUpdateRequest
-): Promise<AllAssessmentsResponse> => {
-  return apiClient<AllAssessmentsResponse>(`/assessments/batch`, {
+): Promise<BatchUpdateResponse> => {
+  return apiClient<BatchUpdateResponse>(`/assessments/batch`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: payload,

@@ -4,6 +4,17 @@ import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteUserAccount } from '@/services/userService'
+import {
+  Button,
+  ConfirmBody,
+  Field,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RecordFacts,
+  inputClass,
+} from '../../shared/modalKit'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface DeleteUserModalProps {
   isOpen: boolean
@@ -51,34 +62,59 @@ const DeleteUserModal: React.FC<DeleteUserModalProps> = ({ isOpen, onClose, onDe
   if (!isOpen) return null
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12 text-black">
-      <h2 className="text-xl mb-4 text-black">Confirm Account Deletion</h2>
-      <p className="text-black mb-4">
-        To permanently delete your account, please type <span className="font-semibold">{user.username}</span> below:
-      </p>
-      <input
-        type="text"
-        value={confirmation}
-        onChange={(e) => setConfirmation(e.target.value)}
-        placeholder="Enter your username"
-        className="w-full border border-gray-300 p-3 rounded-lg mb-6 text-black"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Delete your account"
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
       />
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
+
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'Deleting your account:',
+            items: [
+              'Signs you out right away and returns you to the login page',
+              'Removes the account outright — this username and email can no longer sign in',
+              'Deletes the saved student views you own',
+              'Leaves timetable assignments and connected sheets tied to you unassigned',
+            ],
+          }}
         >
+          Type{' '}
+          <strong className="font-semibold text-slate-900">{user.username}</strong> below to confirm
+          you want your School Mule account permanently removed.
+        </ConfirmBody>
+
+        <RecordFacts
+          facts={[
+            { label: 'Email', value: user.email || 'Not provided' },
+            { label: 'Role', value: user.role || 'Not set' },
+          ]}
+        />
+
+        <Field label="Confirm your username" htmlFor="delete-account-confirmation">
+          <input
+            id="delete-account-confirmation"
+            type="text"
+            value={confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+            placeholder="Enter your username"
+            className={inputClass}
+          />
+        </Field>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={onDeleteClick}
-          disabled={loading}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition cursor-pointer"
-        >
-          {loading ? 'Deleting...' : 'Delete Account'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={onDeleteClick} loading={loading}>
+          {loading ? 'Deleting' : 'Delete account'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

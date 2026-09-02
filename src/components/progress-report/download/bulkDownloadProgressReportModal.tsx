@@ -6,6 +6,14 @@ import JSZip from 'jszip';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { getSignedProgressReportUrl } from '@/services/progressReportService';
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from '@/components/shared/modalKit';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface BulkDownloadProgressReportModalProps {
   isOpen: boolean;
@@ -29,14 +37,18 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
   const showNotification = useNotificationStore(state => state.showNotification);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
+  // Attempts that errored, surfaced live so the bar can't imply every fetch worked.
+  const [failedCount, setFailedCount] = useState(0);
 
   const count = filePaths.length;
+  const noun = `progress report${count !== 1 ? 's' : ''}`;
 
   const handleDownload = async () => {
     if (count === 0) return;
 
     setDownloading(true);
     setProgress(0);
+    setFailedCount(0);
 
     const zip = new JSZip();
     const usedNames = new Set<string>();
@@ -74,6 +86,7 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
         zip.file(uniqueName(filePath), blob);
       } catch (err) {
         failed += 1;
+        setFailedCount(failed);
         console.error(`Failed to fetch progress report: ${filePath}`, err);
       } finally {
         done += 1;
@@ -127,41 +140,63 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
     }
   };
 
+  const percent = count > 0 ? (progress / count) * 100 : 0;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-lg font-semibold mb-4 text-black">Download Progress Reports</h2>
-      <p className="text-black mb-6">
-        Download <strong>{count} progress report{count !== 1 ? 's' : ''}</strong> as a single ZIP file?
-      </p>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title={`Download ${count} ${noun}`}
+        subtitle={term ? `Bundled as one ZIP for ${term}.` : 'Bundled as one ZIP file.'}
+        icon={ArrowDownTrayIcon}
+      />
 
-      {downloading && (
-        <div className="mb-6">
-          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+      <ModalBody>
+        <ConfirmBody>
+          <strong className="font-semibold text-slate-900">
+            {count} {noun}
+          </strong>{' '}
+          will be fetched and packed into a single ZIP file. Large selections take a moment.
+        </ConfirmBody>
+
+        {downloading && (
+          <div>
             <div
-              className="h-full bg-blue-600 transition-all duration-200"
-              style={{ width: `${count > 0 ? (progress / count) * 100 : 0}%` }}
-            />
+              className="h-2 w-full overflow-hidden rounded-xl bg-slate-100"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={count}
+              aria-valuenow={progress}
+            >
+              <div
+                className="h-full rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 transition-all duration-200"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-slate-500">
+              Fetching {progress} of {count}…
+              {failedCount > 0 && (
+                <span className="text-rose-600">
+                  {' '}· {failedCount} failed
+                </span>
+              )}
+            </p>
           </div>
-          <p className="text-sm text-gray-600 mt-2">Fetching {progress} of {count}…</p>
-        </div>
-      )}
+        )}
+      </ModalBody>
 
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={onClose}
-          disabled={downloading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 cursor-pointer disabled:cursor-not-allowed"
-        >
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={downloading}>
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
           onClick={handleDownload}
-          disabled={downloading || count === 0}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer disabled:bg-blue-400 disabled:cursor-not-allowed"
+          loading={downloading}
+          disabled={count === 0}
         >
-          {downloading ? 'Preparing…' : 'Download as ZIP'}
-        </button>
-      </div>
+          {downloading ? 'Preparing ZIP' : 'Download as ZIP'}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };

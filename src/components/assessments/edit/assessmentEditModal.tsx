@@ -6,6 +6,16 @@ import Modal from '../../shared/modal'
 import { updateAssessment, batchUpdateAssessments, deleteAssessment, createAssessment } from '@/services/assessmentService'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import {
+  Button,
+  Field,
+  FieldRow,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  inputClass,
+} from '../../shared/modalKit'
+import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 interface AssessmentEditModalProps {
   isOpen: boolean
@@ -15,6 +25,16 @@ interface AssessmentEditModalProps {
   onUpdate: (updated: AssessmentPayload) => void
   onBatchUpdate?: (updated: AssessmentPayload[], deleted: string[]) => void
 }
+
+/** Quiet label for the compact fields inside an individual-assessment card. */
+const MicroLabel = ({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) => (
+  <label
+    htmlFor={htmlFor}
+    className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+  >
+    {children}
+  </label>
+)
 
 const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
   isOpen,
@@ -39,6 +59,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
     toDelete?: boolean
   }>>([])
   const [childPointsError, setChildPointsError] = useState<string>('')
+  const [submitting, setSubmitting] = useState(false)
 
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -49,7 +70,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
       setWeightPoints(String(assessment.weightPoints || assessment.weightPercent || 0))
       setMaxScore(String(assessment.maxScore || ''))
       setDate(assessment.date ? assessment.date.split('T')[0] : '')
-      
+
       // Initialize children data for parent assessments
       if (assessment.isParent) {
         const childAssessments = allAssessments.filter(a => a.parentAssessmentId === assessment.assessmentId)
@@ -85,7 +106,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
           const childPoints = parseFloat(child.weightPoints) || 0
           return sum + childPoints
         }, 0)
-      
+
       if (totalChildPoints - parentPoints > 0.03) {
         setChildPointsError(`Child points total ${totalChildPoints.toFixed(1)} (must not exceed parent ${parentPoints})`)
       } else if (Math.abs(totalChildPoints - parentPoints) > 0.03) {
@@ -128,7 +149,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
     // Validate parent assessments
     if (assessment.isParent) {
       const activeChildren = childrenData.filter(child => !child.toDelete)
-      
+
       if (activeChildren.some(child => !child.name.trim())) {
         showNotification('All individual assessment names are required', 'error')
         return
@@ -145,12 +166,13 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
       }
     }
 
+    setSubmitting(true)
     try {
       if (assessment.isParent && childrenData.length > 0) {
         const activeChildren = childrenData.filter(child => !child.toDelete)
         const childrenToDelete = childrenData.filter(child => child.toDelete && !child.isNew)
         const newChildren = childrenData.filter(child => child.isNew && !child.toDelete)
-        
+
         // Step 1: Delete marked children
         for (const child of childrenToDelete) {
           try {
@@ -161,7 +183,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             return
           }
         }
-        
+
         // Step 2: Create new children
         const createdChildren: AssessmentPayload[] = []
         for (const newChild of newChildren) {
@@ -190,7 +212,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
             return
           }
         }
-        
+
         // Step 3: Batch update parent and remaining existing children
         const existingChildren = activeChildren.filter(child => !child.isNew)
         const updates = [
@@ -232,7 +254,7 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
               onUpdate(newAssessment)
             })
           }
-          
+
           const totalUpdated = res.data.length + createdChildren.length - childrenToDelete.length
           showNotification(`Assessment updated successfully (${totalUpdated} total assessments)`, 'success')
           onClose()
@@ -262,262 +284,283 @@ const AssessmentEditModal: React.FC<AssessmentEditModalProps> = ({
     } catch (err) {
       console.error('Error updating assessment:', err)
       showNotification('Error updating assessment', 'error')
+    } finally {
+      setSubmitting(false)
     }
   }
 
+  const visibleChildren = childrenData.filter(child => !child.toDelete)
+
+  /** Writes fields of a child row, matched by id rather than by filtered index. */
+  const updateChild = (
+    assessmentId: string,
+    patch: { name?: string; weightPoints?: string; maxScore?: string; date?: string }
+  ) => {
+    setChildrenData(prev =>
+      prev.map(child => (child.assessmentId === assessmentId ? { ...child, ...patch } : child))
+    )
+  }
+
+  const pointsField = (
+    <Field
+      label="Points toward final grade"
+      htmlFor="assessment-edit-points"
+      hint="What this assessment contributes to the final grade."
+      required
+    >
+      <input
+        id="assessment-edit-points"
+        type="number"
+        required
+        value={weightPoints}
+        onChange={(e) => setWeightPoints(e.target.value)}
+        className={inputClass}
+        placeholder="e.g. 15"
+        min={0}
+        step={0.01}
+      />
+    </Field>
+  )
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto">
-      <h2 className="text-xl mb-4 text-black">
-        Edit {assessment.isParent ? 'Multiple ' : ''}Assessment
-      </h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4 text-black">
-        {/* Name field */}
-        <div>
-          <label className="block text-sm font-medium">Name</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-            placeholder="e.g. Midterm Exam"
-          />
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title={assessment.isParent ? 'Edit multiple assessment' : 'Edit assessment'}
+        subtitle={assessment.name}
+        icon={PencilSquareIcon}
+      />
 
-        {/* Points toward final grade */}
-        <div>
-          <label className="block text-sm font-medium">Points toward final grade</label>
-          <input
-            type="number"
-            required
-            value={weightPoints}
-            onChange={(e) => setWeightPoints(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-            placeholder="e.g. 15"
-            min={0}
-            step={0.01}
-          />
-          <p className="text-xs text-gray-500 mt-1">How many points this assessment contributes to the final grade</p>
-        </div>
-
-        {/* Maximum score field - only for standalone assessments */}
-        {!assessment.isParent && (
-          <div>
-            <label className="block text-sm font-medium">Maximum score</label>
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <Field label="Name" htmlFor="assessment-edit-name" required>
             <input
-              type="number"
+              id="assessment-edit-name"
               required
-              value={maxScore}
-              onChange={(e) => setMaxScore(e.target.value)}
-              className="w-full border rounded px-2 py-1"
-              placeholder="e.g. 40"
-              min={0}
-              step={0.01}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              placeholder="e.g. Midterm Exam"
             />
-            <p className="text-xs text-gray-500 mt-1">Total points possible (e.g., 40 for a test out of 40)</p>
-          </div>
-        )}
+          </Field>
 
-        {/* Date field */}
-        <div>
-          <label className="block text-sm font-medium">Assessment Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full border rounded px-2 py-1"
-          />
-          <p className="text-xs text-gray-500 mt-1">When was this assessment conducted? (optional)</p>
-        </div>
+          {/* Maximum score only applies to standalone assessments — a multiple
+              assessment is scored through its individual items. */}
+          {assessment.isParent ? (
+            pointsField
+          ) : (
+            <FieldRow>
+              {pointsField}
+              <Field
+                label="Maximum score"
+                htmlFor="assessment-edit-max-score"
+                hint="Total points possible, e.g. 40 for a test out of 40."
+                required
+              >
+                <input
+                  id="assessment-edit-max-score"
+                  type="number"
+                  required
+                  value={maxScore}
+                  onChange={(e) => setMaxScore(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. 40"
+                  min={0}
+                  step={0.01}
+                />
+              </Field>
+            </FieldRow>
+          )}
 
-        {/* Individual assessments editing - only for multiple assessments */}
-        {assessment.isParent && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Individual Assessments</label>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newChild = {
-                      assessmentId: `temp-${Date.now()}`, // Temporary ID for new assessment
-                      name: '',
-                      weightPoints: '0',
-                      maxScore: '100',
-                      sortOrder: childrenData.length + 1,
-                      date: date, // Use parent's date as default
-                      isNew: true
-                    }
-                    setChildrenData(prev => [...prev, newChild])
-                  }}
-                  className="text-xs text-white hover:text-green-800 cursor-pointer px-2 py-1 border bg-green-500 rounded"
-                >
-                  + Add Individual
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const activeChildren = childrenData.filter(child => !child.toDelete)
-                    const parentPoints = parseFloat(weightPoints) || 0
-                    const equalPoints = activeChildren.length > 0 ? (parentPoints / activeChildren.length).toFixed(2) : '0'
-                    setChildrenData(prev => prev.map(child => child.toDelete ? child : ({ 
-                      ...child, 
-                      weightPoints: equalPoints 
-                    })))
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
-                >
-                  Distribute points equally
-                </button>
+          <Field
+            label="Assessment date"
+            htmlFor="assessment-edit-date"
+            hint="Optional — when the assessment was written."
+          >
+            <input
+              id="assessment-edit-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+
+          {/* Individual assessments editing - only for multiple assessments */}
+          {assessment.isParent && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Individual assessments
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const activeChildren = childrenData.filter(child => !child.toDelete)
+                      const parentPoints = parseFloat(weightPoints) || 0
+                      const equalPoints = activeChildren.length > 0 ? (parentPoints / activeChildren.length).toFixed(2) : '0'
+                      setChildrenData(prev => prev.map(child => child.toDelete ? child : ({
+                        ...child,
+                        weightPoints: equalPoints
+                      })))
+                    }}
+                  >
+                    Split points evenly
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const newChild = {
+                        assessmentId: `temp-${Date.now()}`, // Temporary ID for new assessment
+                        name: '',
+                        weightPoints: '0',
+                        maxScore: '100',
+                        sortOrder: childrenData.length + 1,
+                        date: date, // Use parent's date as default
+                        isNew: true
+                      }
+                      setChildrenData(prev => [...prev, newChild])
+                    }}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Add one
+                  </Button>
+                </div>
               </div>
-            </div>
-            
-            <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-              {/* Header row */}
-              <div className="flex space-x-2 items-center text-xs text-gray-600 font-medium border-b pb-1">
-                <div className="w-8 text-center">#</div>
-                <div className="flex-1">Assessment Name</div>
-                <div className="w-20 text-center">Points</div>
-                <div className="w-12"></div>
-                <div className="w-20 text-center">Out of</div>
-                <div className="w-24 text-center">Date</div>
-                <div className="w-16 text-center">Actions</div>
-              </div>
-              
-              {childrenData.filter(child => !child.toDelete).length === 0 ? (
-                <div className="text-center py-6 text-gray-500">
-                  <p className="text-sm">No individual assessments yet.</p>
-                  <p className="text-xs mt-1">Click &quot;+ Add Individual&quot; to create sub-assessments.</p>
+
+              {visibleChildren.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
+                  <p className="text-sm text-slate-500">No individual assessments yet.</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Add one for each item students are marked on — a quiz, a lab, a recitation.
+                  </p>
                 </div>
               ) : (
-                childrenData.filter(child => !child.toDelete).map((child, index) => (
-                <div key={child.assessmentId} className={`flex space-x-2 items-center p-2 rounded border ${
-                  child.isNew ? 'bg-green-50 border-green-200' : 'bg-white'
-                }`}>
-                  <div className="w-8 text-center text-sm text-gray-500 font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={child.name}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
-                        newChildren[actualIndex].name = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                      placeholder={`Assessment ${index + 1}`}
-                      required
-                    />
-                  </div>
-                  <div className="w-20">
-                    <input
-                      type="number"
-                      value={child.weightPoints}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
-                        newChildren[actualIndex].weightPoints = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm text-center"
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500 w-12">pts</div>
-                  <div className="w-20">
-                    <input
-                      type="number"
-                      value={child.maxScore}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
-                        newChildren[actualIndex].maxScore = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm text-center"
-                      placeholder="100"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="w-24">
-                    <input
-                      type="date"
-                      value={child.date}
-                      onChange={(e) => {
-                        const newChildren = [...childrenData]
-                        const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
-                        newChildren[actualIndex].date = e.target.value
-                        setChildrenData(newChildren)
-                      }}
-                      className="w-full border rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <div className="w-16 text-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (child.isNew) {
-                          // Remove new assessment from array
-                          setChildrenData(prev => prev.filter(c => c.assessmentId !== child.assessmentId))
-                        } else {
-                          // Mark existing assessment for deletion
-                          const newChildren = [...childrenData]
-                          const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
-                          newChildren[actualIndex].toDelete = true
-                          setChildrenData(newChildren)
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-800 font-bold text-lg px-1 cursor-pointer"
-                      title="Delete this individual assessment"
+                <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                  {visibleChildren.map((child, index) => (
+                    <div
+                      key={child.assessmentId}
+                      className={`space-y-2.5 rounded-xl border p-3 ${
+                        child.isNew
+                          ? 'border-emerald-200 bg-emerald-50/60'
+                          : 'border-slate-200 bg-slate-50/70'
+                      }`}
                     >
-                      ×
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                          {index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={child.name}
+                          onChange={(e) => updateChild(child.assessmentId, { name: e.target.value })}
+                          className={inputClass}
+                          placeholder={`Assessment ${index + 1}`}
+                          aria-label={`Individual assessment ${index + 1} name`}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (child.isNew) {
+                              // Remove new assessment from array
+                              setChildrenData(prev => prev.filter(c => c.assessmentId !== child.assessmentId))
+                            } else {
+                              // Mark existing assessment for deletion
+                              const newChildren = [...childrenData]
+                              const actualIndex = newChildren.findIndex(c => c.assessmentId === child.assessmentId)
+                              newChildren[actualIndex].toDelete = true
+                              setChildrenData(newChildren)
+                            }
+                          }}
+                          className="flex-shrink-0 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                          title="Delete this individual assessment"
+                          aria-label={`Delete individual assessment ${index + 1}`}
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pl-8">
+                        <div className="min-w-0">
+                          <MicroLabel htmlFor={`edit-child-points-${child.assessmentId}`}>
+                            Points
+                          </MicroLabel>
+                          <input
+                            id={`edit-child-points-${child.assessmentId}`}
+                            type="number"
+                            value={child.weightPoints}
+                            onChange={(e) => updateChild(child.assessmentId, { weightPoints: e.target.value })}
+                            className={inputClass}
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                            required
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <MicroLabel htmlFor={`edit-child-max-${child.assessmentId}`}>
+                            Out of
+                          </MicroLabel>
+                          <input
+                            id={`edit-child-max-${child.assessmentId}`}
+                            type="number"
+                            value={child.maxScore}
+                            onChange={(e) => updateChild(child.assessmentId, { maxScore: e.target.value })}
+                            className={inputClass}
+                            placeholder="100"
+                            min="0"
+                            step="0.01"
+                            required
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <MicroLabel htmlFor={`edit-child-date-${child.assessmentId}`}>
+                            Date
+                          </MicroLabel>
+                          <input
+                            id={`edit-child-date-${child.assessmentId}`}
+                            type="date"
+                            value={child.date}
+                            onChange={(e) => updateChild(child.assessmentId, { date: e.target.value })}
+                            className={inputClass}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                ))
               )}
-            </div>
 
-            {/* Child points validation message */}
-            {childPointsError && (
-              <p className={`text-xs mt-1 ${
-                childPointsError.includes('must not exceed') ? 'text-red-600' : 'text-yellow-600'
-              }`}>
-                {childPointsError}
+              {/* Child points validation message */}
+              {childPointsError && (
+                <p
+                  className={`text-xs ${
+                    childPointsError.includes('must not exceed') ? 'text-rose-600' : 'text-amber-600'
+                  }`}
+                >
+                  {childPointsError}
+                </p>
+              )}
+
+              <p className="text-xs text-slate-400">
+                Individual points should add up to the multiple assessment’s points. Each one also
+                needs a maximum score — what it is marked out of.
               </p>
-            )}
-            
-            <p className="text-xs text-gray-500">
-              Individual points should total the multiple assessment points. Each individual assessment also needs a maximum score (how many points the assessment is out of).
-            </p>
-            
-          </div>
-        )}
+            </section>
+          )}
+        </ModalBody>
 
-        {/* Buttons */}
-        <div className="flex justify-end space-x-4 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"
-          >
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 cursor-pointer"
-          >
-            Update Assessment
-          </button>
-        </div>
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting}>
+            {submitting ? 'Saving' : 'Save changes'}
+          </Button>
+        </ModalFooter>
       </form>
     </Modal>
   )

@@ -6,6 +6,16 @@ import Modal from '../../../shared/modal' // adjust the path if needed
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { unenrollStudentFromClass } from '@/services/classService'
 import { StudentPayload } from '@/services/types/student'
+import { getGradeDisplayName } from '@/lib/schoolUtils'
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RecordFacts,
+} from '../../../shared/modalKit'
+import { UserMinusIcon } from '@heroicons/react/24/outline'
 
 interface ClassUnenrollStudentModalProps {
   isOpen: boolean
@@ -45,28 +55,40 @@ const ClassUnenrollStudentModal: React.FC<ClassUnenrollStudentModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-xl mb-4 text-black">Confirm Removal</h2>
-      <p className="text-black">
-        Are you sure you want to unenroll <strong>{student.name}</strong> (Grade{' '}
-        {student.grade}) from this class?
-      </p>
-      <div className="flex justify-end space-x-4 pt-6">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
-        >
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Remove student from class"
+        subtitle="They stay in the school and in their other classes."
+        icon={UserMinusIcon}
+        tone="danger"
+      />
+
+      <ModalBody>
+        <ConfirmBody tone="danger">
+          <strong className="font-semibold text-slate-900">{student.name}</strong> comes off this
+          class roster, gradebook, and attendance list. Existing scores and attendance records are
+          kept, so enrolling them again brings the work back.
+        </ConfirmBody>
+
+        <RecordFacts
+          facts={[
+            { label: 'Student', value: student.name },
+            {
+              label: 'Grade',
+              value: student.grade ? getGradeDisplayName(student.grade) : 'Not assigned',
+            },
+          ]}
+        />
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleUnenroll}
-          disabled={loading}
-          className="px-4 py-2 bg-cyan-700 text-white rounded-md hover:bg-cyan-800 transition cursor-pointer"
-        >
-          {loading ? 'Removing...' : 'Unenroll'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={handleUnenroll} loading={loading}>
+          {loading ? 'Removing' : 'Remove student'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

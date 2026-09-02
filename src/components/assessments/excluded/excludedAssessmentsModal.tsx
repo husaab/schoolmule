@@ -7,7 +7,15 @@ import { createExclusion, deleteExclusion, getExclusionsByStudentAndClass } from
 import { AssessmentPayload } from '@/services/types/assessment'
 import { ExcludedAssessmentPayload } from '@/services/excludedAssessmentService'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { TrashIcon } from '@heroicons/react/24/outline'
+import {
+  Button,
+  FormSection,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  selectClass,
+} from '../../shared/modalKit'
+import { NoSymbolIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 interface ExcludedAssessmentsModalProps {
   isOpen: boolean
@@ -32,6 +40,8 @@ const ExcludedAssessmentsModal: React.FC<ExcludedAssessmentsModalProps> = ({
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [adding, setAdding] = useState(false)
+  // Which exclusion is mid-removal, so its row can show progress and the rest stay put
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -98,9 +108,10 @@ const ExcludedAssessmentsModal: React.FC<ExcludedAssessmentsModalProps> = ({
   }
 
   const handleDeleteExclusion = async (assessmentId: string) => {
+    setRemovingId(assessmentId)
     try {
       const res = await deleteExclusion(studentId, classId, assessmentId)
-      
+
       if (res.status === 'success') {
         showNotification('Exclusion removed successfully', 'success')
         await loadExclusions() // Refresh the list
@@ -111,11 +122,13 @@ const ExcludedAssessmentsModal: React.FC<ExcludedAssessmentsModalProps> = ({
     } catch (error) {
       console.error('Error removing exclusion:', error)
       showNotification('Error removing exclusion', 'error')
+    } finally {
+      setRemovingId(null)
     }
   }
 
   // Get available assessments (not already excluded)
-  const availableAssessments = assessments.filter(assessment => 
+  const availableAssessments = assessments.filter(assessment =>
     !exclusions.some(exclusion => exclusion.assessmentId === assessment.assessmentId)
   )
 
@@ -124,123 +137,128 @@ const ExcludedAssessmentsModal: React.FC<ExcludedAssessmentsModalProps> = ({
     return assessments.find(a => a.assessmentId === assessmentId)
   }
 
+  const busy = adding || removingId !== null
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto">
-      <h2 className="text-xl mb-4 text-black">
-        Excluded Assessments for {studentName}
-      </h2>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
+      <ModalHeader
+        title="Excluded assessments"
+        subtitle={studentName}
+        icon={NoSymbolIcon}
+        tone="warning"
+      />
 
-      {loading ? (
-        <div className="text-center py-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading exclusions...</p>
-        </div>
-      ) : (
-        <div className="space-y-6 text-black">
-          {/* Add Exclusion Section */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="text-lg font-medium mb-3">Add Exclusion</h3>
-            
-            <div className="flex space-x-3">
-              <div className="flex-1">
-                <select
-                  value={selectedAssessmentId}
-                  onChange={(e) => setSelectedAssessmentId(e.target.value)}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={adding}
+      <ModalBody className="space-y-6">
+        {loading ? (
+          <div className="space-y-3" aria-label="Loading exclusions">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : (
+          <>
+            <FormSection label="Exclude an assessment">
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <select
+                    value={selectedAssessmentId}
+                    onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                    className={selectClass}
+                    disabled={adding}
+                    aria-label="Assessment to exclude"
+                  >
+                    <option value="">Select an assessment</option>
+                    {availableAssessments.map((assessment) => (
+                      <option key={assessment.assessmentId} value={assessment.assessmentId}>
+                        {assessment.name} ({assessment.weightPoints || assessment.weightPercent || 0} pts)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleAddExclusion}
+                  disabled={!selectedAssessmentId}
+                  loading={adding}
                 >
-                  <option value="">Select an assessment to exclude...</option>
-                  {availableAssessments.map((assessment) => (
-                    <option key={assessment.assessmentId} value={assessment.assessmentId}>
-                      {assessment.name} ({assessment.weightPoints || assessment.weightPercent || 0} pts)
-                    </option>
-                  ))}
-                </select>
+                  {adding ? 'Excluding' : 'Exclude'}
+                </Button>
               </div>
-              
-              <button
-                onClick={handleAddExclusion}
-                disabled={!selectedAssessmentId || adding}
-                className={`px-4 py-2 rounded text-white cursor-pointer ${
-                  !selectedAssessmentId || adding
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {adding ? 'Adding...' : 'Add'}
-              </button>
-            </div>
 
-            {availableAssessments.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">
-                All assessments are already excluded for this student.
-              </p>
-            )}
-          </div>
+              {availableAssessments.length === 0 && (
+                <p className="text-xs text-slate-400">
+                  Every assessment in this class is already excluded for {studentName}.
+                </p>
+              )}
+            </FormSection>
 
-          {/* Current Exclusions Section */}
-          <div>
-            <h3 className="text-lg font-medium mb-3">Current Exclusions</h3>
-            
-            {exclusions.length === 0 ? (
-              <div className="text-center py-6 text-gray-500 border rounded-lg">
-                <p>No assessments are currently excluded for this student.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {exclusions.map((exclusion) => {
-                  const assessment = getAssessmentDetails(exclusion.assessmentId)
-                  return (
-                    <div
-                      key={exclusion.assessmentId}
-                      className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-gray-50"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {assessment?.name || 'Unknown Assessment'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {assessment?.weightPoints || assessment?.weightPercent || 0} points
-                          {assessment?.isParent && ' (Multiple Assessment)'}
-                          {assessment?.date && ` • ${new Date(assessment.date).toLocaleDateString()}`}
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => handleDeleteExclusion(exclusion.assessmentId)}
-                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded cursor-pointer"
-                        title="Remove exclusion"
+            <FormSection label="Currently excluded">
+              {exclusions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
+                  <p className="text-sm text-slate-500">Nothing is excluded yet.</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Pick an assessment above to drop it from this student’s grade.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {exclusions.map((exclusion) => {
+                    const assessment = getAssessmentDetails(exclusion.assessmentId)
+                    const removing = removingId === exclusion.assessmentId
+                    return (
+                      <div
+                        key={exclusion.assessmentId}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-3.5 py-2.5"
                       >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )
-                })}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-slate-800">
+                            {assessment?.name || 'Unknown assessment'}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500">
+                            {assessment?.weightPoints || assessment?.weightPercent || 0} points
+                            {assessment?.isParent && ' · Multiple assessment'}
+                            {assessment?.date && ` · ${new Date(assessment.date).toLocaleDateString()}`}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => handleDeleteExclusion(exclusion.assessmentId)}
+                          loading={removing}
+                          disabled={busy}
+                          title="Count this assessment again"
+                        >
+                          {!removing && <TrashIcon className="h-4 w-4" />}
+                          {removing ? 'Removing' : 'Remove'}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </FormSection>
+
+            {exclusions.length > 0 && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">Excluded assessments do not count toward the grade.</p>
+                <p className="mt-1 opacity-90">
+                  The remaining assessments are reweighted proportionally, so this student’s grade is
+                  calculated out of what is left.
+                </p>
               </div>
             )}
-          </div>
+          </>
+        )}
+      </ModalBody>
 
-          {/* Info Message */}
-          {exclusions.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Excluded assessments will not count toward this student&apos;s final grade. 
-                The remaining assessments will be weighted proportionally to calculate their grade.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Close Button */}
-      <div className="flex justify-end pt-4 mt-6 border-t">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 cursor-pointer"
-        >
+      <ModalFooter>
+        <Button variant="primary" onClick={onClose} disabled={busy}>
           Close
-        </button>
-      </div>
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

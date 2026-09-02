@@ -5,6 +5,14 @@ import React, { useState } from 'react'
 import Modal from '../../../../shared/modal' // adjust path if needed
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { bulkUnenrollStudentsFromClass } from '@/services/classService' 
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+} from '../../../../shared/modalKit'
+import { UserMinusIcon } from '@heroicons/react/24/outline'
 
 interface ClassUnenrollAllStudentsModalProps {
   isOpen: boolean
@@ -42,28 +50,41 @@ const ClassUnenrollAllStudentsModal: React.FC<ClassUnenrollAllStudentsModalProps
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-xl mb-4 text-black">Confirm Unenroll All</h2>
-      <p className="text-black">
-        Are you sure you want to unenroll <strong>all students</strong> from this class?
-        This action cannot be undone.
-      </p>
-      <div className="flex justify-end space-x-4 pt-6">
-        <button
-          onClick={onClose}
-          disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 transition cursor-pointer"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Unenroll every student"
+        subtitle="This clears the whole roster in one go."
+        icon={UserMinusIcon}
+        tone="danger"
+      />
+
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'Emptying the roster affects this class only:',
+            items: [
+              'Every student comes off this class roster, gradebook, and attendance list',
+              'The class stops counting toward their report cards until they are enrolled again',
+              'Scores and attendance already recorded are kept, so re-enrolling a student brings their work back',
+              'There is no undo — rebuilding the roster means enrolling students again',
+            ],
+          }}
         >
+          <strong className="font-semibold text-slate-900">All students</strong> will be unenrolled
+          from this class. Students, their grades in other classes, and their school records are not
+          touched.
+        </ConfirmBody>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleUnenrollAll}
-          disabled={loading}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition cursor-pointer"
-        >
-          {loading ? 'Unenrolling…' : 'Unenroll All'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={handleUnenrollAll} loading={loading}>
+          {loading ? 'Unenrolling' : 'Unenroll every student'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

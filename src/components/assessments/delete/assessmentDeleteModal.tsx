@@ -1,11 +1,20 @@
 // File: src/components/assessment/delete/AssessmentDeleteModal.tsx
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Modal from '../../shared/modal'
 import { deleteAssessment } from '@/services/assessmentService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { AssessmentPayload } from '@/services/types/assessment'
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RecordFacts,
+} from '../../shared/modalKit'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface AssessmentDeleteModalProps {
   isOpen: boolean
@@ -21,8 +30,10 @@ const AssessmentDeleteModal: React.FC<AssessmentDeleteModalProps> = ({
   onDeleted,
 }) => {
   const showNotification = useNotificationStore((state) => state.showNotification)
+  const [loading, setLoading] = useState(false)
 
   const handleDelete = async () => {
+    setLoading(true)
     try {
       const res = await deleteAssessment(assessment.assessmentId)
       if (res.status === 'success') {
@@ -35,30 +46,60 @@ const AssessmentDeleteModal: React.FC<AssessmentDeleteModalProps> = ({
     } catch (err) {
       console.error('Error deleting assessment:', err)
       showNotification('Error deleting assessment', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
+  const points = assessment.weightPoints || assessment.weightPercent || 0
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-lg font-semibold mb-4 text-black">Delete Assessment</h2>
-      <p className="text-black mb-6">
-        Are you sure you want to delete <strong>{assessment.name}</strong> ({assessment.weightPoints || assessment.weightPercent || 0} pts)?
-        This will also permanently delete all student scores recorded for this assessment{assessment.isParent ? ' and its individual assessments' : ''}.
-      </p>
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 cursor-pointer"
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Delete assessment"
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
+      />
+
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'Deleting removes it from the gradebook for good:',
+            items: [
+              'Every score students have on this assessment',
+              ...(assessment.isParent
+                ? ['Its individual assessments, and their scores too']
+                : []),
+              `The ${points} point${points === 1 ? '' : 's'} it carried — remaining assessments reweight to fill the gap`,
+            ],
+          }}
         >
+          <strong className="font-semibold text-slate-900">{assessment.name}</strong> will be
+          permanently deleted from this class. To leave it in place but drop it for one student,
+          exclude it from that student instead.
+        </ConfirmBody>
+
+        <RecordFacts
+          facts={[
+            { label: 'Points', value: `${points} pts` },
+            {
+              label: 'Type',
+              value: assessment.isParent ? 'Multiple assessment' : 'Standalone assessment',
+            },
+          ]}
+        />
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleDelete}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 cursor-pointer"
-        >
-          Delete
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={handleDelete} loading={loading}>
+          {loading ? 'Deleting' : 'Delete assessment'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

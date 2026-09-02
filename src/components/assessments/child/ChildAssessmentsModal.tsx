@@ -7,6 +7,20 @@ import { StudentPayload } from '@/services/types/student'
 import { createExclusion, deleteExclusion } from '@/services/excludedAssessmentService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import type { AssessmentPublicationState } from '@/services/types/assessmentPublication'
+import {
+  Button,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  inputClass,
+} from '../../shared/modalKit'
+import {
+  ArrowPathIcon,
+  CheckIcon,
+  ExclamationTriangleIcon,
+  Squares2X2Icon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline'
 
 interface ScoreRow {
   student_id: string
@@ -58,6 +72,9 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   // Individual items are publishable on their own, so they get the same
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
+  // Which student|assessment cell is mid exclusion toggle, so the cell can show
+  // progress instead of looking inert while the round trip runs.
+  const [togglingKey, setTogglingKey] = useState<string | null>(null)
 
   const toggleChildSelected = (assessmentId: string) => {
     setSelectedChildIds((prev) => {
@@ -83,36 +100,36 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
     let totalPoints = 0
     let maxPossiblePoints = 0
     let totalActiveWeight = 0
-    
+
     childAssessments.forEach(child => {
       const key = `${studentId}|${child.assessmentId}`
       const isExcluded = exclusionMap[key] || false
-      
+
       if (isExcluded) {
         // Skip excluded child assessments
         return
       }
-      
+
       const rawValue = editedScores[key] !== undefined
         ? editedScores[key]
         : existingScoreMap[key] ?? null
-      
+
       const rawScore = typeof rawValue === 'number' ? rawValue : (rawValue ? parseFloat(String(rawValue)) : 0)
-      
+
       // Get weight points (how many points this assessment contributes to parent)
       const childPoints = Number(child.weightPoints || child.weightPercent || 0)
       // Use the actual maxScore, not the convoluted logic
       const maxScore = Number(child.maxScore || 100)
-      
+
       // Convert raw score to percentage, then multiply by weight points
       const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
       const earnedPoints = percentage * childPoints
-      
+
       totalPoints += earnedPoints
       maxPossiblePoints += childPoints
       totalActiveWeight += childPoints
     })
-    
+
     // If some assessments are excluded, redistribute proportionally
     const parentTotalPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
     if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
@@ -121,7 +138,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
       totalPoints = totalPoints * scaleFactor
       maxPossiblePoints = parentTotalPoints
     }
-    
+
     // Return earned/total format for display
     return { earned: totalPoints, total: maxPossiblePoints }
   }
@@ -133,6 +150,38 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }, 0)
   const parentPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
   const pointsWarning = Math.abs(totalChildPoints - parentPoints) > 0.01
+  const parentPublished = publications[parentAssessment.assessmentId]?.isPublished
+
+  const handleToggleExclusion = async (
+    key: string,
+    studentId: string,
+    assessmentId: string,
+    isExcluded: boolean
+  ) => {
+    setTogglingKey(key)
+    try {
+      if (isExcluded) {
+        // Include the assessment
+        await deleteExclusion(studentId, classId, assessmentId)
+        showNotification('Assessment included', 'success')
+      } else {
+        // Exclude the assessment
+        await createExclusion({
+          studentId: studentId,
+          classId: classId,
+          assessmentId: assessmentId
+        })
+        showNotification('Assessment excluded', 'success')
+      }
+      // Refresh exclusions and scores
+      await onRefreshExclusions()
+    } catch (error) {
+      console.error('Error toggling exclusion:', error)
+      showNotification('Failed to update exclusion', 'error')
+    } finally {
+      setTogglingKey(null)
+    }
+  }
 
   const handleArrowNav = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -184,109 +233,109 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-6xl w-11/12 max-h-[90vh] overflow-y-auto">
-      <div className="text-black">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">
-              {parentAssessment.name} - Individual Assessments
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Total worth: {parentAssessment.weightPoints || parentAssessment.weightPercent || 0} points | Individual assessments: {childAssessments.length}
-            </p>
-            {pointsWarning && (
-              <p className="text-sm text-red-600 mt-1">
-                ⚠️ Individual points total {totalChildPoints} (should equal multiple assessment {parentPoints})
-              </p>
-            )}
-            <p className="text-sm mt-1">
-              {publications[parentAssessment.assessmentId]?.isPublished ? (
-                <span className="text-emerald-600">✓ This category is live to parents.</span>
-              ) : (
-                <span className="text-gray-400">This category is not published to parents yet.</span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {selectedChildren.length > 0 && (
-              <button
-                onClick={() => {
-                  onPublish(selectedChildren)
-                  setSelectedChildIds(new Set())
-                }}
-                className="px-4 py-2 text-sm font-medium rounded-xl bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer shadow-sm"
-                title="Publish only the selected individual assessments"
-              >
-                Publish {selectedChildren.length} selected
-              </button>
-            )}
-            <button
-              onClick={() => onPublish([parentAssessment])}
-              className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer shadow-sm"
-              title="Publish this category and every graded item inside it"
-            >
-              {publications[parentAssessment.assessmentId]?.isPublished
-                ? 'Manage category'
-                : 'Publish category'}
-            </button>
-          </div>
+    // Wider than the rest of the set on purpose: this one is a grade grid, and
+    // every individual assessment needs its own column.
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-6xl">
+      <ModalHeader
+        title={parentAssessment.name}
+        subtitle={`${parentPoints} points across ${childAssessments.length} individual assessment${childAssessments.length === 1 ? '' : 's'}`}
+        icon={Squares2X2Icon}
+      />
+
+      <ModalBody className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {parentPublished ? (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-sm font-medium text-emerald-700">
+              <CheckIcon className="h-4 w-4" />
+              Live to parents
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-sm text-slate-500 ring-1 ring-slate-200">
+              Not published to parents yet
+            </span>
+          )}
         </div>
 
+        {pointsWarning && (
+          <div className="flex gap-2.5 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-amber-900">
+            <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p className="text-sm">
+              Individual points total {totalChildPoints}, but the category is worth {parentPoints}.
+              Edit the category to bring them back in line.
+            </p>
+          </div>
+        )}
+
         {childAssessments.length === 0 ? (
-          <p className="text-gray-600 text-center py-8">
-            This multiple assessment has no individual assessments.
-          </p>
+          <div className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center">
+            <p className="text-sm text-slate-500">
+              This multiple assessment has no individual assessments yet.
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Edit the assessment to add the items students are marked on.
+            </p>
+          </div>
         ) : (
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full table-auto whitespace-nowrap">
-              <thead className="bg-gray-100">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="sticky top-0 z-30 px-4 py-2 text-left text-gray-700 sticky left-0 bg-gray-100 z-10">
-                    Student Name
+                  <th className="sticky left-0 z-10 bg-slate-50 px-4 py-2 text-left text-sm font-semibold text-slate-600">
+                    Student
                   </th>
-                  {childAssessments.map((child) => (
-                    <th
-                      key={child.assessmentId}
-                      className="px-4 py-2 text-center text-gray-700 whitespace-nowrap"
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <input
-                          type="checkbox"
-                          checked={selectedChildIds.has(child.assessmentId)}
-                          onChange={() => toggleChildSelected(child.assessmentId)}
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-400 cursor-pointer"
-                          title="Select this assessment to publish on its own"
-                        />
-                        <div className="truncate">{child.name}</div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        ({child.weightPoints || child.weightPercent || 0} pts)
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        Order: {child.sortOrder || '-'}
-                      </div>
-                      {/* Status, and a way straight into managing just this
-                          one — an individual item can be published or pulled
-                          back without touching the rest of the category. */}
-                      <button
-                        onClick={() => onPublish([child])}
-                        className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded border cursor-pointer transition-colors ${
-                          publications[child.assessmentId]?.isPublished
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-white text-slate-500 border-slate-300 border-dashed hover:bg-slate-50'
-                        }`}
-                        title={
-                          publications[child.assessmentId]?.isPublished
-                            ? 'Live to parents — click to manage or unpublish this item'
-                            : 'Not visible to parents — click to publish just this item'
-                        }
+                  {childAssessments.map((child) => {
+                    const childPublished = publications[child.assessmentId]?.isPublished
+                    return (
+                      <th
+                        key={child.assessmentId}
+                        className="whitespace-nowrap px-4 py-2 text-center align-top"
                       >
-                        {publications[child.assessmentId]?.isPublished ? '● Live · manage' : '+ Publish'}
-                      </button>
-                    </th>
-                  ))}
-                  <th className="px-4 py-2 text-center text-gray-700 bg-blue-50">
-                    Multiple Score
+                        <label className="flex cursor-pointer items-center justify-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedChildIds.has(child.assessmentId)}
+                            onChange={() => toggleChildSelected(child.assessmentId)}
+                            className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            title="Select this assessment to publish on its own"
+                          />
+                          <span className="truncate text-sm font-semibold text-slate-700">
+                            {child.name}
+                          </span>
+                        </label>
+                        <div className="mt-0.5 text-xs font-normal text-slate-500">
+                          {child.weightPoints || child.weightPercent || 0} pts · order{' '}
+                          {child.sortOrder || '—'}
+                        </div>
+                        {/* Status, and a way straight into managing just this
+                            one — an individual item can be published or pulled
+                            back without touching the rest of the category. */}
+                        <button
+                          onClick={() => onPublish([child])}
+                          className={`mt-1 inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium transition-colors ${
+                            childPublished
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              : 'border-dashed border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                          }`}
+                          title={
+                            childPublished
+                              ? 'Live to parents — click to manage or unpublish this item'
+                              : 'Not visible to parents — click to publish just this item'
+                          }
+                        >
+                          {childPublished ? (
+                            <>
+                              <CheckIcon className="h-3 w-3" />
+                              Live · manage
+                            </>
+                          ) : (
+                            'Publish'
+                          )}
+                        </button>
+                      </th>
+                    )
+                  })}
+                  <th className="bg-cyan-50/70 px-4 py-2 text-center text-sm font-semibold text-slate-600">
+                    Category score
                   </th>
                 </tr>
               </thead>
@@ -296,9 +345,9 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                   <tr>
                     <td
                       colSpan={childAssessments.length + 2}
-                      className="px-4 py-6 text-center text-gray-600"
+                      className="px-4 py-8 text-center text-sm text-slate-500"
                     >
-                      No students are currently enrolled in this class.
+                      No students are enrolled in this class yet — add them from the class roster.
                     </td>
                   </tr>
                 ) : (
@@ -307,15 +356,16 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                     return (
                       <tr
                         key={student.studentId}
-                        className="border-t border-gray-100 hover:bg-gray-50"
+                        className="border-t border-slate-100 hover:bg-slate-50/70"
                       >
-                        <td className="sticky top-0 z-30 px-4 py-2 text-gray-800 font-medium sticky left-0 bg-white z-10">
+                        <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm font-medium text-slate-800">
                           {student.name}
                         </td>
 
                         {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
                           const isExcluded = exclusionMap[key] || false
+                          const isToggling = togglingKey === key
                           const currentValue = editedScores[key] !== undefined
                             ? editedScores[key]
                             : existingScoreMap[key] ?? ''
@@ -325,78 +375,72 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           return (
                             <td
                               key={child.assessmentId}
-                              className={`px-1 py-1 text-center relative group ${
-                                isExcluded ? 'text-gray-400' : 'text-gray-800'
-                              }`}
+                              className="group relative px-2 py-1.5 text-center"
                             >
                               {/* Hover-triggered exclusion toggle button */}
                               <button
-                                onClick={async () => {
-                                  try {
-                                    if (isExcluded) {
-                                      // Include the assessment
-                                      await deleteExclusion(student.studentId, classId, child.assessmentId)
-                                      showNotification('Assessment included', 'success')
-                                    } else {
-                                      // Exclude the assessment
-                                      await createExclusion({
-                                        studentId: student.studentId,
-                                        classId: classId,
-                                        assessmentId: child.assessmentId
-                                      })
-                                      showNotification('Assessment excluded', 'success')
-                                    }
-                                    // Refresh exclusions and scores
-                                    await onRefreshExclusions()
-                                  } catch (error) {
-                                    console.error('Error toggling exclusion:', error)
-                                    showNotification('Failed to update exclusion', 'error')
-                                  }
-                                }}
-                                className={`absolute top-0 right-0 w-3 h-3 cursor-pointer rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 z-10 opacity-0 group-hover:opacity-100 mt-1 mr-1 ${
-                                  isExcluded 
-                                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                                    : 'bg-red-500 text-white hover:bg-red-600'
+                                onClick={() =>
+                                  handleToggleExclusion(key, student.studentId, child.assessmentId, isExcluded)
+                                }
+                                disabled={togglingKey !== null}
+                                className={`absolute right-1 top-1 z-10 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed ${
+                                  isToggling ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                } ${
+                                  isExcluded
+                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                    : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
                                 }`}
-                                title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
+                                title={
+                                  isExcluded
+                                    ? 'Count this assessment for this student again'
+                                    : 'Drop this assessment from this student’s grade'
+                                }
                               >
-                                {isExcluded ? '✓' : '×'}
+                                {isToggling ? (
+                                  <ArrowPathIcon className="h-3 w-3 animate-spin" />
+                                ) : isExcluded ? (
+                                  <CheckIcon className="h-3 w-3" />
+                                ) : (
+                                  <XMarkIcon className="h-3 w-3" />
+                                )}
                               </button>
 
                               {isExcluded ? (
                                 <div className="flex items-center justify-center">
-                                  <div className="min-w-16 px-2 border border-gray-300 rounded py-1 text-center bg-gray-100 text-gray-500 text-xs whitespace-nowrap">
+                                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-500">
                                     Excluded
-                                  </div>
+                                  </span>
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-center space-x-1">
-                                  <input
-                                    id={`child-grade-${rowIndex}-${colIndex}`}
-                                    type="number"
-                                    min="0"
-                                    max={maxScore}
-                                    step="1"
-                                    className="w-16 border border-gray-300 rounded p-1 text-center focus:outline-none focus:ring-2 focus:ring-cyan-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    value={currentValue}
-                                    onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
-                                    onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
-                                    onKeyPress={(e) => {
-                                      // Only allow numbers, decimal point, and navigation keys
-                                      if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                                        e.preventDefault()
-                                      }
-                                    }}
-                                    placeholder="0"
-                                  />
-                                  <span className="text-sm text-gray-600">/{maxScore}</span>
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className="w-20">
+                                    <input
+                                      id={`child-grade-${rowIndex}-${colIndex}`}
+                                      type="number"
+                                      min="0"
+                                      max={maxScore}
+                                      step="1"
+                                      className={`${inputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                                      value={currentValue}
+                                      onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                                      onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
+                                      onKeyPress={(e) => {
+                                        // Only allow numbers, decimal point, and navigation keys
+                                        if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                                          e.preventDefault()
+                                        }
+                                      }}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <span className="text-sm text-slate-400">/{maxScore}</span>
                                 </div>
                               )}
                             </td>
                           )
                         })}
 
-                        <td className="px-4 py-2 text-center text-blue-800 font-medium bg-blue-50">
+                        <td className="bg-cyan-50/70 px-4 py-2 text-center text-sm font-medium text-cyan-800">
                           {parentScore.earned.toFixed(1)}/{parentAssessment.weightPoints || parentAssessment.weightPercent || 0}
                         </td>
                       </tr>
@@ -408,13 +452,38 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
           </div>
         )}
 
-        <div className="mt-4 text-xs text-gray-500">
-          <p>• Use arrow keys (↑↓←→) to navigate between grade cells, Enter to move down</p>
-          <p>• Individual assessment scores are weighted by their point values to calculate the total score</p>
-          <p>• Changes are automatically reflected in the main gradebook</p>
-          <p>• Remember to save changes in the main gradebook when finished</p>
-        </div>
-      </div>
+        <ul className="space-y-1 text-xs text-slate-400">
+          <li>Arrow keys move between score cells; Enter moves down.</li>
+          <li>Each score is weighted by its points to make up the category score.</li>
+          <li>Hover a cell to drop that assessment from one student’s grade.</li>
+          <li>Save from the main gradebook when you are done — scores are not saved here.</li>
+        </ul>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => onPublish([parentAssessment])}
+          title="Publish this category and every graded item inside it"
+        >
+          {parentPublished ? 'Manage category' : 'Publish category'}
+        </Button>
+        {selectedChildren.length > 0 && (
+          <Button
+            variant="primary"
+            onClick={() => {
+              onPublish(selectedChildren)
+              setSelectedChildIds(new Set())
+            }}
+            title="Publish only the selected individual assessments"
+          >
+            Publish {selectedChildren.length} selected
+          </Button>
+        )}
+      </ModalFooter>
     </Modal>
   )
 }

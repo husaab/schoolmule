@@ -1,11 +1,20 @@
-// File: src/components/terms/delete/TermDeleteModal.tsx
+// File: src/components/terms/delete/termDeleteModal.tsx
 'use client'
 
 import React, { useState } from 'react'
 import Modal from '../../shared/modal'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { deleteTerm } from '@/services/termService'
+import { deleteTerm, formatTermDateRange } from '@/services/termService'
 import type { TermPayload } from '@/services/types/term'
+import {
+  Button,
+  ConfirmBody,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  RecordFacts,
+} from '../../shared/modalKit'
+import { TrashIcon } from '@heroicons/react/24/outline'
 
 interface TermDeleteModalProps {
   isOpen: boolean
@@ -43,31 +52,49 @@ const TermDeleteModal: React.FC<TermDeleteModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="p-6 max-w-sm w-11/12">
-      <h2 className="text-xl mb-4 text-black">Confirm Delete</h2>
-      <p className="text-black mb-6">
-        Are you sure you want to delete the term &ldquo;
-        <span className="font-semibold">{term.name}</span>&rdquo; for {term.academicYear}?
-      </p>
-      <p className="text-sm text-red-600 mb-6">
-        This action cannot be undone. All classes associated with this term will also be affected.
-      </p>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
+      <ModalHeader
+        title="Delete term"
+        subtitle="This cannot be undone."
+        icon={TrashIcon}
+        tone="danger"
+      />
 
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition cursor-pointer"
+      <ModalBody>
+        <ConfirmBody
+          tone="danger"
+          consequences={{
+            title: 'What deleting this term does:',
+            items: [
+              'Classes stay where they are — nothing is moved to another term',
+              'Gradebooks, report cards, and analytics can no longer be filtered by it',
+              ...(term.isActive
+                ? ['No other term is activated in its place — pick a new active term afterwards']
+                : []),
+            ],
+          }}
         >
+          <strong className="font-semibold text-slate-900">{term.name}</strong> ({term.academicYear})
+          will be permanently removed from your school&rsquo;s term list.
+        </ConfirmBody>
+
+        <RecordFacts
+          facts={[
+            { label: 'Academic year', value: term.academicYear },
+            { label: 'Dates', value: formatTermDateRange(term) },
+            { label: 'Status', value: term.isActive ? 'Active term' : 'Not active' },
+          ]}
+        />
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
           Cancel
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={loading}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Deleting...' : 'Delete Term'}
-        </button>
-      </div>
+        </Button>
+        <Button variant="danger" onClick={handleDelete} loading={loading}>
+          {loading ? 'Deleting' : 'Delete term'}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }
