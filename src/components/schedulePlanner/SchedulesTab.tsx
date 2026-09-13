@@ -15,16 +15,25 @@ import {
 } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteSchedule, updateSchedule } from '@/services/schedulePlannerService'
-import type { ScheduleSummary } from '@/services/types/schedulePlanner'
+import type { ClassGroup, PlannerTeacher, ScheduleSummary } from '@/services/types/schedulePlanner'
 import PrintMenu from './PrintMenu'
 
 interface SchedulesTabProps {
   schedules: ScheduleSummary[]
   schoolSlug?: string | null
   onChanged: () => void
+  /** Enable the Print menu's per-teacher / per-class pickers. */
+  teachers?: PlannerTeacher[]
+  classGroups?: ClassGroup[]
 }
 
-const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onChanged }) => {
+const SchedulesTab: React.FC<SchedulesTabProps> = ({
+  schedules,
+  schoolSlug,
+  onChanged,
+  teachers,
+  classGroups,
+}) => {
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -170,7 +179,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ schedules, schoolSlug, onCh
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
-                <PrintMenu scheduleId={s.scheduleId} iconOnly />
+                <PrintMenu scheduleId={s.scheduleId} iconOnly teachers={teachers} classGroups={classGroups} />
                 <button
                   onClick={(e) => {
                     e.stopPropagation()

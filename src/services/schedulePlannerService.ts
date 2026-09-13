@@ -279,14 +279,20 @@ export const publishSchedule = async (scheduleId: string): Promise<ApiResponse<S
 
 export type SchedulePdfView = 'class' | 'teacher' | 'day';
 
+export interface SchedulePdfFilter {
+  teacherId?: string;
+  classGroupId?: string;
+}
+
 export const getSchedulePdfUrl = (
   scheduleId: string,
   view?: SchedulePdfView,
-  teacherId?: string
+  filter?: SchedulePdfFilter
 ): string => {
   const params = new URLSearchParams();
   if (view === 'teacher' || view === 'day') params.set('view', view);
-  if (teacherId) params.set('teacherId', teacherId);
+  if (filter?.teacherId) params.set('teacherId', filter.teacherId);
+  if (filter?.classGroupId) params.set('classGroupId', filter.classGroupId);
   const qs = params.toString();
   return `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/schedules/${encodeURIComponent(
     scheduleId
@@ -314,10 +320,10 @@ const fetchWithAuth = async (url: string, errorMessage: string): Promise<Blob> =
 export const openSchedulePdf = async (
   scheduleId: string,
   view?: SchedulePdfView,
-  teacherId?: string
+  filter?: SchedulePdfFilter
 ): Promise<void> => {
   const blob = await fetchWithAuth(
-    getSchedulePdfUrl(scheduleId, view, teacherId),
+    getSchedulePdfUrl(scheduleId, view, filter),
     'Failed to export PDF'
   );
   window.open(URL.createObjectURL(blob), '_blank');

@@ -110,7 +110,7 @@ const SchedulePlannerPage = () => {
               </div>
               <div className="p-4 lg:p-6">
                 {activeTab === 'schedules' && (
-                  <SchedulesTab schedules={schedules} schoolSlug={schoolSlug} onChanged={refresh} />
+                  <SchedulesTab schedules={schedules} schoolSlug={schoolSlug} onChanged={refresh} teachers={config?.teachers} classGroups={config?.classGroups} />
                 )}
                 {activeTab === 'teachers' && (
                   <TeachersTab teachers={config.teachers} onChanged={refresh} />

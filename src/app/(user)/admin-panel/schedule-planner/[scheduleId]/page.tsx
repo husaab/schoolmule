@@ -627,7 +627,7 @@ const ScheduleWorkspacePage = () => {
                   {scheduleStatus === 'published' ? 'Published' : 'Publish'}
                 </button>
                 {currentScheduleId && (
-                  <PrintMenu scheduleId={currentScheduleId} teachers={config?.teachers} />
+                  <PrintMenu scheduleId={currentScheduleId} teachers={config?.teachers} classGroups={config?.classGroups} />
                 )}
               </div>
 
