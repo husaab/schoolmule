@@ -119,7 +119,7 @@ const DayRibbon: React.FC = () => {
             {hourMarks.map((m) => (
               <span
                 key={m}
-                className="absolute -translate-x-1/2 font-mono tabular-nums text-[10px] text-slate-400"
+                className="absolute -translate-x-1/2 tabular-nums text-[10px] text-slate-400"
                 style={{ left: `${pct(m)}%` }}
               >
                 {formatMin(m).replace(':00', '')}
@@ -174,7 +174,7 @@ const DayRibbon: React.FC = () => {
                 >
                   <p className="text-[11px] font-semibold text-slate-800 truncate">{s.courseName}</p>
                   <p className="text-[10px] text-slate-600 truncate">{s.classGroupName}</p>
-                  <p className="font-mono tabular-nums text-[10px] text-slate-500 truncate">
+                  <p className="tabular-nums text-[10px] text-slate-500 truncate">
                     {formatMin(s.startMin)}
                   </p>
                 </div>
@@ -198,7 +198,7 @@ const DayRibbon: React.FC = () => {
                 <span className="text-slate-500">Now</span>
                 <span className="font-medium text-slate-900">{current.courseName}</span>
                 <span className="text-slate-500">· {current.classGroupName}</span>
-                <span className="font-mono tabular-nums text-slate-500">
+                <span className="tabular-nums text-slate-500">
                   · until {formatMin(current.endMin)}
                 </span>
                 {current.roomName && (
@@ -213,7 +213,7 @@ const DayRibbon: React.FC = () => {
                 <span className="text-slate-500">Up next</span>
                 <span className="font-medium text-slate-900">{next.courseName}</span>
                 <span className="text-slate-500">· {next.classGroupName}</span>
-                <span className="font-mono tabular-nums text-slate-500">
+                <span className="tabular-nums text-slate-500">
                   · {formatMin(next.startMin)}
                 </span>
                 {next.roomName && (

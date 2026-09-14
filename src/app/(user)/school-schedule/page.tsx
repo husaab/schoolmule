@@ -199,7 +199,7 @@ function SchoolScheduleContent() {
                     }`}
                   >
                     <span className="text-sm font-medium">{dayLabel(d, true)}</span>
-                    <span className={`font-mono tabular-nums text-[11px] ${active ? 'text-cyan-100' : 'text-slate-400'}`}>
+                    <span className={`tabular-nums text-[11px] ${active ? 'text-cyan-100' : 'text-slate-400'}`}>
                       {format(date, 'd')}
                     </span>
                     {closed && (
@@ -307,8 +307,8 @@ function SchoolScheduleContent() {
             <p className="ml-auto text-xs text-slate-500">
               {filtersActive ? (
                 <>
-                  <span className="font-mono tabular-nums font-medium text-slate-700">{filtered.length}</span> of{' '}
-                  <span className="font-mono tabular-nums">{sessions.length}</span> periods
+                  <span className="tabular-nums font-medium text-slate-700">{filtered.length}</span> of{' '}
+                  <span className="tabular-nums">{sessions.length}</span> periods
                   <button
                     type="button"
                     onClick={clearFilters}
@@ -320,7 +320,7 @@ function SchoolScheduleContent() {
                 </>
               ) : (
                 <>
-                  <span className="font-mono tabular-nums font-medium text-slate-700">{sessions.length}</span> periods a
+                  <span className="tabular-nums font-medium text-slate-700">{sessions.length}</span> periods a
                   week
                 </>
               )}
@@ -388,7 +388,7 @@ function SchoolScheduleContent() {
                   <h2 className="flex items-baseline justify-between px-4 pt-4 pb-1">
                     <span className="font-display text-sm font-semibold text-slate-900">
                       {dayLabel(d)}
-                      <span className="ml-1.5 font-mono text-xs font-normal text-slate-400">{format(date, 'MMM d')}</span>
+                      <span className="ml-1.5 tabular-nums text-xs font-normal text-slate-400">{format(date, 'MMM d')}</span>
                     </span>
                     {closed && <span className="text-xs font-medium text-amber-700">Closed · {closed.title}</span>}
                   </h2>
@@ -442,6 +442,8 @@ function SchoolScheduleContent() {
 
   return (
     <>
+      {/* A timetable is wider than it is tall; only this page asks for landscape. */}
+      <style>{'@page { size: landscape; margin: 10mm; }'}</style>
       <div className="print:hidden">
         <Navbar />
         <Sidebar />

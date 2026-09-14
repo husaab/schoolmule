@@ -31,14 +31,14 @@ const SessionRow: React.FC<{ s: PublishedSession; time: string; compact: boolean
     />
     <div className="min-w-0 flex-1">
       <p className="text-sm font-medium text-slate-900 truncate">{s.teacherName}</p>
-      <p className="text-xs text-slate-500 truncate">
+      <p className="text-xs font-medium text-slate-700 truncate">
         {s.courseName} · {s.classGroupName}
       </p>
     </div>
     <div className="shrink-0 text-right">
-      <p className="font-mono tabular-nums text-xs text-slate-500">{time}</p>
+      <p className="tabular-nums text-xs font-medium text-slate-700">{time}</p>
       {s.roomName && (
-        <p className="flex items-center justify-end gap-0.5 text-[11px] text-slate-400">
+        <p className="flex items-center justify-end gap-0.5 text-[11px] text-slate-500">
           <MapPinIcon className="h-3 w-3" />
           {s.roomName}
         </p>

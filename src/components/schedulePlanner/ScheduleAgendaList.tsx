@@ -43,7 +43,7 @@ const ScheduleAgendaList: React.FC<ScheduleAgendaListProps> = ({
           <li key={startMin} className={`flex gap-3 px-4 py-3 ${past ? 'opacity-60' : ''}`}>
             <div className="w-16 shrink-0 pt-1">
               <p
-                className={`font-mono tabular-nums text-xs font-semibold ${
+                className={`tabular-nums text-xs font-semibold ${
                   live ? 'text-cyan-700' : 'text-slate-700'
                 }`}
               >
@@ -66,11 +66,11 @@ const ScheduleAgendaList: React.FC<ScheduleAgendaListProps> = ({
                     >
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="truncate text-sm font-semibold text-slate-900">{s.courseName}</p>
-                        <p className="shrink-0 font-mono tabular-nums text-[11px] text-slate-500">
+                        <p className="shrink-0 tabular-nums text-[11px] font-medium text-slate-700">
                           until {formatMin(s.endMin)}
                         </p>
                       </div>
-                      <p className="truncate text-xs text-slate-600">
+                      <p className="truncate text-xs font-medium text-slate-800">
                         {s.classGroupName} · {s.teacherName}
                       </p>
                       {s.roomName && (

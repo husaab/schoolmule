@@ -1,8 +1,9 @@
 'use client'
 
 // The admin's dashboard hero: the whole school today — how many teachers are
-// in class right now, who they are and where, and who is up next. The teacher
-// equivalent is DayRibbon; both read the same shared schedule store.
+// in class right now, who they are and where, and who is up next — with the
+// month's calendar alongside, so "is Friday a PA day?" is answered on the same
+// card. The teacher equivalent is DayRibbon; both read the same schedule store.
 
 import React, { useEffect, useMemo } from 'react'
 import Link from 'next/link'
@@ -13,6 +14,7 @@ import { useUserStore } from '@/store/useUserStore'
 import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import SchoolNowList from './SchoolNowList'
+import MiniCalendar from '@/components/calendar/MiniCalendar'
 import {
   SCHOOL_SCHEDULE_PATH,
   closureOn,
@@ -94,14 +96,22 @@ const SchoolDayPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-3 lg:px-4 pb-4 pt-2">
-        {closure ? (
-          <div className="m-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-900">School is closed today</p>
-            <p className="text-xs text-amber-700 mt-0.5">{closure.title}</p>
+      {/* Who is where on the left; the month on the right, where the card used to run out of things to say. */}
+      <div className="grid grid-cols-1 gap-4 px-3 pb-4 pt-2 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-6 lg:px-4">
+        <div className="min-w-0">
+          {closure ? (
+            <div className="m-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900">School is closed today</p>
+              <p className="text-xs text-amber-700 mt-0.5">{closure.title}</p>
+            </div>
+          ) : (
+            <SchoolNowList sessions={sessions} nowMin={nowMin} />
+          )}
+        </div>
+        {user.school && (
+          <div className="border-t border-slate-100 px-2 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-2">
+            <MiniCalendar school={user.school} />
           </div>
-        ) : (
-          <SchoolNowList sessions={sessions} nowMin={nowMin} />
         )}
       </div>
     </Card>

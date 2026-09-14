@@ -27,7 +27,7 @@ const NavBar: FC = () => {
     <>
       <nav
         className={`
-          fixed top-0 right-0 left-0 lg:left-72 z-30
+          fixed top-0 right-0 left-0 lg:left-72 z-[55]
           transition-all duration-300 ease-out
           ${scrolled
             ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-100'

@@ -40,3 +40,23 @@ export const colorForLabel = (label: string): string => {
   for (let i = 0; i < label.length; i++) hash = (hash * 31 + label.charCodeAt(i)) | 0;
   return SESSION_COLORS[Math.abs(hash) % SESSION_COLORS.length];
 };
+
+/**
+ * Gaps in a set of fillable ranges across [from, to): before school, after
+ * school, and anything between two ranges. Both schedule grids grey these out.
+ */
+export const nonFillableGaps = (
+  fillable: { startMin: number; endMin: number }[],
+  from: number,
+  to: number
+): { from: number; to: number }[] => {
+  const sorted = [...fillable].sort((a, b) => a.startMin - b.startMin);
+  const gaps: { from: number; to: number }[] = [];
+  let cursor = from;
+  for (const r of sorted) {
+    if (r.startMin > cursor) gaps.push({ from: cursor, to: r.startMin });
+    cursor = Math.max(cursor, r.endMin);
+  }
+  if (cursor < to) gaps.push({ from: cursor, to });
+  return gaps;
+};

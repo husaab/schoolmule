@@ -10,7 +10,7 @@ import React, { useEffect, useRef } from 'react'
 import { MapPinIcon } from '@heroicons/react/24/outline'
 import type { TimeRange } from '@/services/types/schedulePlanner'
 import { packLanes } from './WeeklyGrid'
-import { colorForLabel, formatMin } from './timeUtils'
+import { colorForLabel, formatMin, nonFillableGaps } from './timeUtils'
 
 export interface TimetableSession {
   id: string
@@ -70,19 +70,6 @@ const shortTime = (m: number) => formatMin(m).replace(/\s[AP]M$/, '')
 /** "9:05–9:45 AM" — one AM/PM does for both ends. */
 const timeRange = (from: number, to: number) => `${shortTime(from)}–${formatMin(to)}`
 
-/** Before school, after school, and any gaps between fillable ranges. */
-const nonFillableGaps = (fillable: TimeRange[], from: number, to: number) => {
-  const sorted = [...fillable].sort((a, b) => a.startMin - b.startMin)
-  const gaps: { from: number; to: number }[] = []
-  let cursor = from
-  for (const r of sorted) {
-    if (r.startMin > cursor) gaps.push({ from: cursor, to: r.startMin })
-    cursor = Math.max(cursor, r.endMin)
-  }
-  if (cursor < to) gaps.push({ from: cursor, to })
-  return gaps
-}
-
 const CLOSURE_STRIPES =
   'repeating-linear-gradient(135deg, rgba(245,158,11,0.10) 0 10px, transparent 10px 22px)'
 const BREAK_HATCH =
@@ -132,8 +119,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
   const columnStyle = { flex: `1 0 ${minColumnWidth}px` }
 
+  // On paper the whole grid has to fit one landscape sheet, so it prints at
+  // roughly three-fifths scale rather than spilling columns off the page.
   return (
-    <div ref={scrollRef} className={`relative overflow-auto ${className}`}>
+    <div ref={scrollRef} className={`relative isolate overflow-auto print:[zoom:0.62] ${className}`}>
       {/* Wide as the widest of the container and the columns, so both rows share one width. */}
       <div className="inline-block min-w-full align-top">
         <div
@@ -172,7 +161,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             {hourMarks.map((m) => (
               <div
                 key={m}
-                className={`absolute right-2 font-mono tabular-nums text-[11px] font-medium text-slate-500 ${labelShift(px(m))}`}
+                className={`absolute right-2 tabular-nums text-[11px] font-semibold text-slate-700 ${labelShift(px(m))}`}
                 style={{ top: px(m) }}
               >
                 {hourLabel(m)}
@@ -181,7 +170,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             {halfHourMarks.map((m) => (
               <div
                 key={m}
-                className={`absolute right-2 font-mono tabular-nums text-[10px] text-slate-400 ${labelShift(px(m))}`}
+                className={`absolute right-2 tabular-nums text-[10px] font-medium text-slate-500 ${labelShift(px(m))}`}
                 style={{ top: px(m) }}
               >
                 {shortTime(m)}
@@ -189,7 +178,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             ))}
             {nowVisible && nowMin != null && (
               <div
-                className="absolute right-1 z-10 -translate-y-1/2 rounded-md bg-cyan-600 px-1.5 py-0.5 font-mono tabular-nums text-[10px] font-semibold text-white"
+                className="absolute right-1 z-10 -translate-y-1/2 rounded-md bg-cyan-600 px-1.5 py-0.5 tabular-nums text-[10px] font-semibold text-white"
                 style={{ top: px(nowMin) }}
               >
                 {shortTime(nowMin)}
@@ -237,7 +226,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                       className="absolute left-0 right-0 flex items-center justify-center overflow-hidden border-y border-dashed border-slate-200 bg-slate-50/70"
                       style={{ top: px(b.startMin), height: px(b.endMin) - px(b.startMin) }}
                     >
-                      <span className="truncate px-1 text-[10px] italic text-slate-400">{b.label}</span>
+                      <span className="truncate px-1 text-[10px] italic text-slate-500">{b.label}</span>
                     </div>
                   ) : (
                     <div
@@ -249,7 +238,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         backgroundImage: BREAK_HATCH,
                       }}
                     >
-                      <span className="truncate px-1 text-[11px] font-medium text-slate-500">{b.label}</span>
+                      <span className="truncate px-1 text-[11px] font-semibold text-slate-600">{b.label}</span>
                     </div>
                   )
                 )}
@@ -281,17 +270,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         .filter(Boolean)
                         .join(' · ')}
                     >
-                      <p className="truncate text-[13px] font-semibold text-slate-900" style={{ lineHeight: `${ROW_HEIGHT}px` }}>
+                      <p className="truncate text-[13px] font-bold text-slate-950" style={{ lineHeight: `${ROW_HEIGHT}px` }}>
                         {s.course}
                       </p>
                       {lines.map((line, i) => (
-                        <p key={i} className="truncate text-xs text-slate-700" style={{ lineHeight: `${ROW_HEIGHT}px` }}>
+                        <p key={i} className="truncate text-xs font-medium text-slate-800" style={{ lineHeight: `${ROW_HEIGHT}px` }}>
                           {line}
                         </p>
                       ))}
                       {showFooter && (
                         <p
-                          className="flex items-center justify-between gap-2 text-[11px] text-slate-500"
+                          className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-700"
                           style={{ lineHeight: `${ROW_HEIGHT}px` }}
                         >
                           <span className="flex min-w-0 items-center gap-0.5 truncate">
@@ -302,7 +291,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                               </>
                             )}
                           </span>
-                          <span className="shrink-0 font-mono tabular-nums">{timeRange(s.startMin, s.endMin)}</span>
+                          <span className="shrink-0 tabular-nums">{timeRange(s.startMin, s.endMin)}</span>
                         </p>
                       )}
                     </div>

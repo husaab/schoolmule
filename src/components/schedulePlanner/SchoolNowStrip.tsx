@@ -37,7 +37,7 @@ const SchoolNowStrip: React.FC<SchoolNowStripProps> = ({ sessions, nowMin }) => 
           className={`h-2 w-2 shrink-0 rounded-full ${done ? 'bg-slate-300' : 'bg-cyan-500 motion-safe:animate-pulse'}`}
           aria-hidden
         />
-        <span className="shrink-0 font-mono tabular-nums text-sm font-semibold text-slate-900">
+        <span className="shrink-0 tabular-nums text-sm font-semibold text-slate-900">
           {formatMin(nowMin)}
         </span>
         <span className="min-w-0 truncate text-sm text-slate-600">

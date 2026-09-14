@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { MapPinIcon } from '@heroicons/react/24/solid'
-import { colorForLabel, dayLabel, formatMin } from './timeUtils'
+import { colorForLabel, dayLabel, formatMin, nonFillableGaps } from './timeUtils'
 import type { TimeRange } from '@/services/types/schedulePlanner'
 
 export interface GridSession {
@@ -464,14 +464,7 @@ const NonFillableShading: React.FC<{
   topPct: (min: number) => number
   heightPct: (from: number, to: number) => number
 }> = ({ fillable, rangeStartMin, rangeEndMin, topPct, heightPct }) => {
-  const sorted = [...fillable].sort((a, b) => a.startMin - b.startMin)
-  const gaps: { from: number; to: number }[] = []
-  let cursor = rangeStartMin
-  for (const r of sorted) {
-    if (r.startMin > cursor) gaps.push({ from: cursor, to: r.startMin })
-    cursor = Math.max(cursor, r.endMin)
-  }
-  if (cursor < rangeEndMin) gaps.push({ from: cursor, to: rangeEndMin })
+  const gaps = nonFillableGaps(fillable, rangeStartMin, rangeEndMin)
   return (
     <>
       {gaps.map((g, i) => (
