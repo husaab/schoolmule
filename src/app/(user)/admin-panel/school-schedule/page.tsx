@@ -20,9 +20,10 @@ import {
   fillableByDay,
   isoDayOf,
   sessionsOn,
-  teachingDays,
   timeBounds,
   toGridFixedBlocks,
+  toGridSession,
+  weekDaysFor,
 } from '@/components/schedulePlanner/myScheduleUtils'
 import { useMinuteOfDay } from '@/components/schedulePlanner/useMinuteOfDay'
 import type { FixedBlock, PublishedSession } from '@/services/types/schedulePlanner'
@@ -40,16 +41,6 @@ const toClassGridSession = (s: PublishedSession) => ({
   endMin: s.endMin,
   title: s.courseName,
   subtitle: s.teacherName,
-  roomName: s.roomName,
-})
-
-const toTeacherGridSession = (s: PublishedSession) => ({
-  id: s.sessionId,
-  day: s.dayOfWeek,
-  startMin: s.startMin,
-  endMin: s.endMin,
-  title: s.courseName,
-  subtitle: s.classGroupName,
   roomName: s.roomName,
 })
 
@@ -109,14 +100,7 @@ const SchoolSchedulePage: React.FC = () => {
   const options = weekView === 'class' ? classNames : teacherNames
   const active = selected && options.includes(selected) ? selected : options[0] ?? null
 
-  const weekDays = useMemo(() => {
-    if (!data) return []
-    const configured = data.dayTemplates
-      .filter((d) => d.fillableRanges.length > 0)
-      .map((d) => d.dayOfWeek)
-      .sort((a, b) => a - b)
-    return configured.length > 0 ? configured : teachingDays(sessions)
-  }, [data, sessions])
+  const weekDays = useMemo(() => (data ? weekDaysFor(data) : []), [data])
 
   // Today: one column per teacher with classes today, in name order.
   const todayColumns: GridColumn[] = useMemo(() => {
@@ -128,7 +112,7 @@ const SchoolSchedulePage: React.FC = () => {
       .map((name) => ({
         key: name,
         label: name,
-        sessions: todaySessions.filter((s) => s.teacherName === name).map(toTeacherGridSession),
+        sessions: todaySessions.filter((s) => s.teacherName === name).map(toGridSession),
         fixedBlocks: blocks,
         fillableRanges: ranges,
       }))
@@ -238,7 +222,7 @@ const SchoolSchedulePage: React.FC = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-3 overflow-x-auto">
           <div className="min-w-[720px]">
             <WeeklyGrid
-              sessions={weekSessions.map(weekView === 'class' ? toClassGridSession : toTeacherGridSession)}
+              sessions={weekSessions.map(weekView === 'class' ? toClassGridSession : toGridSession)}
               days={weekDays}
               fixedBlocks={
                 weekView === 'class'

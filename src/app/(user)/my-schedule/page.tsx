@@ -4,7 +4,6 @@
 // the whole week. Read-only — the admin owns the schedule in the planner.
 
 import React, { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -22,10 +21,10 @@ import {
   fillableByDay,
   isoDayOf,
   sessionsOn,
-  teachingDays,
   timeBounds,
   toGridFixedBlocks,
   toGridSession,
+  weekDaysFor,
 } from '@/components/schedulePlanner/myScheduleUtils'
 import { CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
@@ -50,17 +49,7 @@ const MySchedulePage: React.FC = () => {
   const today = useMemo(() => new Date(), [])
   const todayIso = isoDayOf(today)
 
-  const days = useMemo(() => {
-    if (!data) return []
-    const taught = teachingDays(data.sessions)
-    // Fall back to the school's configured days so a teacher with a light week
-    // still sees the full grid rather than two lonely columns.
-    const configured = data.dayTemplates
-      .filter((d) => d.fillableRanges.length > 0)
-      .map((d) => d.dayOfWeek)
-      .sort((a, b) => a - b)
-    return configured.length > 0 ? configured : taught
-  }, [data])
+  const days = useMemo(() => (data ? weekDaysFor(data) : []), [data])
 
   const closure = data ? closureOn(data.closures, today) : null
   const todaySessions = data ? sessionsOn(data.sessions, todayIso) : []
@@ -218,17 +207,7 @@ const MySchedulePage: React.FC = () => {
           {content()}
 
           <p className="mt-6 text-xs text-slate-400 print:hidden">
-            {user?.role === 'ADMIN' ? (
-              <>
-                Schedules are set in the{' '}
-                <Link href="/admin-panel/schedule-planner" className="text-cyan-700 hover:underline">
-                  schedule planner
-                </Link>
-                .
-              </>
-            ) : (
-              'Schedules are set by your school administrator.'
-            )}
+            Schedules are set by your school administrator.
           </p>
         </div>
       </main>

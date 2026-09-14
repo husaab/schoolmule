@@ -62,6 +62,18 @@ export const periodsAround = (
 export const teachingDays = (sessions: PublishedSession[]): number[] =>
   [...new Set(sessions.map((s) => s.dayOfWeek))].sort((a, b) => a - b)
 
+/**
+ * Columns for a week view: the school's configured days, so a light week
+ * still shows the full grid rather than two lonely columns; else days taught.
+ */
+export const weekDaysFor = (data: MySchedule): number[] => {
+  const configured = data.dayTemplates
+    .filter((d) => d.fillableRanges.length > 0)
+    .map((d) => d.dayOfWeek)
+    .sort((a, b) => a - b)
+  return configured.length > 0 ? configured : teachingDays(data.sessions)
+}
+
 export const toGridSession = (s: PublishedSession): GridSession => ({
   id: s.sessionId,
   day: s.dayOfWeek,
