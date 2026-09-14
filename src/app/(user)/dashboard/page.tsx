@@ -125,31 +125,53 @@ const DashboardPage: React.FC = () => {
     [user.id]
   )
 
+  // The summary gates the page; the trend does not. They are separate effects
+  // so that changing the attendance window re-fetches only the chart and never
+  // flips the page back to its spinner (which would also reset every analytics
+  // request below, since those key off the summary being on screen).
   useEffect(() => {
     if (!user.school) return
+    let cancelled = false
     setLoading(true)
-    Promise.all([
-      getDashboardSummary(user.school, user.activeTerm!, today),
-      getAttendanceTrend(user.school, daysWindow, today),
-    ])
-      .then(([sumRes, trendRes]) => {
-        setSummary(sumRes.data)
-        setTrend(trendRes.data)
+    getDashboardSummary(user.school, user.activeTerm!, today)
+      .then((res) => {
+        if (!cancelled) setSummary(res.data)
       })
       .catch((err) => {
         console.error(err)
-        setError('Failed to load dashboard data')
+        if (!cancelled) setError('Failed to load dashboard data')
       })
-      .finally(() => setLoading(false))
-  }, [user.school, daysWindow, user.activeTerm, today, selectedYearId]) // refetch when the selected school year changes
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user.school, user.activeTerm, today, selectedYearId]) // refetch when the selected school year changes
+
+  useEffect(() => {
+    if (!user.school) return
+    let cancelled = false
+    getAttendanceTrend(user.school, daysWindow, today)
+      .then((res) => {
+        if (!cancelled) setTrend(res.data)
+      })
+      .catch((err) => {
+        // The chart shows its empty state; the rest of the page is unaffected.
+        console.error(err)
+        if (!cancelled) setTrend([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user.school, daysWindow, today, selectedYearId])
 
   // ── Analytics: one request per endpoint per term, started only once the
   //    summary is on screen. Teachers get their own classes (server-scoped)
   //    plus the student snapshot for check-ins; admins get the school overview
   //    compared against the previous term.
   const { activeTerm, previousTerm, loading: termsLoading } = useDashboardTerms(user.school, selectedYearId)
-  const analyticsReady = !loading && Boolean(summary) && Boolean(activeTerm)
-  const termId = analyticsReady && activeTerm ? activeTerm.termId : null
+  const termId = summary && activeTerm ? activeTerm.termId : null
   const overview = useAnalyticsOverview(termId, 'null_skip', isAdmin ? (previousTerm?.termId ?? null) : null)
   const classesHealth = useAnalyticsClassesHealth(isAdmin ? null : termId, 'null_skip')
   const snapshot = useAnalyticsSnapshot(isAdmin ? null : termId, 'null_skip')

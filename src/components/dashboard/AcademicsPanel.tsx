@@ -8,7 +8,7 @@
 // This card owns its own loading, error and empty states so an analytics
 // outage never takes the rest of the dashboard with it.
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRightIcon, BookOpenIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import Card from '@/components/ui/Card'
@@ -53,6 +53,19 @@ const AcademicsPanel: React.FC<AcademicsPanelProps> = ({
   pending,
   hasTerm,
 }) => {
+  // Memoised so recharts sees the same array across unrelated re-renders
+  // (e.g. the attendance window changing) and does not replay its entrance
+  // animation each time.
+  const byGrade = useMemo(() => {
+    const data = overview.data
+    if (!data) return []
+    return data.byGrade.map((g) => ({
+      label: `Gr ${g.grade}`,
+      current: g.stats?.avg ?? null,
+      previous: data.termDiff?.byGrade.find((d) => d.grade === g.grade)?.previousAvg ?? null,
+    }))
+  }, [overview.data])
+
   if (pending || overview.loading) {
     return (
       <>
@@ -117,11 +130,6 @@ const AcademicsPanel: React.FC<AcademicsPanelProps> = ({
     )
   }
 
-  const byGrade = data.byGrade.map((g) => ({
-    label: `Gr ${g.grade}`,
-    current: g.stats?.avg ?? null,
-    previous: data.termDiff?.byGrade.find((d) => d.grade === g.grade)?.previousAvg ?? null,
-  }))
   const compared = Boolean(data.termDiff && previousTermName)
 
   return (

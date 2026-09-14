@@ -73,6 +73,13 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
       .slice(0, CHECK_IN_LIMIT)
   }, [snapshot.data, classes])
 
+  // Same array across re-renders, so the bar chart animates once, not on
+  // every unrelated state change higher up the page.
+  const bars = useMemo(
+    () => classes.map((c) => ({ label: `Gr ${c.grade} ${c.subject}`, current: c.classAvg })),
+    [classes]
+  )
+
   if (pending || classesHealth.loading) {
     return (
       <>
@@ -138,7 +145,6 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
 
   const anyGraded = classes.some((c) => c.classAvg != null)
   const schoolAvg = overview.data?.school.stats?.avg ?? null
-  const bars = classes.map((c) => ({ label: `Gr ${c.grade} ${c.subject}`, current: c.classAvg }))
 
   return (
     <>
