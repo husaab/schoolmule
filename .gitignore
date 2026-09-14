@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+/remotion
+public/videos/al-haadi-finance-guide.mp4
+remotion/src/Root.tsx
+remotion/src/Root.tsx

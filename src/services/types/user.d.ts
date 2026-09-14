@@ -26,7 +26,6 @@ export interface UserPayload {
   createdAt: string;
   lastModifiedAt: string;
   isVerified: boolean;
-  emailToken: string;
 }
 
 export interface AllUsersResponse {

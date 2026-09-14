@@ -3,9 +3,18 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
+  {
+    href: '/admin-panel/users',
+    label: 'Users',
+    description: 'See everyone at your school, their roles and details. Add, edit or remove accounts.',
+    icon: UsersIcon,
+    color: 'bg-cyan-500',
+    bgColor: 'from-cyan-50 to-sky-50',
+    borderColor: 'border-cyan-100',
+  },
   {
     href: '/admin-panel/approvals',
     label: 'Manage User Approvals',

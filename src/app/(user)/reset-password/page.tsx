@@ -21,6 +21,8 @@ const ResetPasswordPage: FC = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get('token') || ''
+  // Admin-created accounts land here from their invite email to set a first password.
+  const isInvite = searchParams.get('invite') === '1'
   const notify = useNotificationStore(s => s.showNotification)
 
   const [newPassword, setNewPassword] = useState('')
@@ -63,7 +65,7 @@ const ResetPasswordPage: FC = () => {
     try {
       const response = await resetPassword(token, newPassword)
       if (response.success) {
-        notify('Password reset successfully. You can now log in.', 'success')
+        notify(isInvite ? 'Password set. You can now log in.' : 'Password reset successfully. You can now log in.', 'success')
         router.push('/login')
       } else {
         notify(response.message || 'Failed to reset password.', 'error')
@@ -99,7 +101,7 @@ const ResetPasswordPage: FC = () => {
                 <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6 animate-pulse">
                   <KeyIcon className="w-8 h-8 text-slate-400" />
                 </div>
-                <p className="text-slate-600">Validating your reset link...</p>
+                <p className="text-slate-600">{isInvite ? 'Checking your invite link...' : 'Validating your reset link...'}</p>
               </div>
             ) : isValidToken === false ? (
               // Invalid token state
@@ -111,7 +113,9 @@ const ResetPasswordPage: FC = () => {
                   Link Expired or Invalid
                 </h2>
                 <p className="text-slate-600 mb-6">
-                  This password reset link has expired or is invalid. Please request a new one.
+                  {isInvite
+                    ? 'This invite link has expired or was replaced by a newer one. Ask your school admin to resend it, or request a password reset link.'
+                    : 'This password reset link has expired or is invalid. Please request a new one.'}
                 </p>
                 <Link
                   href="/forgot-password"
@@ -128,10 +132,10 @@ const ResetPasswordPage: FC = () => {
                 </div>
 
                 <h1 className="text-2xl font-bold text-slate-900 text-center mb-2">
-                  Reset your password
+                  {isInvite ? 'Welcome to School Mule' : 'Reset your password'}
                 </h1>
                 <p className="text-slate-600 text-center mb-8">
-                  Enter a new secure password for your account.
+                  {isInvite ? 'Choose a password to finish setting up your account.' : 'Enter a new secure password for your account.'}
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -217,7 +221,7 @@ const ResetPasswordPage: FC = () => {
                         Resetting...
                       </span>
                     ) : (
-                      'Reset Password'
+                      isInvite ? 'Set Password' : 'Reset Password'
                     )}
                   </button>
                 </form>

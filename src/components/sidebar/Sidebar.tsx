@@ -31,7 +31,8 @@ import {
   PhotoIcon,
   CalendarDaysIcon,
   Squares2X2Icon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -353,6 +354,7 @@ const Sidebar = () => {
                   isActive={isAdminPanelPath}
                 >
                   <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
+                  <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
                   <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
                   <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
                   <SubNavItem href="/staff-attendance" label="Staff Attendance" icon={IdentificationIcon} />

@@ -31,7 +31,9 @@
     "lint": "eslint src && tsc",
     "render:mp4": "remotion render FeatureTour ../public/videos/feature-tour.mp4 --codec=h264 --crf=18",
     "render:poster": "remotion still FeatureTour ../public/videos/feature-tour-poster.jpg --frame=200",
-    "render:all": "mkdir -p ../public/videos && npm run render:mp4 && npm run render:poster"
+    "render:all": "mkdir -p ../public/videos && npm run render:mp4 && npm run render:poster",
+    "render:finance": "remotion render AlHaadiFinanceGuide ../public/videos/al-haadi-finance-guide.mp4 --codec=h264 --crf=18",
+    "still:finance": "remotion still AlHaadiFinanceGuide ../public/videos/al-haadi-finance-guide-poster.jpg --frame=160"
   },
   "sideEffects": [
     "*.css"
