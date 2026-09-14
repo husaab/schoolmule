@@ -1,14 +1,16 @@
 'use client'
 
-// Labeled "Print" button with a layout menu (By class / By teacher / By day).
-// "By class" and "By teacher" open a second-level picker: the whole set as
-// one document, or a single class/teacher as its own PDF. Used in the
-// schedule workspace toolbar and as a compact icon action in Schedules rows.
+// Labeled "Download" button with a format switch (PDF / PNG / Word) above a
+// layout menu (By class / By teacher / By day). "By class" and "By teacher"
+// open a second-level picker: the whole set as one document, or a single
+// class/teacher on its own. Used in the schedule workspace toolbar and as a
+// compact icon action in Schedules rows.
 
 import React, { useEffect, useRef, useState } from 'react'
-import { PrinterIcon, ChevronDownIcon, ChevronLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, ChevronDownIcon, ChevronLeftIcon } from '@heroicons/react/24/outline'
 import {
-  openSchedulePdf,
+  exportSchedule,
+  type ScheduleExportFormat,
   type SchedulePdfView,
   type SchedulePdfFilter,
 } from '@/services/schedulePlannerService'
@@ -19,6 +21,12 @@ const OPTIONS: { view: SchedulePdfView; label: string; hint: string }[] = [
   { view: 'class', label: 'By class', hint: 'One page per class' },
   { view: 'teacher', label: 'By teacher', hint: 'One page per teacher' },
   { view: 'day', label: 'By day', hint: 'One page per day, all classes' },
+]
+
+const FORMATS: { format: ScheduleExportFormat; label: string; allHint: string }[] = [
+  { format: 'pdf', label: 'PDF', allHint: 'One document, a page each' },
+  { format: 'png', label: 'PNG', allHint: 'A .zip with an image each' },
+  { format: 'docx', label: 'Word', allHint: 'One document, a table each' },
 ]
 
 interface PrintMenuProps {
@@ -39,6 +47,7 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
 }) => {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [format, setFormat] = useState<ScheduleExportFormat>('pdf')
   /** Second level of the menu: pick one entity instead of printing them all. */
   const [picker, setPicker] = useState<'teacher' | 'class' | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -56,14 +65,17 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
-  const handlePick = async (view: SchedulePdfView, filter?: SchedulePdfFilter) => {
+  const formatInfo = FORMATS.find((f) => f.format === format)!
+
+  /** `name` is the single class/teacher picked, used for the downloaded file's name. */
+  const handlePick = async (view: SchedulePdfView, filter?: SchedulePdfFilter, name?: string) => {
     setOpen(false)
     setPicker(null)
     setBusy(true)
     try {
-      await openSchedulePdf(scheduleId, view, filter)
+      await exportSchedule(scheduleId, format, view, filter, name ? `schedule_${name}` : `schedule_by_${view}`)
     } catch {
-      showNotification('Error exporting PDF', 'error')
+      showNotification(`Error exporting ${formatInfo.label}`, 'error')
     } finally {
       setBusy(false)
     }
@@ -91,10 +103,10 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
             toggleOpen()
           }}
           disabled={busy}
-          title="Print / export PDF"
+          title="Download as PDF, PNG or Word"
           className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer disabled:opacity-50"
         >
-          <PrinterIcon className="h-4 w-4" />
+          <ArrowDownTrayIcon className="h-4 w-4" />
         </button>
       ) : (
         <button
@@ -102,17 +114,32 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
           disabled={busy}
           className="flex items-center gap-1.5 px-4 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition disabled:opacity-50 cursor-pointer"
         >
-          <PrinterIcon className="h-4 w-4" />
-          {busy ? 'Preparing…' : 'Print'}
+          <ArrowDownTrayIcon className="h-4 w-4" />
+          {busy ? 'Preparing…' : 'Download'}
           <ChevronDownIcon className="h-3.5 w-3.5" />
         </button>
       )}
 
       {open && (
         <div
-          className="absolute right-0 z-20 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1"
+          className="absolute right-0 z-20 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1"
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="flex gap-0.5 mx-2 mt-1 mb-1.5 p-0.5 rounded-md bg-gray-100" role="radiogroup" aria-label="File format">
+            {FORMATS.map((f) => (
+              <button
+                key={f.format}
+                role="radio"
+                aria-checked={format === f.format}
+                onClick={() => setFormat(f.format)}
+                className={`flex-1 px-2 py-1 rounded text-xs font-medium cursor-pointer transition ${
+                  format === f.format ? 'bg-white text-cyan-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           {picker ? (
             <>
               <button
@@ -128,7 +155,7 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
                 <div className="text-sm font-medium text-gray-800">
                   {picker === 'teacher' ? 'All teachers' : 'All classes'}
                 </div>
-                <div className="text-xs text-gray-400">One document, a page each</div>
+                <div className="text-xs text-gray-400">{formatInfo.allHint}</div>
               </button>
               <div className="max-h-64 overflow-y-auto">
                 {pickerEntries.map((entry) => (
@@ -137,7 +164,8 @@ const PrintMenu: React.FC<PrintMenuProps> = ({
                     onClick={() =>
                       handlePick(
                         picker,
-                        picker === 'teacher' ? { teacherId: entry.id } : { classGroupId: entry.id }
+                        picker === 'teacher' ? { teacherId: entry.id } : { classGroupId: entry.id },
+                        entry.name
                       )
                     }
                     className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer truncate"

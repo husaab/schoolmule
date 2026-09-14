@@ -279,6 +279,9 @@ export const publishSchedule = async (scheduleId: string): Promise<ApiResponse<S
 
 export type SchedulePdfView = 'class' | 'teacher' | 'day';
 
+/** Download formats. A multi-page PNG export arrives as a .zip of images. */
+export type ScheduleExportFormat = 'pdf' | 'png' | 'docx';
+
 export interface SchedulePdfFilter {
   teacherId?: string;
   classGroupId?: string;
@@ -287,10 +290,12 @@ export interface SchedulePdfFilter {
 export const getSchedulePdfUrl = (
   scheduleId: string,
   view?: SchedulePdfView,
-  filter?: SchedulePdfFilter
+  filter?: SchedulePdfFilter,
+  format: ScheduleExportFormat = 'pdf'
 ): string => {
   const params = new URLSearchParams();
   if (view === 'teacher' || view === 'day') params.set('view', view);
+  if (format !== 'pdf') params.set('format', format);
   if (filter?.teacherId) params.set('teacherId', filter.teacherId);
   if (filter?.classGroupId) params.set('classGroupId', filter.classGroupId);
   const qs = params.toString();
@@ -316,17 +321,48 @@ const fetchWithAuth = async (url: string, errorMessage: string): Promise<Blob> =
   return res.blob();
 };
 
-/** Downloads the PDF with the auth token and opens it in a new tab. */
-export const openSchedulePdf = async (
+const EXTENSION_BY_TYPE: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'application/zip': 'zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+};
+
+/**
+ * PDFs open in a new tab like before; images, zips and Word files can't be
+ * viewed inline, so they download. The extension follows what the server sent
+ * (a multi-page PNG export is a zip).
+ */
+const deliverBlob = (blob: Blob, fileBase: string): void => {
+  const url = URL.createObjectURL(blob);
+  if (blob.type === 'application/pdf') {
+    window.open(url, '_blank');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileBase.replace(/[^\w.-]+/g, '_')}.${EXTENSION_BY_TYPE[blob.type] ?? 'bin'}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+const FORMAT_LABEL: Record<ScheduleExportFormat, string> = { pdf: 'PDF', png: 'image', docx: 'Word document' };
+
+/** Exports a schedule (admin planner) in the chosen format and view. */
+export const exportSchedule = async (
   scheduleId: string,
+  format: ScheduleExportFormat,
   view?: SchedulePdfView,
-  filter?: SchedulePdfFilter
+  filter?: SchedulePdfFilter,
+  fileBase = 'schedule'
 ): Promise<void> => {
   const blob = await fetchWithAuth(
-    getSchedulePdfUrl(scheduleId, view, filter),
-    'Failed to export PDF'
+    getSchedulePdfUrl(scheduleId, view, filter, format),
+    `Failed to export ${FORMAT_LABEL[format]}`
   );
-  window.open(URL.createObjectURL(blob), '_blank');
+  deliverBlob(blob, fileBase);
 };
 
 // ─── Teacher widget ───────────────────────────────────────────────────────
@@ -338,13 +374,14 @@ export const getMySchedule = async (): Promise<ApiResponse<MySchedule>> =>
 export const getSchoolSchedule = async (): Promise<ApiResponse<MySchedule>> =>
   apiClient<ApiResponse<MySchedule>>(`${BASE}/school-schedule`);
 
-/** Opens the logged-in teacher's own weekly schedule as a PDF. */
-export const openMySchedulePdf = async (): Promise<void> => {
+/** The logged-in teacher's own weekly schedule as a PDF (new tab), PNG or Word file. */
+export const exportMySchedule = async (format: ScheduleExportFormat = 'pdf'): Promise<void> => {
+  const qs = format === 'pdf' ? '' : `?format=${format}`;
   const blob = await fetchWithAuth(
-    `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/my-schedule/pdf`,
-    'Failed to export PDF'
+    `${process.env.NEXT_PUBLIC_BASE_URL}${BASE}/my-schedule/pdf${qs}`,
+    `Failed to export ${FORMAT_LABEL[format]}`
   );
-  window.open(URL.createObjectURL(blob), '_blank');
+  deliverBlob(blob, 'my-schedule');
 };
 
 /** Downloads the logged-in teacher's schedule as an .ics calendar file. */

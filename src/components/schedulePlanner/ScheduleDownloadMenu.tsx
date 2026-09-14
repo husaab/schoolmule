@@ -1,17 +1,20 @@
 'use client'
 
-// Download menu for a teacher's own schedule: a PDF matching the admin print
-// output, an .ics for their personal calendar, or the browser's print dialog.
+// Download menu for a teacher's own schedule: a PDF, image or Word document
+// matching the admin export, an .ics for their personal calendar, or the
+// browser's print dialog.
 
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ArrowDownTrayIcon,
   ChevronDownIcon,
   DocumentArrowDownIcon,
+  DocumentTextIcon,
   CalendarDaysIcon,
+  PhotoIcon,
   PrinterIcon,
 } from '@heroicons/react/24/outline'
-import { downloadMyScheduleIcs, openMySchedulePdf } from '@/services/schedulePlannerService'
+import { downloadMyScheduleIcs, exportMySchedule } from '@/services/schedulePlannerService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
 const ScheduleDownloadMenu: React.FC = () => {
@@ -47,7 +50,21 @@ const ScheduleDownloadMenu: React.FC = () => {
       icon: DocumentArrowDownIcon,
       label: 'Download PDF',
       hint: 'Your week, ready to print',
-      onClick: () => run(openMySchedulePdf, 'Error exporting PDF'),
+      onClick: () => run(() => exportMySchedule('pdf'), 'Error exporting PDF'),
+    },
+    {
+      key: 'png',
+      icon: PhotoIcon,
+      label: 'Download image',
+      hint: 'A PNG to share or set as a wallpaper',
+      onClick: () => run(() => exportMySchedule('png'), 'Error exporting image'),
+    },
+    {
+      key: 'docx',
+      icon: DocumentTextIcon,
+      label: 'Download Word document',
+      hint: 'An editable table',
+      onClick: () => run(() => exportMySchedule('docx'), 'Error exporting Word document'),
     },
     {
       key: 'ics',
