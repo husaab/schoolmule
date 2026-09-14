@@ -23,7 +23,7 @@ import {
   useAnalyticsClass,
   useAnalyticsStudent,
   useAnalyticsSnapshot,
-} from './_hooks/useAnalyticsData'
+} from '@/components/analytics/useAnalyticsData'
 
 import ControlBar from './_components/ControlBar'
 import BreadcrumbNav from './_components/BreadcrumbNav'

@@ -1,5 +1,6 @@
-// Data-fetching hooks for the analytics views. One hook per drill level,
-// all returning the same { data, loading, error, retry } shape.
+// Data-fetching hooks for the analytics views and the dashboard. One hook
+// per endpoint, all returning the same { data, loading, error, retry } shape.
+// Shared home (not under app/analytics) because the dashboard reuses them.
 
 'use client'
 
@@ -10,6 +11,7 @@ import {
   getAnalyticsStudent,
   getAnalyticsSnapshot,
   getAnalyticsTermComparison,
+  getAnalyticsClassesHealth,
 } from '@/services/analyticsService'
 import {
   OverviewData,
@@ -17,10 +19,11 @@ import {
   StudentData,
   SnapshotData,
   TermComparisonData,
+  ClassesHealthData,
   GradeEngine,
 } from '@/services/types/analytics'
 
-interface HookState<T> {
+export interface HookState<T> {
   data: T | null
   loading: boolean
   error: string | null
@@ -131,5 +134,16 @@ export function useAnalyticsTermComparison(
       ? () => getAnalyticsTermComparison(subject, grade, engine).then((r) => r.data)
       : null,
     [enabled, subject, grade, engine]
+  )
+}
+
+export function useAnalyticsClassesHealth(
+  termId: string | null,
+  engine: GradeEngine
+): HookState<ClassesHealthData> {
+  return useFetch<ClassesHealthData>(
+    Boolean(termId),
+    termId ? () => getAnalyticsClassesHealth(termId, engine).then((r) => r.data) : null,
+    [termId, engine]
   )
 }

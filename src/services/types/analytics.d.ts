@@ -130,6 +130,8 @@ export interface OverviewData {
   bySubject: SubjectStats[]
   compareTermId?: string
   termDiff?: {
+    /** Whole-school delta, exact (over every student), not averaged from grade rows. */
+    school?: { currentAvg: number | null; previousAvg: number | null; avgDiff: number | null }
     byGrade: TermDiffRow[]
     bySubject: TermDiffRow[]
   }
@@ -280,6 +282,42 @@ export interface SnapshotData {
 export interface SnapshotResponse {
   status: string
   data: SnapshotData
+}
+
+// ── Classes health (dashboard) ──────────────────────────────────────
+
+export interface ClassHealthRow {
+  classId: string
+  subject: string
+  grade: string
+  teacherName: string
+  termId: string
+  studentCount: number
+  classAvg: number | null
+  classMedian: number | null
+  /** Sum of every student's missing top-level assessments in this class. */
+  missingCount: number
+  studentIds: string[]
+  /** Gradable (leaf) assessments. */
+  assessmentCount: number
+  /** Leaf assessments nobody has a score for yet. */
+  ungradedAssessments: number
+  /** Leaf assessments with scores that parents cannot see yet. */
+  unpublishedGraded: number
+  lastGradedDate: string | null
+}
+
+export interface ClassesHealthData {
+  termId: string
+  engine: GradeEngine
+  /** 'mine' for teachers (server-scoped to their classes), 'school' for admins. */
+  scope: 'school' | 'mine'
+  classes: ClassHealthRow[]
+}
+
+export interface ClassesHealthResponse {
+  status: string
+  data: ClassesHealthData
 }
 
 // ── AI / chat ───────────────────────────────────────────────────────

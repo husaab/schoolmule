@@ -9,7 +9,7 @@
 import React from 'react'
 import { ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
 import { TermComparisonData, TermComparisonStudent } from '@/services/types/analytics'
-import TermComparisonChart from '../charts/TermComparisonChart'
+import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 
 interface TermComparisonSectionProps {

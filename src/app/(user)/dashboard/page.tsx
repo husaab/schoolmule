@@ -1,38 +1,54 @@
 'use client'
 
-// Schedule-first dashboard. The day ribbon leads because the first question a
-// teacher has at 8:40 AM is "where am I supposed to be", not "what is the
-// school's average class size". School-wide figures sit below it as a quiet
-// row rather than nine gradient tiles competing with the schedule.
+// Schedule-first dashboard, then the numbers, then the term.
+//
+// The day ribbon leads because the first question at 8:40 AM is "where am I
+// supposed to be". Four clickable tiles follow, then academics sit beside
+// attendance in the main column — a principal is judged on both, so the page
+// no longer charts one and reduces the other to a single figure. The right
+// rail holds what is coming (this week), the AI briefing, and the staff
+// directory.
+//
+// Analytics loads after the summary and attendance requests, keyed on the
+// active term id (resolved here — useUserStore only knows the term's name),
+// and every analytics card owns its own loading/empty/error state so an
+// analytics failure never takes the rest of the page down.
 
 import React, { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
+import { format, isWeekend } from 'date-fns'
 import Navbar from '../../../components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { getSchoolName } from '@/lib/schoolUtils'
 import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardService'
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
+import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
+import {
+  useAnalyticsOverview,
+  useAnalyticsSnapshot,
+  useAnalyticsClassesHealth,
+} from '@/components/analytics/useAnalyticsData'
 import Spinner from '@/components/Spinner'
 import Card from '@/components/ui/Card'
-import StatTile, { toneForRate, toneForScore } from '@/components/ui/StatTile'
-import DailyBriefing from '@/components/dashboard/DailyBriefing'
-import { useMyScheduleStore } from '@/store/useMyScheduleStore'
-import SectionHeader from '@/components/ui/SectionHeader'
-import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
 import DayRibbon from '@/components/schedulePlanner/DayRibbon'
 import SchoolDayPanel from '@/components/schedulePlanner/SchoolDayPanel'
-import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import Link from 'next/link'
 import StaffList from '@/components/staff/StaffList'
+import DailyBriefing from '@/components/dashboard/DailyBriefing'
+import HeadlineTiles from '@/components/dashboard/HeadlineTiles'
+import AcademicsPanel from '@/components/dashboard/AcademicsPanel'
+import MyClassesPanel from '@/components/dashboard/MyClassesPanel'
+import AttendanceCard from '@/components/dashboard/AttendanceCard'
+import ThisWeekCard from '@/components/dashboard/ThisWeekCard'
+import { useDashboardTerms } from '@/components/dashboard/useDashboardTerms'
 import {
   AcademicCapIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
   ChartBarIcon,
-  ArrowRightIcon,
   ChevronDownIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
@@ -45,35 +61,19 @@ const greetingFor = (date: Date): string => {
   return 'Good evening'
 }
 
-// Each action keeps its own hue so the row is scannable by colour, not just
-// by reading three near-identical labels.
+// Header buttons rather than a card: three verbs the user came here to do
+// belong next to the greeting, not below the fold. Each keeps its own hue so
+// the row is scannable by colour, not just by reading three similar labels.
 const QUICK_ACTIONS = [
-  {
-    href: '/classes',
-    label: 'Open classes',
-    icon: AcademicCapIcon,
-    icon_class: 'text-cyan-600 bg-cyan-50',
-    hover: 'hover:border-cyan-300 hover:bg-cyan-50/40',
-  },
-  {
-    href: '/gradebook',
-    label: 'Enter grades',
-    icon: BookOpenIcon,
-    icon_class: 'text-violet-600 bg-violet-50',
-    hover: 'hover:border-violet-300 hover:bg-violet-50/40',
-  },
-  {
-    href: '/attendance/general',
-    label: 'Take attendance',
-    icon: ClipboardDocumentCheckIcon,
-    icon_class: 'text-emerald-600 bg-emerald-50',
-    hover: 'hover:border-emerald-300 hover:bg-emerald-50/40',
-  },
+  { href: '/classes', label: 'Open classes', icon: AcademicCapIcon, chip: 'text-cyan-700 bg-cyan-50', hover: 'hover:border-cyan-300 hover:bg-cyan-50/40' },
+  { href: '/gradebook', label: 'Enter grades', icon: BookOpenIcon, chip: 'text-violet-700 bg-violet-50', hover: 'hover:border-violet-300 hover:bg-violet-50/40' },
+  { href: '/attendance/general', label: 'Take attendance', icon: ClipboardDocumentCheckIcon, chip: 'text-emerald-700 bg-emerald-50', hover: 'hover:border-emerald-300 hover:bg-emerald-50/40' },
 ]
 
 const DashboardPage: React.FC = () => {
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const isAdmin = user.role === 'ADMIN'
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -130,7 +130,7 @@ const DashboardPage: React.FC = () => {
     setLoading(true)
     Promise.all([
       getDashboardSummary(user.school, user.activeTerm!, today),
-      getAttendanceTrend(user.school, daysWindow, today)
+      getAttendanceTrend(user.school, daysWindow, today),
     ])
       .then(([sumRes, trendRes]) => {
         setSummary(sumRes.data)
@@ -142,6 +142,18 @@ const DashboardPage: React.FC = () => {
       })
       .finally(() => setLoading(false))
   }, [user.school, daysWindow, user.activeTerm, today, selectedYearId]) // refetch when the selected school year changes
+
+  // ── Analytics: one request per endpoint per term, started only once the
+  //    summary is on screen. Teachers get their own classes (server-scoped)
+  //    plus the student snapshot for check-ins; admins get the school overview
+  //    compared against the previous term.
+  const { activeTerm, previousTerm, loading: termsLoading } = useDashboardTerms(user.school, selectedYearId)
+  const analyticsReady = !loading && Boolean(summary) && Boolean(activeTerm)
+  const termId = analyticsReady && activeTerm ? activeTerm.termId : null
+  const overview = useAnalyticsOverview(termId, 'null_skip', isAdmin ? (previousTerm?.termId ?? null) : null)
+  const classesHealth = useAnalyticsClassesHealth(isAdmin ? null : termId, 'null_skip')
+  const snapshot = useAnalyticsSnapshot(isAdmin ? null : termId, 'null_skip')
+  const analyticsPending = termsLoading || (Boolean(activeTerm) && !termId)
 
   if (loading) {
     return (
@@ -176,40 +188,13 @@ const DashboardPage: React.FC = () => {
     )
   }
 
-  const pct = (v: number | null | undefined) => (v ? `${(v * 100).toFixed(1)}%` : '—')
-
-  // Four figures carry the headline; the rest stay available without adding
-  // eight more boxes to scan past.
-  const headline = [
-    { label: 'Students', value: summary.totalStudents || 0, tone: 'neutral' as const },
-    { label: 'Classes', value: summary.totalClasses || 0, tone: 'neutral' as const },
-    {
-      label: 'Here today',
-      value: pct(summary.todaysAttendance),
-      tone: toneForRate(summary.todaysAttendance),
-    },
-    {
-      label: 'Average grade',
-      value: summary.averageStudentGrade ? `${summary.averageStudentGrade.toFixed(1)}%` : '—',
-      tone: toneForScore(summary.averageStudentGrade),
-    },
-  ]
-
-  const secondary = [
-    { label: 'teachers', value: summary.totalTeachers || 0, tone: 'neutral' as const },
-    { label: 'this week', value: pct(summary.weeklyAttendance), tone: toneForRate(summary.weeklyAttendance) },
-    { label: 'this month', value: pct(summary.monthlyAttendance), tone: toneForRate(summary.monthlyAttendance) },
-    { label: 'report cards', value: summary.reportCardsCount || 0, tone: 'neutral' as const },
-    { label: 'avg. class size', value: summary.avgClassSize || 0, tone: 'neutral' as const },
-  ]
-
   return (
     <>
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
         <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
-          {/* Header */}
+          {/* Header: greeting on the left, the three things to do on the right */}
           <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
             <div>
               <h1 className="font-display text-2xl lg:text-3xl font-semibold text-slate-900 tracking-tight">
@@ -220,27 +205,72 @@ const DashboardPage: React.FC = () => {
                 {user.school ? ` · ${getSchoolName(user.school)}` : ''}
               </p>
             </div>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_ACTIONS.map((a) => (
+                <Link
+                  key={a.href}
+                  href={a.href}
+                  className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white pl-2 pr-3.5 py-1.5 text-sm font-medium text-slate-800 transition-colors ${a.hover}`}
+                >
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${a.chip}`}>
+                    <a.icon className="h-4 w-4" />
+                  </span>
+                  {a.label}
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* Today: the teacher's own day, or who is where across the school */}
-          {user.role === 'ADMIN' ? <SchoolDayPanel /> : <DayRibbon />}
+          {isAdmin ? <SchoolDayPanel /> : <DayRibbon />}
 
-          {/* School-wide figures */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-            {headline.map((m) => (
-              <StatTile key={m.label} label={m.label} value={m.value} tone={m.tone} />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 mb-6 px-1">
-            {secondary.map((m) => (
-              <StatTile key={m.label} label={m.label} value={m.value} tone={m.tone} compact />
-            ))}
-          </div>
+          <HeadlineTiles
+            isAdmin={isAdmin}
+            summary={summary}
+            today={today}
+            termId={termId}
+            previousTermName={previousTerm?.name ?? null}
+            pending={analyticsPending}
+            overview={overview}
+            classesHealth={classesHealth}
+          />
 
-          {/* Two columns on wide screens: the narrative and the chart carry the
-              main column, short reference blocks sit in a right rail. */}
+          {/* Main column: academics then attendance. Rail: what's coming,
+              the briefing, and the staff directory folded away. */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6 items-start">
             <div className="xl:col-span-2 space-y-4">
+              {isAdmin ? (
+                <AcademicsPanel
+                  overview={overview}
+                  termId={termId}
+                  termName={activeTerm?.name ?? null}
+                  previousTermName={previousTerm?.name ?? null}
+                  pending={analyticsPending}
+                  hasTerm={Boolean(activeTerm)}
+                />
+              ) : (
+                <MyClassesPanel
+                  classesHealth={classesHealth}
+                  snapshot={snapshot}
+                  overview={overview}
+                  termId={termId}
+                  termName={activeTerm?.name ?? null}
+                  pending={analyticsPending}
+                  hasTerm={Boolean(activeTerm)}
+                />
+              )}
+              <AttendanceCard
+                trend={trend}
+                daysWindow={daysWindow}
+                onWindowChange={setDaysWindow}
+                weekly={summary.weeklyAttendance}
+                monthly={summary.monthlyAttendance}
+                today={today}
+              />
+            </div>
+
+            <div className="space-y-4">
+              {user.school && <ThisWeekCard school={user.school} isAdmin={isAdmin} />}
               {user.school && (
                 <DailyBriefing
                   summary={summary}
@@ -251,137 +281,36 @@ const DashboardPage: React.FC = () => {
                   hasPublishedSchedule={Boolean(mySchedule?.schedule)}
                 />
               )}
-              <Card>
-              <SectionHeader
-                title="Attendance"
-                hint="Share of students present each day"
-                action={
-                  <select
-                    value={daysWindow}
-                    onChange={(e) => setDaysWindow(Number(e.target.value))}
-                    className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
-                  >
-                    {[7, 14, 30].map((d) => (
-                      <option key={d} value={d}>Last {d} days</option>
-                    ))}
-                  </select>
-                }
-              />
-              <div style={{ width: '100%', height: 260 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={trend} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="attendanceFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.28} />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={(d) => format(new Date(d), 'MM/dd')}
-                      tick={{ fill: '#94a3b8', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      padding={{ left: 20, right: 20 }}
-                    />
-                    <YAxis
-                      domain={[0, 1]}
-                      tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                      tick={{ fill: '#94a3b8', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={42}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                      }}
-                      labelFormatter={(label) => format(new Date(label), 'EEEE, MMM do')}
-                      formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, 'Present']}
-                      labelStyle={{ color: '#1e293b', fontWeight: 600 }}
-                      itemStyle={{ color: '#0891b2' }}
-                    />
-                    {/* The line schools are trying to stay above. */}
-                    <ReferenceLine
-                      y={0.9}
-                      stroke="#f59e0b"
-                      strokeDasharray="4 4"
-                      label={{ value: '90% target', position: 'right', fill: '#b45309', fontSize: 10 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="rate"
-                      stroke="#0891b2"
-                      strokeWidth={2.5}
-                      fill="url(#attendanceFill)"
-                      dot={{ r: 3.5, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 6, fill: '#0891b2', strokeWidth: 2, stroke: '#fff' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {/* Staff directory: still here for everyone who needs a colleague's
+                  contact details, but folded away so it stops burying the page. */}
+              <Card flush>
+                <button
+                  onClick={() => setStaffOpen((open) => !open)}
+                  aria-expanded={staffOpen}
+                  className="group flex w-full items-center gap-3 px-5 py-4 text-left cursor-pointer"
+                >
+                  <UsersIcon className="h-5 w-5 text-slate-400 group-hover:text-cyan-600 transition-colors" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-900">Staff directory</p>
+                    <p className="text-xs text-slate-500">
+                      {summary.totalTeachers || 0} staff members and their contact details
+                    </p>
+                  </div>
+                  <ChevronDownIcon
+                    className={`h-4 w-4 ml-auto text-slate-400 transition-transform ${staffOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {staffOpen && (
+                  <div className="border-t border-slate-200/70 p-5 lg:p-6 max-h-[32rem] overflow-y-auto">
+                    <StaffList school={user.school!} showContactInfo showActions />
+                  </div>
+                )}
               </Card>
-            </div>
-
-            <div className="space-y-4">
-            <Card>
-              <SectionHeader title="Quick actions" />
-              <div className="space-y-2">
-                {QUICK_ACTIONS.map((action) => (
-                  <Link
-                    key={action.href}
-                    href={action.href}
-                    className={`group flex items-center gap-3 rounded-xl border border-slate-200/70 px-4 py-3 transition-colors ${action.hover}`}
-                  >
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${action.icon_class}`}>
-                      <action.icon className="h-5 w-5" />
-                    </span>
-                    <span className="text-sm font-medium text-slate-800">{action.label}</span>
-                    <ArrowRightIcon className="h-4 w-4 ml-auto text-slate-300 group-hover:translate-x-0.5 transition-all" />
-                  </Link>
-                ))}
-              </div>
-            </Card>
-
-            {/* Staff directory: still here for everyone who needs a colleague's
-                contact details, but folded away so it stops burying the page. */}
-            <Card flush>
-            <button
-              onClick={() => setStaffOpen((open) => !open)}
-              aria-expanded={staffOpen}
-              className="group flex w-full items-center gap-3 px-5 py-4 text-left cursor-pointer"
-            >
-              <UsersIcon className="h-5 w-5 text-slate-400 group-hover:text-cyan-600 transition-colors" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-900">Staff directory</p>
-                <p className="text-xs text-slate-500">
-                  {summary.totalTeachers || 0} staff members and their contact details
-                </p>
-              </div>
-              <ChevronDownIcon
-                className={`h-4 w-4 ml-auto text-slate-400 transition-transform ${
-                  staffOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-              {staffOpen && (
-                <div className="border-t border-slate-200/70 p-5 lg:p-6 max-h-[32rem] overflow-y-auto">
-                  <StaffList school={user.school!} showContactInfo showActions />
-                </div>
-              )}
-            </Card>
             </div>
           </div>
         </div>
       </main>
-      <CheckInModal
-        isOpen={showCheckIn}
-        onCheckIn={handleCheckIn}
-        onSkip={() => setShowCheckIn(false)}
-      />
+      <CheckInModal isOpen={showCheckIn} onCheckIn={handleCheckIn} onSkip={() => setShowCheckIn(false)} />
     </>
   )
 }

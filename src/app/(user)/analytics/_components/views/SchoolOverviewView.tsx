@@ -10,8 +10,8 @@ import {
 import { OverviewData, GradeLevelStats, SubjectClassRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import StatCard from '../StatCard'
-import HistogramChart from '../charts/HistogramChart'
-import TermComparisonChart from '../charts/TermComparisonChart'
+import HistogramChart from '@/components/analytics/charts/HistogramChart'
+import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import QuartileChart from '../charts/QuartileChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 

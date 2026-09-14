@@ -14,7 +14,7 @@ import { StudentData, StudentClassBreakdown } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import { computeAtRiskScore } from '@/lib/analyticsUtils'
 import StatCard from '../StatCard'
-import TermComparisonChart from '../charts/TermComparisonChart'
+import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 
 interface StudentViewProps {

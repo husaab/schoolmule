@@ -14,7 +14,7 @@ import {
 import { ClassData, ClassStudentRow, AssessmentStatsRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import StatCard from '../StatCard'
-import HistogramChart from '../charts/HistogramChart'
+import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import TrendLineChart from '../charts/TrendLineChart'
 import ScatterDifficultyChart from '../charts/ScatterDifficultyChart'
 import QuartileChart from '../charts/QuartileChart'

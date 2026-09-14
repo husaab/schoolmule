@@ -10,7 +10,7 @@ import {
 import { OverviewData, GradeStudentRow, SubjectClassRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import StatCard from '../StatCard'
-import HistogramChart from '../charts/HistogramChart'
+import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 
 interface GradeCohortViewProps {

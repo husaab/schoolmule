@@ -9,10 +9,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { OverviewData, SubjectClassRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
-import { useAnalyticsTermComparison } from '../../_hooks/useAnalyticsData'
+import { useAnalyticsTermComparison } from '@/components/analytics/useAnalyticsData'
 import StatCard from '../StatCard'
-import HistogramChart from '../charts/HistogramChart'
-import TermComparisonChart from '../charts/TermComparisonChart'
+import HistogramChart from '@/components/analytics/charts/HistogramChart'
+import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 import TermComparisonSection from './TermComparisonSection'
 

@@ -11,6 +11,7 @@ import {
   StudentResponse,
   SnapshotResponse,
   TermComparisonResponse,
+  ClassesHealthResponse,
   GradeEngine,
 } from './types/analytics'
 
@@ -82,4 +83,18 @@ export const getAnalyticsTermComparison = async (
 ): Promise<TermComparisonResponse> => {
   const query = `?subject=${encodeURIComponent(subject)}&grade=${encodeURIComponent(grade)}&engine=${engine}`
   return apiClient<TermComparisonResponse>(`/analytics/term-comparison${query}`)
+}
+
+/**
+ * Per-class grading health for the dashboard (average, missing work,
+ * ungraded / unpublished assessments). Teachers get only their own classes;
+ * the scoping happens server-side.
+ * GET /analytics/classes-health?termId=...&engine=...
+ */
+export const getAnalyticsClassesHealth = async (
+  termId: string,
+  engine: GradeEngine
+): Promise<ClassesHealthResponse> => {
+  const query = `?termId=${encodeURIComponent(termId)}&engine=${engine}`
+  return apiClient<ClassesHealthResponse>(`/analytics/classes-health${query}`)
 }
