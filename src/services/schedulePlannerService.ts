@@ -334,7 +334,7 @@ export const openSchedulePdf = async (
 export const getMySchedule = async (): Promise<ApiResponse<MySchedule>> =>
   apiClient<ApiResponse<MySchedule>>(`${BASE}/my-schedule`);
 
-/** Admin only: the published timetable with every teacher's sessions. */
+/** Staff (admins and teachers): the published timetable with every teacher's sessions. */
 export const getSchoolSchedule = async (): Promise<ApiResponse<MySchedule>> =>
   apiClient<ApiResponse<MySchedule>>(`${BASE}/school-schedule`);
 

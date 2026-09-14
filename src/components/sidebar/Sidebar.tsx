@@ -314,6 +314,14 @@ const Sidebar = () => {
               isActive={pathname === '/my-attendance'}
             />
 
+            {/* School Schedule — the published timetable, readable by all staff */}
+            <NavItem
+              href="/school-schedule"
+              label="School Schedule"
+              icon={CalendarDaysIcon}
+              isActive={pathname === '/school-schedule'}
+            />
+
             {/* Admin Panel */}
             {user?.role === 'ADMIN' && (
               <>

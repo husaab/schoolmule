@@ -1,5 +1,5 @@
-// Helpers shared by the teacher-facing schedule surfaces (navbar menu,
-// dashboard hero, /my-schedule page).
+// Helpers shared by the schedule surfaces (navbar menu, dashboard hero,
+// /my-schedule and /school-schedule pages).
 
 import type {
   FixedBlock,
@@ -9,8 +9,8 @@ import type {
 } from '@/services/types/schedulePlanner'
 import type { GridFixedBlock, GridSession } from './WeeklyGrid'
 
-/** The admin's whole-school timetable page. */
-export const SCHOOL_SCHEDULE_PATH = '/admin-panel/school-schedule'
+/** The whole-school timetable page, open to every staff member. */
+export const SCHOOL_SCHEDULE_PATH = '/school-schedule'
 
 /** ISO weekday, Monday = 1 … Sunday = 7 (JS getDay() puts Sunday at 0). */
 export const isoDayOf = (date: Date): number => (date.getDay() === 0 ? 7 : date.getDay())

@@ -83,11 +83,14 @@ interface DragState {
   endMin: number
 }
 
-/** Assigns overlapping sessions of one column to side-by-side lanes. */
-function packLanes(sessions: GridSession[]): Map<string, { lane: number; lanes: number }> {
+/** Assigns overlapping sessions of one column to side-by-side lanes. Shared
+ * with TimetableGrid, so both grids resolve double-bookings the same way. */
+export function packLanes(
+  sessions: { id: string; startMin: number; endMin: number }[]
+): Map<string, { lane: number; lanes: number }> {
   const sorted = [...sessions].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin)
   const result = new Map<string, { lane: number; lanes: number }>()
-  let cluster: GridSession[] = []
+  let cluster: { id: string; startMin: number; endMin: number }[] = []
   let clusterEnd = -1
 
   const flush = () => {
