@@ -22,6 +22,7 @@ import SectionHeader from '@/components/ui/SectionHeader'
 import { format, isWeekend } from 'date-fns'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
 import DayRibbon from '@/components/schedulePlanner/DayRibbon'
+import SchoolDayPanel from '@/components/schedulePlanner/SchoolDayPanel'
 import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import Link from 'next/link'
@@ -220,8 +221,8 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Today, as a proportional strip of the school day */}
-          <DayRibbon />
+          {/* Today: the teacher's own day, or who is where across the school */}
+          {user.role === 'ADMIN' ? <SchoolDayPanel /> : <DayRibbon />}
 
           {/* School-wide figures */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">

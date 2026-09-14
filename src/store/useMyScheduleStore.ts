@@ -1,10 +1,14 @@
 import { create } from 'zustand';
-import { getMySchedule } from '@/services/schedulePlannerService';
+import { getMySchedule, getSchoolSchedule } from '@/services/schedulePlannerService';
 import type { MySchedule } from '@/services/types/schedulePlanner';
+import { useUserStore } from '@/store/useUserStore';
 
-// The teacher's published timetable is read by three surfaces at once (navbar
-// menu, dashboard hero, /my-schedule page). Sharing one store keeps that to a
-// single request per school year instead of one per mounted component.
+// The published timetable is read by several surfaces at once (navbar menu,
+// dashboard hero, schedule page). Sharing one store keeps that to a single
+// request per school year instead of one per mounted component.
+//
+// Teachers get their own sessions; admins get the whole school's, so the same
+// surfaces answer "where am I" for one and "who is where" for the other.
 
 interface MyScheduleState {
   data: MySchedule | null;
@@ -29,8 +33,9 @@ export const useMyScheduleStore = create<MyScheduleState>((set, get) => ({
     if (inFlight) return inFlight;
     if (loaded && !force) return;
 
+    const isAdmin = useUserStore.getState().user?.role === 'ADMIN';
     set({ loading: true, error: null });
-    const request = getMySchedule()
+    const request = (isAdmin ? getSchoolSchedule() : getMySchedule())
       .then((res) => {
         // A school not using the planner has no published schedule; that is a
         // normal empty state, not an error.

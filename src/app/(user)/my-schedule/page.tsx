@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -15,6 +16,7 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
 import { dayLabel, formatMin } from '@/components/schedulePlanner/timeUtils'
 import {
+  SCHOOL_SCHEDULE_PATH,
   closureOn,
   dateForDay,
   fillableByDay,
@@ -31,13 +33,19 @@ import { format } from 'date-fns'
 const MySchedulePage: React.FC = () => {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const router = useRouter()
   const { data, loading, loaded, error, load } = useMyScheduleStore()
   const [tab, setTab] = useState<'today' | 'week'>('today')
 
   useEffect(() => {
     if (!user?.id) return
+    // Admins see the whole school, which has its own page.
+    if (user.role === 'ADMIN') {
+      router.replace(SCHOOL_SCHEDULE_PATH)
+      return
+    }
     load(true)
-  }, [user?.id, selectedYearId, load])
+  }, [user?.id, user?.role, selectedYearId, load, router])
 
   const today = useMemo(() => new Date(), [])
   const todayIso = isoDayOf(today)

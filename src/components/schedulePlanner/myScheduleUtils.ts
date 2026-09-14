@@ -9,6 +9,9 @@ import type {
 } from '@/services/types/schedulePlanner'
 import type { GridFixedBlock, GridSession } from './WeeklyGrid'
 
+/** The admin's whole-school timetable page. */
+export const SCHOOL_SCHEDULE_PATH = '/admin-panel/school-schedule'
+
 /** ISO weekday, Monday = 1 … Sunday = 7 (JS getDay() puts Sunday at 0). */
 export const isoDayOf = (date: Date): number => (date.getDay() === 0 ? 7 : date.getDay())
 
@@ -36,6 +39,24 @@ export const dateForDay = (weekStart: string, day: number): Date => {
 
 export const sessionsOn = (sessions: PublishedSession[], day: number): PublishedSession[] =>
   sessions.filter((s) => s.dayOfWeek === day).sort((a, b) => a.startMin - b.startMin)
+
+/**
+ * The whole-school picture at a moment: every session in progress, and every
+ * session in the next period to start. Classes run on staggered bells, so
+ * "next" is whatever begins soonest after `nowMin`, not a fixed period number.
+ */
+export const periodsAround = (
+  sessions: PublishedSession[],
+  nowMin: number
+): { now: PublishedSession[]; next: PublishedSession[] } => {
+  const byTeacher = (a: PublishedSession, b: PublishedSession) =>
+    a.teacherName.localeCompare(b.teacherName)
+  const now = sessions.filter((s) => s.startMin <= nowMin && nowMin < s.endMin).sort(byTeacher)
+  const upcoming = sessions.filter((s) => s.startMin > nowMin)
+  const nextStart = upcoming.length > 0 ? Math.min(...upcoming.map((s) => s.startMin)) : null
+  const next = upcoming.filter((s) => s.startMin === nextStart).sort(byTeacher)
+  return { now, next }
+}
 
 /** Days the teacher actually teaches, in order. */
 export const teachingDays = (sessions: PublishedSession[]): number[] =>

@@ -1,7 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import React, { useState, useEffect, useMemo } from 'react'
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import {
@@ -13,6 +21,7 @@ import { getTeachersBySchool } from '@/services/teacherService'
 import type { TeacherPayload } from '@/services/types/teacher'
 import type { PlannerTeacher, TimeWindow } from '@/services/types/schedulePlanner'
 import { DAY_LABELS_SHORT, dayLabel, formatMin, minToTimeStr, timeStrToMin } from './timeUtils'
+import { suggestAccount } from './accountMatching'
 
 interface TeachersTabProps {
   teachers: PlannerTeacher[]
@@ -54,6 +63,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
   const [form, setForm] = useState<TeacherForm>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [userAccounts, setUserAccounts] = useState<TeacherPayload[]>([])
+  const [accountsLoaded, setAccountsLoaded] = useState(false)
 
   useEffect(() => {
     if (!user?.school) return
@@ -62,7 +72,140 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
         if (res.status === 'success') setUserAccounts(res.data)
       })
       .catch(() => {})
+      .finally(() => setAccountsLoaded(true))
   }, [user?.school])
+
+  // ─── Account links ──────────────────────────────────────────────────────
+  // A planner teacher only sees their schedule once linked to their login, so
+  // link status is shown on every row rather than buried in the edit form.
+
+  const [unlinkedOnly, setUnlinkedOnly] = useState(false)
+  const [linkingId, setLinkingId] = useState<string | null>(null)
+
+  const accountById = useMemo(
+    () => new Map(userAccounts.map((a) => [a.userId, a])),
+    [userAccounts]
+  )
+
+  /** Which planner teacher each account is already linked to. */
+  const linkedTo = useMemo(() => {
+    const map = new Map<string, PlannerTeacher>()
+    for (const t of teachers) if (t.userId) map.set(t.userId, t)
+    return map
+  }, [teachers])
+
+  const isLinked = (t: PlannerTeacher) => Boolean(t.userId)
+  const linkedCount = teachers.filter(isLinked).length
+  const unlinkedCount = teachers.length - linkedCount
+
+  /** Name-based guesses for unlinked teachers, from accounts nobody has claimed. */
+  const suggestions = useMemo(() => {
+    const free = userAccounts.filter((a) => !linkedTo.has(a.userId))
+    const map = new Map<string, TeacherPayload>()
+    for (const t of teachers) {
+      if (t.userId) continue
+      const match = suggestAccount(t.displayName, free)
+      if (match) map.set(t.plannerTeacherId, match)
+    }
+    return map
+  }, [teachers, userAccounts, linkedTo])
+
+  const accountOptionLabel = (account: TeacherPayload, forTeacherId: string | null) => {
+    const owner = linkedTo.get(account.userId)
+    const taken = owner && owner.plannerTeacherId !== forTeacherId
+    return `${account.fullName} (${account.email})${taken ? ` — linked to ${owner.displayName}` : ''}`
+  }
+
+  const setLink = async (t: PlannerTeacher, userId: string | null) => {
+    setLinkingId(t.plannerTeacherId)
+    try {
+      await updatePlannerTeacher(t.plannerTeacherId, { userId })
+      const account = userId ? accountById.get(userId) : null
+      showNotification(
+        account
+          ? `${t.displayName} linked to ${account.fullName} — their schedule is now on their dashboard`
+          : `${t.displayName} unlinked`,
+        'success'
+      )
+      onChanged()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error updating account link', 'error')
+    } finally {
+      setLinkingId(null)
+    }
+  }
+
+  const visibleTeachers = unlinkedOnly ? teachers.filter((t) => !isLinked(t)) : teachers
+
+  const renderAccountCell = (t: PlannerTeacher) => {
+    if (!accountsLoaded) return <span className="text-xs text-gray-400">…</span>
+    const busy = linkingId === t.plannerTeacherId
+
+    if (t.userId) {
+      const account = accountById.get(t.userId)
+      return (
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-flex items-center gap-1 max-w-[14rem] px-2 py-0.5 rounded-full text-xs font-medium ${
+              account ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+            }`}
+            title={account ? account.email : 'Linked account is no longer a teacher in this school'}
+          >
+            {account ? (
+              <CheckCircleIcon className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ExclamationTriangleIcon className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="truncate">{account ? account.fullName : 'Unknown account'}</span>
+          </span>
+          <button
+            onClick={() => setLink(t, null)}
+            disabled={busy}
+            title="Unlink account"
+            className="p-0.5 rounded text-gray-400 hover:text-red-500 disabled:opacity-50 cursor-pointer"
+          >
+            <XMarkIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )
+    }
+
+    const suggestion = suggestions.get(t.plannerTeacherId)
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-medium whitespace-nowrap">
+            <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+            Not linked
+          </span>
+          <select
+            value=""
+            disabled={busy || userAccounts.length === 0}
+            onChange={(e) => e.target.value && setLink(t, e.target.value)}
+            className="min-w-0 max-w-[10rem] border border-gray-300 rounded px-1.5 py-0.5 text-xs text-gray-600 bg-white disabled:opacity-50"
+          >
+            <option value="">{userAccounts.length === 0 ? 'No accounts' : 'Link account…'}</option>
+            {userAccounts.map((account) => (
+              <option key={account.userId} value={account.userId}>
+                {accountOptionLabel(account, t.plannerTeacherId)}
+              </option>
+            ))}
+          </select>
+        </div>
+        {suggestion && (
+          <button
+            onClick={() => setLink(t, suggestion.userId)}
+            disabled={busy}
+            title={`Link to ${suggestion.fullName} (${suggestion.email})`}
+            className="inline-flex items-center gap-1 text-xs text-cyan-700 hover:text-cyan-900 hover:underline disabled:opacity-50 cursor-pointer"
+          >
+            <SparklesIcon className="h-3.5 w-3.5" />
+            Suggested: <span className="font-medium">{suggestion.fullName}</span> · Link
+          </button>
+        )}
+      </div>
+    )
+  }
 
   const startAdd = () => {
     setForm(emptyForm)
@@ -316,15 +459,22 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
               <select
                 value={form.userId}
                 onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                className={`w-full border rounded px-2 py-1.5 text-sm ${
+                  form.userId ? 'border-gray-300' : 'border-amber-300 bg-amber-50/60'
+                }`}
               >
                 <option value="">Not linked</option>
                 {userAccounts.map((account) => (
                   <option key={account.userId} value={account.userId}>
-                    {account.fullName} ({account.email})
+                    {accountOptionLabel(account, editingId === 'new' ? null : editingId)}
                   </option>
                 ))}
               </select>
+              {!form.userId && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Not linked — this teacher won&apos;t see their schedule.
+                </p>
+              )}
             </div>
           </div>
 
@@ -411,6 +561,57 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
         </div>
       )}
 
+      {teachers.length > 0 && accountsLoaded && (
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 ${
+            unlinkedCount === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              {unlinkedCount === 0 ? (
+                <CheckCircleIcon className="h-5 w-5 shrink-0 text-green-600" />
+              ) : (
+                <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-600" />
+              )}
+              <div>
+                <p
+                  className={`text-sm font-semibold ${
+                    unlinkedCount === 0 ? 'text-green-900' : 'text-amber-900'
+                  }`}
+                >
+                  {linkedCount} of {teachers.length} teachers linked to a SchoolMule account
+                </p>
+                <p className={`text-xs ${unlinkedCount === 0 ? 'text-green-700' : 'text-amber-700'}`}>
+                  {unlinkedCount === 0
+                    ? 'Every teacher can see their schedule on their dashboard.'
+                    : `${unlinkedCount} teacher${unlinkedCount === 1 ? '' : 's'} can't see their schedule until linked. Links apply to the published schedule instantly — no need to republish.`}
+                </p>
+              </div>
+            </div>
+            {unlinkedCount > 0 && (
+              <label className="flex items-center gap-2 text-xs font-medium text-amber-900 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={unlinkedOnly}
+                  onChange={(e) => setUnlinkedOnly(e.target.checked)}
+                  className="rounded border-amber-300"
+                />
+                Show unlinked only
+              </label>
+            )}
+          </div>
+          <div className="mt-2.5 h-1.5 rounded-full bg-white/80 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                unlinkedCount === 0 ? 'bg-green-500' : 'bg-amber-500'
+              }`}
+              style={{ width: `${(linkedCount / teachers.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {teachers.length === 0 && !editingId ? (
         <p className="text-sm text-gray-400 py-6 text-center">No teachers yet — add your first one.</p>
       ) : (
@@ -419,6 +620,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
             <thead>
               <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
                 <th className="py-2 pr-4">Name</th>
+                <th className="py-2 pr-4">Account</th>
                 <th className="py-2 pr-4">Type</th>
                 <th className="py-2 pr-4">Max hrs/wk</th>
                 <th className="py-2 pr-4">Spare/day</th>
@@ -430,9 +632,15 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, onChanged }) => {
               </tr>
             </thead>
             <tbody>
-              {teachers.map((t) => (
-                <tr key={t.plannerTeacherId} className="border-b border-gray-100">
+              {visibleTeachers.map((t) => (
+                <tr
+                  key={t.plannerTeacherId}
+                  className={`border-b border-gray-100 ${
+                    accountsLoaded && !t.userId ? 'bg-amber-50/40' : ''
+                  }`}
+                >
                   <td className="py-2 pr-4 font-medium">{t.displayName}</td>
+                  <td className="py-2 pr-4 min-w-[14rem]">{renderAccountCell(t)}</td>
                   <td className="py-2 pr-4">{t.isFullTime ? 'Full-time' : 'Part-time'}</td>
                   <td className="py-2 pr-4">
                     {t.maxWeeklyMinutes != null ? (t.maxWeeklyMinutes / 60).toFixed(1) : '—'}

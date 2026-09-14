@@ -6,7 +6,7 @@
 // marker shows where the day currently is. It answers "where am I supposed to
 // be, and how long until the bell" without reading a single row of a table.
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import {
   ArrowRightIcon,
@@ -20,23 +20,7 @@ import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import { colorForLabel, formatMin } from './timeUtils'
 import { closureOn, isoDayOf, sessionsOn } from './myScheduleUtils'
-
-/** Minutes since midnight, refreshed each minute so the marker stays honest. */
-const useMinuteOfDay = (): number => {
-  const [now, setNow] = useState(() => {
-    const d = new Date()
-    return d.getHours() * 60 + d.getMinutes()
-  })
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date()
-      setNow(d.getHours() * 60 + d.getMinutes())
-    }
-    const timer = window.setInterval(tick, 60_000)
-    return () => window.clearInterval(timer)
-  }, [])
-  return now
-}
+import { useMinuteOfDay } from './useMinuteOfDay'
 
 const DayRibbon: React.FC = () => {
   const user = useUserStore((s) => s.user)
@@ -91,7 +75,8 @@ const DayRibbon: React.FC = () => {
 
   if (!loaded) return null
 
-  // No published schedule at all: say what will fill the space, and who fills it.
+  // No published sessions for this teacher: say what will fill the space.
+  // (Admins get SchoolDayPanel instead.)
   if (!data || data.sessions.length === 0) {
     return (
       <Card className="mb-6 !bg-gradient-to-br from-cyan-50/80 via-white to-teal-50/60 border-cyan-200/60">
@@ -99,22 +84,7 @@ const DayRibbon: React.FC = () => {
           icon={CalendarDaysIcon}
           iconClassName="text-cyan-500"
           title="Your day will appear here"
-          description={
-            user?.role === 'ADMIN'
-              ? 'Build the school timetable in the schedule planner, then publish it to put every teacher’s day on their dashboard.'
-              : 'Once your administrator publishes the school timetable, today’s periods show up here.'
-          }
-          action={
-            user?.role === 'ADMIN' ? (
-              <Link
-                href="/admin-panel/schedule-planner"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white text-sm font-medium rounded-xl hover:bg-cyan-700 transition"
-              >
-                Open the schedule planner
-                <ArrowRightIcon className="h-4 w-4" />
-              </Link>
-            ) : undefined
-          }
+          description="Once your administrator publishes the school timetable, today’s periods show up here."
         />
       </Card>
     )
