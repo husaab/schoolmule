@@ -5,6 +5,7 @@ import {
   MyMonthResponse,
   AllTeachersResponse,
   UpdateRecordResponse,
+  WorkDaysResponse,
 } from "./types/teacherAttendance";
 
 const BASE = "/teacher-attendance";
@@ -42,6 +43,17 @@ export const updateTeacherRecord = (
     method: "PATCH",
     body: { status, notes: notes ?? null },
   });
+
+/** Admin: set which weekdays a staff member works (ISO, Monday = 1). */
+export const setWorkDays = (teacherId: string, workDays: number[]) =>
+  apiClient<WorkDaysResponse>(`${BASE}/work-days/${teacherId}`, {
+    method: "PUT",
+    body: { workDays },
+  });
+
+/** Admin: drop the override so work days come from the schedule planner again. */
+export const resetWorkDays = (teacherId: string) =>
+  apiClient<WorkDaysResponse>(`${BASE}/work-days/${teacherId}`, { method: "DELETE" });
 
 export const downloadAttendancePDF = async (
   school: string,

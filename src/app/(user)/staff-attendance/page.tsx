@@ -7,10 +7,13 @@ import { useUserStore } from '@/store/useUserStore'
 import Spinner from '@/components/Spinner'
 import AttendanceCalendar from '@/components/teacherAttendance/AttendanceCalendar'
 import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceModal'
+import WorkDaysControl from '@/components/teacherAttendance/WorkDaysControl'
 import {
   getAllTeacherAttendance,
   updateTeacherRecord,
   downloadAttendancePDF,
+  setWorkDays,
+  resetWorkDays,
 } from '@/services/teacherAttendanceService'
 import { TeacherAttendanceData } from '@/services/types/teacherAttendance'
 import { format, addMonths, subMonths } from 'date-fns'
@@ -21,16 +24,17 @@ import {
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 import { useFilterParams } from '@/hooks/useFilterParams'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 function StaffAttendanceContent() {
   const user = useUserStore((s) => s.user)
+  const showNotification = useNotificationStore((s) => s.showNotification)
   const { get, setParams } = useFilterParams()
   // Filters live in the URL so Back/refresh/share restore them.
   const monthParam = get('month')
   const currentMonth = monthParam ? new Date(monthParam + '-01T00:00:00') : new Date()
   const selectedTeacherId = get('teacher')
   const [teachers, setTeachers] = useState<TeacherAttendanceData[]>([])
-  const [workingDays, setWorkingDays] = useState(0)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
   const [editTarget, setEditTarget] = useState<{
@@ -48,7 +52,6 @@ function StaffAttendanceContent() {
     try {
       const res = await getAllTeacherAttendance(user.school, monthStr)
       setTeachers(res.data.teachers)
-      setWorkingDays(res.data.workingDays)
     } catch {
       // fail silently
     } finally {
@@ -84,6 +87,29 @@ function StaffAttendanceContent() {
       await loadData()
     } catch {
       // fail silently
+    }
+  }
+
+  // Work days change which days are assumed present, so reload the month after.
+  const handleSaveWorkDays = async (teacherId: string, days: number[]) => {
+    try {
+      await setWorkDays(teacherId, days)
+      showNotification('Work days saved', 'success')
+      await loadData()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error saving work days', 'error')
+      throw err
+    }
+  }
+
+  const handleResetWorkDays = async (teacherId: string) => {
+    try {
+      await resetWorkDays(teacherId)
+      showNotification('Work days reset to the schedule planner', 'success')
+      await loadData()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error resetting work days', 'error')
+      throw err
     }
   }
 
@@ -193,11 +219,19 @@ function StaffAttendanceContent() {
                     return (
                       <div key={teacher.teacherId}>
                         {/* Teacher header */}
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-base font-semibold text-slate-900">
-                            {teacher.firstName || ''}{' '}
-                            {teacher.lastName || teacher.username || ''}
-                          </h3>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-900">
+                              {teacher.firstName || ''}{' '}
+                              {teacher.lastName || teacher.username || ''}
+                            </h3>
+                            <WorkDaysControl
+                              workDays={teacher.workDays}
+                              source={teacher.workDaysSource}
+                              onSave={(days) => handleSaveWorkDays(teacher.teacherId, days)}
+                              onReset={() => handleResetWorkDays(teacher.teacherId)}
+                            />
+                          </div>
                           <div className="flex items-center gap-3 text-xs text-slate-500">
                             <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium">
                               {present}P
@@ -205,13 +239,14 @@ function StaffAttendanceContent() {
                             <span className="px-2 py-1 rounded-lg bg-red-50 text-red-700 font-medium">
                               {absent}A
                             </span>
-                            <span className="text-slate-400">/ {workingDays} days</span>
+                            <span className="text-slate-400">/ {teacher.workingDays} days</span>
                           </div>
                         </div>
 
                         <AttendanceCalendar
                           month={currentMonth}
                           records={teacher.records}
+                          workDays={teacher.workDays}
                           onDayClick={(date, status) =>
                             handleDayClick(teacher.teacherId, date, status)
                           }

@@ -4,6 +4,8 @@ export interface TodayStatusResponse {
     checkedIn: boolean;
     status: string | null;
     notes?: string | null;
+    /** False on school closures and the person's days off. */
+    expected?: boolean;
   };
 }
 
@@ -23,10 +25,17 @@ export interface AttendanceRecord {
   notes?: string | null;
 }
 
+/** Where a staff member's work days came from. */
+export type WorkDaysSource = "custom" | "planner" | "default";
+
 export interface MyMonthResponse {
   status: string;
   data: {
     records: AttendanceRecord[];
+    /** ISO weekdays they work, Monday = 1 */
+    workDays: number[];
+    workDaysSource: WorkDaysSource;
+    /** Open school days they work this month */
     workingDays: number;
     presentDays: number;
     absentDays: number;
@@ -39,6 +48,11 @@ export interface TeacherAttendanceData {
   lastName: string;
   username: string;
   records: AttendanceRecord[];
+  /** ISO weekdays they work, Monday = 1 */
+  workDays: number[];
+  workDaysSource: WorkDaysSource;
+  /** Open school days they work this month */
+  workingDays: number;
 }
 
 export interface AllTeachersResponse {
@@ -56,5 +70,14 @@ export interface UpdateRecordResponse {
     attendanceDate: string;
     status: string;
     notes?: string | null;
+  };
+}
+
+export interface WorkDaysResponse {
+  status: string;
+  data: {
+    teacherId: string;
+    workDays?: number[];
+    workDaysSource?: WorkDaysSource;
   };
 }

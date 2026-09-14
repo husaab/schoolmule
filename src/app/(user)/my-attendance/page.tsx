@@ -12,6 +12,7 @@ import { AttendanceRecord } from '@/services/types/teacherAttendance'
 import { format, addMonths, subMonths } from 'date-fns'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { useFilterParams } from '@/hooks/useFilterParams'
+import { formatWorkDays } from '@/components/teacherAttendance/WorkDaysControl'
 
 function MyAttendanceContent() {
   const user = useUserStore((s) => s.user)
@@ -21,6 +22,7 @@ function MyAttendanceContent() {
   const currentMonth = monthParam ? new Date(monthParam + '-01T00:00:00') : new Date()
   const [records, setRecords] = useState<AttendanceRecord[]>([])
   const [workingDays, setWorkingDays] = useState(0)
+  const [workDays, setWorkDays] = useState<number[] | undefined>(undefined)
   const [presentDays, setPresentDays] = useState(0)
   const [absentDays, setAbsentDays] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -38,6 +40,7 @@ function MyAttendanceContent() {
       const res = await getMyMonth(monthStr)
       setRecords(res.data.records)
       setWorkingDays(res.data.workingDays)
+      setWorkDays(res.data.workDays)
       setPresentDays(res.data.presentDays)
       setAbsentDays(res.data.absentDays)
     } catch {
@@ -86,7 +89,14 @@ function MyAttendanceContent() {
               <CalendarDaysIcon className="w-7 h-7 text-cyan-500" />
               My Attendance
             </h1>
-            <p className="text-slate-500 mt-1">View and manage your attendance log</p>
+            <p className="text-slate-500 mt-1">
+              View and manage your attendance log
+              {workDays && workDays.length < 5 && (
+                <span className="ml-2 inline-block px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs font-medium">
+                  Your work days: {formatWorkDays(workDays)}
+                </span>
+              )}
+            </p>
           </div>
 
           {/* Month Navigation */}
@@ -119,6 +129,7 @@ function MyAttendanceContent() {
                 <AttendanceCalendar
                   month={currentMonth}
                   records={records}
+                  workDays={workDays}
                   onDayClick={handleDayClick}
                 />
               )}

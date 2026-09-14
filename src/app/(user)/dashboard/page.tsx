@@ -105,7 +105,8 @@ const DashboardPage: React.FC = () => {
       .then((res) => {
         if (res.data.checkedIn) {
           localStorage.setItem(localKey, todayStr)
-        } else {
+          // No prompt when they aren't expected in (school closed, or a part-timer's day off)
+        } else if (res.data.expected !== false) {
           setShowCheckIn(true)
         }
       })

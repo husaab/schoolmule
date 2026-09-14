@@ -25,6 +25,8 @@ interface AttendanceCalendarProps {
   records: AttendanceRecord[]
   onDayClick?: (date: string, currentStatus: string | null) => void
   readOnly?: boolean
+  /** ISO weekdays (Monday = 1) this person works; other weekdays show as "Off". */
+  workDays?: number[]
 }
 
 export default function AttendanceCalendar({
@@ -32,6 +34,7 @@ export default function AttendanceCalendar({
   records,
   onDayClick,
   readOnly = false,
+  workDays,
 }: AttendanceCalendarProps) {
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
@@ -48,6 +51,12 @@ export default function AttendanceCalendar({
   })
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const isOffDay = (day: Date) => {
+    if (!workDays) return false
+    const iso = day.getDay() === 0 ? 7 : day.getDay()
+    return !workDays.includes(iso)
+  }
+  const hasOffDays = Boolean(workDays) && [1, 2, 3, 4, 5].some((d) => !workDays!.includes(d))
 
   return (
     <div>
@@ -74,16 +83,20 @@ export default function AttendanceCalendar({
           const record = recordMap[dateStr] || null
           const status = record?.status ?? null
           const hasNote = !!(record?.notes)
+          // Not a work day and nothing recorded. Still clickable, so a covered
+          // shift can be recorded.
+          const off = inMonth && !weekend && !status && isOffDay(day)
           const disabled = !inMonth || weekend || tooFarAhead || readOnly
 
           let bgClass = 'bg-white'
           if (!inMonth) bgClass = 'bg-transparent'
           else if (weekend) bgClass = 'bg-slate-50'
+          else if (off) bgClass = 'bg-slate-50 border border-dashed border-slate-200'
           else if (status === 'PRESENT') bgClass = 'bg-emerald-100'
           else if (status === 'ABSENT') bgClass = 'bg-red-100'
 
           let textClass = 'text-slate-400'
-          if (inMonth && !weekend) textClass = 'text-slate-700'
+          if (inMonth && !weekend) textClass = off ? 'text-slate-400' : 'text-slate-700'
           if (status === 'PRESENT') textClass = 'text-emerald-700'
           if (status === 'ABSENT') textClass = 'text-red-700'
 
@@ -91,7 +104,7 @@ export default function AttendanceCalendar({
             <button
               key={dateStr}
               disabled={disabled}
-              title={hasNote ? record!.notes! : undefined}
+              title={hasNote ? record!.notes! : off ? 'Not scheduled' : undefined}
               onClick={() => {
                 if (!disabled && onDayClick) {
                   onDayClick(dateStr, status)
@@ -107,6 +120,7 @@ export default function AttendanceCalendar({
               `}
             >
               <span className="text-sm font-medium">{format(day, 'd')}</span>
+              {off && <span className="text-[10px] font-medium mt-0.5">Off</span>}
               {inMonth && !weekend && status && (
                 <span className="text-[10px] font-semibold mt-0.5">
                   {status === 'PRESENT' ? 'P' : 'A'}
@@ -139,6 +153,12 @@ export default function AttendanceCalendar({
           <div className="w-3 h-3 rounded bg-slate-50 border border-slate-200" />
           Weekend
         </div>
+        {hasOffDays && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded bg-slate-50 border border-dashed border-slate-300" />
+            Not scheduled
+          </div>
+        )}
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-amber-400" />
           Has note
