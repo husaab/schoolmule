@@ -10,8 +10,15 @@ interface EditAttendanceModalProps {
   date: string
   currentStatus: 'PRESENT' | 'ABSENT' | null
   currentNotes: string | null
-  onSave: (status: 'PRESENT' | 'ABSENT', notes: string | null) => Promise<void>
+  onSave: (status: 'PRESENT' | 'ABSENT', notes: string | null, hours?: number | null) => Promise<void>
   onClose: () => void
+  /**
+   * Admin-only: let the day's hours be overridden (a half day, a covered
+   * shift). `usualHours` is what the day counts for without an override.
+   */
+  allowHours?: boolean
+  currentHours?: number | null
+  usualHours?: number
 }
 
 export default function EditAttendanceModal({
@@ -21,22 +28,30 @@ export default function EditAttendanceModal({
   currentNotes,
   onSave,
   onClose,
+  allowHours = false,
+  currentHours = null,
+  usualHours,
 }: EditAttendanceModalProps) {
   const [status, setStatus] = useState<'PRESENT' | 'ABSENT'>(currentStatus ?? 'PRESENT')
   const [notes, setNotes] = useState(currentNotes ?? '')
+  const [hours, setHours] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setStatus(currentStatus ?? 'PRESENT')
       setNotes(currentNotes ?? '')
+      setHours(currentHours === null || currentHours === undefined ? '' : String(currentHours))
     }
-  }, [isOpen, currentStatus, currentNotes])
+  }, [isOpen, currentStatus, currentNotes, currentHours])
+
+  const hoursValue = hours.trim() === '' ? null : Number(hours)
+  const hoursValid = hoursValue === null || (Number.isFinite(hoursValue) && hoursValue >= 0 && hoursValue <= 24)
 
   const handleSave = async () => {
     setLoading(true)
     try {
-      await onSave(status, notes.trim() || null)
+      await onSave(status, notes.trim() || null, allowHours ? hoursValue : undefined)
     } finally {
       setLoading(false)
     }
@@ -79,6 +94,43 @@ export default function EditAttendanceModal({
           </button>
         </div>
 
+        {allowHours && (
+          <div className="mb-5">
+            <label className="block text-xs font-medium text-slate-500 mb-1.5">
+              Hours this day <span className="font-normal text-slate-400">(optional override)</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={24}
+                step={0.25}
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+                placeholder={usualHours !== undefined ? `${usualHours}` : 'e.g. 3.5'}
+                className="w-28 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-300"
+              />
+              <span className="text-xs text-slate-400">
+                {hoursValue === null
+                  ? status === 'PRESENT'
+                    ? `Counts the usual ${usualHours ?? ''} h`
+                    : 'Counts 0 h'
+                  : 'Counts exactly this'}
+              </span>
+              {hoursValue !== null && (
+                <button
+                  type="button"
+                  onClick={() => setHours('')}
+                  className="ml-auto text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {!hoursValid && <p className="mt-1 text-xs text-rose-600">Hours must be between 0 and 24.</p>}
+          </div>
+        )}
+
         <div className="mb-5">
           <label className="block text-xs font-medium text-slate-500 mb-1.5">
             Notes <span className="font-normal text-slate-400">(optional)</span>
@@ -86,7 +138,7 @@ export default function EditAttendanceModal({
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. only worked 7 hours today"
+            placeholder="e.g. left early for an appointment"
             rows={2}
             maxLength={500}
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none placeholder:text-slate-300"
@@ -103,7 +155,7 @@ export default function EditAttendanceModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || !hoursValid}
             className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-teal-500 rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-sm cursor-pointer disabled:opacity-50"
           >
             {loading ? 'Saving...' : 'Save'}

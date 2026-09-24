@@ -7,8 +7,11 @@ import { useUserStore } from '@/store/useUserStore'
 import Spinner from '@/components/Spinner'
 import AttendanceCalendar from '@/components/teacherAttendance/AttendanceCalendar'
 import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceModal'
-import { getMyMonth, updateMyRecord } from '@/services/teacherAttendanceService'
-import { AttendanceRecord } from '@/services/types/teacherAttendance'
+import { getMyMonth, getMyPayPeriod, updateMyRecord } from '@/services/teacherAttendanceService'
+import type { AttendanceRecord, MyPayPeriodResponse } from '@/services/types/teacherAttendance'
+import MyPayPeriodCard from '@/components/teacherAttendance/MyPayPeriodCard'
+import { formatHours } from '@/components/teacherAttendance/payPeriodFormat'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import { format, addMonths, subMonths } from 'date-fns'
 import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { useFilterParams } from '@/hooks/useFilterParams'
@@ -16,6 +19,7 @@ import { formatWorkDays } from '@/components/teacherAttendance/WorkDaysControl'
 
 function MyAttendanceContent() {
   const user = useUserStore((s) => s.user)
+  const showNotification = useNotificationStore((s) => s.showNotification)
   const { get, setParams } = useFilterParams()
   // Filter lives in the URL so Back/refresh/share restore it.
   const monthParam = get('month')
@@ -25,6 +29,8 @@ function MyAttendanceContent() {
   const [workDays, setWorkDays] = useState<number[] | undefined>(undefined)
   const [presentDays, setPresentDays] = useState(0)
   const [absentDays, setAbsentDays] = useState(0)
+  const [hoursWorked, setHoursWorked] = useState(0)
+  const [payPeriod, setPayPeriod] = useState<MyPayPeriodResponse['data'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [editTarget, setEditTarget] = useState<{
     date: string
@@ -43,6 +49,7 @@ function MyAttendanceContent() {
       setWorkDays(res.data.workDays)
       setPresentDays(res.data.presentDays)
       setAbsentDays(res.data.absentDays)
+      setHoursWorked(res.data.hoursWorked)
     } catch {
       // fail silently
     } finally {
@@ -50,9 +57,22 @@ function MyAttendanceContent() {
     }
   }, [monthStr])
 
+  const loadPayPeriod = useCallback(async () => {
+    try {
+      const res = await getMyPayPeriod()
+      setPayPeriod(res.data)
+    } catch {
+      setPayPeriod(null)
+    }
+  }, [])
+
   useEffect(() => {
     if (user.id) loadData()
   }, [user.id, loadData])
+
+  useEffect(() => {
+    if (user.id) loadPayPeriod()
+  }, [user.id, loadPayPeriod])
 
   const handleDayClick = (date: string, currentStatus: string | null) => {
     const record = records.find((r) => r.attendanceDate.substring(0, 10) === date)
@@ -69,9 +89,9 @@ function MyAttendanceContent() {
     try {
       await updateMyRecord(date, status, notes)
       setEditTarget(null)
-      await loadData()
-    } catch {
-      // fail silently
+      await Promise.all([loadData(), loadPayPeriod()])
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error saving attendance', 'error')
     }
   }
 
@@ -98,6 +118,9 @@ function MyAttendanceContent() {
               )}
             </p>
           </div>
+
+          {/* Current pay period (only when the school has a pay schedule) */}
+          <MyPayPeriodCard data={payPeriod} />
 
           {/* Month Navigation */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 mb-6">
@@ -137,7 +160,7 @@ function MyAttendanceContent() {
           </div>
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-center">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Working Days</p>
               <p className="text-2xl font-bold text-slate-900">{workingDays}</p>
@@ -153,6 +176,10 @@ function MyAttendanceContent() {
             <div className="bg-slate-50 rounded-2xl p-5 shadow-sm border border-slate-200 text-center">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Unmarked</p>
               <p className="text-2xl font-bold text-slate-600">{unmarkedDays < 0 ? 0 : unmarkedDays}</p>
+            </div>
+            <div className="bg-cyan-50 rounded-2xl p-5 shadow-sm border border-cyan-100 text-center">
+              <p className="text-xs font-medium text-cyan-600 uppercase tracking-wide mb-1">Hours</p>
+              <p className="text-2xl font-bold text-cyan-700 tabular-nums">{formatHours(hoursWorked)}</p>
             </div>
           </div>
         </div>

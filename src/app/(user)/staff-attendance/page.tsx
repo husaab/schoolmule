@@ -8,14 +8,28 @@ import Spinner from '@/components/Spinner'
 import AttendanceCalendar from '@/components/teacherAttendance/AttendanceCalendar'
 import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceModal'
 import WorkDaysControl from '@/components/teacherAttendance/WorkDaysControl'
+import HoursPerDayControl from '@/components/teacherAttendance/HoursPerDayControl'
+import PayPeriodCard from '@/components/teacherAttendance/PayPeriodCard'
+import PayScheduleModal from '@/components/teacherAttendance/PayScheduleModal'
+import { formatHours } from '@/components/teacherAttendance/payPeriodFormat'
 import {
   getAllTeacherAttendance,
   updateTeacherRecord,
   downloadAttendancePDF,
   setWorkDays,
   resetWorkDays,
+  setHoursPerDay,
+  resetHoursPerDay,
+  getPayPeriodContaining,
+  savePaySchedule,
+  deletePaySchedule,
 } from '@/services/teacherAttendanceService'
-import { TeacherAttendanceData } from '@/services/types/teacherAttendance'
+import type {
+  TeacherAttendanceData,
+  PaySchedule,
+  PayPeriod,
+  PaySchedulePayload,
+} from '@/services/types/teacherAttendance'
 import { format, addMonths, subMonths } from 'date-fns'
 import {
   ChevronLeftIcon,
@@ -37,11 +51,17 @@ function StaffAttendanceContent() {
   const [teachers, setTeachers] = useState<TeacherAttendanceData[]>([])
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [paySchedule, setPaySchedule] = useState<PaySchedule | null>(null)
+  const [currentPeriod, setCurrentPeriod] = useState<PayPeriod | null>(null)
+  const [periodLoading, setPeriodLoading] = useState(true)
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<{
     teacherId: string
     date: string
     status: 'PRESENT' | 'ABSENT' | null
     notes: string | null
+    hours: number | null
+    usualHours: number
   } | null>(null)
 
   const monthStr = format(currentMonth, 'yyyy-MM')
@@ -52,6 +72,7 @@ function StaffAttendanceContent() {
     try {
       const res = await getAllTeacherAttendance(user.school, monthStr)
       setTeachers(res.data.teachers)
+      setPaySchedule(res.data.paySchedule ?? null)
     } catch {
       // fail silently
     } finally {
@@ -59,58 +80,84 @@ function StaffAttendanceContent() {
     }
   }, [user.school, monthStr])
 
+  // The pay period containing today — independent of which month is on screen.
+  const loadPayPeriod = useCallback(async () => {
+    setPeriodLoading(true)
+    try {
+      const res = await getPayPeriodContaining()
+      setPaySchedule(res.data.schedule)
+      setCurrentPeriod(res.data.periods[0] ?? null)
+    } catch {
+      setCurrentPeriod(null)
+    } finally {
+      setPeriodLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (user.id) loadData()
   }, [user.id, loadData])
 
+  useEffect(() => {
+    if (user.id) loadPayPeriod()
+  }, [user.id, loadPayPeriod])
+
+  const reloadAll = async () => {
+    await Promise.all([loadData(), loadPayPeriod()])
+  }
+
   const handleDayClick = (
-    teacherId: string,
+    teacher: TeacherAttendanceData,
     date: string,
     currentStatus: string | null
   ) => {
-    const teacher = teachers.find((t) => t.teacherId === teacherId)
-    const record = teacher?.records.find((r) => r.attendanceDate.substring(0, 10) === date)
+    const record = teacher.records.find((r) => r.attendanceDate.substring(0, 10) === date)
     setEditTarget({
-      teacherId,
+      teacherId: teacher.teacherId,
       date,
       status: (currentStatus as 'PRESENT' | 'ABSENT' | null) ?? null,
       notes: record?.notes ?? null,
+      hours: record?.hours ?? null,
+      usualHours: teacher.hoursPerDay,
     })
   }
 
-  const handleEditSave = async (status: 'PRESENT' | 'ABSENT', notes: string | null) => {
+  const handleEditSave = async (status: 'PRESENT' | 'ABSENT', notes: string | null, hours?: number | null) => {
     if (!editTarget) return
     const { teacherId, date } = editTarget
     try {
-      await updateTeacherRecord(teacherId, date, status, notes)
+      await updateTeacherRecord(teacherId, date, status, notes, hours ?? null)
       setEditTarget(null)
-      await loadData()
-    } catch {
-      // fail silently
+      await reloadAll()
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Error saving attendance', 'error')
     }
   }
 
-  // Work days change which days are assumed present, so reload the month after.
-  const handleSaveWorkDays = async (teacherId: string, days: number[]) => {
+  // Work days and hours change what every day is worth, so reload after.
+  const withReload = (label: string, action: () => Promise<unknown>) => async () => {
     try {
-      await setWorkDays(teacherId, days)
-      showNotification('Work days saved', 'success')
-      await loadData()
+      await action()
+      showNotification(label, 'success')
+      await reloadAll()
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Error saving work days', 'error')
+      showNotification(err instanceof Error ? err.message : 'Something went wrong', 'error')
       throw err
     }
   }
 
-  const handleResetWorkDays = async (teacherId: string) => {
-    try {
-      await resetWorkDays(teacherId)
-      showNotification('Work days reset to the schedule planner', 'success')
-      await loadData()
-    } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Error resetting work days', 'error')
-      throw err
-    }
+  const handleSavePaySchedule = async (payload: PaySchedulePayload) => {
+    await savePaySchedule(payload)
+    showNotification('Pay schedule saved', 'success')
+    setScheduleModalOpen(false)
+    await reloadAll()
+  }
+
+  const handleDeletePaySchedule = async () => {
+    await deletePaySchedule()
+    showNotification('Pay schedule removed', 'success')
+    setScheduleModalOpen(false)
+    await reloadAll()
   }
 
   const handleDownloadPDF = async () => {
@@ -123,7 +170,7 @@ function StaffAttendanceContent() {
         selectedTeacherId || undefined
       )
     } catch {
-      // fail silently
+      showNotification('Could not generate the PDF', 'error')
     } finally {
       setDownloading(false)
     }
@@ -147,7 +194,7 @@ function StaffAttendanceContent() {
                 Staff Attendance
               </h1>
               <p className="text-slate-500 mt-1">
-                Manage and review staff attendance records
+                Attendance, work days and hours for every staff member
               </p>
             </div>
             <button
@@ -158,6 +205,17 @@ function StaffAttendanceContent() {
               <ArrowDownTrayIcon className="w-4 h-4" />
               {downloading ? 'Generating...' : 'Download PDF'}
             </button>
+          </div>
+
+          {/* Current pay period — fixed */}
+          <div className="flex-shrink-0 mb-6">
+            <PayPeriodCard
+              schedule={paySchedule}
+              period={currentPeriod}
+              loading={periodLoading}
+              teacherId={selectedTeacherId || undefined}
+              onConfigure={() => setScheduleModalOpen(true)}
+            />
           </div>
 
           {/* Card — controls fixed, content scrolls */}
@@ -208,57 +266,58 @@ function StaffAttendanceContent() {
                 <p className="text-center text-slate-500 py-12">No teachers found</p>
               ) : (
                 <div className="space-y-8">
-                  {filteredTeachers.map((teacher, idx) => {
-                    const present = teacher.records.filter(
-                      (r) => r.status === 'PRESENT'
-                    ).length
-                    const absent = teacher.records.filter(
-                      (r) => r.status === 'ABSENT'
-                    ).length
-
-                    return (
-                      <div key={teacher.teacherId}>
-                        {/* Teacher header */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-semibold text-slate-900">
-                              {teacher.firstName || ''}{' '}
-                              {teacher.lastName || teacher.username || ''}
-                            </h3>
-                            <WorkDaysControl
-                              workDays={teacher.workDays}
-                              source={teacher.workDaysSource}
-                              onSave={(days) => handleSaveWorkDays(teacher.teacherId, days)}
-                              onReset={() => handleResetWorkDays(teacher.teacherId)}
-                            />
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
-                            <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium">
-                              {present}P
-                            </span>
-                            <span className="px-2 py-1 rounded-lg bg-red-50 text-red-700 font-medium">
-                              {absent}A
-                            </span>
-                            <span className="text-slate-400">/ {teacher.workingDays} days</span>
-                          </div>
+                  {filteredTeachers.map((teacher, idx) => (
+                    <div key={teacher.teacherId}>
+                      {/* Teacher header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold text-slate-900">
+                            {teacher.firstName || ''}{' '}
+                            {teacher.lastName || teacher.username || ''}
+                          </h3>
+                          <WorkDaysControl
+                            workDays={teacher.workDays}
+                            source={teacher.workDaysSource}
+                            onSave={(days) => withReload('Work days saved', () => setWorkDays(teacher.teacherId, days))()}
+                            onReset={withReload('Work days reset to the schedule planner', () => resetWorkDays(teacher.teacherId))}
+                          />
+                          <HoursPerDayControl
+                            hoursPerDay={teacher.hoursPerDay}
+                            source={teacher.hoursPerDaySource}
+                            onSave={(hours) => withReload('Hours per day saved', () => setHoursPerDay(teacher.teacherId, hours))()}
+                            onReset={withReload('Hours per day reset to the school default', () => resetHoursPerDay(teacher.teacherId))}
+                          />
                         </div>
-
-                        <AttendanceCalendar
-                          month={currentMonth}
-                          records={teacher.records}
-                          workDays={teacher.workDays}
-                          onDayClick={(date, status) =>
-                            handleDayClick(teacher.teacherId, date, status)
-                          }
-                        />
-
-                        {/* Divider (except last) */}
-                        {idx < filteredTeachers.length - 1 && (
-                          <div className="border-t border-slate-100 mt-6" />
-                        )}
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium">
+                            {teacher.presentDays}P
+                          </span>
+                          <span className="px-2 py-1 rounded-lg bg-red-50 text-red-700 font-medium">
+                            {teacher.absentDays}A
+                          </span>
+                          <span className="text-slate-400">/ {teacher.workingDays} days</span>
+                          <span
+                            className="px-2 py-1 rounded-lg bg-cyan-50 text-cyan-700 font-medium tabular-nums"
+                            title="Hours worked this month"
+                          >
+                            {formatHours(teacher.hoursWorked)} h
+                          </span>
+                        </div>
                       </div>
-                    )
-                  })}
+
+                      <AttendanceCalendar
+                        month={currentMonth}
+                        records={teacher.records}
+                        workDays={teacher.workDays}
+                        onDayClick={(date, status) => handleDayClick(teacher, date, status)}
+                      />
+
+                      {/* Divider (except last) */}
+                      {idx < filteredTeachers.length - 1 && (
+                        <div className="border-t border-slate-100 mt-6" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -271,8 +330,19 @@ function StaffAttendanceContent() {
         date={editTarget?.date ?? ''}
         currentStatus={editTarget?.status ?? null}
         currentNotes={editTarget?.notes ?? null}
+        allowHours
+        currentHours={editTarget?.hours ?? null}
+        usualHours={editTarget?.usualHours}
         onSave={handleEditSave}
         onClose={() => setEditTarget(null)}
+      />
+
+      <PayScheduleModal
+        isOpen={scheduleModalOpen}
+        schedule={paySchedule}
+        onSave={handleSavePaySchedule}
+        onDelete={handleDeletePaySchedule}
+        onClose={() => setScheduleModalOpen(false)}
       />
     </>
   )

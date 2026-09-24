@@ -88,7 +88,7 @@ const Sidebar = () => {
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
-  const isAdminPanelPath = (pathname.startsWith('/admin-panel') && !isRegistrationPath) || pathname === '/staff-attendance';
+  const isAdminPanelPath = pathname.startsWith('/admin-panel') && !isRegistrationPath;
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
@@ -306,13 +306,22 @@ const Sidebar = () => {
               <div className="border-t border-slate-100" />
             </div>
 
-            {/* My Attendance */}
-            <NavItem
-              href="/my-attendance"
-              label="My Attendance"
-              icon={UserCircleIcon}
-              isActive={pathname === '/my-attendance'}
-            />
+            {/* Attendance log: admins manage everyone's, other staff see their own */}
+            {user?.role === 'ADMIN' ? (
+              <NavItem
+                href="/staff-attendance"
+                label="Staff Attendance"
+                icon={IdentificationIcon}
+                isActive={pathname === '/staff-attendance'}
+              />
+            ) : (
+              <NavItem
+                href="/my-attendance"
+                label="My Attendance"
+                icon={UserCircleIcon}
+                isActive={pathname === '/my-attendance'}
+              />
+            )}
 
             {/* School Schedule — the published timetable, readable by all staff */}
             <NavItem
@@ -365,7 +374,6 @@ const Sidebar = () => {
                   <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
                   <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
                   <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
-                  <SubNavItem href="/staff-attendance" label="Staff Attendance" icon={IdentificationIcon} />
                   <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
                   <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
                   <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />

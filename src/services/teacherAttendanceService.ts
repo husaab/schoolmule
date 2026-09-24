@@ -3,9 +3,14 @@ import {
   TodayStatusResponse,
   CheckInResponse,
   MyMonthResponse,
+  MyPayPeriodResponse,
   AllTeachersResponse,
   UpdateRecordResponse,
   WorkDaysResponse,
+  HoursPerDayResponse,
+  PayScheduleResponse,
+  PaySchedulePayload,
+  PayPeriodsResponse,
 } from "./types/teacherAttendance";
 
 const BASE = "/teacher-attendance";
@@ -22,6 +27,9 @@ export const checkIn = (status: "PRESENT" | "ABSENT", date: string, notes?: stri
 export const getMyMonth = (month: string) =>
   apiClient<MyMonthResponse>(`${BASE}/me?month=${encodeURIComponent(month)}`);
 
+/** My hours so far in the period paid on the next pay day (null without a schedule). */
+export const getMyPayPeriod = () => apiClient<MyPayPeriodResponse>(`${BASE}/me/pay-period`);
+
 export const updateMyRecord = (date: string, status: "PRESENT" | "ABSENT", notes?: string | null) =>
   apiClient<UpdateRecordResponse>(`${BASE}/me/${date}`, {
     method: "PATCH",
@@ -33,15 +41,17 @@ export const getAllTeacherAttendance = (school: string, month: string) =>
     `${BASE}?school=${encodeURIComponent(school)}&month=${encodeURIComponent(month)}`
   );
 
+/** Admin: set a day's status, note and — optionally — the hours it is worth (null = usual day). */
 export const updateTeacherRecord = (
   teacherId: string,
   date: string,
   status: "PRESENT" | "ABSENT",
-  notes?: string | null
+  notes?: string | null,
+  hours?: number | null
 ) =>
   apiClient<UpdateRecordResponse>(`${BASE}/${teacherId}/${date}`, {
     method: "PATCH",
-    body: { status, notes: notes ?? null },
+    body: { status, notes: notes ?? null, hours: hours ?? null },
   });
 
 /** Admin: set which weekdays a staff member works (ISO, Monday = 1). */
@@ -54,6 +64,46 @@ export const setWorkDays = (teacherId: string, workDays: number[]) =>
 /** Admin: drop the override so work days come from the schedule planner again. */
 export const resetWorkDays = (teacherId: string) =>
   apiClient<WorkDaysResponse>(`${BASE}/work-days/${teacherId}`, { method: "DELETE" });
+
+/** Admin: how many hours one of this person's work days is worth. */
+export const setHoursPerDay = (teacherId: string, hoursPerDay: number) =>
+  apiClient<HoursPerDayResponse>(`${BASE}/hours-per-day/${teacherId}`, {
+    method: "PUT",
+    body: { hoursPerDay },
+  });
+
+/** Admin: back to the school's default hours per day. */
+export const resetHoursPerDay = (teacherId: string) =>
+  apiClient<HoursPerDayResponse>(`${BASE}/hours-per-day/${teacherId}`, { method: "DELETE" });
+
+// ─── Pay schedule ──────────────────────────────────────────────────────────
+
+/** Any staff member: the school's pay schedule and the period we are in now. */
+export const getPaySchedule = () => apiClient<PayScheduleResponse>(`${BASE}/pay-schedule`);
+
+/** Admin: create or replace the school's pay schedule. */
+export const savePaySchedule = (payload: PaySchedulePayload) =>
+  apiClient<PayScheduleResponse>(`${BASE}/pay-schedule`, { method: "PUT", body: payload });
+
+/** Admin: remove the pay schedule (hours stay, pay periods go). */
+export const deletePaySchedule = () =>
+  apiClient<PayScheduleResponse>(`${BASE}/pay-schedule`, { method: "DELETE" });
+
+/** Admin: every pay period whose pay day lands in the month, with hours per teacher. */
+export const getPayPeriodsForMonth = (month: string, teacherId?: string) =>
+  apiClient<PayPeriodsResponse>(
+    `${BASE}/pay-periods?month=${encodeURIComponent(month)}` +
+      (teacherId ? `&teacherId=${encodeURIComponent(teacherId)}` : "")
+  );
+
+/** Admin: the single pay period containing a date (today when omitted). */
+export const getPayPeriodContaining = (date?: string, teacherId?: string) => {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (teacherId) params.set("teacherId", teacherId);
+  const qs = params.toString();
+  return apiClient<PayPeriodsResponse>(`${BASE}/pay-periods${qs ? `?${qs}` : ""}`);
+};
 
 export const downloadAttendancePDF = async (
   school: string,
