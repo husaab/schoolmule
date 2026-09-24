@@ -27,8 +27,14 @@ export const checkIn = (status: "PRESENT" | "ABSENT", date: string, notes?: stri
 export const getMyMonth = (month: string) =>
   apiClient<MyMonthResponse>(`${BASE}/me?month=${encodeURIComponent(month)}`);
 
-/** My hours so far in the period paid on the next pay day (null without a schedule). */
-export const getMyPayPeriod = () => apiClient<MyPayPeriodResponse>(`${BASE}/me/pay-period`);
+/**
+ * My hours in the period paid on the next pay day (null without a schedule).
+ * Pass a date to get the period containing it instead — e.g. a past pay day.
+ */
+export const getMyPayPeriod = (date?: string) =>
+  apiClient<MyPayPeriodResponse>(
+    `${BASE}/me/pay-period${date ? `?date=${encodeURIComponent(date)}` : ""}`
+  );
 
 export const updateMyRecord = (date: string, status: "PRESENT" | "ABSENT", notes?: string | null) =>
   apiClient<UpdateRecordResponse>(`${BASE}/me/${date}`, {

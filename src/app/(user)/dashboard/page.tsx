@@ -25,7 +25,7 @@ import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { getSchoolName } from '@/lib/schoolUtils'
 import { getDashboardSummary, getAttendanceTrend } from '@/services/dashboardService'
 import { DashboardSummaryData, AttendanceTrendPoint } from '@/services/types/dashboard'
-import { getTodayStatus, checkIn } from '@/services/teacherAttendanceService'
+import { getTodayStatus, checkIn, getPaySchedule } from '@/services/teacherAttendanceService'
 import {
   useAnalyticsOverview,
   useAnalyticsSnapshot,
@@ -81,6 +81,7 @@ const DashboardPage: React.FC = () => {
   const [trend, setTrend] = useState<AttendanceTrendPoint[]>([])
   const [daysWindow, setDaysWindow] = useState<number>(7)
   const [showCheckIn, setShowCheckIn] = useState(false)
+  const [checkInPayDate, setCheckInPayDate] = useState<string | null>(null)
   const [staffOpen, setStaffOpen] = useState(false)
   // Already loaded by the day ribbon; read it so the briefing can flag a
   // school that has never published a timetable.
@@ -108,6 +109,10 @@ const DashboardPage: React.FC = () => {
           // No prompt when they aren't expected in (school closed, or a part-timer's day off)
         } else if (res.data.expected !== false) {
           setShowCheckIn(true)
+          // One quiet line in the prompt: which pay day today counts toward.
+          getPaySchedule()
+            .then((pay) => setCheckInPayDate(pay.data.currentPeriod?.payDate ?? null))
+            .catch(() => setCheckInPayDate(null))
         }
       })
       .catch(() => {
@@ -332,7 +337,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </main>
-      <CheckInModal isOpen={showCheckIn} onCheckIn={handleCheckIn} onSkip={() => setShowCheckIn(false)} />
+      <CheckInModal isOpen={showCheckIn} onCheckIn={handleCheckIn} onSkip={() => setShowCheckIn(false)} payDate={checkInPayDate} />
     </>
   )
 }

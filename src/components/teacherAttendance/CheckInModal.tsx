@@ -3,14 +3,17 @@
 import Modal from '@/components/shared/modal'
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
+import { shortDate } from './payPeriodFormat'
 
 interface CheckInModalProps {
   isOpen: boolean
   onCheckIn: (status: 'PRESENT' | 'ABSENT', notes: string | null) => Promise<void>
   onSkip: () => void
+  /** The pay day this check-in counts toward, when the school has a pay schedule. */
+  payDate?: string | null
 }
 
-export default function CheckInModal({ isOpen, onCheckIn, onSkip }: CheckInModalProps) {
+export default function CheckInModal({ isOpen, onCheckIn, onSkip, payDate }: CheckInModalProps) {
   const [loading, setLoading] = useState(false)
   const [notes, setNotes] = useState('')
 
@@ -32,6 +35,9 @@ export default function CheckInModal({ isOpen, onCheckIn, onSkip }: CheckInModal
       <div className="p-6">
         <p className="text-sm text-slate-600 text-center mb-6">
           How are you checking in today?
+          {payDate && (
+            <span className="mt-1 block text-xs text-slate-400">Counts toward pay day {shortDate(payDate, true)}.</span>
+          )}
         </p>
 
         <div className="flex gap-4">
