@@ -6,7 +6,7 @@
 // wear their hours as a chip so payroll can see what was changed by hand.
 
 import React from 'react'
-import { ChevronDownIcon, PencilSquareIcon, PlusIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon, PencilSquareIcon, PlusIcon, ChatBubbleBottomCenterTextIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import type { AttendanceRecord, PayPeriod, TeacherAttendanceData } from '@/services/types/teacherAttendance'
 import { formatWorkDays } from './WorkDaysControl'
 import PresentAbsentChips from './PresentAbsentChips'
@@ -19,6 +19,7 @@ interface PayPeriodTableProps {
   onToggle: (teacherId: string) => void
   onEditDay: (teacher: TeacherAttendanceData, record: AttendanceRecord) => void
   onMarkDay: (teacher: TeacherAttendanceData) => void
+  onOpenCalendar: (teacher: TeacherAttendanceData) => void
 }
 
 const noteCount = (t: TeacherAttendanceData) => t.records.filter((r) => r.notes).length
@@ -31,7 +32,8 @@ const PeriodDayList: React.FC<{
   period: PayPeriod
   onEditDay: (record: AttendanceRecord) => void
   onMarkDay: () => void
-}> = ({ teacher, period, onEditDay, onMarkDay }) => {
+  onOpenCalendar: () => void
+}> = ({ teacher, period, onEditDay, onMarkDay, onOpenCalendar }) => {
   const records = [...teacher.records].sort((a, b) => a.attendanceDate.localeCompare(b.attendanceDate))
   const ahead = teacher.workingDays - teacher.elapsedWorkingDays
 
@@ -88,12 +90,20 @@ const PeriodDayList: React.FC<{
           <PlusIcon className="h-3.5 w-3.5" />
           Mark another day
         </button>
+        <button
+          type="button"
+          onClick={onOpenCalendar}
+          className="inline-flex items-center gap-1 font-medium text-cyan-700 hover:underline cursor-pointer"
+        >
+          <CalendarDaysIcon className="h-3.5 w-3.5" />
+          Open calendar
+        </button>
       </div>
     </div>
   )
 }
 
-const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expandedId, onToggle, onEditDay, onMarkDay }) => {
+const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expandedId, onToggle, onEditDay, onMarkDay, onOpenCalendar }) => {
   const totalHours = teachers.reduce((sum, t) => sum + (Number(t.hoursWorked) || 0), 0)
 
   return (
@@ -171,7 +181,7 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
                   {open && (
                     <tr className="bg-slate-50/60">
                       <td colSpan={9} className="px-5 py-4">
-                        <PeriodDayList teacher={t} period={period} onEditDay={(r) => onEditDay(t, r)} onMarkDay={() => onMarkDay(t)} />
+                        <PeriodDayList teacher={t} period={period} onEditDay={(r) => onEditDay(t, r)} onMarkDay={() => onMarkDay(t)} onOpenCalendar={() => onOpenCalendar(t)} />
                       </td>
                     </tr>
                   )}
@@ -228,7 +238,7 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
               </button>
               {open && (
                 <div className="bg-slate-50/60 px-4 py-3">
-                  <PeriodDayList teacher={t} period={period} onEditDay={(r) => onEditDay(t, r)} onMarkDay={() => onMarkDay(t)} />
+                  <PeriodDayList teacher={t} period={period} onEditDay={(r) => onEditDay(t, r)} onMarkDay={() => onMarkDay(t)} onOpenCalendar={() => onOpenCalendar(t)} />
                 </div>
               )}
             </li>

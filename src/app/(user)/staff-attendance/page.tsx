@@ -22,6 +22,7 @@ import MonthSwitcher from '@/components/teacherAttendance/MonthSwitcher'
 import StaffPicker, { type StaffOption } from '@/components/teacherAttendance/StaffPicker'
 import PayPeriodTable from '@/components/teacherAttendance/PayPeriodTable'
 import StaffMonthRow from '@/components/teacherAttendance/StaffMonthRow'
+import StaffCalendarModal from '@/components/teacherAttendance/StaffCalendarModal'
 import MarkDayModal, { type MarkDayFailure, type MarkDayPayload } from '@/components/teacherAttendance/MarkDayModal'
 import { errorMessage, shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
 import {
@@ -103,6 +104,9 @@ function StaffAttendanceContent() {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
   const [markDay, setMarkDay] = useState<{ teacherIds: string[]; date?: string } | null>(null)
+  const [calendarFor, setCalendarFor] = useState<string | null>(null)
+  // Bumped after every save so the calendar modal refetches its month.
+  const [dataVersion, setDataVersion] = useState(0)
   const [downloading, setDownloading] = useState(false)
 
   const loadPeriod = useCallback(async () => {
@@ -149,6 +153,7 @@ function StaffAttendanceContent() {
   }, [selectedTeacherId, monthStr, paydayParam])
 
   const reload = useCallback(async () => {
+    setDataVersion((v) => v + 1)
     await Promise.all([loadPeriod(), view === 'month' ? loadMonth() : Promise.resolve()])
   }, [loadPeriod, loadMonth, view])
 
@@ -501,6 +506,7 @@ function StaffAttendanceContent() {
                     onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))}
                     onEditDay={(teacher, record) => openEditor(teacher, record.attendanceDate.substring(0, 10), record)}
                     onMarkDay={(teacher) => setMarkDay({ teacherIds: [teacher.teacherId] })}
+                    onOpenCalendar={(teacher) => setCalendarFor(teacher.teacherId)}
                   />
                 )
               ) : monthLoading ? (
@@ -535,6 +541,21 @@ function StaffAttendanceContent() {
           </div>
         </div>
       </main>
+
+      <StaffCalendarModal
+        teacherId={calendarFor}
+        school={user.school ?? ''}
+        staff={staffOptions}
+        initialMonth={pdfMonth}
+        dataVersion={dataVersion}
+        onClose={() => setCalendarFor(null)}
+        onChangePerson={setCalendarFor}
+        onDayClick={openEditor}
+        onSaveWorkDays={(id, days) => withReload('Work days saved', () => setWorkDays(id, days))()}
+        onResetWorkDays={(id) => withReload('Work days reset to the schedule planner', () => resetWorkDays(id))()}
+        onSaveHoursPerDay={(id, hours) => withReload('Hours per day saved', () => setHoursPerDay(id, hours))()}
+        onResetHoursPerDay={(id) => withReload('Hours per day reset to the school default', () => resetHoursPerDay(id))()}
+      />
 
       <EditAttendanceModal
         isOpen={!!editTarget}
