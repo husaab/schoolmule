@@ -6,11 +6,12 @@
 // slips.
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { CalendarDaysIcon, CheckCircleIcon, XCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import SearchInput from './SearchInput'
 import Modal from '@/components/shared/modal'
 import { ModalHeader, ModalBody, ModalFooter, Field, FieldRow, Button, inputClass, textareaClass } from '@/components/shared/modalKit'
 import type { StaffOption } from './StaffPicker'
-import { shortDate, todayKey } from './payPeriodFormat'
+import { filterByName, shortDate, todayKey } from './payPeriodFormat'
 
 export interface MarkDayPayload {
   date: string
@@ -21,6 +22,7 @@ export interface MarkDayPayload {
 }
 
 export interface MarkDayFailure {
+  teacherId: string
   name: string
   message: string
 }
@@ -66,10 +68,7 @@ export default function MarkDayModal({ isOpen, staff, initialTeacherIds, initial
     setSelected(new Set(initialTeacherIds ?? []))
   }, [isOpen, initialDate, initialTeacherIds])
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return q ? staff.filter((s) => s.name.toLowerCase().includes(q)) : staff
-  }, [staff, query])
+  const visible = useMemo(() => filterByName(staff, query), [staff, query])
 
   const hoursValue = hours.trim() === '' ? null : Number(hours)
   const hoursValid = hoursValue === null || (Number.isFinite(hoursValue) && hoursValue >= 0 && hoursValue <= 24)
@@ -100,8 +99,7 @@ export default function MarkDayModal({ isOpen, staff, initialTeacherIds, initial
       if (failed.length > 0) {
         setFailures(failed)
         // Leave only the people that still need saving ticked.
-        const failedNames = new Set(failed.map((f) => f.name))
-        setSelected(new Set(staff.filter((s) => failedNames.has(s.name)).map((s) => s.id)))
+        setSelected(new Set(failed.map((f) => f.teacherId)))
       }
     } finally {
       setSaving(false)
@@ -171,16 +169,7 @@ export default function MarkDayModal({ isOpen, staff, initialTeacherIds, initial
         <Field label="Who" required hint={count === 0 ? 'Tick at least one person' : `${count} selected`}>
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="flex items-center gap-2 border-b border-slate-100 p-2">
-              <label className="relative flex-1">
-                <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Find a staff member"
-                  aria-label="Find a staff member"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-2.5 text-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-              </label>
+              <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a staff member" className="flex-1" />
               <button
                 type="button"
                 onClick={() => setSelected(new Set(visible.map((s) => s.id)))}
@@ -226,7 +215,7 @@ export default function MarkDayModal({ isOpen, staff, initialTeacherIds, initial
             </p>
             <ul className="mt-1.5 space-y-1 text-xs opacity-90">
               {failures.map((f) => (
-                <li key={f.name}>
+                <li key={f.teacherId}>
                   {f.name}: {f.message}
                 </li>
               ))}

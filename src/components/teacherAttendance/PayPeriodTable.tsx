@@ -9,6 +9,7 @@ import React from 'react'
 import { ChevronDownIcon, PencilSquareIcon, PlusIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
 import type { AttendanceRecord, PayPeriod, TeacherAttendanceData } from '@/services/types/teacherAttendance'
 import { formatWorkDays } from './WorkDaysControl'
+import PresentAbsentChips from './PresentAbsentChips'
 import { formatHours, staffName, weekdayDate } from './payPeriodFormat'
 
 interface PayPeriodTableProps {
@@ -98,10 +99,10 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
   return (
     <>
       {/* Wide screens: a table with an expanding row. */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100">
+          <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(241_245_249)]">
+            <tr>
               <th className={`${headCell} pl-5 text-left`}>Staff member</th>
               <th className={`${headCell} text-left`}>Works</th>
               <th className={`${headCell} text-right`}>Hrs / day</th>
@@ -211,10 +212,7 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
                     {formatWorkDays(t.workDays)} · {formatHours(t.hoursPerDay)} h/day · {t.elapsedWorkingDays}/{t.workingDays} days
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">{t.presentDays} present</span>
-                    <span className={`rounded-md px-1.5 py-0.5 font-medium ${t.absentDays > 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {t.absentDays} absent
-                    </span>
+                    <PresentAbsentChips presentDays={t.presentDays} absentDays={t.absentDays} />
                     {notes > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700">
                         <ChatBubbleBottomCenterTextIcon className="h-3.5 w-3.5" />

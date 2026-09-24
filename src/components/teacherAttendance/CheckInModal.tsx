@@ -1,8 +1,12 @@
 'use client'
 
-import Modal from '@/components/shared/modal'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+// The daily check-in prompt on the dashboard: present or absent, an optional
+// note, and a quiet line saying which pay day today counts toward.
+
 import { useState, useEffect } from 'react'
+import { CheckCircleIcon, XCircleIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
+import Modal from '@/components/shared/modal'
+import { ModalHeader, ModalBody, Field, textareaClass } from '@/components/shared/modalKit'
 import { shortDate } from './payPeriodFormat'
 
 interface CheckInModalProps {
@@ -31,59 +35,55 @@ export default function CheckInModal({ isOpen, onCheckIn, onSkip, payDate }: Che
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onSkip} title="Daily Check-In" size="sm">
-      <div className="p-6">
-        <p className="text-sm text-slate-600 text-center mb-6">
-          How are you checking in today?
-          {payDate && (
-            <span className="mt-1 block text-xs text-slate-400">Counts toward pay day {shortDate(payDate, true)}.</span>
-          )}
-        </p>
-
-        <div className="flex gap-4">
-          {/* Present Button */}
+    <Modal isOpen={isOpen} onClose={onSkip} size="sm">
+      <ModalHeader
+        title="Daily check-in"
+        subtitle={payDate ? `Today counts toward pay day ${shortDate(payDate, true)}` : 'How are you checking in today?'}
+        icon={ClipboardDocumentCheckIcon}
+      />
+      <ModalBody>
+        <div className="flex gap-3">
           <button
+            type="button"
             disabled={loading}
             onClick={() => handleCheckIn('PRESENT')}
-            className="flex-1 flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300 transition-all duration-200 cursor-pointer disabled:opacity-50"
+            className="flex flex-1 flex-col items-center gap-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-6 transition-colors hover:border-emerald-300 hover:bg-emerald-100 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
           >
             <CheckCircleIcon className="w-12 h-12 text-emerald-500" />
             <span className="text-base font-semibold text-emerald-700">Present</span>
           </button>
-
-          {/* Absent Button */}
           <button
+            type="button"
             disabled={loading}
             onClick={() => handleCheckIn('ABSENT')}
-            className="flex-1 flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all duration-200 cursor-pointer disabled:opacity-50"
+            className="flex flex-1 flex-col items-center gap-3 rounded-2xl border-2 border-rose-200 bg-rose-50 p-6 transition-colors hover:border-rose-300 hover:bg-rose-100 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
           >
-            <XCircleIcon className="w-12 h-12 text-red-500" />
-            <span className="text-base font-semibold text-red-700">Absent</span>
+            <XCircleIcon className="w-12 h-12 text-rose-500" />
+            <span className="text-base font-semibold text-rose-700">Absent</span>
           </button>
         </div>
 
-        <div className="mt-5">
-          <label className="block text-xs font-medium text-slate-500 mb-1.5">
-            Notes <span className="font-normal text-slate-400">(optional)</span>
-          </label>
+        <Field label="Note" htmlFor="checkin-notes">
           <textarea
+            id="checkin-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. only worked 7 hours today"
+            placeholder="Optional, e.g. only worked 7 hours today"
             rows={2}
             maxLength={500}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none placeholder:text-slate-300"
+            className={textareaClass}
           />
-        </div>
+        </Field>
 
         <button
+          type="button"
           onClick={onSkip}
           disabled={loading}
-          className="w-full mt-4 text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
         >
           I&apos;ll check in later
         </button>
-      </div>
+      </ModalBody>
     </Modal>
   )
 }

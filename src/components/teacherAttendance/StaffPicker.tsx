@@ -5,7 +5,9 @@
 // narrowed by typing. Single-select; the choice lives in the page URL.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, ChevronDownIcon, UsersIcon } from '@heroicons/react/24/outline'
+import SearchInput from './SearchInput'
+import { filterByName } from './payPeriodFormat'
 
 export interface StaffOption {
   id: string
@@ -30,10 +32,9 @@ const StaffPicker: React.FC<StaffPickerProps> = ({ options, value, onChange, cla
   const selected = options.find((o) => o.id === value) ?? null
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const matches = q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options
+    const matches = filterByName(options, query)
     // "All staff" stays first unless the person is clearly typing a name.
-    return q ? matches : [{ id: '', name: 'All staff' }, ...matches]
+    return query.trim() ? matches : [{ id: '', name: 'All staff' }, ...matches]
   }, [options, query])
 
   useEffect(() => {
@@ -64,6 +65,15 @@ const StaffPicker: React.FC<StaffPickerProps> = ({ options, value, onChange, cla
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // Closed: the trigger is an ordinary button, so let Enter/Space open it
+    // and nothing else here should fire.
+    if (!open) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
     if (e.key === 'Escape') {
       setOpen(false)
       return
@@ -100,17 +110,7 @@ const StaffPicker: React.FC<StaffPickerProps> = ({ options, value, onChange, cla
 
       {open && (
         <div className="absolute left-0 z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-          <label className="relative mb-1.5 block">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find a staff member"
-              aria-label="Find a staff member"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-2.5 text-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            />
-          </label>
+          <SearchInput autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a staff member" className="mb-1.5" />
           <ul ref={listRef} role="listbox" className="max-h-64 overflow-y-auto">
             {visible.length === 0 && (
               <li className="px-2 py-3 text-center text-xs text-slate-400">No one matches.</li>

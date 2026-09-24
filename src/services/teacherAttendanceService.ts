@@ -11,6 +11,7 @@ import {
   PayScheduleResponse,
   PaySchedulePayload,
   PayPeriodsResponse,
+  DeleteRecordResponse,
 } from "./types/teacherAttendance";
 
 const BASE = "/teacher-attendance";
@@ -42,6 +43,10 @@ export const updateMyRecord = (date: string, status: "PRESENT" | "ABSENT", notes
     body: { status, notes: notes ?? null },
   });
 
+/** Remove what I recorded for a day; it then reads as unmarked (or assumed present). */
+export const deleteMyRecord = (date: string) =>
+  apiClient<DeleteRecordResponse>(`${BASE}/me/${date}`, { method: "DELETE" });
+
 export const getAllTeacherAttendance = (school: string, month: string) =>
   apiClient<AllTeachersResponse>(
     `${BASE}?school=${encodeURIComponent(school)}&month=${encodeURIComponent(month)}`
@@ -59,6 +64,10 @@ export const updateTeacherRecord = (
     method: "PATCH",
     body: { status, notes: notes ?? null, hours: hours ?? null },
   });
+
+/** Admin: remove a day's record for anyone. */
+export const deleteTeacherRecord = (teacherId: string, date: string) =>
+  apiClient<DeleteRecordResponse>(`${BASE}/${teacherId}/${date}`, { method: "DELETE" });
 
 /** Admin: set which weekdays a staff member works (ISO, Monday = 1). */
 export const setWorkDays = (teacherId: string, workDays: number[]) =>

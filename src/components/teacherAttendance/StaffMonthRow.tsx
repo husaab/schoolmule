@@ -11,6 +11,7 @@ import type { TeacherAttendanceData } from '@/services/types/teacherAttendance'
 import AttendanceCalendar from './AttendanceCalendar'
 import WorkDaysControl from './WorkDaysControl'
 import HoursPerDayControl from './HoursPerDayControl'
+import PresentAbsentChips from './PresentAbsentChips'
 import { formatHours, staffName } from './payPeriodFormat'
 
 interface StaffMonthRowProps {
@@ -48,10 +49,7 @@ const StaffMonthRow: React.FC<StaffMonthRowProps> = ({
         <span className="min-w-0 flex-1">
           <span className="block font-medium text-slate-900 truncate">{staffName(teacher)}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">{teacher.presentDays} present</span>
-            <span className={`rounded-md px-1.5 py-0.5 font-medium ${teacher.absentDays > 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
-              {teacher.absentDays} absent
-            </span>
+            <PresentAbsentChips presentDays={teacher.presentDays} absentDays={teacher.absentDays} />
             <span className="text-slate-400">of {teacher.workingDays} days</span>
           </span>
         </span>

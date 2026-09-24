@@ -165,3 +165,13 @@ export interface HoursPerDayResponse {
     hoursPerDaySource?: HoursPerDaySource;
   };
 }
+
+export interface DeleteRecordResponse {
+  status: string;
+  data: {
+    teacherId: string;
+    attendanceDate: string;
+    /** False when nothing was recorded for that day (an assumed-present day). */
+    deleted: boolean;
+  };
+}

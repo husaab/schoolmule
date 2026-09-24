@@ -5,6 +5,7 @@
 // counts and the last few pay days.
 
 import React, { useEffect, useState, useCallback, Suspense } from 'react'
+import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
@@ -15,21 +16,18 @@ import AttendanceCalendar from '@/components/teacherAttendance/AttendanceCalenda
 import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceModal'
 import MyPayPeriodCard from '@/components/teacherAttendance/MyPayPeriodCard'
 import MyPayHistory, { type MyPeriod } from '@/components/teacherAttendance/MyPayHistory'
-import { getMyMonth, getMyPayPeriod, updateMyRecord } from '@/services/teacherAttendanceService'
+import { getMyMonth, getMyPayPeriod, updateMyRecord, deleteMyRecord } from '@/services/teacherAttendanceService'
 import type { AttendanceSummary, MyPayPeriodResponse } from '@/services/types/teacherAttendance'
-import { formatHours, shiftDate } from '@/components/teacherAttendance/payPeriodFormat'
+import { errorMessage, formatHours, shiftDate } from '@/components/teacherAttendance/payPeriodFormat'
+import MonthSwitcher from '@/components/teacherAttendance/MonthSwitcher'
 import { formatWorkDays } from '@/components/teacherAttendance/WorkDaysControl'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { format, addMonths, subMonths } from 'date-fns'
-import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { CalendarDaysIcon, ExclamationTriangleIcon, IdentificationIcon } from '@heroicons/react/24/outline'
 import { useFilterParams } from '@/hooks/useFilterParams'
 
 const HISTORY_LENGTH = 3
 
-const errorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback)
-
-const navButton =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500'
 
 function MyAttendanceContent() {
   const user = useUserStore((s) => s.user)
@@ -106,6 +104,18 @@ function MyAttendanceContent() {
     })
   }
 
+  const handleEditDelete = async () => {
+    if (!editTarget) return
+    try {
+      await deleteMyRecord(editTarget.date)
+      setEditTarget(null)
+      showNotification('Record removed', 'success')
+      await Promise.all([loadMonth(), loadPayPeriods()])
+    } catch (err) {
+      showNotification(errorMessage(err, 'Could not remove the record'), 'error')
+    }
+  }
+
   const handleEditSave = async (status: 'PRESENT' | 'ABSENT', notes: string | null) => {
     if (!editTarget) return
     try {
@@ -145,31 +155,29 @@ function MyAttendanceContent() {
                 </span>
               )}
             </p>
+            {/* Admins land here from Staff Attendance; give them the way back. */}
+            {user.role === 'ADMIN' && (
+              <Link
+                href="/staff-attendance"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-cyan-300 hover:text-cyan-700 transition-colors"
+              >
+                <IdentificationIcon className="h-4 w-4" />
+                Staff attendance
+              </Link>
+            )}
           </div>
 
           {/* Next pay day */}
-          <MyPayPeriodCard data={payPeriod} />
+          <MyPayPeriodCard data={payPeriod} loading={historyLoading && !payPeriod} error={historyError && !payPeriod ? historyError : null} onRetry={loadPayPeriods} />
 
           {/* Calendar */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 mb-6">
-            <div className="flex items-center justify-between px-4 py-3 sm:px-5 border-b border-slate-100">
-              <button
-                type="button"
-                onClick={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
-                aria-label="Previous month"
-                className={navButton}
-              >
-                <ChevronLeftIcon className="h-5 w-5" />
-              </button>
-              <h2 className="text-base font-semibold text-slate-900">{format(currentMonth, 'MMMM yyyy')}</h2>
-              <button
-                type="button"
-                onClick={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
-                aria-label="Next month"
-                className={navButton}
-              >
-                <ChevronRightIcon className="h-5 w-5" />
-              </button>
+            <div className="px-4 py-3 sm:px-5 border-b border-slate-100">
+              <MonthSwitcher
+                month={currentMonth}
+                onPrev={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
+                onNext={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
+              />
             </div>
 
             <div className="p-4 sm:p-5">
@@ -222,6 +230,7 @@ function MyAttendanceContent() {
         currentStatus={editTarget?.status ?? null}
         currentNotes={editTarget?.notes ?? null}
         onSave={handleEditSave}
+        onDelete={handleEditDelete}
         onClose={() => setEditTarget(null)}
       />
     </>

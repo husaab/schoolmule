@@ -5,6 +5,8 @@
 // days) and the month (each person's calendar with their work days and hours
 // per day). Both share the overview strip, the staff filter, and the same
 // day editor. Filters live in the URL so Back/refresh/share restore them.
+// On a desktop the header and overview stay put and the list scrolls inside
+// its card; on a phone the whole page scrolls.
 
 import React, { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import Navbar from '@/components/navbar/Navbar'
@@ -16,14 +18,16 @@ import EditAttendanceModal from '@/components/teacherAttendance/EditAttendanceMo
 import PayScheduleModal from '@/components/teacherAttendance/PayScheduleModal'
 import AttendanceOverview from '@/components/teacherAttendance/AttendanceOverview'
 import PeriodSwitcher from '@/components/teacherAttendance/PeriodSwitcher'
+import MonthSwitcher from '@/components/teacherAttendance/MonthSwitcher'
 import StaffPicker, { type StaffOption } from '@/components/teacherAttendance/StaffPicker'
 import PayPeriodTable from '@/components/teacherAttendance/PayPeriodTable'
 import StaffMonthRow from '@/components/teacherAttendance/StaffMonthRow'
 import MarkDayModal, { type MarkDayFailure, type MarkDayPayload } from '@/components/teacherAttendance/MarkDayModal'
-import { shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
+import { errorMessage, shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
 import {
   getAllTeacherAttendance,
   updateTeacherRecord,
+  deleteTeacherRecord,
   downloadAttendancePDF,
   setWorkDays,
   resetWorkDays,
@@ -40,10 +44,8 @@ import type {
   PayPeriod,
   PaySchedulePayload,
 } from '@/services/types/teacherAttendance'
-import { format, addMonths, subMonths } from 'date-fns'
+import { format, addMonths, subMonths, parseISO } from 'date-fns'
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
   IdentificationIcon,
   ArrowDownTrayIcon,
   Cog6ToothIcon,
@@ -51,6 +53,7 @@ import {
   CalendarDaysIcon,
   ExclamationTriangleIcon,
   UsersIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -66,14 +69,10 @@ interface EditTarget {
   usualHours: number
 }
 
-const errorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback)
-
 const secondaryButton =
   'inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 cursor-pointer active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500'
 const primaryButton =
   'inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600 disabled:opacity-50 cursor-pointer active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2'
-const navButton =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500'
 
 function StaffAttendanceContent() {
   const user = useUserStore((s) => s.user)
@@ -166,9 +165,16 @@ function StaffAttendanceContent() {
     selectedTeacherId ? list.filter((t) => t.teacherId === selectedTeacherId) : list
   const periodTeachers = filterTo(period?.teachers ?? [])
   const visibleMonthTeachers = filterTo(monthTeachers)
+  const selectedStaff = staffOptions.find((s) => s.id === selectedTeacherId) ?? null
 
   const today = todayKey()
   const isCurrentPeriod = !!period && period.startDate <= today && today <= period.endDate
+
+  // The PDF is by month: in pay-period view that is the month the pay day
+  // falls in (so its "hours by pay day" table is in there), otherwise the
+  // month on screen.
+  const pdfMonth = view === 'period' && period ? parseISO(period.payDate) : currentMonth
+  const pdfMonthLabel = format(pdfMonth, 'MMMM yyyy')
 
   // ── Handlers ─────────────────────────────────────────────────────────
   const openEditor = (teacher: TeacherAttendanceData, date: string, record: AttendanceRecord | null) =>
@@ -198,6 +204,18 @@ function StaffAttendanceContent() {
     }
   }
 
+  const handleEditDelete = async () => {
+    if (!editTarget) return
+    try {
+      await deleteTeacherRecord(editTarget.teacherId, editTarget.date)
+      setEditTarget(null)
+      showNotification('Record removed', 'success')
+      await reload()
+    } catch (err) {
+      showNotification(errorMessage(err, 'Could not remove the record'), 'error')
+    }
+  }
+
   const handleMarkDay = async (payload: MarkDayPayload): Promise<MarkDayFailure[]> => {
     const names = new Map(staffOptions.map((s) => [s.id, s.name]))
     const results = await Promise.allSettled(
@@ -206,7 +224,8 @@ function StaffAttendanceContent() {
     const failed: MarkDayFailure[] = []
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
-        failed.push({ name: names.get(payload.teacherIds[i]) ?? 'Staff member', message: errorMessage(r.reason, 'Could not save') })
+        const teacherId = payload.teacherIds[i]
+        failed.push({ teacherId, name: names.get(teacherId) ?? 'Staff member', message: errorMessage(r.reason, 'Could not save') })
       }
     })
     const saved = results.length - failed.length
@@ -249,7 +268,7 @@ function StaffAttendanceContent() {
     if (!user.school) return
     setDownloading(true)
     try {
-      await downloadAttendancePDF(user.school, monthStr, selectedTeacherId || undefined)
+      await downloadAttendancePDF(user.school, format(pdfMonth, 'yyyy-MM'), selectedTeacherId || undefined)
     } catch {
       showNotification('Could not generate the PDF', 'error')
     } finally {
@@ -267,15 +286,49 @@ function StaffAttendanceContent() {
 
   const noSchedule = !periodLoading && !periodError && !schedule
 
+  // ── Shared empty states ──────────────────────────────────────────────
+  const loadError = (title: string, message: string | null, onRetry: () => void) => (
+    <EmptyState
+      icon={ExclamationTriangleIcon}
+      iconClassName="text-rose-300"
+      title={title}
+      description={message ?? undefined}
+      action={
+        <button type="button" onClick={onRetry} className={secondaryButton}>
+          Try again
+        </button>
+      }
+    />
+  )
+  const noStaff = (scope: string) => (
+    <EmptyState
+      icon={UsersIcon}
+      title={selectedTeacherId ? `That person is not on staff${scope}` : 'No staff yet'}
+      description={selectedTeacherId ? 'Pick someone else, or show everyone.' : 'Staff appear here once their accounts are approved.'}
+      action={
+        selectedTeacherId ? (
+          <button type="button" onClick={() => setParams({ teacher: null })} className={secondaryButton}>
+            Show all staff
+          </button>
+        ) : undefined
+      }
+    />
+  )
+  const spinner = (
+    <div className="flex justify-center py-16">
+      <Spinner size="lg" />
+    </div>
+  )
+
   // ── Render ───────────────────────────────────────────────────────────
   return (
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-4 lg:p-8 max-w-6xl mx-auto w-full">
+      <main className="lg:ml-72 pt-20 min-h-screen lg:h-screen flex flex-col bg-slate-50">
+        <div className="flex flex-col flex-1 lg:min-h-0 p-4 lg:p-8 max-w-6xl mx-auto w-full">
           {/* Header */}
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-shrink-0 mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                 <IdentificationIcon className="w-7 h-7 text-cyan-500" />
@@ -293,10 +346,10 @@ function StaffAttendanceContent() {
                 onClick={handleDownloadPDF}
                 disabled={downloading || staffOptions.length === 0}
                 className={secondaryButton}
-                title={`${format(currentMonth, 'MMMM yyyy')}: the month grid plus hours worked to each pay day in it`}
+                title={`${pdfMonthLabel}: the month grid${selectedStaff ? ` for ${selectedStaff.name}` : ''}, plus hours worked to each pay day in it`}
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
-                {downloading ? 'Generating…' : `${format(currentMonth, 'MMM')} PDF`}
+                {downloading ? 'Generating…' : 'Download PDF'}
               </button>
               <button
                 type="button"
@@ -311,7 +364,7 @@ function StaffAttendanceContent() {
           </div>
 
           {/* Overview strip */}
-          <div className="mb-5">
+          <div className="flex-shrink-0 mb-5">
             {noSchedule ? (
               <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -343,9 +396,9 @@ function StaffAttendanceContent() {
             )}
           </div>
 
-          {/* Toolbar + content */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Toolbar (fixed) + list (scrolls on desktop) */}
+          <div className="flex flex-col flex-1 lg:min-h-0 bg-white rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex-shrink-0 flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="View">
                   {(
@@ -382,25 +435,11 @@ function StaffAttendanceContent() {
                     onCurrent={() => setParams({ payday: null })}
                   />
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
-                      aria-label="Previous month"
-                      className={navButton}
-                    >
-                      <ChevronLeftIcon className="h-5 w-5" />
-                    </button>
-                    <h2 className="min-w-[10rem] text-center text-sm font-semibold text-slate-900">{format(currentMonth, 'MMMM yyyy')}</h2>
-                    <button
-                      type="button"
-                      onClick={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
-                      aria-label="Next month"
-                      className={navButton}
-                    >
-                      <ChevronRightIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+                  <MonthSwitcher
+                    month={currentMonth}
+                    onPrev={() => setParams({ month: format(subMonths(currentMonth, 1), 'yyyy-MM') })}
+                    onNext={() => setParams({ month: format(addMonths(currentMonth, 1), 'yyyy-MM') })}
+                  />
                 )}
               </div>
 
@@ -420,93 +459,57 @@ function StaffAttendanceContent() {
                   options={staffOptions}
                   value={selectedTeacherId}
                   onChange={(id) => setParams({ teacher: id || null })}
-                  className="w-full sm:w-60"
+                  className="min-w-0 flex-1 sm:flex-none sm:w-60"
                 />
+                {selectedTeacherId && (
+                  <button
+                    type="button"
+                    onClick={() => setParams({ teacher: null })}
+                    className="inline-flex items-center gap-1 rounded-xl px-2.5 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 cursor-pointer active:scale-[0.98]"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                    Clear filter
+                  </button>
+                )}
               </div>
             </div>
 
-            {view === 'period' ? (
-              noSchedule ? (
-                <EmptyState
-                  icon={BanknotesIcon}
-                  title="Pay periods appear once there is a pay schedule"
-                  description="Until then, the month view still has everyone's calendar."
-                  action={
-                    <button type="button" onClick={() => setParams({ view: 'month' })} className={secondaryButton}>
-                      Open month view
-                    </button>
-                  }
-                />
-              ) : periodLoading ? (
-                <div className="flex justify-center py-16">
-                  <Spinner size="lg" />
-                </div>
-              ) : periodError || !period ? (
-                <EmptyState
-                  icon={ExclamationTriangleIcon}
-                  iconClassName="text-rose-300"
-                  title="Could not load this pay period"
-                  description={periodError ?? undefined}
-                  action={
-                    <button type="button" onClick={loadPeriod} className={secondaryButton}>
-                      Try again
-                    </button>
-                  }
-                />
-              ) : periodTeachers.length === 0 ? (
-                <EmptyState
-                  icon={UsersIcon}
-                  title={selectedTeacherId ? 'That person is not on staff this period' : 'No staff yet'}
-                  description={selectedTeacherId ? 'Pick someone else, or show everyone.' : 'Staff appear here once their accounts are approved.'}
-                  action={
-                    selectedTeacherId ? (
-                      <button type="button" onClick={() => setParams({ teacher: null })} className={secondaryButton}>
-                        Show all staff
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+              {view === 'period' ? (
+                noSchedule ? (
+                  <EmptyState
+                    icon={BanknotesIcon}
+                    title="Pay periods appear once there is a pay schedule"
+                    description="Until then, the month view still has everyone's calendar."
+                    action={
+                      <button type="button" onClick={() => setParams({ view: 'month' })} className={secondaryButton}>
+                        Open month view
                       </button>
-                    ) : undefined
-                  }
-                />
+                    }
+                  />
+                ) : periodLoading ? (
+                  spinner
+                ) : periodError || !period ? (
+                  loadError('Could not load this pay period', periodError, loadPeriod)
+                ) : periodTeachers.length === 0 ? (
+                  noStaff(' this period')
+                ) : (
+                  <PayPeriodTable
+                    period={period}
+                    teachers={periodTeachers}
+                    expandedId={expandedId}
+                    onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))}
+                    onEditDay={(teacher, record) => openEditor(teacher, record.attendanceDate.substring(0, 10), record)}
+                    onMarkDay={(teacher) => setMarkDay({ teacherIds: [teacher.teacherId] })}
+                  />
+                )
+              ) : monthLoading ? (
+                spinner
+              ) : monthError ? (
+                loadError('Could not load this month', monthError, loadMonth)
+              ) : visibleMonthTeachers.length === 0 ? (
+                noStaff('')
               ) : (
-                <PayPeriodTable
-                  period={period}
-                  teachers={periodTeachers}
-                  expandedId={expandedId}
-                  onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))}
-                  onEditDay={(teacher, record) => openEditor(teacher, record.attendanceDate.substring(0, 10), record)}
-                  onMarkDay={(teacher) => setMarkDay({ teacherIds: [teacher.teacherId] })}
-                />
-              )
-            ) : monthLoading ? (
-              <div className="flex justify-center py-16">
-                <Spinner size="lg" />
-              </div>
-            ) : monthError ? (
-              <EmptyState
-                icon={ExclamationTriangleIcon}
-                iconClassName="text-rose-300"
-                title="Could not load this month"
-                description={monthError}
-                action={
-                  <button type="button" onClick={loadMonth} className={secondaryButton}>
-                    Try again
-                  </button>
-                }
-              />
-            ) : visibleMonthTeachers.length === 0 ? (
-              <EmptyState
-                icon={UsersIcon}
-                title={selectedTeacherId ? 'That person is not on staff' : 'No staff yet'}
-                description={selectedTeacherId ? 'Pick someone else, or show everyone.' : 'Staff appear here once their accounts are approved.'}
-                action={
-                  selectedTeacherId ? (
-                    <button type="button" onClick={() => setParams({ teacher: null })} className={secondaryButton}>
-                      Show all staff
-                    </button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <>
                 <ul className="divide-y divide-slate-100">
                   {visibleMonthTeachers.map((teacher) => (
                     <StaffMonthRow
@@ -523,11 +526,12 @@ function StaffAttendanceContent() {
                     />
                   ))}
                 </ul>
-                <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400 sm:px-5">
-                  The {format(currentMonth, 'MMMM')} PDF has this grid for everyone shown, plus hours worked to each pay day in the month.
-                </p>
-              </>
-            )}
+              )}
+            </div>
+
+            <p className="flex-shrink-0 border-t border-slate-100 px-4 py-2.5 text-xs text-slate-400 sm:px-5">
+              Download PDF gives {pdfMonthLabel}: the month grid{selectedStaff ? ` for ${selectedStaff.name}` : ' for everyone'}, plus hours worked to each pay day in it.
+            </p>
           </div>
         </div>
       </main>
@@ -541,6 +545,7 @@ function StaffAttendanceContent() {
         currentHours={editTarget?.hours ?? null}
         usualHours={editTarget?.usualHours}
         onSave={handleEditSave}
+        onDelete={handleEditDelete}
         onClose={() => setEditTarget(null)}
       />
 

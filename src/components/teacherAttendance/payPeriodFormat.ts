@@ -45,3 +45,13 @@ export const relativeDays = (days: number) => {
 /** "Amina Rahman", falling back to the username when a name is missing. */
 export const staffName = (t: { firstName?: string | null; lastName?: string | null; username?: string | null }) =>
   `${t.firstName || ''} ${t.lastName || t.username || ''}`.trim() || 'Staff member'
+
+/** The message from a thrown error, or a fallback when there is none to show. */
+export const errorMessage = (err: unknown, fallback: string) =>
+  err instanceof Error && err.message ? err.message : fallback
+
+/** Case-insensitive "name contains query"; an empty query keeps everyone. */
+export const filterByName = <T extends { name: string }>(list: T[], query: string): T[] => {
+  const q = query.trim().toLowerCase()
+  return q ? list.filter((item) => item.name.toLowerCase().includes(q)) : list
+}

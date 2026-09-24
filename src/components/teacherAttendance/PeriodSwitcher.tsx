@@ -7,6 +7,7 @@
 import React from 'react'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import type { PayPeriodRange } from '@/services/types/teacherAttendance'
+import NavIconButton from './NavIconButton'
 import { dateRange, daysUntil, relativeDays, shortDate } from './payPeriodFormat'
 
 interface PeriodSwitcherProps {
@@ -18,17 +19,14 @@ interface PeriodSwitcherProps {
   onCurrent: () => void
 }
 
-const navButton =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500'
-
 const PeriodSwitcher: React.FC<PeriodSwitcherProps> = ({ period, isCurrent, disabled, onPrev, onNext, onCurrent }) => {
   const until = period ? daysUntil(period.payDate) : 0
 
   return (
     <div className="flex items-center gap-1">
-      <button type="button" onClick={onPrev} disabled={disabled || !period} aria-label="Previous pay day" className={navButton}>
+      <NavIconButton label="Previous pay day" onClick={onPrev} disabled={disabled || !period}>
         <ChevronLeftIcon className="h-5 w-5" />
-      </button>
+      </NavIconButton>
       <div className="min-w-[10rem] flex-1 text-center sm:min-w-[13rem]">
         {period ? (
           <>
@@ -58,9 +56,9 @@ const PeriodSwitcher: React.FC<PeriodSwitcherProps> = ({ period, isCurrent, disa
           <span className="block h-9 w-40 mx-auto rounded-lg bg-slate-100 animate-pulse" aria-label="Loading" />
         )}
       </div>
-      <button type="button" onClick={onNext} disabled={disabled || !period} aria-label="Next pay day" className={navButton}>
+      <NavIconButton label="Next pay day" onClick={onNext} disabled={disabled || !period}>
         <ChevronRightIcon className="h-5 w-5" />
-      </button>
+      </NavIconButton>
     </div>
   )
 }

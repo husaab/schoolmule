@@ -34,6 +34,7 @@ import {
 import Spinner from '@/components/Spinner'
 import Card from '@/components/ui/Card'
 import CheckInModal from '@/components/teacherAttendance/CheckInModal'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import DayRibbon from '@/components/schedulePlanner/DayRibbon'
 import SchoolDayPanel from '@/components/schedulePlanner/SchoolDayPanel'
 import StaffList from '@/components/staff/StaffList'
@@ -82,6 +83,7 @@ const DashboardPage: React.FC = () => {
   const [daysWindow, setDaysWindow] = useState<number>(7)
   const [showCheckIn, setShowCheckIn] = useState(false)
   const [checkInPayDate, setCheckInPayDate] = useState<string | null>(null)
+  const showNotification = useNotificationStore((s) => s.showNotification)
   const [staffOpen, setStaffOpen] = useState(false)
   // Already loaded by the day ribbon; read it so the briefing can flag a
   // school that has never published a timetable.
@@ -123,11 +125,16 @@ const DashboardPage: React.FC = () => {
   const handleCheckIn = useCallback(
     async (status: 'PRESENT' | 'ABSENT', notes: string | null) => {
       const todayStr = format(new Date(), 'yyyy-MM-dd')
-      await checkIn(status, todayStr, notes)
+      try {
+        await checkIn(status, todayStr, notes)
+      } catch (err) {
+        showNotification(err instanceof Error && err.message ? err.message : 'Could not check in', 'error')
+        return
+      }
       localStorage.setItem(`checkin_date_${user.id}`, todayStr)
       setShowCheckIn(false)
     },
-    [user.id]
+    [user.id, showNotification]
   )
 
   // The summary gates the page; the trend does not. They are separate effects
