@@ -38,6 +38,7 @@ export default function PayScheduleModal({ isOpen, schedule, onSave, onDelete, o
   const [secondPayDay, setSecondPayDay] = useState('')
   const [anchor, setAnchor] = useState('')
   const [hours, setHours] = useState('7.5')
+  const [startTime, setStartTime] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,13 +52,15 @@ export default function PayScheduleModal({ isOpen, schedule, onSave, onDelete, o
     setSecondPayDay(schedule?.secondPayDayOfMonth ? String(schedule.secondPayDayOfMonth) : '')
     setAnchor(schedule?.anchorPayDate ?? format(new Date(), 'yyyy-MM-dd'))
     setHours(String(schedule?.defaultHoursPerDay ?? 7.5))
+    setStartTime(schedule?.workDayStart ?? '')
   }, [isOpen, schedule])
 
   const monthly = frequency === 'MONTHLY' || frequency === 'SEMI_MONTHLY'
 
   const preview = useMemo(() => {
     const h = Number(hours)
-    const hoursText = Number.isFinite(h) && h > 0 ? `${h} h per day.` : ''
+    const startText = startTime ? ` Staff are expected in by ${startTime}.` : ''
+    const hoursText = Number.isFinite(h) && h > 0 ? `${h} h per day.${startText}` : ''
     if (monthly) {
       const d1 = Number(payDay)
       const d2 = Number(secondPayDay)
@@ -72,11 +75,15 @@ export default function PayScheduleModal({ isOpen, schedule, onSave, onDelete, o
     if (!/^\d{4}-\d{2}-\d{2}$/.test(anchor)) return null
     const every = frequency === 'WEEKLY' ? 'every week' : 'every second week'
     return `Staff are paid ${every} from ${anchor}. Each pay day covers the ${frequency === 'WEEKLY' ? 7 : 14} days ending on it. ${hoursText}`
-  }, [monthly, frequency, payDay, secondPayDay, anchor, hours])
+  }, [monthly, frequency, payDay, secondPayDay, anchor, hours, startTime])
 
   const handleSave = async () => {
     setError(null)
-    const payload: PaySchedulePayload = { frequency, defaultHoursPerDay: Number(hours) }
+    const payload: PaySchedulePayload = {
+      frequency,
+      defaultHoursPerDay: Number(hours),
+      workDayStart: startTime || null,
+    }
     if (monthly) {
       payload.payDayOfMonth = Number(payDay)
       if (frequency === 'SEMI_MONTHLY') payload.secondPayDayOfMonth = Number(secondPayDay)
@@ -176,23 +183,34 @@ export default function PayScheduleModal({ isOpen, schedule, onSave, onDelete, o
           </Field>
         )}
 
-        <Field
-          label="Hours in a normal work day"
-          htmlFor="hours"
-          required
-          hint="Used for everyone unless you set a person's own hours on the Staff Attendance page"
-        >
-          <input
-            id="hours"
-            type="number"
-            min={0.5}
-            max={24}
-            step={0.25}
-            value={hours}
-            onChange={(e) => setHours(e.target.value)}
-            className={inputClass}
-          />
-        </Field>
+        <FieldRow>
+          <Field
+            label="Hours in a normal work day"
+            htmlFor="hours"
+            required
+            hint="Used for everyone unless you set a person's own hours on the Staff Attendance page"
+          >
+            <input
+              id="hours"
+              type="number"
+              min={0.5}
+              max={24}
+              step={0.25}
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Staff expected in by" htmlFor="start-time" hint="Shown to staff and on the PDF; does not change the hours counted">
+            <input
+              id="start-time"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        </FieldRow>
 
         {preview && (
           <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-900">{preview}</div>

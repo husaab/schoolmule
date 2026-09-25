@@ -75,6 +75,10 @@ export interface PaySchedule {
   /** BIWEEKLY / WEEKLY: any real pay date; pay days repeat from it */
   anchorPayDate: string | null;
   defaultHoursPerDay: number;
+  /** When staff are expected in, "HH:MM" 24h; informational only */
+  workDayStart: string | null;
+  /** e.g. "8:30 a.m." */
+  workDayStartLabel: string | null;
   /** e.g. "Monthly on the 25th" */
   description: string | null;
   updatedAt?: string | null;
@@ -86,6 +90,8 @@ export interface PaySchedulePayload {
   secondPayDayOfMonth?: number | null;
   anchorPayDate?: string | null;
   defaultHoursPerDay?: number;
+  /** "HH:MM" or null to clear */
+  workDayStart?: string | null;
 }
 
 /** A pay period: ends on the pay day (inclusive), starts after the previous one. */

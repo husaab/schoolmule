@@ -82,6 +82,7 @@ const MyPayPeriodCard: React.FC<MyPayPeriodCardProps> = ({ data, loading, error,
           <p className="text-sm font-semibold text-slate-900">Next pay day {shortDate(period.payDate, true)}</p>
           <p className="text-xs text-slate-500">
             {schedule.description} · covers {dateRange(period.startDate, period.endDate)}
+            {schedule.workDayStartLabel && <> · in by {schedule.workDayStartLabel}</>}
           </p>
         </div>
         <span className="ml-auto rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-medium text-cyan-700 border border-cyan-100 whitespace-nowrap">
