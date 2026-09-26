@@ -56,6 +56,9 @@ export interface SheetTarget {
   linkNew: () => Promise<LinkResponse>;
   unlink: () => Promise<MessageResponse>;
   syncNow: () => Promise<MessageResponse>;
+  listShares: () => Promise<SharesResponse>;
+  addShare: (email: string, role: ShareRole) => Promise<ShareResponse>;
+  removeShare: (permissionId: string) => Promise<RemoveShareResponse>;
   /** App path the OAuth round-trip returns to (must be on the backend's allowlist). */
   returnTo: string;
   copy: {
@@ -71,3 +74,23 @@ export interface SheetTarget {
     unlinkConfirm: string;
   };
 }
+
+// ─── Sharing ───────────────────────────────────────────────────────
+
+/** Google's role names; the UI says Viewer / Editor. */
+export type ShareRole = 'reader' | 'writer';
+
+export interface SheetShare {
+  id: string;
+  type: string;
+  role: ShareRole | 'owner' | string;
+  email: string | null;
+  displayName: string | null;
+  isOwner: boolean;
+  /** The account SchoolMule syncs through; it keeps its access. */
+  isConnectedAccount: boolean;
+}
+
+export interface SharesResponse { status: string; data: { shares: SheetShare[] } }
+export interface ShareResponse { status: string; data: { share: SheetShare } }
+export interface RemoveShareResponse { status: string; data: { removed: boolean } }

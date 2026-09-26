@@ -6,6 +6,10 @@ import type {
   LinkResponse,
   MessageResponse,
   SheetTarget,
+  SharesResponse,
+  ShareResponse,
+  RemoveShareResponse,
+  ShareRole,
 } from './types/googleSheets';
 
 // ─── Connection (one Google account per school) ─────────────────────
@@ -55,6 +59,17 @@ export const unlinkSheet = (formId: string) =>
 export const syncNow = (formId: string) =>
   apiClient<MessageResponse>(`/registration/forms/${formId}/sheet/sync`, { method: 'POST' });
 
+// ─── Sharing (Drive permissions on the linked spreadsheet) ──────────
+
+export const listShares = (formId: string) =>
+  apiClient<SharesResponse>(`/registration/forms/${formId}/sheet/shares`);
+
+export const addShare = (formId: string, email: string, role: ShareRole) =>
+  apiClient<ShareResponse>(`/registration/forms/${formId}/sheet/shares`, { method: 'POST', body: { email, role } });
+
+export const removeShare = (formId: string, permissionId: string) =>
+  apiClient<RemoveShareResponse>(`/registration/forms/${formId}/sheet/shares/${permissionId}`, { method: 'DELETE' });
+
 /** A registration form as a target for the shared Google Sheet UI. */
 export const formSheetTarget = (formId: string, formTitle: string): SheetTarget => ({
   key: `form:${formId}`,
@@ -63,6 +78,9 @@ export const formSheetTarget = (formId: string, formTitle: string): SheetTarget 
   linkNew: () => linkNewSheet(formId, `${formTitle} — Submissions`),
   unlink: () => unlinkSheet(formId),
   syncNow: () => syncNow(formId),
+  listShares: () => listShares(formId),
+  addShare: (email, role) => addShare(formId, email, role),
+  removeShare: (permissionId) => removeShare(formId, permissionId),
   returnTo: '/admin-panel/forms/submissions',
   copy: {
     connectPitch: 'Keep a spreadsheet up to date with these submissions, instead of exporting a CSV each time.',

@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
 import { useGooglePicker } from './useGooglePicker';
+import SheetSharing from './SheetSharing';
 import { getAuthUrl, disconnectGoogle } from '@/services/googleSheetsService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SheetLinkState, SheetTarget } from '@/services/types/googleSheets';
@@ -228,6 +229,10 @@ export default function LinkSheetModal({ target, isOpen, onClose, onChanged }: P
                 )}
 
                 <p className="text-xs text-slate-400">{target.copy.ownedNote(state)}</p>
+
+                <div className="border-t border-slate-100 pt-4">
+                  <SheetSharing target={target} />
+                </div>
 
                 <button
                   onClick={handleUnlink}

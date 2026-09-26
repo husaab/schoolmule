@@ -4,6 +4,10 @@ import type {
   LinkResponse,
   MessageResponse,
   SheetTarget,
+  SharesResponse,
+  ShareResponse,
+  RemoveShareResponse,
+  ShareRole,
 } from "./types/googleSheets";
 import {
   TodayStatusResponse,
@@ -169,6 +173,15 @@ export const unlinkStaffHoursSheet = () =>
 export const syncStaffHoursSheet = () =>
   apiClient<MessageResponse>(`${BASE}/sheet/sync`, { method: "POST" });
 
+/** Who the linked spreadsheet is shared with (Drive permissions). */
+export const listStaffHoursSheetShares = () => apiClient<SharesResponse>(`${BASE}/sheet/shares`);
+
+export const addStaffHoursSheetShare = (email: string, role: ShareRole) =>
+  apiClient<ShareResponse>(`${BASE}/sheet/shares`, { method: "POST", body: { email, role } });
+
+export const removeStaffHoursSheetShare = (permissionId: string) =>
+  apiClient<RemoveShareResponse>(`${BASE}/sheet/shares/${permissionId}`, { method: "DELETE" });
+
 /** The school's staff hours as a target for the shared Google Sheet UI. */
 export const staffHoursSheetTarget = (): SheetTarget => ({
   key: "staff-hours",
@@ -177,6 +190,9 @@ export const staffHoursSheetTarget = (): SheetTarget => ({
   linkNew: () => linkStaffHoursSheet({ createNew: true }),
   unlink: unlinkStaffHoursSheet,
   syncNow: syncStaffHoursSheet,
+  listShares: listStaffHoursSheetShares,
+  addShare: addStaffHoursSheetShare,
+  removeShare: removeStaffHoursSheetShare,
   returnTo: "/staff-attendance",
   copy: {
     connectPitch:
