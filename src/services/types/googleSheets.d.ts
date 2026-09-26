@@ -40,3 +40,34 @@ export interface PickedSpreadsheet {
   spreadsheetId: string;
   name: string;
 }
+
+/**
+ * What the shared Google Sheet UI (LinkSheetModal, SheetSyncStatus) needs to
+ * know about the thing being linked — a registration form's tab or the
+ * school's staff-hours spreadsheet. The components never see an endpoint.
+ */
+export interface SheetTarget {
+  /** Stable identity for memoisation and effect deps, e.g. 'form:<id>'. */
+  key: string;
+  getLink: () => Promise<SheetLinkResponse>;
+  /** Link a spreadsheet chosen through the Picker. */
+  linkExisting: (spreadsheetId: string) => Promise<LinkResponse>;
+  /** Create a spreadsheet in the connected account and link it. */
+  linkNew: () => Promise<LinkResponse>;
+  unlink: () => Promise<MessageResponse>;
+  syncNow: () => Promise<MessageResponse>;
+  /** App path the OAuth round-trip returns to (must be on the backend's allowlist). */
+  returnTo: string;
+  copy: {
+    /** Why connect: shown before a Google account is connected. */
+    connectPitch: string;
+    /** What gets created in the spreadsheet, shown when choosing one. */
+    tabNote: string;
+    /** Which part of the sheet is ours, shown once linked. */
+    ownedNote: (state: SheetLinkState) => string;
+    /** Tooltip on the "Link a Sheet" entry point. */
+    pillTitle: string;
+    /** Confirmation copy when unlinking. */
+    unlinkConfirm: string;
+  };
+}

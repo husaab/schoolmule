@@ -24,6 +24,9 @@ import PayPeriodTable from '@/components/teacherAttendance/PayPeriodTable'
 import StaffMonthRow from '@/components/teacherAttendance/StaffMonthRow'
 import StaffCalendarModal from '@/components/teacherAttendance/StaffCalendarModal'
 import MarkDayModal, { type MarkDayFailure, type MarkDayPayload } from '@/components/teacherAttendance/MarkDayModal'
+import LinkSheetModal from '@/components/googleSheets/LinkSheetModal'
+import SheetSyncStatus from '@/components/googleSheets/SheetSyncStatus'
+import { useGoogleOAuthOutcome } from '@/components/googleSheets/useGoogleOAuthOutcome'
 import { errorMessage, shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
 import {
   getAllTeacherAttendance,
@@ -37,6 +40,7 @@ import {
   getPayPeriodContaining,
   savePaySchedule,
   deletePaySchedule,
+  staffHoursSheetTarget,
 } from '@/services/teacherAttendanceService'
 import type {
   AttendanceRecord,
@@ -79,6 +83,8 @@ function StaffAttendanceContent() {
   const user = useUserStore((s) => s.user)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const { get, setParams } = useFilterParams()
+  // "Connect Google" (in the sheet modal) round-trips through this page.
+  useGoogleOAuthOutcome()
 
   const view: View = get('view') === 'month' ? 'month' : 'period'
   const paydayParam = get('payday') // any date inside the period to show; empty = today
@@ -108,6 +114,12 @@ function StaffAttendanceContent() {
   // Bumped after every save so the calendar modal refetches its month.
   const [dataVersion, setDataVersion] = useState(0)
   const [downloading, setDownloading] = useState(false)
+
+  // Google Sheet of hours by pay day. `sheetRefreshKey` nudges the status
+  // pill to refetch after the modal changes the link or an edit queues a sync.
+  const sheetTarget = useMemo(() => staffHoursSheetTarget(), [])
+  const [sheetModalOpen, setSheetModalOpen] = useState(false)
+  const [sheetRefreshKey, setSheetRefreshKey] = useState(0)
 
   const loadPeriod = useCallback(async () => {
     setPeriodLoading(true)
@@ -154,6 +166,8 @@ function StaffAttendanceContent() {
 
   const reload = useCallback(async () => {
     setDataVersion((v) => v + 1)
+    // Every save queues a sheet sync; let the pill show "Syncing…" right away.
+    setSheetRefreshKey((k) => k + 1)
     await Promise.all([loadPeriod(), view === 'month' ? loadMonth() : Promise.resolve()])
   }, [loadPeriod, loadMonth, view])
 
@@ -342,6 +356,7 @@ function StaffAttendanceContent() {
               <p className="text-slate-500 mt-1">Hours worked to each pay day, and every person&apos;s calendar</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <SheetSyncStatus target={sheetTarget} refreshKey={sheetRefreshKey} onOpenSettings={() => setSheetModalOpen(true)} />
               <button type="button" onClick={() => setScheduleModalOpen(true)} className={secondaryButton} title="When staff are paid">
                 <Cog6ToothIcon className="h-4 w-4" />
                 Pay schedule
@@ -585,6 +600,13 @@ function StaffAttendanceContent() {
         onSave={handleSavePaySchedule}
         onDelete={handleDeletePaySchedule}
         onClose={() => setScheduleModalOpen(false)}
+      />
+
+      <LinkSheetModal
+        target={sheetTarget}
+        isOpen={sheetModalOpen}
+        onClose={() => setSheetModalOpen(false)}
+        onChanged={() => setSheetRefreshKey((k) => k + 1)}
       />
     </>
   )

@@ -14,11 +14,12 @@ import FieldMappingEditor from '@/components/registration/Import/FieldMappingEdi
 import ImportPreviewModal from '@/components/registration/Import/ImportPreviewModal';
 import ImportedBadge from '@/components/registration/Import/ImportedBadge';
 import UndoImportModal from '@/components/registration/Import/UndoImportModal';
-import LinkSheetModal from '@/components/registration/Sheets/LinkSheetModal';
-import SheetSyncStatus from '@/components/registration/Sheets/SheetSyncStatus';
+import LinkSheetModal from '@/components/googleSheets/LinkSheetModal';
+import SheetSyncStatus from '@/components/googleSheets/SheetSyncStatus';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
+import { formSheetTarget } from '@/services/googleSheetsService';
 import * as statusService from '@/services/registrationStatusService';
 import { statusBadgeClass } from '@/lib/statusColors';
 import type {
@@ -163,6 +164,11 @@ export default function FormSubmissionsPage() {
   // after the modal changes the link.
   const [sheetModalOpen, setSheetModalOpen] = useState(false);
   const [sheetRefreshKey, setSheetRefreshKey] = useState(0);
+  // Only rendered once the form has loaded; the fallback just keeps the hook unconditional.
+  const sheetTarget = useMemo(
+    () => formSheetTarget(form?.formId ?? '', form?.title ?? ''),
+    [form?.formId, form?.title],
+  );
 
   // Detail modal
   const [detailSubmission, setDetailSubmission] = useState<FormSubmission | null>(null);
@@ -455,7 +461,7 @@ export default function FormSubmissionsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <SheetSyncStatus
-                formId={form.formId}
+                target={sheetTarget}
                 refreshKey={sheetRefreshKey}
                 onOpenSettings={() => setSheetModalOpen(true)}
               />
@@ -742,8 +748,7 @@ export default function FormSubmissionsPage() {
 
       {/* Google Sheet link */}
       <LinkSheetModal
-        formId={form.formId}
-        formTitle={form.title}
+        target={sheetTarget}
         isOpen={sheetModalOpen}
         onClose={() => setSheetModalOpen(false)}
         onChanged={() => setSheetRefreshKey((k) => k + 1)}

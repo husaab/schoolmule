@@ -1,4 +1,10 @@
 import apiClient from "./apiClient";
+import type {
+  SheetLinkResponse,
+  LinkResponse,
+  MessageResponse,
+  SheetTarget,
+} from "./types/googleSheets";
 import {
   TodayStatusResponse,
   CheckInResponse,
@@ -146,3 +152,41 @@ export const downloadAttendancePDF = async (
   link.click();
   URL.revokeObjectURL(link.href);
 };
+
+// ─── Staff hours → Google Sheet (admin) ────────────────────────────────────
+
+/** The school's linked staff-hours spreadsheet, its connection, and sync state. */
+export const getStaffHoursSheet = () => apiClient<SheetLinkResponse>(`${BASE}/sheet`);
+
+/** Link a spreadsheet picked from Drive, or have one created. Queues the first sync. */
+export const linkStaffHoursSheet = (body: { spreadsheetId: string } | { createNew: true; title?: string }) =>
+  apiClient<LinkResponse>(`${BASE}/sheet`, { method: "PUT", body });
+
+/** Forget the link. The spreadsheet itself is left untouched. */
+export const unlinkStaffHoursSheet = () =>
+  apiClient<MessageResponse>(`${BASE}/sheet`, { method: "DELETE" });
+
+export const syncStaffHoursSheet = () =>
+  apiClient<MessageResponse>(`${BASE}/sheet/sync`, { method: "POST" });
+
+/** The school's staff hours as a target for the shared Google Sheet UI. */
+export const staffHoursSheetTarget = (): SheetTarget => ({
+  key: "staff-hours",
+  getLink: getStaffHoursSheet,
+  linkExisting: (spreadsheetId) => linkStaffHoursSheet({ spreadsheetId }),
+  linkNew: () => linkStaffHoursSheet({ createNew: true }),
+  unlink: unlinkStaffHoursSheet,
+  syncNow: syncStaffHoursSheet,
+  returnTo: "/staff-attendance",
+  copy: {
+    connectPitch:
+      "Keep a spreadsheet of everyone's hours up to date on its own — an Overview tab plus one tab per pay day — instead of downloading a PDF each time.",
+    tabNote:
+      "You get an Overview tab (hours by pay day) and one tab per pay day from the start of this school year, with a column for every date. New pay days add their own tab.",
+    ownedNote: () =>
+      "We keep the Overview and every pay-day tab up to date, from the first column through the last date column. Anything you add to the right of those, or on your own tabs, is yours — we never read or change it. Changing the pay schedule starts new tabs; old ones are left as they were.",
+    pillTitle: "Keep a Google Sheet of staff hours by pay day up to date",
+    unlinkConfirm:
+      "Unlink this sheet? The spreadsheet and everything in it stays exactly as it is — we just stop updating it.",
+  },
+});

@@ -5,6 +5,7 @@ import type {
   AuthUrlResponse,
   LinkResponse,
   MessageResponse,
+  SheetTarget,
 } from './types/googleSheets';
 
 // ─── Connection (one Google account per school) ─────────────────────
@@ -17,9 +18,13 @@ export const getConnectionStatus = () =>
  *
  * The backend returns it rather than redirecting, so that the request
  * identifying the school is authenticated — a redirect would carry no token.
+ * `returnTo` is the app path Google's callback should land on; the backend
+ * only honours paths on its allowlist.
  */
-export const getAuthUrl = () =>
-  apiClient<AuthUrlResponse>('/registration/google/auth-url');
+export const getAuthUrl = (returnTo?: string) =>
+  apiClient<AuthUrlResponse>(
+    `/registration/google/auth-url${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`,
+  );
 
 export const disconnectGoogle = () =>
   apiClient<MessageResponse>('/registration/google/connection', { method: 'DELETE' });
@@ -49,3 +54,22 @@ export const unlinkSheet = (formId: string) =>
 
 export const syncNow = (formId: string) =>
   apiClient<MessageResponse>(`/registration/forms/${formId}/sheet/sync`, { method: 'POST' });
+
+/** A registration form as a target for the shared Google Sheet UI. */
+export const formSheetTarget = (formId: string, formTitle: string): SheetTarget => ({
+  key: `form:${formId}`,
+  getLink: () => getSheetLink(formId),
+  linkExisting: (spreadsheetId) => linkExistingSheet(formId, spreadsheetId),
+  linkNew: () => linkNewSheet(formId, `${formTitle} — Submissions`),
+  unlink: () => unlinkSheet(formId),
+  syncNow: () => syncNow(formId),
+  returnTo: '/admin-panel/forms/submissions',
+  copy: {
+    connectPitch: 'Keep a spreadsheet up to date with these submissions, instead of exporting a CSV each time.',
+    tabNote: 'This form gets its own tab, so several forms can share one spreadsheet without overwriting each other.',
+    ownedNote: (state) =>
+      `We keep the first ${state.ownedColumns} columns up to date. Anything you add to the right of those is yours — we never read or change it.`,
+    pillTitle: 'Keep a Google Sheet up to date with these submissions',
+    unlinkConfirm: 'Unlink this sheet? The spreadsheet and everything in it stays exactly as it is — we just stop updating it.',
+  },
+});

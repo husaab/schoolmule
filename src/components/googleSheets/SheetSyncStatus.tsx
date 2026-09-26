@@ -6,13 +6,12 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
-import * as sheetsService from '@/services/googleSheetsService';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import type { SheetLinkState } from '@/services/types/googleSheets';
+import type { SheetLinkState, SheetTarget } from '@/services/types/googleSheets';
 
 interface Props {
-  formId: string;
-  /** Bumping this refetches — used after linking or unlinking. */
+  target: SheetTarget;
+  /** Bumping this refetches — used after linking, unlinking, or an edit that queued a sync. */
   refreshKey?: number;
   onOpenSettings: () => void;
 }
@@ -30,25 +29,25 @@ function relativeTime(iso: string): string {
 }
 
 /**
- * The sheet's freshness, in the submissions page header.
+ * The linked sheet's freshness, in a page header.
  *
  * A stale sheet must announce itself — silent drift is the one failure mode
  * that would quietly undermine trust in the whole feature — so a failed sync or
  * a dead Google grant is shown here rather than only inside a modal.
  */
-export default function SheetSyncStatus({ formId, refreshKey = 0, onOpenSettings }: Props) {
+export default function SheetSyncStatus({ target, refreshKey = 0, onOpenSettings }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
   const [state, setState] = useState<SheetLinkState | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await sheetsService.getSheetLink(formId);
+      const res = await target.getLink();
       setState(res.data);
     } catch {
       // Not being able to read sync state shouldn't interrupt the page.
     }
-  }, [formId]);
+  }, [target]);
 
   useEffect(() => { load(); }, [load, refreshKey]);
 
@@ -63,7 +62,7 @@ export default function SheetSyncStatus({ formId, refreshKey = 0, onOpenSettings
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await sheetsService.syncNow(formId);
+      await target.syncNow();
       showNotification('Sync queued', 'success');
       await load();
     } catch (err) {
@@ -79,7 +78,7 @@ export default function SheetSyncStatus({ formId, refreshKey = 0, onOpenSettings
       <button
         onClick={onOpenSettings}
         className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
-        title="Keep a Google Sheet up to date with these submissions"
+        title={target.copy.pillTitle}
       >
         <TableCellsIcon className="w-4 h-4" />
         Link a Sheet

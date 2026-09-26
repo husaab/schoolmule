@@ -10,25 +10,26 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
 import { useGooglePicker } from './useGooglePicker';
-import * as sheetsService from '@/services/googleSheetsService';
+import { getAuthUrl, disconnectGoogle } from '@/services/googleSheetsService';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import type { SheetLinkState } from '@/services/types/googleSheets';
+import type { SheetLinkState, SheetTarget } from '@/services/types/googleSheets';
 
 interface Props {
-  formId: string;
-  formTitle: string;
+  target: SheetTarget;
   isOpen: boolean;
   onClose: () => void;
   onChanged: () => void;
 }
 
 /**
- * Connect Google, then point this form at a spreadsheet tab.
+ * Connect Google, then point a target (a form, or the school's staff hours)
+ * at a spreadsheet.
  *
  * Three states in one modal, because they're one linear task: not connected →
- * connected but unlinked → linked.
+ * connected but unlinked → linked. The Google connection is per school and
+ * shared by every target; the link is the target's own.
  */
-export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onChanged }: Props) {
+export default function LinkSheetModal({ target, isOpen, onClose, onChanged }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
   const { pick, loading: picking } = useGooglePicker();
 
@@ -38,14 +39,14 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
 
   const load = useCallback(async () => {
     try {
-      const res = await sheetsService.getSheetLink(formId);
+      const res = await target.getLink();
       setState(res.data);
     } catch (err) {
       showNotification((err as Error).message || 'Error loading sheet link', 'error');
     } finally {
       setLoading(false);
     }
-  }, [formId, showNotification]);
+  }, [target, showNotification]);
 
   useEffect(() => { if (isOpen) load(); }, [isOpen, load]);
 
@@ -54,7 +55,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
     try {
       // The backend hands back the URL rather than redirecting, so that the
       // request identifying our school carries the auth token.
-      const res = await sheetsService.getAuthUrl();
+      const res = await getAuthUrl(target.returnTo);
       window.location.href = res.data.url;
     } catch (err) {
       showNotification((err as Error).message || 'Could not start Google sign-in', 'error');
@@ -67,7 +68,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
     try {
       const picked = await pick();
       if (!picked) return; // cancelled
-      await sheetsService.linkExistingSheet(formId, picked.spreadsheetId);
+      await target.linkExisting(picked.spreadsheetId);
       showNotification(`Linked to "${picked.name}"`, 'success');
       await load();
       onChanged();
@@ -81,7 +82,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
   const handleCreate = async () => {
     setWorking(true);
     try {
-      await sheetsService.linkNewSheet(formId, `${formTitle} — Submissions`);
+      await target.linkNew();
       showNotification('Spreadsheet created and linked', 'success');
       await load();
       onChanged();
@@ -93,10 +94,10 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
   };
 
   const handleUnlink = async () => {
-    if (!confirm('Unlink this sheet? The spreadsheet and everything in it stays exactly as it is — we just stop updating it.')) return;
+    if (!confirm(target.copy.unlinkConfirm)) return;
     setWorking(true);
     try {
-      const res = await sheetsService.unlinkSheet(formId);
+      const res = await target.unlink();
       showNotification(res.message, 'success');
       await load();
       onChanged();
@@ -108,10 +109,10 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
   };
 
   const handleDisconnect = async () => {
-    if (!confirm('Disconnect Google for the whole school? Every form linked to a sheet will stop syncing.')) return;
+    if (!confirm('Disconnect Google for the whole school? Every linked sheet — form submissions and staff hours — will stop syncing.')) return;
     setWorking(true);
     try {
-      await sheetsService.disconnectGoogle();
+      await disconnectGoogle();
       showNotification('Google account disconnected', 'success');
       await load();
       onChanged();
@@ -145,7 +146,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
                 <p className="text-sm text-slate-500 mb-5 max-w-md mx-auto">
                   {needsReconnect
                     ? 'Access was revoked, so the sheet has stopped updating. Reconnecting resumes it.'
-                    : 'Keep a spreadsheet up to date with these submissions, instead of exporting a CSV each time.'}
+                    : target.copy.connectPitch}
                 </p>
                 <button
                   onClick={handleConnect}
@@ -187,10 +188,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
                     <p className="text-xs text-slate-500 mt-0.5">A new spreadsheet in your Drive</p>
                   </button>
                 </div>
-                <p className="text-xs text-slate-400">
-                  This form gets its own tab, so several forms can share one spreadsheet without
-                  overwriting each other.
-                </p>
+                <p className="text-xs text-slate-400">{target.copy.tabNote}</p>
               </>
             )}
 
@@ -203,9 +201,11 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
                     <p className="text-sm font-medium text-emerald-900 truncate">
                       {state.spreadsheetName || 'Linked spreadsheet'}
                     </p>
-                    <p className="text-xs text-emerald-700 mt-0.5">
-                      Tab: {state.sheetTabName}
-                    </p>
+                    {state.sheetTabName && (
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        Tab: {state.sheetTabName}
+                      </p>
+                    )}
                     <a
                       href={`https://docs.google.com/spreadsheets/d/${state.spreadsheetId}/edit`}
                       target="_blank"
@@ -227,10 +227,7 @@ export default function LinkSheetModal({ formId, formTitle, isOpen, onClose, onC
                   </div>
                 )}
 
-                <p className="text-xs text-slate-400">
-                  We keep the first {state.ownedColumns} columns up to date. Anything you add to the
-                  right of those is yours — we never read or change it.
-                </p>
+                <p className="text-xs text-slate-400">{target.copy.ownedNote(state)}</p>
 
                 <button
                   onClick={handleUnlink}

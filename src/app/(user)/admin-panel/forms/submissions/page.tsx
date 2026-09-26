@@ -7,6 +7,7 @@ import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useFilterParams } from '@/hooks/useFilterParams';
+import { useGoogleOAuthOutcome } from '@/components/googleSheets/useGoogleOAuthOutcome';
 import * as registrationService from '@/services/registrationService';
 import type { RegistrationForm, FormStatus } from '@/services/types/registration';
 import {
@@ -48,25 +49,8 @@ function SubmissionsContent() {
     }
   }, [showNotification]);
 
-  // The Google OAuth callback is a browser redirect back to this page, so the
-  // outcome arrives as a query param rather than a response we can await.
-  useEffect(() => {
-    const outcome = get('google');
-    if (!outcome) return;
-
-    const messages: Record<string, [string, 'success' | 'error']> = {
-      connected: ['Google account connected', 'success'],
-      denied: ['Google access was declined', 'error'],
-      invalid_state: ['That sign-in link expired — please try again', 'error'],
-      missing_code: ['Google sign-in did not complete', 'error'],
-      error: ['Could not connect Google — please try again', 'error'],
-    };
-    const [message, kind] = messages[outcome] || ['Could not connect Google', 'error'];
-    showNotification(message, kind);
-
-    // Clear it so a refresh doesn't replay the toast.
-    setParams({ google: null });
-  }, [get, setParams, showNotification]);
+  // "Connect Google" round-trips through this page; the hook reports how it ended.
+  useGoogleOAuthOutcome();
 
   useEffect(() => {
     fetchForms();
