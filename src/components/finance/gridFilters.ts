@@ -1,7 +1,7 @@
 // Pure filtering/sorting for the tuition grid. The page reads these values
 // from the URL; nothing here touches React.
 
-import type { GridFamily, Ledger } from '@/services/types/finance'
+import type { Cell, CellStatus, GridFamily, Ledger, LedgerTotals, PseudoRow } from '@/services/types/finance'
 import { cellFor, compareGrades } from './format'
 
 export type StatusFilter = 'all' | 'unpaid' | 'partial' | 'overdue' | 'paid'
@@ -162,4 +162,77 @@ export function totalsFor(families: GridFamily[], months: string[]): VisibleTota
     paid += fam.parent.totals.paid
   }
   return { byMonth, balance, invoiced, paid }
+}
+
+// ── Pinned pseudo-rows (grant / school-applied) under filters ────────────
+
+const cents = (n: number) => Math.round(n * 100) / 100
+const OWED = 0.005
+
+/** One month of a pseudo-row rebuilt from the families' cells for it. */
+function combineCells(cells: Cell[]): Cell {
+  let invoiced = 0
+  let paid = 0
+  let balance = 0
+  let daysOverdue = 0
+  const statuses = new Set<CellStatus>()
+  const invoices: Cell['invoices'] = []
+  const payments: Cell['payments'] = []
+  for (const c of cells) {
+    invoiced += c.invoiced
+    paid += c.paid
+    balance += c.balance
+    daysOverdue = Math.max(daysOverdue, c.daysOverdue)
+    statuses.add(c.status)
+    invoices.push(...c.invoices)
+    payments.push(...c.payments)
+  }
+  invoiced = cents(invoiced)
+  paid = cents(paid)
+  balance = cents(balance)
+  const status: CellStatus = statuses.has('overdue')
+    ? 'overdue'
+    : balance > OWED && paid > OWED
+      ? 'partial'
+      : balance > OWED
+        ? 'unpaid'
+        : invoiced > 0
+          ? 'paid'
+          : statuses.has('voided')
+            ? 'voided'
+            : 'none'
+  return { status, invoiced, paid, balance, daysOverdue, invoices, payments }
+}
+
+/**
+ * The grant / school-applied pseudo-row limited to the families on screen:
+ * keeps only their `byFamily` entries and rebuilds every month's cell and the
+ * totals from them. Null when none of its families is visible, so the row can
+ * be hidden. (The summary tiles stay school-wide; only the grid follows the
+ * filters, like the footer totals.)
+ */
+export function restrictPseudoRow(row: PseudoRow, visibleFamilyIds: Set<string>, months: string[]): PseudoRow | null {
+  const byFamily = row.byFamily.filter((f) => visibleFamilyIds.has(f.familyId))
+  if (byFamily.length === 0) return null
+  const cells: Record<string, Cell> = {}
+  const totals: LedgerTotals = { invoiced: 0, paid: 0, balance: 0, overdueBalance: 0 }
+  for (const m of months) {
+    const cell = combineCells(byFamily.map((f) => cellFor(f.cells, m)))
+    cells[m] = cell
+    totals.invoiced += cell.invoiced
+    totals.paid += cell.paid
+    totals.balance += cell.balance
+    if (cell.status === 'overdue') totals.overdueBalance += cell.balance
+  }
+  return {
+    label: row.label,
+    byFamily,
+    cells,
+    totals: {
+      invoiced: cents(totals.invoiced),
+      paid: cents(totals.paid),
+      balance: cents(totals.balance),
+      overdueBalance: cents(totals.overdueBalance),
+    },
+  }
 }

@@ -367,6 +367,7 @@ function TuitionContent() {
         schoolSubsidy={grid.schoolSubsidy}
         totals={view.totals}
         grantName={grantName}
+        allFamilyCount={grid.families.length}
         onOpenFamily={setOpenFamilyId}
       />
     )

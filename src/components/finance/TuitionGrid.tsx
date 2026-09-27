@@ -3,15 +3,16 @@
 // The family × month ledger. Desktop: a table with the Family and Balance
 // columns pinned left, a sticky header and a sticky totals footer, scrolling
 // both ways inside its card. Below md: a stacked card per family showing the
-// selected month.
+// selected month. The pinned grant / school-applied rows follow the filters:
+// they cover only the visible families (see restrictPseudoRow).
 
-import React, { memo, useState } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import { ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import type { GridFamily, PseudoRow, PseudoRowFamily } from '@/services/types/finance'
 import { FamilyBadges } from './badges'
 import MonthCell, { MonthChip } from './MonthCell'
 import { cellFor, formatMoney, gradeShort, monthMedium, monthShort } from './format'
-import { hasAnyCell, type VisibleTotals } from './gridFilters'
+import { hasAnyCell, restrictPseudoRow, type VisibleTotals } from './gridFilters'
 
 interface TuitionGridProps {
   months: string[]
@@ -21,6 +22,8 @@ interface TuitionGridProps {
   schoolSubsidy: PseudoRow
   totals: VisibleTotals
   grantName: string
+  /** How many families the unfiltered grid has; fewer visible = filtered. */
+  allFamilyCount: number
   onOpenFamily: (familyId: string) => void
 }
 
@@ -110,8 +113,11 @@ function PseudoRows({
   grantName,
   tint,
   onOpenFamily,
+  totalFamilies,
 }: {
   row: PseudoRow
+  /** The unfiltered row's family count, when the row is filtered. */
+  totalFamilies?: number
   months: string[]
   selectedMonth: string
   grantName: string
@@ -139,6 +145,11 @@ function PseudoRows({
           <p className="mt-0.5 pl-5 text-[11px] text-slate-500">
             {expandable ? `${row.byFamily.length} ${row.byFamily.length === 1 ? 'family' : 'families'}` : 'No families yet'}
           </p>
+          {totalFamilies !== undefined && totalFamilies > row.byFamily.length && (
+            <p className="pl-5 text-[10px] text-slate-400">
+              {row.byFamily.length} of {totalFamilies} families shown
+            </p>
+          )}
         </td>
         <td className={`${BALANCE_COL} ${CELL_Y} z-10 ${bg} px-3 text-right text-sm font-semibold tabular-nums ${balanceTone(row.totals.balance)}`}>
           {formatMoney(row.totals.balance)}
@@ -189,14 +200,20 @@ function MobileList({
   grant,
   selectedMonth,
   onOpenFamily,
-}: Pick<TuitionGridProps, 'families' | 'grant' | 'selectedMonth' | 'onOpenFamily'>) {
+  grantTotal,
+}: Pick<TuitionGridProps, 'families' | 'selectedMonth' | 'onOpenFamily'> & { grant: PseudoRow | null; grantTotal: number }) {
   return (
     <ul className="divide-y divide-slate-100 md:hidden">
-      {hasAnyCell(grant) && (
+      {grant && hasAnyCell(grant) && (
         <li className="flex items-center justify-between gap-3 bg-cyan-50 px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-800">{grant.label}</p>
             <p className={`text-xs tabular-nums ${balanceTone(grant.totals.balance)}`}>Balance {formatMoney(grant.totals.balance)}</p>
+            {grant.byFamily.length < grantTotal && (
+              <p className="text-[10px] text-slate-400">
+                {grant.byFamily.length} of {grantTotal} families shown
+              </p>
+            )}
           </div>
           <div className="w-24 shrink-0">
             <MonthChip cell={cellFor(grant.cells, selectedMonth)} />
@@ -244,12 +261,28 @@ const TuitionGrid: React.FC<TuitionGridProps> = ({
   schoolSubsidy,
   totals,
   grantName,
+  allFamilyCount,
   onOpenFamily,
 }) => {
-  const showSchool = hasAnyCell(schoolSubsidy)
+  // Under filters the pinned rows cover only the visible families (and
+  // disappear when none of theirs is visible); unfiltered they are shown as
+  // the server built them.
+  const filtered = families.length < allFamilyCount
+  const { grantRow, schoolRow } = useMemo(() => {
+    if (!filtered) return { grantRow: grant, schoolRow: schoolSubsidy }
+    const ids = new Set(families.map((f) => f.familyId))
+    return { grantRow: restrictPseudoRow(grant, ids, months), schoolRow: restrictPseudoRow(schoolSubsidy, ids, months) }
+  }, [filtered, families, grant, schoolSubsidy, months])
+  const showSchool = !!schoolRow && hasAnyCell(schoolRow)
   return (
     <>
-      <MobileList families={families} grant={grant} selectedMonth={selectedMonth} onOpenFamily={onOpenFamily} />
+      <MobileList
+        families={families}
+        grant={grantRow}
+        grantTotal={grant.byFamily.length}
+        selectedMonth={selectedMonth}
+        onOpenFamily={onOpenFamily}
+      />
 
       <div className="hidden max-h-[75vh] overflow-auto md:block lg:max-h-none lg:min-h-0 lg:flex-1">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
@@ -279,10 +312,21 @@ const TuitionGrid: React.FC<TuitionGridProps> = ({
             </tr>
           </thead>
           <tbody>
-            <PseudoRows row={grant} months={months} selectedMonth={selectedMonth} grantName={grantName} tint="cyan" onOpenFamily={onOpenFamily} />
-            {showSchool && (
+            {grantRow && (
               <PseudoRows
-                row={schoolSubsidy}
+                row={grantRow}
+                totalFamilies={filtered ? grant.byFamily.length : undefined}
+                months={months}
+                selectedMonth={selectedMonth}
+                grantName={grantName}
+                tint="cyan"
+                onOpenFamily={onOpenFamily}
+              />
+            )}
+            {showSchool && schoolRow && (
+              <PseudoRows
+                row={schoolRow}
+                totalFamilies={filtered ? schoolSubsidy.byFamily.length : undefined}
                 months={months}
                 selectedMonth={selectedMonth}
                 grantName={grantName}
