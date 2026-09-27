@@ -12,6 +12,8 @@ import { useUserStore } from '@/store/useUserStore'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
 import {
   AcademicCapIcon,
+  ArchiveBoxArrowDownIcon,
+  ArrowUturnLeftIcon,
   BookOpenIcon,
   ChatBubbleLeftRightIcon,
   EnvelopeIcon,
@@ -30,6 +32,8 @@ interface UserViewModalProps {
   user: SchoolUser
   onEdit: () => void
   onDelete: () => void
+  onArchive: () => void
+  onUnarchive: () => void
 }
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -47,7 +51,15 @@ const Quiet = ({ children }: { children: React.ReactNode }) => (
   <p className="text-sm text-slate-400">{children}</p>
 )
 
-const UserViewModal: React.FC<UserViewModalProps> = ({ isOpen, onClose, user, onEdit, onDelete }) => {
+const UserViewModal: React.FC<UserViewModalProps> = ({
+  isOpen,
+  onClose,
+  user,
+  onEdit,
+  onDelete,
+  onArchive,
+  onUnarchive,
+}) => {
   const currentUserId = useUserStore((s) => s.user.id)
   const notify = useNotificationStore((s) => s.showNotification)
   const [details, setDetails] = useState<SchoolUserDetails | null>(null)
@@ -116,6 +128,12 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ isOpen, onClose, user, on
       </header>
 
       <div className="space-y-6 px-6 py-5">
+        {status === 'archived' && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Archived {formatDate(user.archivedAt)}. Hidden from staff lists and teacher pickers, and
+            can&apos;t sign in. Their records are kept. Restore them to bring the account back.
+          </div>
+        )}
         {status === 'invited' && (
           <div className="flex flex-col gap-3 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-sky-900">
@@ -269,19 +287,34 @@ const UserViewModal: React.FC<UserViewModalProps> = ({ isOpen, onClose, user, on
         {isSelf ? (
           <span className="text-xs text-slate-400">Manage your own login in Settings.</span>
         ) : (
-          <Button variant="secondary" onClick={onDelete} className="text-rose-600 hover:bg-rose-50">
-            <TrashIcon className="h-4 w-4" />
-            Delete
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onDelete} className="text-rose-600 hover:bg-rose-50">
+              <TrashIcon className="h-4 w-4" />
+              Delete
+            </Button>
+            {status !== 'archived' && (
+              <Button variant="secondary" onClick={onArchive} className="text-amber-700 hover:bg-amber-50">
+                <ArchiveBoxArrowDownIcon className="h-4 w-4" />
+                Archive
+              </Button>
+            )}
+          </div>
         )}
         <div className="flex gap-2">
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-          <Button onClick={onEdit}>
-            <PencilSquareIcon className="h-4 w-4" />
-            Edit
-          </Button>
+          {status === 'archived' ? (
+            <Button onClick={onUnarchive}>
+              <ArrowUturnLeftIcon className="h-4 w-4" />
+              Restore
+            </Button>
+          ) : (
+            <Button onClick={onEdit}>
+              <PencilSquareIcon className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
         </div>
       </footer>
     </Modal>

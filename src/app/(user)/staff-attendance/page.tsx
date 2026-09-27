@@ -347,7 +347,7 @@ function StaffAttendanceContent() {
       <main className="lg:ml-72 pt-20 min-h-screen lg:h-screen flex flex-col bg-slate-50">
         <div className="flex flex-col flex-1 lg:min-h-0 p-4 lg:p-8 max-w-6xl mx-auto w-full">
           {/* Header */}
-          <div className="flex-shrink-0 mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex-shrink-0 mb-5 flex flex-col gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                 <IdentificationIcon className="w-7 h-7 text-cyan-500" />
@@ -356,7 +356,7 @@ function StaffAttendanceContent() {
               <p className="text-slate-500 mt-1">Hours worked to each pay day, and every person&apos;s calendar</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <SheetSyncStatus target={sheetTarget} refreshKey={sheetRefreshKey} onOpenSettings={() => setSheetModalOpen(true)} />
+              <SheetSyncStatus target={sheetTarget} refreshKey={sheetRefreshKey} onOpenSettings={() => setSheetModalOpen(true)} radius="xl" />
               <button type="button" onClick={() => setScheduleModalOpen(true)} className={secondaryButton} title="When staff are paid">
                 <Cog6ToothIcon className="h-4 w-4" />
                 Pay schedule

@@ -9,6 +9,8 @@ import EmptyState from '@/components/ui/EmptyState'
 import UserViewModal from '@/components/adminUsers/UserViewModal'
 import UserFormModal from '@/components/adminUsers/UserFormModal'
 import UserDeleteModal from '@/components/adminUsers/UserDeleteModal'
+import UserArchiveModal from '@/components/adminUsers/UserArchiveModal'
+import UserUnarchiveModal from '@/components/adminUsers/UserUnarchiveModal'
 import {
   RoleBadge,
   STATUS_META,
@@ -22,6 +24,9 @@ import { getSchoolUsers } from '@/services/adminUserService'
 import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
 import { useUserStore } from '@/store/useUserStore'
 import {
+  ArchiveBoxArrowDownIcon,
+  ArchiveBoxIcon,
+  ArrowUturnLeftIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -46,12 +51,15 @@ const UsersPage = () => {
   const [error, setError] = useState<string | null>(null)
 
   const [search, setSearch] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
 
   const [viewing, setViewing] = useState<SchoolUser | null>(null)
   const [editing, setEditing] = useState<SchoolUser | null>(null)
   const [deleting, setDeleting] = useState<SchoolUser | null>(null)
+  const [archiving, setArchiving] = useState<SchoolUser | null>(null)
+  const [unarchiving, setUnarchiving] = useState<SchoolUser | null>(null)
   const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
@@ -70,26 +78,32 @@ const UsersPage = () => {
     load()
   }, [load])
 
+  // The Active / Archived tabs split the list; everything below works on one side.
+  const active = useMemo(() => users.filter((u) => !u.isArchived), [users])
+  const archived = useMemo(() => users.filter((u) => u.isArchived), [users])
+  const pool = showArchived ? archived : active
+
   const counts = useMemo(
     () => ({
-      total: users.length,
-      ADMIN: users.filter((u) => u.role === 'ADMIN').length,
-      TEACHER: users.filter((u) => u.role === 'TEACHER').length,
-      PARENT: users.filter((u) => u.role === 'PARENT').length,
-      needsAttention: users.filter((u) => statusOf(u) !== 'active').length,
+      total: pool.length,
+      ADMIN: pool.filter((u) => u.role === 'ADMIN').length,
+      TEACHER: pool.filter((u) => u.role === 'TEACHER').length,
+      PARENT: pool.filter((u) => u.role === 'PARENT').length,
+      needsAttention: active.filter((u) => statusOf(u) !== 'active').length,
+      archived: archived.length,
     }),
-    [users]
+    [pool, active, archived]
   )
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return users.filter(
+    return pool.filter(
       (u) =>
         (roleFilter === 'ALL' || u.role === roleFilter) &&
-        (statusFilter === 'ALL' || statusOf(u) === statusFilter) &&
+        (showArchived || statusFilter === 'ALL' || statusOf(u) === statusFilter) &&
         (!q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
     )
-  }, [users, search, roleFilter, statusFilter])
+  }, [pool, search, roleFilter, statusFilter, showArchived])
 
   const upsert = (saved: SchoolUser) => {
     setUsers((prev) => {
@@ -108,7 +122,9 @@ const UsersPage = () => {
     setViewing(null)
   }
 
-  const hasFilters = search || roleFilter !== 'ALL' || statusFilter !== 'ALL'
+  const hasFilters = search || roleFilter !== 'ALL' || (!showArchived && statusFilter !== 'ALL')
+
+  const activeStatuses = (Object.keys(STATUS_META) as UserStatus[]).filter((s) => s !== 'archived')
 
   return (
     <>
@@ -133,10 +149,10 @@ const UsersPage = () => {
 
           {/* Stats */}
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-            <StatTile label="Total users" value={counts.total} />
-            <StatTile label="Admins" value={counts.ADMIN} />
-            <StatTile label="Teachers" value={counts.TEACHER} />
-            <StatTile label="Parents" value={counts.PARENT} />
+            <StatTile label="Total users" value={active.length} />
+            <StatTile label="Admins" value={active.filter((u) => u.role === 'ADMIN').length} />
+            <StatTile label="Teachers" value={active.filter((u) => u.role === 'TEACHER').length} />
+            <StatTile label="Parents" value={active.filter((u) => u.role === 'PARENT').length} />
             <StatTile
               label="Pending or no access"
               value={counts.needsAttention}
@@ -147,41 +163,69 @@ const UsersPage = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
             {/* Toolbar */}
             <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by role">
-                {ROLE_TABS.map((tab) => {
-                  const active = roleFilter === tab.value
-                  const count = tab.value === 'ALL' ? counts.total : counts[tab.value]
-                  return (
-                    <button
-                      key={tab.value}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setRoleFilter(tab.value)}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
-                        active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      {tab.label}
-                      <span className="ml-1.5 font-mono tabular-nums text-xs text-slate-400">{count}</span>
-                    </button>
-                  )
-                })}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Active or archived">
+                  <button
+                    role="tab"
+                    aria-selected={!showArchived}
+                    onClick={() => setShowArchived(false)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                      !showArchived ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={showArchived}
+                    onClick={() => setShowArchived(true)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                      showArchived ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <ArchiveBoxIcon className="h-4 w-4" />
+                    Archived
+                    <span className="font-mono tabular-nums text-xs text-slate-400">{counts.archived}</span>
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by role">
+                  {ROLE_TABS.map((tab) => {
+                    const active = roleFilter === tab.value
+                    const count = tab.value === 'ALL' ? counts.total : counts[tab.value]
+                    return (
+                      <button
+                        key={tab.value}
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setRoleFilter(tab.value)}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                          active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="ml-1.5 font-mono tabular-nums text-xs text-slate-400">{count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  aria-label="Filter by status"
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
-                >
-                  <option value="ALL">Any status</option>
-                  {(Object.keys(STATUS_META) as UserStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_META[s].label}
-                    </option>
-                  ))}
-                </select>
+                {!showArchived && (
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                    aria-label="Filter by status"
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
+                  >
+                    <option value="ALL">Any status</option>
+                    {activeStatuses.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_META[s].label}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <div className="relative sm:w-64">
                   <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -215,11 +259,19 @@ const UsersPage = () => {
             ) : filtered.length === 0 ? (
               <EmptyState
                 icon={UsersIcon}
-                title={users.length === 0 ? 'No users yet' : 'No matching users'}
+                title={
+                  showArchived && archived.length === 0
+                    ? 'No archived users'
+                    : users.length === 0
+                      ? 'No users yet'
+                      : 'No matching users'
+                }
                 description={
-                  users.length === 0
-                    ? 'Add your staff and parents, or share your school signup link.'
-                    : 'Try a different search or filter.'
+                  showArchived && archived.length === 0
+                    ? 'Archive staff who have left the school to keep their records without deleting them.'
+                    : users.length === 0
+                      ? 'Add your staff and parents, or share your school signup link.'
+                      : 'Try a different search or filter.'
                 }
                 action={
                   hasFilters ? (
@@ -237,14 +289,16 @@ const UsersPage = () => {
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-h-[calc(100vh-24rem)] min-h-[16rem] overflow-auto">
                 <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-100">
+                  <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#f1f5f9]">
+                    <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Joined</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {showArchived ? 'Archived' : 'Joined'}
+                      </th>
                       <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
                         <span className="sr-only">Actions</span>
                       </th>
@@ -265,7 +319,9 @@ const UsersPage = () => {
                           }}
                           tabIndex={0}
                           aria-label={`View ${u.fullName}`}
-                          className="group cursor-pointer transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
+                          className={`group cursor-pointer transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500 ${
+                            u.isArchived ? 'opacity-75' : ''
+                          }`}
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3 min-w-0">
@@ -285,17 +341,40 @@ const UsersPage = () => {
                           <td className="px-4 py-3 whitespace-nowrap">
                             <StatusBadge user={u} />
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{formatDate(u.createdAt)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
+                            {formatDate(u.isArchived ? u.archivedAt : u.createdAt)}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
                             <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => setEditing(u)}
-                                title="Edit"
-                                aria-label={`Edit ${u.fullName}`}
-                                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 cursor-pointer"
-                              >
-                                <PencilSquareIcon className="h-4 w-4" />
-                              </button>
+                              {u.isArchived ? (
+                                <button
+                                  onClick={() => setUnarchiving(u)}
+                                  title="Restore"
+                                  aria-label={`Restore ${u.fullName}`}
+                                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 cursor-pointer"
+                                >
+                                  <ArrowUturnLeftIcon className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setEditing(u)}
+                                  title="Edit"
+                                  aria-label={`Edit ${u.fullName}`}
+                                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 cursor-pointer"
+                                >
+                                  <PencilSquareIcon className="h-4 w-4" />
+                                </button>
+                              )}
+                              {!isSelf && !u.isArchived && (
+                                <button
+                                  onClick={() => setArchiving(u)}
+                                  title="Archive"
+                                  aria-label={`Archive ${u.fullName}`}
+                                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 cursor-pointer"
+                                >
+                                  <ArchiveBoxArrowDownIcon className="h-4 w-4" />
+                                </button>
+                              )}
                               {!isSelf && (
                                 <button
                                   onClick={() => setDeleting(u)}
@@ -326,6 +405,30 @@ const UsersPage = () => {
           user={viewing}
           onEdit={() => setEditing(viewing)}
           onDelete={() => setDeleting(viewing)}
+          onArchive={() => setArchiving(viewing)}
+          onUnarchive={() => setUnarchiving(viewing)}
+        />
+      )}
+      {archiving && (
+        <UserArchiveModal
+          isOpen={Boolean(archiving)}
+          onClose={() => setArchiving(null)}
+          user={archiving}
+          onArchived={(saved) => {
+            upsert(saved)
+            setViewing(null)
+          }}
+        />
+      )}
+      {unarchiving && (
+        <UserUnarchiveModal
+          isOpen={Boolean(unarchiving)}
+          onClose={() => setUnarchiving(null)}
+          user={unarchiving}
+          onRestored={(saved) => {
+            upsert(saved)
+            setViewing(null)
+          }}
         />
       )}
       {(adding || editing) && (

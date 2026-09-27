@@ -31,9 +31,10 @@ export const RoleBadge = ({ role }: { role: string }) => (
   </span>
 )
 
-export type UserStatus = 'active' | 'invited' | 'awaiting' | 'unverified'
+export type UserStatus = 'active' | 'invited' | 'awaiting' | 'unverified' | 'archived'
 
 export const statusOf = (user: SchoolUser): UserStatus => {
+  if (user.isArchived) return 'archived'
   if (user.invitePending) return 'invited'
   if (user.isVerifiedSchool) return 'active'
   return user.isVerified ? 'awaiting' : 'unverified'
@@ -44,6 +45,7 @@ export const STATUS_META: Record<UserStatus, { label: string; dot: string; text:
   invited: { label: 'Invite pending', dot: 'bg-sky-500', text: 'text-sky-700' },
   awaiting: { label: 'No school access', dot: 'bg-amber-500', text: 'text-amber-700' },
   unverified: { label: 'Email unverified', dot: 'bg-slate-400', text: 'text-slate-500' },
+  archived: { label: 'Archived', dot: 'bg-slate-300', text: 'text-slate-400' },
 }
 
 export const StatusBadge = ({ user }: { user: SchoolUser }) => {

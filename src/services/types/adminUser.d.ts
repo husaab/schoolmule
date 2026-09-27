@@ -14,6 +14,9 @@ export interface SchoolUser {
   role: SchoolRole;
   isVerified: boolean;
   isVerifiedSchool: boolean;
+  /** Archived: kept with all their records, hidden from staff lists, can't sign in. */
+  isArchived: boolean;
+  archivedAt: string | null;
   /** Created by an admin and hasn't set a password yet. */
   invitePending: boolean;
   createdAt: string;
@@ -37,6 +40,13 @@ export interface SchoolUserDetails extends SchoolUser {
     emailContactHours: string | null;
   } | null;
   children: { studentId: string; name: string; grade: string; relation: string | null }[];
+  /** What must be reassigned before this account can be archived. */
+  archiveBlockers: ArchiveBlockers;
+}
+
+export interface ArchiveBlockers {
+  classes: { classId: string; grade: string; subject: string; termName: string | null }[];
+  homeroomStudents: number;
 }
 
 export interface InviteUserRequest {

@@ -37,6 +37,18 @@ export const updateSchoolUser = (userId: string, payload: UpdateSchoolUserReques
     body: payload,
   });
 
+/** POST /admin/users/:id/archive — keeps records, hides from staff lists, revokes access */
+export const archiveSchoolUser = (userId: string) =>
+  apiClient<AdminUserResponse<SchoolUser>>(`/admin/users/${userId}/archive`, {
+    method: 'POST',
+  });
+
+/** POST /admin/users/:id/unarchive */
+export const unarchiveSchoolUser = (userId: string) =>
+  apiClient<AdminUserResponse<SchoolUser>>(`/admin/users/${userId}/unarchive`, {
+    method: 'POST',
+  });
+
 /** DELETE /admin/users/:id */
 export const deleteSchoolUser = (userId: string) =>
   apiClient<{ status: string; message?: string }>(`/admin/users/${userId}`, {

@@ -59,7 +59,8 @@ const UserDeleteModal: React.FC<UserDeleteModalProps> = ({ isOpen, onClose, user
           }}
         >
           <strong className="font-semibold text-slate-900">{user.fullName}</strong> will be permanently
-          removed. To keep the account but block access, edit them and turn off school access instead.
+          removed. For someone who has left the school, archive them instead: it keeps their history and
+          blocks access.
         </ConfirmBody>
 
         <RecordFacts
