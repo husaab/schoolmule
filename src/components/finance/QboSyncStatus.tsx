@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   ArrowPathIcon,
   CheckCircleIcon,
+  ClockIcon,
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
   LinkSlashIcon,
@@ -18,6 +19,7 @@ import { syncNow } from '@/services/financeService'
 import type { SyncStatus } from '@/services/types/finance'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { errorMessage, formatDateTime, relativeTime } from './format'
+import SyncHistoryModal from './SyncHistoryModal'
 
 interface QboSyncStatusProps {
   status: SyncStatus | null
@@ -46,7 +48,7 @@ function useNow(intervalMs = 30_000) {
   return now
 }
 
-function DisconnectMenu({ onDisconnect }: { onDisconnect: () => void }) {
+function OptionsMenu({ onDisconnect, onHistory }: { onDisconnect: () => void; onHistory: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -85,6 +87,18 @@ function DisconnectMenu({ onDisconnect }: { onDisconnect: () => void }) {
             role="menuitem"
             onClick={() => {
               setOpen(false)
+              onHistory()
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer"
+          >
+            <ClockIcon className="h-4 w-4" />
+            Sync history
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
               onDisconnect()
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 cursor-pointer"
@@ -102,6 +116,36 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
   const showNotification = useNotificationStore((s) => s.showNotification)
   const now = useNow()
   const [queueing, setQueueing] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  const handleSync = async () => {
+    setQueueing(true)
+    try {
+      const res = await syncNow()
+      showNotification(res.data.alreadyQueued ? 'A sync is already queued' : 'Sync queued', 'success')
+      await onRefresh()
+    } catch (err) {
+      showNotification(errorMessage(err, 'Could not queue a sync'), 'error')
+    } finally {
+      setQueueing(false)
+    }
+  }
+
+  const pending = !!status && (status.pendingSync || status.job?.state === 'pending' || status.job?.state === 'running')
+  const canSync = !!status && status.connection.connected && status.connection.status !== 'needs_reconnect'
+
+  const menu = <OptionsMenu onDisconnect={onDisconnect} onHistory={() => setHistoryOpen(true)} />
+  const historyModal = status ? (
+    <SyncHistoryModal
+      isOpen={historyOpen}
+      onClose={() => setHistoryOpen(false)}
+      lastSuccessAt={status.connection.lastSuccessAt}
+      latestRunKey={status.lastRun ? `${status.lastRun.runId}:${status.lastRun.status}` : undefined}
+      onSyncNow={canSync ? handleSync : undefined}
+      syncing={queueing}
+      syncPending={pending}
+    />
+  ) : null
 
   if (!status) {
     if (error) {
@@ -150,12 +194,12 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
           <ExclamationTriangleIcon className="h-4 w-4" />
           Reconnect QuickBooks
         </button>
-        <DisconnectMenu onDisconnect={onDisconnect} />
+        {menu}
+        {historyModal}
       </div>
     )
   }
 
-  const pending = status.pendingSync || status.job?.state === 'pending' || status.job?.state === 'running'
   // A permanently failed job row can outlive later successful syncs (those
   // rows are deleted), so a failed job only counts if it is newer than the
   // last success.
@@ -176,19 +220,6 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
   const title = failed
     ? failureText
     : [conn.companyName, conn.lastSuccessAt ? `Last synced ${formatDateTime(conn.lastSuccessAt)}` : null].filter(Boolean).join(' · ')
-
-  const handleSync = async () => {
-    setQueueing(true)
-    try {
-      const res = await syncNow()
-      showNotification(res.data.alreadyQueued ? 'A sync is already queued' : 'Sync queued', 'success')
-      await onRefresh()
-    } catch (err) {
-      showNotification(errorMessage(err, 'Could not queue a sync'), 'error')
-    } finally {
-      setQueueing(false)
-    }
-  }
 
   return (
     <div className="flex items-center">
@@ -212,7 +243,8 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
         <ArrowPathIcon className={`h-4 w-4 ${queueing ? 'animate-spin' : ''}`} />
         <span className="hidden sm:inline">Sync now</span>
       </button>
-      <DisconnectMenu onDisconnect={onDisconnect} />
+      {menu}
+      {historyModal}
     </div>
   )
 }
