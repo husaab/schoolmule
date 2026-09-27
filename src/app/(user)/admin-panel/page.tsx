@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -86,6 +86,15 @@ const adminLinks = [
     color: 'bg-indigo-500',
     bgColor: 'from-indigo-50 to-blue-50',
     borderColor: 'border-indigo-100',
+  },
+  {
+    href: '/finance/tuition',
+    label: 'Finance · Tuition',
+    description: 'Every family’s tuition by month from QuickBooks: paid, partial, overdue and subsidy.',
+    icon: CurrencyDollarIcon,
+    color: 'bg-teal-600',
+    bgColor: 'from-teal-50 to-cyan-50',
+    borderColor: 'border-teal-100',
   },
   {
     href: '/admin-panel/patch-notes',

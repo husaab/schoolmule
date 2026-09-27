@@ -18,6 +18,7 @@ const KNOWN_APP_ROUTES = [
   'admin-panel', 'settings', 'support',
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
+  'finance',
   'forbidden', 'api', '_next',
 ];
 
@@ -134,7 +135,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         path !== '/school-approval'
       ) {
         router.replace('/school-approval')
-      } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance')) && user.role !== "ADMIN") {
+      } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance') || path.startsWith('/finance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
       } else if (user.role === 'PARENT' && !isParentPath(path) && !isPublicSchedulePath(path)) {
         router.replace("/parent/dashboard")

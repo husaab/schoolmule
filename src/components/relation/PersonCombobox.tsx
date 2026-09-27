@@ -118,6 +118,9 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
             e.preventDefault()
             pick(matches[highlighted])
           } else if (e.key === 'Escape') {
+            // Close only the list — not a drawer or dialog this sits in.
+            e.preventDefault()
+            e.stopPropagation()
             setOpen(false)
           }
         }}

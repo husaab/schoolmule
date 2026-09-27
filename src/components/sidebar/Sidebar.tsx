@@ -32,7 +32,9 @@ import {
   CalendarDaysIcon,
   Squares2X2Icon,
   ChatBubbleLeftRightIcon,
-  UsersIcon
+  UsersIcon,
+  BanknotesIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -89,11 +91,13 @@ const Sidebar = () => {
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
   const isAdminPanelPath = pathname.startsWith('/admin-panel') && !isRegistrationPath;
+  const isFinancePath = pathname.startsWith('/finance');
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
   const [registrationOpen, setRegistrationOpen] = useState(isRegistrationPath);
   const [adminPanelOpen, setAdminPanelOpen] = useState(isAdminPanelPath);
+  const [financeOpen, setFinanceOpen] = useState(isFinancePath);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -363,6 +367,15 @@ const Sidebar = () => {
                   icon={BookOpenIcon}
                   isActive={pathname.startsWith('/admin-panel/agendas')}
                 />
+                <DropdownSection
+                  label="Finance"
+                  icon={BanknotesIcon}
+                  isOpen={financeOpen}
+                  onToggle={() => setFinanceOpen(!financeOpen)}
+                  isActive={isFinancePath}
+                >
+                  <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
+                </DropdownSection>
                 <DropdownSection
                   label="Admin Panel"
                   icon={ShieldCheckIcon}

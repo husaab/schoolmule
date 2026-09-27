@@ -9,6 +9,28 @@ const getToken = (): string | null => {
   return localStorage.getItem('auth_token');
 };
 
+/**
+ * What apiClient throws on a non-2xx response. It is still an Error whose
+ * message is the server's `message` (so existing `err.message` callers are
+ * unchanged), with the HTTP status, the server's `code` and its `data`
+ * attached for callers that need to tell failures apart.
+ */
+export class ApiError extends Error {
+  status: number;
+  code: string | null;
+  data: unknown;
+
+  constructor(message: string, opts: { status: number; code?: string | null; data?: unknown }) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = opts.status;
+    this.code = opts.code ?? null;
+    this.data = opts.data ?? null;
+  }
+}
+
+export const isApiError = (err: unknown): err is ApiError => err instanceof ApiError;
+
 interface ApiClientOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: T;
@@ -61,7 +83,11 @@ async function apiClient<T, B = unknown>(
             }
         }
         
-        throw new Error(errorBody.message || 'Something went wrong');
+        throw new ApiError(errorBody.message || 'Something went wrong', {
+            status: response.status,
+            code: errorBody.code ?? null,
+            data: errorBody.data ?? null,
+        });
     }
 
     return response.json() as Promise<T>;
