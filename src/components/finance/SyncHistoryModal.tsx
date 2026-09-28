@@ -5,7 +5,7 @@
 // anything?", "why did it fail?", "how long has it been failing?".
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowPathIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ArrowUturnUpIcon, ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
 import { getSyncRuns } from '@/services/financeService'
@@ -25,6 +25,8 @@ interface SyncHistoryModalProps {
   latestRunKey?: string
   /** Queue a sync; omitted when syncing isn't possible (needs reconnect). */
   onSyncNow?: () => void
+  /** Queue a full refresh (re-reads everything); omitted alongside onSyncNow. */
+  onFullRefresh?: () => void
   syncing?: boolean
   /** A sync is already queued or running. */
   syncPending?: boolean
@@ -129,6 +131,7 @@ const SyncHistoryModal: React.FC<SyncHistoryModalProps> = ({
   lastSuccessAt,
   latestRunKey,
   onSyncNow,
+  onFullRefresh,
   syncing = false,
   syncPending = false,
 }) => {
@@ -317,6 +320,17 @@ const SyncHistoryModal: React.FC<SyncHistoryModalProps> = ({
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
+        {onFullRefresh && (
+          <Button
+            variant="secondary"
+            onClick={onFullRefresh}
+            disabled={syncing || syncPending}
+            title="Re-reads everything from QuickBooks. Use after merging or renaming customers there."
+          >
+            <ArrowUturnUpIcon className="h-4 w-4" />
+            Full refresh
+          </Button>
+        )}
         {onSyncNow && (
           <Button onClick={onSyncNow} loading={syncing} disabled={syncPending} title="Pull the latest from QuickBooks">
             {!syncing && <ArrowPathIcon className={`h-4 w-4 ${syncPending ? 'animate-spin' : ''}`} />}

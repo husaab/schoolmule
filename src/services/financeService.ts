@@ -46,9 +46,15 @@ export const disconnectQbo = (purge: boolean) =>
   );
 
 /** Queue a sync. Rejects with the server's message on 409 (not connected /
- *  needs reconnect) and 429 (a sync ran under a minute ago). */
-export const syncNow = () =>
-  apiClient<ApiEnvelope<SyncQueued>>(`${BASE}/sync`, { method: "POST" });
+ *  needs reconnect) and 429 (a sync ran under a minute ago). Pass
+ *  `{ full: true }` to queue a full refresh — re-reads every customer,
+ *  invoice and payment for the year, instead of the cheap "what changed"
+ *  sync. Use after merging or renaming customers in QuickBooks. */
+export const syncNow = (options?: { full?: boolean }) =>
+  apiClient<ApiEnvelope<SyncQueued>, { full: boolean } | undefined>(`${BASE}/sync`, {
+    method: "POST",
+    body: options?.full ? { full: true } : undefined,
+  });
 
 export const getSyncStatus = () =>
   apiClient<ApiEnvelope<SyncStatus>>(`${BASE}/sync/status`);

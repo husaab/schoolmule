@@ -8,6 +8,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ArrowPathIcon,
+  ArrowUturnUpIcon,
   CheckCircleIcon,
   ClockIcon,
   EllipsisVerticalIcon,
@@ -18,6 +19,7 @@ import {
 import { syncNow } from '@/services/financeService'
 import type { SyncStatus } from '@/services/types/finance'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import ConfirmActionModal, { type ConfirmRequest } from './ConfirmActionModal'
 import { errorMessage, formatDateTime, relativeTime } from './format'
 import SyncHistoryModal from './SyncHistoryModal'
 
@@ -48,7 +50,17 @@ function useNow(intervalMs = 30_000) {
   return now
 }
 
-function OptionsMenu({ onDisconnect, onHistory }: { onDisconnect: () => void; onHistory: () => void }) {
+function OptionsMenu({
+  onDisconnect,
+  onHistory,
+  onFullRefresh,
+  fullRefreshDisabled,
+}: {
+  onDisconnect: () => void
+  onHistory: () => void
+  onFullRefresh: () => void
+  fullRefreshDisabled: boolean
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -97,6 +109,24 @@ function OptionsMenu({ onDisconnect, onHistory }: { onDisconnect: () => void; on
           <button
             type="button"
             role="menuitem"
+            disabled={fullRefreshDisabled}
+            onClick={() => {
+              setOpen(false)
+              onFullRefresh()
+            }}
+            className="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span className="flex items-center gap-2">
+              <ArrowUturnUpIcon className="h-4 w-4" />
+              Full refresh
+            </span>
+            <span className="pl-6 text-xs font-normal text-slate-400">
+              Re-reads everything from QuickBooks
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
             onClick={() => {
               setOpen(false)
               onDisconnect()
@@ -117,12 +147,14 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
   const now = useNow()
   const [queueing, setQueueing] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
 
-  const handleSync = async () => {
+  const queueSync = async (options?: { full?: boolean }) => {
     setQueueing(true)
     try {
-      const res = await syncNow()
-      showNotification(res.data.alreadyQueued ? 'A sync is already queued' : 'Sync queued', 'success')
+      const res = await syncNow(options)
+      const queuedLabel = options?.full ? 'Full refresh queued' : 'Sync queued'
+      showNotification(res.data.alreadyQueued ? 'A sync is already queued' : queuedLabel, 'success')
       await onRefresh()
     } catch (err) {
       showNotification(errorMessage(err, 'Could not queue a sync'), 'error')
@@ -131,10 +163,32 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
     }
   }
 
+  const handleSync = () => queueSync()
+
+  const handleFullRefresh = () => {
+    setConfirmRequest({
+      title: 'Full refresh',
+      message:
+        'Re-reads everything from QuickBooks — every customer, invoice and payment for the year — instead of just what changed. Use this after merging or renaming customers there.',
+      confirmLabel: 'Queue full refresh',
+      tone: 'warning',
+      icon: ArrowUturnUpIcon,
+      onConfirm: () => queueSync({ full: true }),
+    })
+  }
+
   const pending = !!status && (status.pendingSync || status.job?.state === 'pending' || status.job?.state === 'running')
   const canSync = !!status && status.connection.connected && status.connection.status !== 'needs_reconnect'
 
-  const menu = <OptionsMenu onDisconnect={onDisconnect} onHistory={() => setHistoryOpen(true)} />
+  const menu = (
+    <OptionsMenu
+      onDisconnect={onDisconnect}
+      onHistory={() => setHistoryOpen(true)}
+      onFullRefresh={handleFullRefresh}
+      fullRefreshDisabled={pending || queueing}
+    />
+  )
+  const confirmModal = <ConfirmActionModal request={confirmRequest} onClose={() => setConfirmRequest(null)} />
   const historyModal = status ? (
     <SyncHistoryModal
       isOpen={historyOpen}
@@ -142,6 +196,7 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
       lastSuccessAt={status.connection.lastSuccessAt}
       latestRunKey={status.lastRun ? `${status.lastRun.runId}:${status.lastRun.status}` : undefined}
       onSyncNow={canSync ? handleSync : undefined}
+      onFullRefresh={canSync ? handleFullRefresh : undefined}
       syncing={queueing}
       syncPending={pending}
     />
@@ -196,6 +251,7 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
         </button>
         {menu}
         {historyModal}
+        {confirmModal}
       </div>
     )
   }
@@ -245,6 +301,7 @@ const QboSyncStatus: React.FC<QboSyncStatusProps> = ({ status, onRefresh, onConn
       </button>
       {menu}
       {historyModal}
+      {confirmModal}
     </div>
   )
 }
