@@ -1,8 +1,9 @@
 // Pure filtering/sorting for the tuition grid. The page reads these values
 // from the URL; nothing here touches React.
 
-import type { Cell, CellStatus, GridFamily, Ledger, LedgerTotals, PseudoRow } from '@/services/types/finance'
+import type { Cell, CellStatus, GridFamily, Ledger, LedgerTotals, PseudoRow, TuitionPeriod } from '@/services/types/finance'
 import { cellFor, compareGrades } from './format'
+import { parsePeriod, periodStatus, ytdStatus } from './monthSummary'
 
 export type StatusFilter = 'all' | 'unpaid' | 'partial' | 'overdue' | 'paid'
 export type FlagKey = 'subsidy' | 'teacher' | 'unlinked' | 'attention'
@@ -30,7 +31,8 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 
 export interface TuitionFilterState {
-  month: string
+  /** A 'YYYY-MM' month or 'ytd' — set by the month tab strip. */
+  month: TuitionPeriod
   status: StatusFilter
   flags: FlagKey[]
   grade: string
@@ -51,7 +53,7 @@ export function parseFilters(get: (key: string) => string, months: string[], asO
   const sort = get('sort')
   const overRaw = Number(get('over'))
   return {
-    month: months.includes(month) ? month : asOfMonth,
+    month: parsePeriod(month, months, asOfMonth),
     status: STATUS_KEYS.has(status) ? (status as StatusFilter) : 'all',
     flags: get('flags')
       .split(',')
@@ -106,17 +108,24 @@ export function filterWithoutStatus(families: GridFamily[], f: TuitionFilterStat
   )
 }
 
-export function matchesStatus(family: GridFamily, month: string, status: StatusFilter): boolean {
-  return status === 'all' || cellFor(family.parent.cells, month).status === status
+export function matchesStatus(family: GridFamily, period: TuitionPeriod, status: StatusFilter): boolean {
+  return status === 'all' || periodStatus(family.parent, period) === status
 }
 
-export function statusCounts(families: GridFamily[], month: string): Record<StatusFilter, number> {
+export function statusCounts(families: GridFamily[], period: TuitionPeriod): Record<StatusFilter, number> {
   const counts: Record<StatusFilter, number> = { all: families.length, unpaid: 0, partial: 0, overdue: 0, paid: 0 }
   for (const fam of families) {
-    const s = cellFor(fam.parent.cells, month).status
-    if (s === 'unpaid' || s === 'partial' || s === 'overdue' || s === 'paid') counts[s] += 1
+    const s = periodStatus(fam.parent, period)
+    if (s !== 'none') counts[s] += 1
   }
   return counts
+}
+
+/** A whole-year stand-in cell (for the mobile card's chip in year-to-date view). */
+export function ytdCell(ledger: Ledger): Cell {
+  const t = ledger.totals
+  const daysOverdue = Object.values(ledger.cells).reduce((max, c) => (c.status === 'overdue' ? Math.max(max, c.daysOverdue) : max), 0)
+  return { status: ytdStatus(ledger), invoiced: t.invoiced, paid: t.paid, balance: t.balance, daysOverdue, invoices: [], payments: [] }
 }
 
 export function sortFamilies(families: GridFamily[], sort: SortKey): GridFamily[] {

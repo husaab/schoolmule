@@ -8,6 +8,10 @@
 // page bumps `version`, which refetches the grid and the attention list and
 // makes the open drawer and wizard reload.
 //
+// The month tab strip under the header picks the period (a month, or the
+// year to date) for the summary tiles, the status tabs and the highlighted
+// grid column; it is the `month` URL param like every other filter.
+//
 // Filters live in the URL so Back/refresh/share restore them. On a desktop the
 // header, summary and toolbar stay put and the grid scrolls inside its card;
 // on a phone the whole page scrolls and the grid becomes a card list.
@@ -38,6 +42,7 @@ import QboConnectionCard from '@/components/finance/QboConnectionCard'
 import DisconnectQboModal from '@/components/finance/DisconnectQboModal'
 import TuitionSummary from '@/components/finance/TuitionSummary'
 import TuitionFilters from '@/components/finance/TuitionFilters'
+import MonthTabs from '@/components/finance/MonthTabs'
 import TuitionGrid from '@/components/finance/TuitionGrid'
 import FamilyDrawer from '@/components/finance/FamilyDrawer'
 import { FirstSyncBanner, FullRefreshBanner } from '@/components/finance/TuitionNotices'
@@ -55,6 +60,7 @@ import {
   statusCounts,
   totalsFor,
 } from '@/components/finance/gridFilters'
+import { YTD, invoicedMonths, summarizePeriod } from '@/components/finance/monthSummary'
 
 const RETURN_TO = '/finance/tuition'
 
@@ -239,11 +245,6 @@ function TuitionContent() {
     setFormOpen(true)
   }, [])
 
-  const showAnomalies = () => {
-    setAnomaliesOpen(true)
-    requestAnimationFrame(() => anomaliesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  }
-
   const handleFamilyDeleted = useCallback(() => {
     setOpenFamilyId(null)
     refreshAfterChange()
@@ -277,6 +278,13 @@ function TuitionContent() {
     }
   }, [grid, filters])
 
+  // School-wide, so computed from every family rather than the filtered view.
+  const period = filters?.month ?? null
+  const periodSummary = useMemo(() => (grid && period ? summarizePeriod(grid, period) : null), [grid, period])
+  const monthsInvoiced = useMemo(() => (grid ? invoicedMonths(grid) : new Set<string>()), [grid])
+  const selectedMonth = period && period !== YTD ? period : null
+  const periodLabel = selectedMonth ? monthLong(selectedMonth) : 'the school year to date'
+
   const connection = status?.connection ?? null
   // Only an 'active' connection syncs; 'needs_reconnect' still reports
   // connected=true but is effectively offline.
@@ -290,7 +298,7 @@ function TuitionContent() {
   const drawerPreview = openFamilyId ? grid?.families.find((f) => f.familyId === openFamilyId) ?? null : null
 
   const subtitle = grid
-    ? `${grid.year.label} · as of ${monthLong(grid.asOfMonth)}`
+    ? `${grid.year.label} · ${selectedMonth ? `viewing ${monthLong(selectedMonth)}` : 'school year to date'}`
     : 'Invoices and payments by family, from QuickBooks'
 
   const showGridCard = loading || !!error || !grid || grid.families.length > 0 || active
@@ -349,7 +357,7 @@ function TuitionContent() {
           action={
             <button
               type="button"
-              onClick={() => setParams({ month: null, status: null, flags: null, grade: null, q: null, over: null, sort: null })}
+              onClick={() => setParams({ status: null, flags: null, grade: null, q: null, over: null, sort: null })}
               className={secondaryButton}
             >
               Clear filters
@@ -361,7 +369,7 @@ function TuitionContent() {
     return (
       <TuitionGrid
         months={grid.months}
-        selectedMonth={filters.month}
+        selectedMonth={selectedMonth}
         families={view.visible}
         grant={grid.grant}
         schoolSubsidy={grid.schoolSubsidy}
@@ -426,6 +434,19 @@ function TuitionContent() {
             </div>
           </div>
 
+          {/* Month tabs — the page's one month control */}
+          {grid && filters && grid.months.length > 0 && (
+            <div className="flex-shrink-0 -mt-1">
+              <MonthTabs
+                months={grid.months}
+                asOfMonth={grid.asOfMonth}
+                selected={filters.month}
+                invoiced={monthsInvoiced}
+                onSelect={(p) => setParams({ month: p === grid.asOfMonth ? null : p })}
+              />
+            </div>
+          )}
+
           {/* Connection + notices */}
           {knowConnection && !active && (
             <div className="flex-shrink-0">
@@ -446,13 +467,7 @@ function TuitionContent() {
           {/* Summary */}
           {(loading || grid) && (
             <div className="flex-shrink-0">
-              <TuitionSummary
-                summary={grid?.summary ?? null}
-                asOfMonth={grid?.asOfMonth ?? null}
-                grantLabel={grid?.grant.label ?? null}
-                loading={loading && !grid}
-                onAttentionClick={showAnomalies}
-              />
+              <TuitionSummary summary={periodSummary} grantName={grantName} loading={loading && !grid} />
             </div>
           )}
           {grid && (anomalies || anomaliesError) && (
@@ -477,8 +492,7 @@ function TuitionContent() {
                 <div className="flex-shrink-0 border-b border-slate-100 px-4 py-3 sm:px-5">
                   <TuitionFilters
                     filters={filters}
-                    months={grid.months}
-                    asOfMonth={grid.asOfMonth}
+                    periodLabel={periodLabel}
                     grades={view.grades}
                     counts={view.counts}
                     onChange={setParams}

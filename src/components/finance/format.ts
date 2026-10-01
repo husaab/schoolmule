@@ -31,6 +31,12 @@ export function monthShort(month: string): string {
   return p ? `${MONTHS_SHORT[p[1] - 1]} ${String(p[0]).slice(2)}` : month
 }
 
+/** '2026-09' → 'Sep' (month tab labels). */
+export function monthAbbr(month: string): string {
+  const p = splitMonth(month)
+  return p ? MONTHS_SHORT[p[1] - 1] : month
+}
+
 /** '2026-09' → 'September 2026'. */
 export function monthLong(month: string): string {
   const p = splitMonth(month)

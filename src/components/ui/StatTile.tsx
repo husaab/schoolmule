@@ -12,7 +12,7 @@
 import React from 'react'
 import Link from 'next/link'
 
-export type StatTone = 'neutral' | 'good' | 'warn' | 'bad'
+export type StatTone = 'neutral' | 'good' | 'warn' | 'bad' | 'muted'
 
 export interface StatDelta {
   /** Signed change in the value's own unit (percentage points for rates). */
@@ -42,6 +42,8 @@ const TONES: Record<StatTone, { bar: string; value: string; ring: string }> = {
   good: { bar: 'bg-emerald-500', value: 'text-emerald-700', ring: 'border-emerald-200' },
   warn: { bar: 'bg-amber-500', value: 'text-amber-700', ring: 'border-amber-200' },
   bad: { bar: 'bg-rose-500', value: 'text-rose-700', ring: 'border-rose-200' },
+  /** A figure that doesn't apply yet (e.g. a month not invoiced). */
+  muted: { bar: 'bg-slate-100', value: 'text-slate-300', ring: 'border-slate-200/70' },
 }
 
 /** Maps a 0–1 rate to a tone. Null stays neutral — missing is not bad. */

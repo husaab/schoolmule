@@ -3,7 +3,8 @@
 // The family × month ledger. Desktop: a table with the Family and Balance
 // columns pinned left, a sticky header and a sticky totals footer, scrolling
 // both ways inside its card. Below md: a stacked card per family showing the
-// selected month. The pinned grant / school-applied rows follow the filters:
+// selected month (or the year so far). The selected month's column is
+// highlighted; year-to-date highlights none. The pinned grant / school-applied rows follow the filters:
 // they cover only the visible families (see restrictPseudoRow).
 
 import React, { memo, useMemo, useState } from 'react'
@@ -12,11 +13,12 @@ import type { GridFamily, PseudoRow, PseudoRowFamily } from '@/services/types/fi
 import { FamilyBadges } from './badges'
 import MonthCell, { MonthChip } from './MonthCell'
 import { cellFor, formatMoney, gradeShort, monthMedium, monthShort } from './format'
-import { hasAnyCell, restrictPseudoRow, type VisibleTotals } from './gridFilters'
+import { hasAnyCell, restrictPseudoRow, ytdCell, type VisibleTotals } from './gridFilters'
 
 interface TuitionGridProps {
   months: string[]
-  selectedMonth: string
+  /** Null in year-to-date view. */
+  selectedMonth: string | null
   families: GridFamily[]
   grant: PseudoRow
   schoolSubsidy: PseudoRow
@@ -51,7 +53,8 @@ const FamilyRow = memo(function FamilyRow({
 }: {
   family: GridFamily
   months: string[]
-  selectedMonth: string
+  /** Null in year-to-date view. */
+  selectedMonth: string | null
   grantName: string
   onOpen: (id: string) => void
 }) {
@@ -119,7 +122,8 @@ function PseudoRows({
   /** The unfiltered row's family count, when the row is filtered. */
   totalFamilies?: number
   months: string[]
-  selectedMonth: string
+  /** Null in year-to-date view. */
+  selectedMonth: string | null
   grantName: string
   tint: 'cyan' | 'muted'
   onOpenFamily: (id: string) => void
@@ -216,7 +220,7 @@ function MobileList({
             )}
           </div>
           <div className="w-24 shrink-0">
-            <MonthChip cell={cellFor(grant.cells, selectedMonth)} />
+            <MonthChip cell={selectedMonth ? cellFor(grant.cells, selectedMonth) : ytdCell(grant)} />
           </div>
         </li>
       )}
@@ -241,8 +245,9 @@ function MobileList({
               </div>
             </div>
             <div className="w-24 shrink-0">
-              <p className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">{monthMedium(selectedMonth)}</p>
-              <MonthChip cell={cellFor(f.parent.cells, selectedMonth)} />
+              <p className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">{selectedMonth ? monthMedium(selectedMonth) : 'Year'}
+              </p>
+              <MonthChip cell={selectedMonth ? cellFor(f.parent.cells, selectedMonth) : ytdCell(f.parent)} />
             </div>
           </button>
         </li>

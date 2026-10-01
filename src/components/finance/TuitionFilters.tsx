@@ -1,13 +1,14 @@
 'use client'
 
-// The grid's toolbar. Every control writes to the URL (via onChange), so
+// The grid's toolbar (the month itself is picked in the MonthTabs strip
+// above the summary; the status tabs here follow it). Every control writes to the URL (via onChange), so
 // Back/refresh/share restore the same view. Typed values (search, days
 // overdue) are debounced so the URL isn't rewritten on every keystroke.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import SearchInput from '@/components/teacherAttendance/SearchInput'
-import { gradeShort, monthMedium } from './format'
+import { gradeShort } from './format'
 import {
   FLAG_CHIPS,
   SORT_OPTIONS,
@@ -21,8 +22,8 @@ type Patch = Record<string, string | null>
 
 interface TuitionFiltersProps {
   filters: TuitionFilterState
-  months: string[]
-  asOfMonth: string
+  /** The viewed period in words, for the status tabs' label ('October 2026'). */
+  periodLabel: string
   grades: string[]
   counts: Record<StatusFilter, number>
   onChange: (patch: Patch) => void
@@ -102,7 +103,7 @@ function useDebouncedValue(value: string, commit: (v: string) => void, delay = 3
   return { draft, update, take, reset }
 }
 
-const TuitionFilters: React.FC<TuitionFiltersProps> = ({ filters, months, asOfMonth, grades, counts, onChange: commitChange }) => {
+const TuitionFilters: React.FC<TuitionFiltersProps> = ({ filters, periodLabel, grades, counts, onChange: commitChange }) => {
   const qToParam = (v: string) => (v.trim() ? v : null)
   const overToParam = (v: string) => (/^\d+$/.test(v.trim()) ? v.trim() : null)
   const search = useDebouncedValue(filters.q, (v) => commitChange({ q: qToParam(v) }))
@@ -122,7 +123,7 @@ const TuitionFilters: React.FC<TuitionFiltersProps> = ({ filters, months, asOfMo
   const clearAll = () => {
     search.reset('')
     overDays.reset('')
-    commitChange({ month: null, status: null, flags: null, grade: null, q: null, over: null, sort: null })
+    commitChange({ status: null, flags: null, grade: null, q: null, over: null, sort: null })
   }
 
   const toggleFlag = (flag: FlagKey) => {
@@ -136,29 +137,12 @@ const TuitionFilters: React.FC<TuitionFiltersProps> = ({ filters, months, asOfMo
     !!filters.grade ||
     !!filters.q ||
     filters.over !== null ||
-    filters.month !== asOfMonth ||
     filters.sort !== 'name'
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-          <span className="sr-only sm:not-sr-only">Month</span>
-          <select
-            value={filters.month}
-            onChange={(e) => onChange({ month: e.target.value === asOfMonth ? null : e.target.value })}
-            className={control}
-          >
-            {months.map((m) => (
-              <option key={m} value={m}>
-                {monthMedium(m)}
-                {m === asOfMonth ? ' (current)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Payment status this month">
+        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1" role="tablist" aria-label={`Payment status for ${periodLabel}`}>
           {STATUS_TABS.map((t) => {
             const on = filters.status === t.key
             return (

@@ -230,6 +230,47 @@ export interface GridSummary {
   studentsWithoutFamily: number;
 }
 
+/** The period the tuition page is viewing: a 'YYYY-MM' month, or 'ytd'
+ *  for the school year so far. Lives in the URL as `?month=`. */
+export type TuitionPeriod = string;
+
+/** A family's payment status for the viewed period ('none' = nothing billed). */
+export type PeriodStatus = "none" | "unpaid" | "partial" | "overdue" | "paid";
+
+/** The summary tiles for one month, computed client-side over every family. */
+export interface MonthPeriodSummary {
+  kind: "month";
+  month: string;
+  /** False when no family (nor the grant) has an invoice for the month yet. */
+  hasInvoices: boolean;
+  invoiced: number;
+  collected: number;
+  owed: number;
+  overdue: number;
+  familiesInvoiced: number;
+  familiesOverdue: number;
+  counts: { unpaid: number; partial: number; paid: number };
+  /** Earliest due date among the month's parent invoices. */
+  earliestDue: string | null;
+  grantOwed: number;
+  grantFamilies: number;
+}
+
+/** The summary tiles for the school year so far. */
+export interface YtdPeriodSummary {
+  kind: "ytd";
+  invoiced: number;
+  collected: number;
+  outstanding: number;
+  familiesWithBalance: number;
+  overdue: number;
+  familiesOverdue: number;
+  grantReceivable: number;
+  grantFamilies: number;
+}
+
+export type PeriodSummary = MonthPeriodSummary | YtdPeriodSummary;
+
 export interface UnlinkedCustomer {
   qboId: string;
   displayName: string;
