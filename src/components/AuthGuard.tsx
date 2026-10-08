@@ -19,7 +19,7 @@ const KNOWN_APP_ROUTES = [
   'admin-panel', 'settings', 'support',
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
-  'finance',
+  'finance', 'messages',
   'forbidden', 'api', '_next',
 ];
 

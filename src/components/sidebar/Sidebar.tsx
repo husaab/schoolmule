@@ -32,6 +32,8 @@ import {
   CalendarDaysIcon,
   Squares2X2Icon,
   ChatBubbleLeftRightIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
+  InboxIcon,
   UsersIcon,
   BanknotesIcon,
   CurrencyDollarIcon
@@ -41,6 +43,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
+import { useMessagingStore } from '@/store/useMessagingStore'
 import { getNewSubmissionCount } from '@/services/registrationService'
 import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
 import ChildSwitcher from '@/components/parent/ChildSwitcher'
@@ -60,12 +63,14 @@ const teacherLinks: NavLink[] = [
   { href: '/students', label: 'Students', icon: UserGroupIcon },
   { href: '/classes', label: 'Classes', icon: AcademicCapIcon },
   { href: '/gradebook', label: 'Gradebook', icon: BookOpenIcon },
+  { href: '/messages', label: 'Messages', icon: InboxIcon },
   { href: '/analytics', label: 'Analytics', icon: PresentationChartLineIcon },
 ];
 
 const parentLinks: NavLink[] = [
   { href: '/parent/dashboard', label: 'Overview', icon: HomeIcon },
   { href: '/parent/grades', label: 'Grades', icon: BookOpenIcon },
+  { href: '/parent/messages', label: 'Messages', icon: InboxIcon },
   { href: '/parent/attendance', label: 'Attendance', icon: ClipboardDocumentCheckIcon },
   { href: '/parent/calendar', label: 'Calendar', icon: CalendarDaysIcon },
   { href: '/parent/feedback', label: 'Feedback', icon: ChatBubbleLeftRightIcon },
@@ -86,6 +91,7 @@ const Sidebar = () => {
 
   const newSubmissionCount = useRegistrationStore((s) => s.newSubmissionCount);
   const setNewSubmissionCount = useRegistrationStore((s) => s.setNewSubmissionCount);
+  const unreadConversations = useMessagingStore((s) => s.summary.unreadConversations);
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -134,7 +140,7 @@ const Sidebar = () => {
 
   if (!user) return null
 
-  const NavItem = ({ href, label, icon: Icon, isActive }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean }) => (
+  const NavItem = ({ href, label, icon: Icon, isActive, badge }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number }) => (
     <Link
       href={href}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
@@ -144,7 +150,12 @@ const Sidebar = () => {
       }`}
     >
       <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-      <span className="text-sm">{label}</span>
+      <span className="text-sm flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${user?.role === 'PARENT' ? 'bg-amber-700' : 'bg-cyan-600'}`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   );
 
@@ -266,6 +277,7 @@ const Sidebar = () => {
                 ? pathname === link.href || pathname.startsWith(link.href + '/')
                 : pathname === link.href
             }
+            badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadConversations : undefined}
           />
         ))}
 
@@ -390,6 +402,7 @@ const Sidebar = () => {
                   <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
                   <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
                   <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
+                  <SubNavItem href="/admin-panel/messages" label="All Messages" icon={ChatBubbleOvalLeftEllipsisIcon} />
 
                   <SubNavGroup label="School setup" />
                   <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
