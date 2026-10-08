@@ -6,6 +6,7 @@ import {
   ApproveSignupResult,
   ChildCandidatesResponse,
   DeclineSignupResult,
+  RenameSignupRequest,
   SignupRole,
 } from './types/adminApproval';
 
