@@ -1,8 +1,8 @@
 'use client'
 
 // Staff inbox: every parent conversation across the classes the caller
-// teaches (admins: every thread they have joined, plus the oversight table
-// under Admin Panel for the rest).
+// teaches; admins see every thread in the school here and get the
+// oversight table under Admin Panel as well.
 
 import React, { Suspense, useEffect, useState } from 'react'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'

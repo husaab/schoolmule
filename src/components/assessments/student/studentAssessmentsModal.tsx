@@ -367,8 +367,7 @@ export default function StudentAssessmentsModal({
                             </div>
                             
                             {messageAction(assessment.assessmentId)}
-                            {messageAction(assessment.assessmentId)}
-                        <div className="text-right min-w-16">
+                            <div className="text-right min-w-16">
                               {!isExcluded && percentage !== null && (
                                 <>
                                   <div className="text-sm font-medium">{percentage}%</div>

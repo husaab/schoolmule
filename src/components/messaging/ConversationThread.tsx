@@ -70,7 +70,32 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
   const showNotification = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
 
-  const [thread, setThread] = useState<Thread | null>(null)
+  const [thread, setThreadState] = useState<Thread | null>(null)
+  // Signed attachment URLs are good for an hour; keep the ones we already
+  // have across the 15 s polls so images are not re-fetched every tick.
+  const setThread = useCallback((next: Thread | null) => {
+    setThreadState((prev) => {
+      if (!next || !prev) return next
+      const known = new Map<string, string | null>()
+      for (const m of prev.messages) for (const a of m.attachments) known.set(a.attachmentId, a.url)
+      return {
+        ...next,
+        messages: next.messages.map((m) => ({
+          ...m,
+          attachments: m.attachments.map((a) => {
+            const kept = known.get(a.attachmentId)
+            return kept ? { ...a, url: kept } : a
+          }),
+        })),
+      }
+    })
+  }, [])
+  // The parent's onChanged re-creates whenever its list filters change; hold
+  // it in a ref so a filter click never remounts the open thread.
+  const onChangedRef = useRef(onChanged)
+  useEffect(() => {
+    onChangedRef.current = onChanged
+  }, [onChanged])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -95,24 +120,24 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
         if (!silent) setLoading(false)
       }
     },
-    [conversationId],
+    [conversationId, setThread],
   )
 
   const read = useCallback(async () => {
     try {
       await markRead(conversationId)
       void bump()
-      onChanged?.()
+      onChangedRef.current?.()
     } catch {
       // Read marks are best-effort.
     }
-  }, [conversationId, bump, onChanged])
+  }, [conversationId, bump])
 
   // Open: load, then mark read. Thereafter poll quietly and re-mark read
   // when new messages land while the tab is visible.
   useEffect(() => {
     let cancelled = false
-    setThread(null)
+    setThreadState(null)
     lastCountRef.current = 0
     void load().then(() => {
       if (!cancelled) void read()
@@ -165,7 +190,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
     if (res.status !== 'success' || !res.data) throw new Error(res.message || 'Could not send message')
     setThread(res.data)
     void bump()
-    onChanged?.()
+    onChangedRef.current?.()
   }
 
   const edit = async (message: Message, body: string) => {
@@ -184,7 +209,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
       const res = await deleteMessage(conversationId, message.messageId)
       if (res.status !== 'success') throw new Error(res.message)
       await load(true)
-      onChanged?.()
+      onChangedRef.current?.()
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Could not remove message', 'error')
     }
@@ -196,7 +221,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
     try {
       await setStatus(conversationId, next)
       await load(true)
-      onChanged?.()
+      onChangedRef.current?.()
       showNotification(next === 'resolved' ? 'Conversation resolved' : 'Conversation reopened', 'success')
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Could not update conversation', 'error')

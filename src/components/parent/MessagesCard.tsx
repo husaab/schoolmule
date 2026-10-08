@@ -14,7 +14,7 @@ import { childColor, childInitial } from './childColors'
  * first. Quiet when there is nothing to show — a parent who has never
  * messaged gets one line inviting them to, not an empty box.
  */
-const MessagesCard: React.FC<{ limit?: number }> = ({ limit = 3 }) => {
+const MessagesCard: React.FC<{ limit?: number }> = ({ limit = 2 }) => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [result, setResult] = useState<{ year: string | null; items: ConversationItem[] } | null>(null)
 

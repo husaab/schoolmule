@@ -41,18 +41,22 @@ export const useUserStore = create<UserStore>(
 
             setUser: (user) => set({ user }),
 
-            clearUser: () => set({
-                user: {
-                    id: null,
-                    username: null,
-                    role: null,
-                    email: null,
-                    school: null,
-                    isVerifiedEmail: false,
-                    isVerifiedSchool: false,
-                    activeTerm: null
-                }
-            }),
+            clearUser: () => {
+                // Badges belong to the session that just ended.
+                import('@/store/useMessagingStore').then((m) => m.useMessagingStore.getState().clear()).catch(() => {})
+                set({
+                    user: {
+                        id: null,
+                        username: null,
+                        role: null,
+                        email: null,
+                        school: null,
+                        isVerifiedEmail: false,
+                        isVerifiedSchool: false,
+                        activeTerm: null
+                    }
+                })
+            },
             hasHydrated: false, // track hydration
             setHasHydrated: (state) => set({ hasHydrated: state }),
             

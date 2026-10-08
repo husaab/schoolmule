@@ -142,9 +142,6 @@ const Composer: React.FC<ComposerProps> = ({
         >
           <PaperClipIcon className="h-4 w-4" /> Attach
         </button>
-        <span className="hidden text-[11px] text-slate-400 sm:inline">
-          Images, PDF, Word · 10 MB each · {MAX_FILES} per message
-        </span>
         <span className="flex-1" />
         {recipientsLabel && (
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
