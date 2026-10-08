@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ChatBubbleLeftRightIcon, ClipboardDocumentCheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Field, ModalBody, ModalHeader, inputClass, selectClass } from '@/components/shared/modalKit'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
+import { useUserStore } from '@/store/useUserStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createConversation, getParentTargets, getStaffTargets, getStaffTargetsForStudent } from '@/services/messagingService'
@@ -51,15 +52,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const selectedChildId = useSelectedChildStore((s) => s.selectedChildId)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
-  const me = useMemo(() => {
-    if (typeof window === 'undefined') return null
-    try {
-      const raw = localStorage.getItem('user-storage')
-      return raw ? (JSON.parse(raw)?.state?.user ?? null) : null
-    } catch {
-      return null
-    }
-  }, [])
+  const me = useUserStore((s) => s.user)
 
   const [mode, setMode] = useState<Mode>('assessment')
   const [studentId, setStudentId] = useState('')
@@ -339,7 +332,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
                 <input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Invite guardians without an account
               </label>
               <label className={`flex items-center gap-2 cursor-pointer ${invite ? '' : 'opacity-50'}`}>
-                <input type="checkbox" checked={includePreview} disabled={!invite} onChange={(e) => setIncludePreview(e.target.checked)} /> Include the first lines of my message in the email
+                <input type="checkbox" checked={includePreview} disabled={!invite} onChange={(e) => setIncludePreview(e.target.checked)} /> Include my message in the email
               </label>
             </div>
           </div>

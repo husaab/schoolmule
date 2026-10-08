@@ -196,7 +196,7 @@ interface NewConversationBase {
   files?: File[];
   /** Staff only: invite guardians who have an email but no account (default true). */
   invite?: boolean;
-  /** Staff only: quote the first lines of the message in the invite email (default true). */
+  /** Staff only: include the full message in the invite email (default true). */
   includePreview?: boolean;
 }
 export interface NewAssessmentConversationInput extends NewConversationBase {
