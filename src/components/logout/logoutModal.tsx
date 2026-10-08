@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { logout } from '@/services/authService'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
+import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { useRouter } from 'next/navigation'
 
 const LogoutModal = () => {
@@ -27,6 +28,9 @@ const LogoutModal = () => {
       clearUser()
       useSchoolYearStore.getState().clearYears()
       useSelectedChildStore.getState().clearChildren()
+      // Logging out mid-preview ends both sessions: the parked admin token
+      // must not outlive the sign-out.
+      useImpersonationStore.getState().clearSession()
       closeModal()
       router.push('/login')
     } catch (error) {

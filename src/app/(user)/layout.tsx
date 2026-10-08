@@ -1,6 +1,7 @@
 'use client'
 import AuthGuard from '@/components/AuthGuard';
 import Notification from '../../components/shared/notification';
+import ImpersonationBar from '@/components/impersonation/ImpersonationBar';
 import { Analytics } from "@vercel/analytics/next"
 
 export default function UserLayout({
@@ -13,6 +14,7 @@ export default function UserLayout({
       <Notification />
       <Analytics />
       <AuthGuard>{children}</AuthGuard>
+      <ImpersonationBar />
     </>
   );
 }

@@ -40,6 +40,18 @@ export const statusOf = (user: SchoolUser): UserStatus => {
   return user.isVerified ? 'awaiting' : 'unverified'
 }
 
+/**
+ * Can an admin "view as" this user? Only teachers and parents whose account
+ * can actually sign in (active, or invited and pre-approved). Mirrors the
+ * backend rule in adminUser.controller impersonateUser.
+ */
+export const canImpersonate = (user: SchoolUser, currentUserId: string | null): boolean =>
+  user.userId !== currentUserId &&
+  (user.role === 'TEACHER' || user.role === 'PARENT') &&
+  !user.isArchived &&
+  user.isVerified &&
+  user.isVerifiedSchool
+
 export const STATUS_META: Record<UserStatus, { label: string; dot: string; text: string }> = {
   active: { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-700' },
   invited: { label: 'Invite pending', dot: 'bg-sky-500', text: 'text-sky-700' },

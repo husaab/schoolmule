@@ -17,6 +17,7 @@ import {
   BookOpenIcon,
   ChatBubbleLeftRightIcon,
   EnvelopeIcon,
+  EyeIcon,
   HomeIcon,
   PaperAirplaneIcon,
   PencilSquareIcon,
@@ -24,7 +25,7 @@ import {
   TrashIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
-import { RoleBadge, StatusBadge, UserAvatar, formatDate, statusOf } from './userDisplay'
+import { RoleBadge, StatusBadge, UserAvatar, canImpersonate, formatDate, statusOf } from './userDisplay'
 
 interface UserViewModalProps {
   isOpen: boolean
@@ -34,6 +35,8 @@ interface UserViewModalProps {
   onDelete: () => void
   onArchive: () => void
   onUnarchive: () => void
+  /** "View as": open the read-only preview confirmation. */
+  onImpersonate: () => void
 }
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -59,6 +62,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
   onDelete,
   onArchive,
   onUnarchive,
+  onImpersonate,
 }) => {
   const currentUserId = useUserStore((s) => s.user.id)
   const notify = useNotificationStore((s) => s.showNotification)
@@ -304,6 +308,17 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
+          {canImpersonate(user, currentUserId) && (
+            <Button
+              variant="secondary"
+              onClick={onImpersonate}
+              className="text-violet-700 hover:bg-violet-50"
+              title="See School Mule exactly as this user does (read-only)"
+            >
+              <EyeIcon className="h-4 w-4" />
+              View as
+            </Button>
+          )}
           {status === 'archived' ? (
             <Button onClick={onUnarchive}>
               <ArrowUturnLeftIcon className="h-4 w-4" />

@@ -11,12 +11,14 @@ import UserFormModal from '@/components/adminUsers/UserFormModal'
 import UserDeleteModal from '@/components/adminUsers/UserDeleteModal'
 import UserArchiveModal from '@/components/adminUsers/UserArchiveModal'
 import UserUnarchiveModal from '@/components/adminUsers/UserUnarchiveModal'
+import UserImpersonateModal from '@/components/adminUsers/UserImpersonateModal'
 import {
   RoleBadge,
   STATUS_META,
   StatusBadge,
   UserAvatar,
   UserStatus,
+  canImpersonate,
   formatDate,
   statusOf,
 } from '@/components/adminUsers/userDisplay'
@@ -27,6 +29,7 @@ import {
   ArchiveBoxArrowDownIcon,
   ArchiveBoxIcon,
   ArrowUturnLeftIcon,
+  EyeIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -60,6 +63,7 @@ const UsersPage = () => {
   const [deleting, setDeleting] = useState<SchoolUser | null>(null)
   const [archiving, setArchiving] = useState<SchoolUser | null>(null)
   const [unarchiving, setUnarchiving] = useState<SchoolUser | null>(null)
+  const [previewing, setPreviewing] = useState<SchoolUser | null>(null)
   const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
@@ -346,6 +350,16 @@ const UsersPage = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
                             <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              {canImpersonate(u, currentUserId) && (
+                                <button
+                                  onClick={() => setPreviewing(u)}
+                                  title="View as (read-only)"
+                                  aria-label={`View School Mule as ${u.fullName}`}
+                                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-violet-50 hover:text-violet-600 cursor-pointer"
+                                >
+                                  <EyeIcon className="h-4 w-4" />
+                                </button>
+                              )}
                               {u.isArchived ? (
                                 <button
                                   onClick={() => setUnarchiving(u)}
@@ -407,7 +421,11 @@ const UsersPage = () => {
           onDelete={() => setDeleting(viewing)}
           onArchive={() => setArchiving(viewing)}
           onUnarchive={() => setUnarchiving(viewing)}
+          onImpersonate={() => setPreviewing(viewing)}
         />
+      )}
+      {previewing && (
+        <UserImpersonateModal isOpen={Boolean(previewing)} onClose={() => setPreviewing(null)} user={previewing} />
       )}
       {archiving && (
         <UserArchiveModal

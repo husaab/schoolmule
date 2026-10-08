@@ -106,12 +106,8 @@ export const uploadAgendaPage = async (
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     if (response.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      const { useUserStore } = await import('@/store/useUserStore');
-      const { useNotificationStore } = await import('@/store/useNotificationStore');
-      useUserStore.getState().clearUser();
-      useNotificationStore.getState().showNotification('Your login session has expired, please login again', 'error');
-      window.location.href = '/';
+      const { handleUnauthorized } = await import('./sessionExpiry');
+      await handleUnauthorized(token);
     }
     throw new Error(errorBody.message || 'Upload failed');
   }

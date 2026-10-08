@@ -97,15 +97,9 @@ export const uploadSchoolAsset = async (
     const errorBody = await response.json();
     
     // Handle 401 Unauthorized - token expired or invalid
-    if (response.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        const { useUserStore } = await import('@/store/useUserStore');
-        const { useNotificationStore } = await import('@/store/useNotificationStore');
-        useUserStore.getState().clearUser();
-        useNotificationStore.getState().showNotification("Your login session has expired, please login again", "error");
-        window.location.href = '/';
-      }
+    if (response.status === 401 && typeof window !== 'undefined') {
+      const { handleUnauthorized } = await import('./sessionExpiry');
+      await handleUnauthorized(token);
     }
     
     throw new Error(errorBody.message || 'Upload failed');

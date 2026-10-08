@@ -66,23 +66,23 @@ async function apiClient<T, B = unknown>(
         const errorBody = await response.json();
         console.log(errorBody)
         
-        // Handle 401 Unauthorized - token expired or invalid
-        if (response.status === 401) {
-            // Clear token and user data
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('auth_token');
-                // Clear user store and show notification
-                const { useUserStore } = await import('@/store/useUserStore');
-                const { useNotificationStore } = await import('@/store/useNotificationStore');
-                const { useSelectedChildStore } = await import('@/store/useSelectedChildStore');
-                useUserStore.getState().clearUser();
-                useSchoolYearStore.getState().clearYears();
-                useSelectedChildStore.getState().clearChildren();
-                useNotificationStore.getState().showNotification("Your login session has expired, please login again", "error")
-                window.location.href = '/';
-            }
+        // Handle 401 Unauthorized - token expired or invalid. The handler is
+        // idempotent and preview-aware; see services/sessionExpiry.ts.
+        if (response.status === 401 && typeof window !== 'undefined') {
+            const { handleUnauthorized } = await import('./sessionExpiry');
+            await handleUnauthorized(token);
         }
-        
+
+        // Writes attempted during an admin "view as" preview. The server
+        // refuses them all; say so in one consistent, friendly way.
+        if (response.status === 403 && errorBody.code === 'IMPERSONATION_READ_ONLY' && typeof window !== 'undefined') {
+            const { useNotificationStore } = await import('@/store/useNotificationStore');
+            useNotificationStore.getState().showNotification(
+                "You're in a read-only preview — exit it to make changes",
+                'error'
+            );
+        }
+
         throw new ApiError(errorBody.message || 'Something went wrong', {
             status: response.status,
             code: errorBody.code ?? null,

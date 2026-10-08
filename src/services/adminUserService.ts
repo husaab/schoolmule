@@ -1,6 +1,7 @@
 import apiClient from './apiClient';
 import {
   AdminUserResponse,
+  ImpersonationStart,
   InviteUserRequest,
   SchoolUser,
   SchoolUserDetails,
@@ -53,4 +54,14 @@ export const unarchiveSchoolUser = (userId: string) =>
 export const deleteSchoolUser = (userId: string) =>
   apiClient<{ status: string; message?: string }>(`/admin/users/${userId}`, {
     method: 'DELETE',
+  });
+
+/**
+ * POST /admin/users/:id/impersonate — "View as". Returns a read-only preview
+ * token for a teacher or parent; see services/impersonation.ts for how it is
+ * swapped in.
+ */
+export const impersonateSchoolUser = (userId: string) =>
+  apiClient<AdminUserResponse<ImpersonationStart>>(`/admin/users/${userId}/impersonate`, {
+    method: 'POST',
   });

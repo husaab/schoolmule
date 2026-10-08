@@ -17,6 +17,8 @@ export interface SchoolUser {
   /** Archived: kept with all their records, hidden from staff lists, can't sign in. */
   isArchived: boolean;
   archivedAt: string | null;
+  /** Set when a signup was declined from the Approvals page (always archived too). */
+  declinedAt: string | null;
   /** Created by an admin and hasn't set a password yet. */
   invitePending: boolean;
   createdAt: string;
@@ -61,6 +63,25 @@ export interface UpdateSchoolUserRequest {
   lastName: string;
   role: SchoolRole;
   isVerifiedSchool: boolean;
+}
+
+/** POST /admin/users/:id/impersonate — a login-shaped payload for the previewed user. */
+export interface ImpersonationStart {
+  userId: string;
+  username: string;
+  fullName: string;
+  email: string;
+  school: string;
+  role: SchoolRole;
+  isVerified: boolean;
+  isVerifiedSchool: boolean;
+  activeTerm: string | false;
+  activeSchoolYear: { schoolYearId: string; label: string } | null;
+  schoolYears: import('./schoolYear').SchoolYear[];
+  /** The admin who started the preview. */
+  impersonator: { userId: string; username: string; fullName: string };
+  /** Short-lived, read-only token for the previewed user. */
+  token: string;
 }
 
 export interface AdminUserResponse<T> {

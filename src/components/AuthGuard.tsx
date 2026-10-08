@@ -6,6 +6,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { validateSession, getToken } from '@/services/authService'
 import { getUnreadPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
+import { useImpersonationStore } from '@/store/useImpersonationStore'
 import PatchNotesModal from '@/components/patchNotes/PatchNotesModal'
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
@@ -53,6 +54,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   const [patchNotesChecked, setPatchNotesChecked] = useState(false)
   const setUnread = usePatchNotesStore((s) => s.setUnread)
   const unreadNotes = usePatchNotesStore((s) => s.unreadNotes)
+  // During an admin "view as" preview, "What's new" belongs to the previewed
+  // user and dismissing it would be a (refused) write, so leave it alone.
+  const previewing = useImpersonationStore((s) => Boolean(s.session))
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -88,6 +92,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
             // Check for unread patch notes
             try {
+              if (previewing) return
               const patchRes = await getUnreadPatchNotes()
               if (patchRes.data.hasUnread) {
                 setUnread(true, patchRes.data.notes)
@@ -105,7 +110,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
 
     // Check for unread patch notes when user is already logged in (once per session)
-    if (token && user.id && user.isVerifiedEmail && user.isVerifiedSchool && !patchNotesChecked) {
+    if (token && user.id && user.isVerifiedEmail && user.isVerifiedSchool && !patchNotesChecked && !previewing) {
       setPatchNotesChecked(true)
       getUnreadPatchNotes()
         .then((patchRes) => {
@@ -141,7 +146,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         router.replace("/parent/dashboard")
       }
     }
-  }, [hasHydrated, user.id, user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser, setUnread])
+  }, [hasHydrated, user.id, user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser, setUnread, previewing])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

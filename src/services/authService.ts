@@ -81,6 +81,8 @@ export interface SessionValidationResponse {
     activeTerm: string;
     activeSchoolYear?: { schoolYearId: string; label: string } | null;
     schoolYears?: SchoolYear[];
+    /** Set when the token is an admin "view as" preview token. */
+    impersonator?: { userId: string; username: string; fullName: string } | null;
   };
 }
 
