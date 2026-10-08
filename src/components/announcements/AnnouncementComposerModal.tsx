@@ -6,7 +6,7 @@ import Modal from '@/components/shared/modal'
 import { Button, Field, FieldRow, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
-import { createAnnouncement, getAnnouncementTargets, previewAudience, updateAnnouncement } from '@/services/announcementService'
+import { createAnnouncement, getAnnouncementTargets, previewAudience, sendAnnouncementPreviewEmail, updateAnnouncement } from '@/services/announcementService'
 import type { AnnouncementDetail, AnnouncementScope, AnnouncementTargets, AudiencePreview } from '@/services/types/announcement'
 import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
 import type { Tone } from '@/components/messaging/tones'
@@ -51,6 +51,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
   const [keepAttachments, setKeepAttachments] = useState<string[]>([])
   const [preview, setPreview] = useState<AudiencePreview | null>(null)
   const [saving, setSaving] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const files = useAnnouncementFiles(keepAttachments.length)
   const resetFiles = files.reset
 
@@ -126,6 +127,29 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     body.trim().length > 0 &&
     body.length <= MAX_BODY &&
     (mode === 'edit' || scope === 'school' || (scope === 'class' ? Boolean(classId) : Boolean(grade)))
+
+  // The email a guardian will get, sent to the author first.
+  const emailPreview = async () => {
+    if (!ready || previewing) return
+    setPreviewing(true)
+    try {
+      const audience = mode === 'edit' && existing ? existing : { scope, classId, grade }
+      const res = await sendAnnouncementPreviewEmail({
+        scope: audience.scope,
+        classId: audience.scope === 'class' ? audience.classId ?? undefined : undefined,
+        grade: audience.scope === 'grade' ? audience.grade ?? undefined : undefined,
+        title: title.trim(),
+        body: body.trim(),
+        attachmentCount: files.files.length + keepAttachments.length,
+      })
+      if (res.status !== 'success' || !res.data) throw new Error(res.message || 'Could not send the preview')
+      showNotification(`Preview sent to ${res.data.sentTo}`, 'success')
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Could not send the preview', 'error')
+    } finally {
+      setPreviewing(false)
+    }
+  }
 
   const save = async () => {
     if (!ready || saving) return
@@ -320,6 +344,9 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
         )}
       </ModalBody>
       <ModalFooter>
+        <Button type="button" variant="secondary" onClick={emailPreview} disabled={!ready || saving} loading={previewing} className="mr-auto" title="Send yourself the email guardians will get">
+          Email me a preview
+        </Button>
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
         </Button>

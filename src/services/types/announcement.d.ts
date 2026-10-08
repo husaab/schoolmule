@@ -122,6 +122,17 @@ export interface NewAnnouncementInput {
   files?: File[];
 }
 
+/** POST /announcements/preview-email: the draft to email the author. */
+export interface AnnouncementPreviewEmailInput {
+  scope: AnnouncementScope;
+  classId?: string;
+  grade?: string;
+  title: string;
+  body: string;
+  attachmentCount?: number;
+}
+export type AnnouncementPreviewEmailResponse = AnnouncementResponse<{ sentTo: string }>;
+
 export interface EditAnnouncementInput {
   title?: string;
   body?: string;

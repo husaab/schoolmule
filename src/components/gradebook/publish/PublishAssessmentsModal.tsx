@@ -6,6 +6,7 @@ import {
   MegaphoneIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  EnvelopeIcon,
   EyeSlashIcon,
 } from '@heroicons/react/24/outline'
 import type { AssessmentPayload } from '@/services/types/assessment'
@@ -17,6 +18,7 @@ import type {
 import {
   previewPublish,
   publishAssessments,
+  sendPublishPreviewEmail,
   unpublishAssessments,
   updatePublicationComment,
 } from '@/services/assessmentPublicationService'
@@ -58,6 +60,13 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<PublishResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [previewEmail, setPreviewEmail] = useState<
+    { state: 'idle' } | { state: 'sending' } | { state: 'sent'; to: string; student: string }
+  >({ state: 'idle' })
+
+  useEffect(() => {
+    if (isOpen) setPreviewEmail({ state: 'idle' })
+  }, [isOpen])
   const [confirmingUnpublish, setConfirmingUnpublish] = useState(false)
 
   const assessmentIds = useMemo(
@@ -142,6 +151,28 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
       setError(err instanceof Error ? err.message : 'Publish failed')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // The email a parent will get, sent to the teacher first. Unsaved notes
+  // are included so what they see is what will go out.
+  const handlePreviewEmail = async () => {
+    setPreviewEmail({ state: 'sending' })
+    setError(null)
+    try {
+      const res = await sendPublishPreviewEmail(classId, {
+        assessmentIds,
+        batchComment: batchComment.trim() || undefined,
+        assessmentComments: nonEmptyComments(),
+      })
+      if (res.status !== 'success' || !res.data) {
+        throw new Error(res.message || 'Could not send the preview')
+      }
+      setPreviewEmail({ state: 'sent', to: res.data.sentTo, student: res.data.sampleStudentName })
+    } catch (err) {
+      console.error(err)
+      setPreviewEmail({ state: 'idle' })
+      setError(err instanceof Error ? err.message : 'Could not send the preview')
     }
   }
 
@@ -393,17 +424,34 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
-              {anyPublished ? (
-                <button
-                  onClick={() => setConfirmingUnpublish(true)}
-                  className="inline-flex items-center gap-1.5 text-sm text-rose-600 hover:text-rose-700 cursor-pointer"
-                >
-                  <EyeSlashIcon className="w-4 h-4" />
-                  Unpublish
-                </button>
-              ) : (
-                <span />
-              )}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+                {anyPublished && (
+                  <button
+                    onClick={() => setConfirmingUnpublish(true)}
+                    className="inline-flex items-center gap-1.5 text-sm text-rose-600 hover:text-rose-700 cursor-pointer"
+                  >
+                    <EyeSlashIcon className="w-4 h-4" />
+                    Unpublish
+                  </button>
+                )}
+                {previewEmail.state === 'sent' ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm text-emerald-700">
+                    <CheckCircleIcon className="w-4 h-4 flex-shrink-0" />
+                    Preview sent to {previewEmail.to}, as {previewEmail.student.split(' ')[0]}&rsquo;s family will see it
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handlePreviewEmail}
+                    disabled={previewEmail.state === 'sending' || submitting || assessments.length === 0}
+                    className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Send yourself the email a parent will get, before publishing"
+                  >
+                    <EnvelopeIcon className="w-4 h-4" />
+                    {previewEmail.state === 'sending' ? 'Sending preview…' : 'Email me a preview'}
+                  </button>
+                )}
+              </div>
 
               <div className="flex gap-2">
                 <button

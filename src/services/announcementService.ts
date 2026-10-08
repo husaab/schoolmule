@@ -7,6 +7,8 @@
 import apiClient from './apiClient';
 import apiUpload from './apiUpload';
 import type {
+  AnnouncementPreviewEmailInput,
+  AnnouncementPreviewEmailResponse,
   AnnouncementAttachmentUrlResponse,
   AnnouncementDetailResponse,
   AnnouncementListFilters,
@@ -72,6 +74,13 @@ export const previewAudience = async (scope: { scope: AnnouncementScope; classId
   if (scope.grade) params.set('grade', scope.grade);
   return apiClient<AudiencePreviewResponse>(`${base}/preview?${params.toString()}`);
 };
+
+/**
+ * Email the author one copy exactly as a guardian will get it. Nothing is posted.
+ * POST /announcements/preview-email
+ */
+export const sendAnnouncementPreviewEmail = async (input: AnnouncementPreviewEmailInput): Promise<AnnouncementPreviewEmailResponse> =>
+  apiClient<AnnouncementPreviewEmailResponse, AnnouncementPreviewEmailInput>(`${base}/preview-email`, { method: 'POST', body: input });
 
 /**
  * Post. Emails go out two minutes later.

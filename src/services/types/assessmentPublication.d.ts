@@ -85,7 +85,17 @@ export interface PublicationHistoryEntry {
   emailSummary: { sent: number; failed: number; skipped: number }
 }
 
+/** What a "send me a preview" produced. */
+export interface PublishPreviewEmail {
+  sentTo: string
+  /** The student whose digest was used as the sample. */
+  sampleStudentName: string
+  /** How many guardian addresses a real publish would reach. */
+  recipientCount: number
+}
+
 export type PublicationStateResponse = AssessmentPublicationResponse<AssessmentPublicationState[]>
+export type PublishPreviewEmailResponse = AssessmentPublicationResponse<PublishPreviewEmail>
 export type PublishPreviewResponse = AssessmentPublicationResponse<PublishPreview>
 export type PublishResponse = AssessmentPublicationResponse<PublishResult>
 export type UnpublishResponse = AssessmentPublicationResponse<UnpublishResult>

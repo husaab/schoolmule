@@ -2,6 +2,7 @@ import apiClient from './apiClient'
 import {
   PublicationStateResponse,
   PublishPreviewResponse,
+  PublishPreviewEmailResponse,
   PublishResponse,
   UnpublishResponse,
   PublicationHistoryResponse,
@@ -36,6 +37,25 @@ export const previewPublish = async (
     { method: 'POST', body: { assessmentIds } }
   )
 };
+
+/**
+ * Email the caller one digest exactly as a parent will receive it, for the
+ * first graded student in the selection. Publishes nothing.
+ * POST /assessment-publications/classes/:classId/preview-email
+ */
+export const sendPublishPreviewEmail = async (
+  classId: string,
+  payload: {
+    assessmentIds: string[]
+    batchComment?: string
+    assessmentComments?: Record<string, string>
+  }
+): Promise<PublishPreviewEmailResponse> => {
+  return apiClient<PublishPreviewEmailResponse, typeof payload>(`${base(classId)}/preview-email`, {
+    method: 'POST',
+    body: payload,
+  })
+}
 
 /**
  * Publish assessments and email the affected guardians.
