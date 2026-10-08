@@ -64,6 +64,12 @@ export interface AssessmentScore {
    * children; use score/maxScore for those.
    */
   rollupPct: number | null;
+  /**
+   * The class's mean on this assessment (score/max for leaves, graded
+   * rollups for categories), over published rows only. null when no
+   * classmate is graded yet.
+   */
+  classAvgPct: number | null;
   /** Teacher's note about this assessment, written when publishing. */
   parentComment: string | null;
   /**

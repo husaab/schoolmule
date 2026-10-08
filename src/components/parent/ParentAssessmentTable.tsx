@@ -31,6 +31,12 @@ const MetaLine: React.FC<{ parts: (string | null)[] }> = ({ parts }) => {
   return <p className="text-xs text-slate-400 mt-0.5">{shown.join(' · ')}</p>
 }
 
+/** "Class avg 72%" under a mark, so a parent can read it against the room. */
+const ClassAvg: React.FC<{ pct: number | null }> = ({ pct }) =>
+  pct == null ? null : (
+    <span className="text-[11px] text-slate-400 whitespace-nowrap">Class avg {pct}%</span>
+  )
+
 const CommentChip: React.FC<{ comment: string | null }> = ({ comment }) => {
   if (!comment) return null
   return (
@@ -121,11 +127,14 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
           )}
           <AssessmentStatusBadge status={status} />
           {pct != null && (
-            <span className="text-sm whitespace-nowrap">
-              <span className="text-slate-500">
-                {score.score}/{score.maxScore}
-              </span>{' '}
-              <span className={`font-medium ${gradeTextColor(pct)}`}>{pct}%</span>
+            <span className="flex flex-col items-end">
+              <span className="text-sm whitespace-nowrap">
+                <span className="text-slate-500">
+                  {score.score}/{score.maxScore}
+                </span>{' '}
+                <span className={`font-medium ${gradeTextColor(pct)}`}>{pct}%</span>
+              </span>
+              <ClassAvg pct={score.classAvgPct} />
             </span>
           )}
         </div>
@@ -190,8 +199,11 @@ const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onTo
         <div className="flex items-center gap-2 flex-shrink-0">
           <AssessmentStatusBadge status={status} />
           {group.pct != null && (
-            <span className={`text-sm font-semibold ${gradeTextColor(group.pct)}`}>
-              {group.pct}%
+            <span className="flex flex-col items-end">
+              <span className={`text-sm font-semibold ${gradeTextColor(group.pct)}`}>
+                {group.pct}%
+              </span>
+              <ClassAvg pct={group.parent.classAvgPct} />
             </span>
           )}
         </div>
