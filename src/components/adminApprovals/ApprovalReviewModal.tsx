@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Modal from '@/components/shared/modal'
 import {
   Button,
+  Field,
   FormSection,
   ModalBody,
   ModalFooter,
@@ -25,6 +26,9 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { ShieldCheckIcon } from '@heroicons/react/24/outline'
 import { ROLE_OPTIONS, formatDate } from '@/components/adminUsers/userDisplay'
 import ChildLinker, { SelectedChild } from './ChildLinker'
+
+const nameInputClass =
+  'w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20'
 
 const SIGNUP_ROLE_OPTIONS = ROLE_OPTIONS.filter((o): o is typeof o & { value: SignupRole } => o.value !== 'ADMIN')
 
@@ -46,6 +50,8 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
 }) => {
   const notify = useNotificationStore((s) => s.showNotification)
   const [role, setRole] = useState<SignupRole>(asSignupRole(user.role))
+  const [firstName, setFirstName] = useState(user.firstName ?? '')
+  const [lastName, setLastName] = useState(user.lastName ?? '')
   const [sendEmail, setSendEmail] = useState(true)
   const [students, setStudents] = useState<ChildCandidate[]>([])
   const [suggested, setSuggested] = useState<SuggestedChild[]>([])
@@ -60,6 +66,8 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
   useEffect(() => {
     if (!isOpen) return
     setRole(asSignupRole(user.role))
+    setFirstName(user.firstName ?? '')
+    setLastName(user.lastName ?? '')
     setSendEmail(true)
     setSelected([])
     setStudents([])
@@ -94,12 +102,18 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
   const roleChanged = role !== user.role
   const isParent = role === 'PARENT'
   const childCount = isParent ? selected.length : 0
+  const first = firstName.trim()
+  const last = lastName.trim()
+  const nameChanged = first !== (user.firstName ?? '') || last !== (user.lastName ?? '')
+  const nameValid = first.length > 0
 
   const handleApprove = async () => {
+    if (!nameValid) return
     setApproving(true)
     try {
       const res = await approveSignup(user.userId, {
         role,
+        ...(nameChanged ? { firstName: first, lastName: last } : {}),
         children: isParent ? selected.map((c) => ({ studentId: c.studentId, relation: c.relation })) : [],
         sendEmail,
       })
@@ -124,12 +138,37 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
       />
 
       <ModalBody>
-        <RecordFacts
-          facts={[
-            { label: 'Name', value: user.fullName },
-            { label: 'Signed up', value: formatDate(user.createdAt) },
-          ]}
-        />
+        {/* Editable: parents sometimes sign up under their child's name, and
+            this is what every email and page will greet them with. */}
+        <FormSection label="Name">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="First name" htmlFor="review-first-name" required>
+              <input
+                id="review-first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                maxLength={60}
+                className={nameInputClass}
+              />
+            </Field>
+            <Field label="Last name" htmlFor="review-last-name" hint="Leave blank if they go by one name.">
+              <input
+                id="review-last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                maxLength={60}
+                className={nameInputClass}
+              />
+            </Field>
+          </div>
+          {nameChanged && (
+            <p className="text-xs text-slate-500">
+              They signed up as <span className="font-medium text-slate-700">{user.fullName}</span>. The new name is saved when you approve.
+            </p>
+          )}
+        </FormSection>
+
+        <RecordFacts facts={[{ label: 'Signed up', value: formatDate(user.createdAt) }]} />
 
         <FormSection label="Approve as">
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Role">

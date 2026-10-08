@@ -42,6 +42,9 @@ export interface RenameSignupRequest {
 export interface ApproveSignupRequest {
   /** Omit to keep the role they picked at signup. */
   role?: SignupRole;
+  /** Send both to correct the name on the way in; omit to keep what they typed. */
+  firstName?: string;
+  lastName?: string;
   /** Parents only. */
   children?: ChildLink[];
   sendEmail?: boolean;
