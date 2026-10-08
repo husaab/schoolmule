@@ -97,7 +97,7 @@ export default function WhatsNewPage() {
                             {note.title}
                           </h3>
                           <div
-                            className="text-sm text-slate-600 mt-1 prose prose-sm max-w-none"
+                            className="patch-note-body text-sm text-slate-600 mt-1 max-w-none"
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
                           />
                           {note.imageUrl && (

@@ -71,7 +71,7 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
                 </div>
                 <h3 className="font-semibold text-base text-slate-900">{note.title}</h3>
                 <div
-                  className="text-sm text-slate-600 mt-1.5 prose prose-sm max-w-none leading-relaxed break-words overflow-wrap-anywhere"
+                  className="patch-note-body text-sm text-slate-600 mt-1.5 max-w-none leading-relaxed break-words overflow-wrap-anywhere"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
                 />
                 {note.imageUrl && (
