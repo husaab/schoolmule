@@ -176,9 +176,19 @@ export interface StaffTargetGuardian {
   invitedAt: string | null;
 }
 
+export interface StaffTargetAssessment {
+  assessmentId: string;
+  name: string;
+  date: string | null;
+  isPublished: boolean;
+}
+
 export interface StaffTargets {
   students: { studentId: string; name: string; guardians: StaffTargetGuardian[] }[];
-  assessments: { assessmentId: string; name: string; date: string | null; isPublished: boolean }[];
+  /** Class-scoped picker (gradebook): the assessments of that one class. */
+  assessments: StaffTargetAssessment[];
+  /** Student-scoped picker (Students page): the classes the caller teaches the student in. */
+  classes?: { classId: string; subject: string; assessments: StaffTargetAssessment[] }[];
 }
 
 export interface ListFilters {
@@ -206,6 +216,8 @@ export interface NewAssessmentConversationInput extends NewConversationBase {
 export interface NewGeneralConversationInput extends NewConversationBase {
   teacherId: string;
   title: string;
+  /** Optional: the class (subject) the thread is about. */
+  classId?: string;
 }
 export type NewConversationInput = NewAssessmentConversationInput | NewGeneralConversationInput;
 

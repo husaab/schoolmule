@@ -114,6 +114,7 @@ export const createConversation = async (input: NewConversationInput): Promise<T
   } else {
     form.set('teacherId', input.teacherId);
     form.set('title', input.title);
+    if (input.classId) form.set('classId', input.classId);
   }
   form.set('body', input.body);
   return apiUpload<ThreadResponse>(base, withFlags(withFiles(form, input.files), input));

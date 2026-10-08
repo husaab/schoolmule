@@ -60,6 +60,8 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const [assessmentId, setAssessmentId] = useState('')
   const [teacherId, setTeacherId] = useState('')
   const [title, setTitle] = useState('')
+  // Staff: the class (subject) in play. Required for an assessment, optional for General.
+  const [staffClassId, setStaffClassId] = useState(classId ?? '')
   const [invite, setInvite] = useState(true)
   const [includePreview, setIncludePreview] = useState(true)
   const [parentTargets, setParentTargets] = useState<ParentTargets | null>(null)
@@ -72,6 +74,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     const defaultChild = preset?.studentId ?? (children.find((c) => c.studentId === selectedChildId)?.studentId ?? children[0]?.studentId ?? '')
     setStudentId(isParent ? defaultChild : preset?.studentId ?? '')
     setPickedClassId(classId ?? '')
+    setStaffClassId(classId ?? '')
     setAssessmentId(preset?.assessmentId ?? '')
     setMode(preset?.mode ?? (preset?.assessmentId ? 'assessment' : classId ? 'assessment' : 'general'))
     setTeacherId('')
@@ -125,7 +128,12 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   }, [isOpen, isParent, classId, preset?.studentId, showNotification])
 
   const parentClass = parentTargets?.classes.find((c) => c.classId === pickedClassId) ?? null
-  const assessments = isParent ? parentClass?.assessments ?? [] : staffTargets?.assessments ?? []
+  // Staff classes: the one the picker was opened for, or the student's classes the caller teaches.
+  const staffClasses = classId
+    ? [{ classId, subject: 'This class', assessments: staffTargets?.assessments ?? [] }]
+    : staffTargets?.classes ?? []
+  const staffClass = staffClasses.find((c) => c.classId === staffClassId) ?? null
+  const assessments = isParent ? parentClass?.assessments ?? [] : staffClass?.assessments ?? []
   const staffStudent = !isParent ? staffTargets?.students.find((s) => s.studentId === studentId) : undefined
   const guardians: StaffTargetGuardian[] = staffStudent?.guardians ?? []
   const unlinked = guardians.filter((g) => !g.hasAccount && !g.invitePending && g.email)
@@ -137,7 +145,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const ready =
     Boolean(studentId) &&
     (mode === 'assessment'
-      ? Boolean(assessmentId) && (isParent ? Boolean(pickedClassId) : Boolean(classId))
+      ? Boolean(assessmentId) && (isParent ? Boolean(pickedClassId) : Boolean(staffClassId))
       : Boolean(title.trim()) && title.trim().length <= MAX_TITLE && (isParent ? Boolean(teacherId) : true))
 
   const willInvite = !isParent && invite && unlinked.length > 0
@@ -159,12 +167,13 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     const flags = isParent ? {} : { invite, includePreview }
     const res =
       mode === 'assessment'
-        ? await createConversation({ studentId, classId: isParent ? pickedClassId : (classId as string), assessmentId, body, files, ...flags })
+        ? await createConversation({ studentId, classId: isParent ? pickedClassId : staffClassId, assessmentId, body, files, ...flags })
         : await createConversation({
             studentId,
             // Staff general threads go to the caller; parents choose the teacher.
             teacherId: isParent ? teacherId : (me?.id as string),
             title: title.trim(),
+            ...(!isParent && staffClassId ? { classId: staffClassId } : {}),
             body,
             files,
             ...flags,
@@ -291,11 +300,40 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
             </Field>
           )}
 
+          {!isParent && (
+            <div className="sm:col-span-2">
+              <Field
+                label="Class"
+                htmlFor="nc-staff-class"
+                required={mode === 'assessment'}
+                hint={mode === 'general' ? 'Optional: the subject this is about. Leave blank for a homeroom-style note.' : undefined}
+              >
+                <select
+                  id="nc-staff-class"
+                  value={staffClassId}
+                  onChange={(e) => {
+                    setStaffClassId(e.target.value)
+                    setAssessmentId('')
+                  }}
+                  className={selectClass}
+                  disabled={Boolean(classId) || loading || !studentId || staffClasses.length === 0}
+                >
+                  <option value="">{mode === 'general' ? 'No specific class' : 'Select…'}</option>
+                  {staffClasses.map((c) => (
+                    <option key={c.classId} value={c.classId}>
+                      {c.subject}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          )}
+
           {mode === 'assessment' ? (
             <div className="sm:col-span-2">
               <Field label="Assessment" htmlFor="nc-assessment" required hint={isParent ? 'Only assessments that have been shared with you' : undefined}>
                 <select id="nc-assessment" value={assessmentId} onChange={(e) => setAssessmentId(e.target.value)} className={selectClass} disabled={loading || assessments.length === 0}>
-                  <option value="">Select…</option>
+                  <option value="">{!isParent && !staffClassId ? 'Pick a class first' : 'Select…'}</option>
                   {assessments.map((a) => (
                     <option key={a.assessmentId} value={a.assessmentId}>
                       {a.name}
