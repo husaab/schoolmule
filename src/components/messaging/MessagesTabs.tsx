@@ -16,7 +16,10 @@ export function useMessagesTab(defaultTab: MessagesTab): [MessagesTab, (t: Messa
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const raw = searchParams.get('tab')
-  const tab: MessagesTab = raw === 'announcements' || raw === 'conversations' ? raw : defaultTab
+  // Older links (digest emails, invite landings, grade chips) carry only ?thread=;
+  // infer the side from the deep-link param before falling back to the default.
+  const inferred: MessagesTab | null = searchParams.has('thread') ? 'conversations' : searchParams.has('announcement') ? 'announcements' : null
+  const tab: MessagesTab = raw === 'announcements' || raw === 'conversations' ? raw : inferred ?? defaultTab
   const setTab = useCallback(
     (t: MessagesTab) => {
       const params = new URLSearchParams(searchParams.toString())

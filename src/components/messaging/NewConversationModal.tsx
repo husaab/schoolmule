@@ -96,7 +96,9 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     setTitle(preset?.title ?? '')
     setInvite(true)
     setIncludePreview(true)
-  }, [isOpen, preset?.studentId, preset?.assessmentId, preset?.mode, preset?.teacherId, preset?.title, preset?.announcementId, preset?.childIds, classId, isParent, children, selectedChildId])
+    // childIds is compared by value (joined key) so a caller passing a fresh array each render cannot reset the form mid-typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, preset?.studentId, preset?.assessmentId, preset?.mode, preset?.teacherId, preset?.title, preset?.announcementId, preset?.childIds?.join(','), classId, isParent, children, selectedChildId])
 
   // Parent: classes, assessments and teachers for the chosen child.
   useEffect(() => {

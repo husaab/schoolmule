@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MegaphoneIcon } from '@heroicons/react/24/outline'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
@@ -100,6 +100,24 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
     }
   }
 
+  // One preset object per announcement being asked about: a fresh object on every
+  // render would re-run the modal's reset effect while the parent is typing.
+  const askPreset = useMemo(
+    () =>
+      asking
+        ? {
+            mode: 'general' as const,
+            teacherId: asking.authorId ?? undefined,
+            title: `Re: ${asking.title}`.slice(0, 120),
+            announcementId: asking.announcementId,
+            announcementScopeLabel: asking.scopeLabel,
+            authorName: asking.authorName,
+            childIds: (asking.children ?? []).map((c) => c.studentId),
+          }
+        : undefined,
+    [asking],
+  )
+
   const onCreated = (thread: Thread) => {
     setAsking(null)
     router.push(`/parent/messages?tab=conversations&thread=${encodeURIComponent(thread.conversation.conversationId)}`)
@@ -137,19 +155,7 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
         onClose={() => setAsking(null)}
         tone="parent"
         role="PARENT"
-        preset={
-          asking
-            ? {
-                mode: 'general',
-                teacherId: asking.authorId ?? undefined,
-                title: `Re: ${asking.title}`.slice(0, 120),
-                announcementId: asking.announcementId,
-                announcementScopeLabel: asking.scopeLabel,
-                authorName: asking.authorName,
-                childIds: (asking.children ?? []).map((c) => c.studentId),
-              }
-            : undefined
-        }
+        preset={askPreset}
         onCreated={onCreated}
       />
     </div>
