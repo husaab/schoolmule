@@ -8,7 +8,6 @@ import React, { useMemo, useState } from 'react'
 import { ChildCandidate, SuggestedChild } from '@/services/types/adminApproval'
 import { RELATION_PRESETS } from '@/components/relation/RelationFormFields'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
-import { selectClass } from '@/components/shared/modalKit'
 import { MagnifyingGlassIcon, PlusIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export interface SelectedChild extends ChildCandidate {
@@ -96,7 +95,7 @@ const ChildLinker: React.FC<ChildLinkerProps> = ({ students, suggested, selected
                 value={child.relation}
                 onChange={(e) => setRelation(child.studentId, e.target.value)}
                 aria-label={`Relation to ${child.name}`}
-                className={`${selectClass} w-auto py-1.5`}
+                className="w-32 flex-shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
               >
                 {RELATIONS.map((r) => (
                   <option key={r} value={r}>
