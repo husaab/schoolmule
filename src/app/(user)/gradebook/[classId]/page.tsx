@@ -104,7 +104,7 @@ const GradebookClass = () => {
   // Parent conversations: chips beside a student's name (open threads) and
   // inside a score cell (that assessment has a thread). Keyed "studentId|assessmentId".
   const [threadStubs, setThreadStubs] = useState<Record<string, ThreadStub>>({})
-  const [messagePreset, setMessagePreset] = useState<{ studentId?: string; assessmentId?: string } | null>(null)
+  const [messagePreset, setMessagePreset] = useState<{ studentId?: string; assessmentId?: string; mode?: 'assessment' | 'general' } | null>(null)
   const bumpUnread = useMessagingStore((s) => s.bump)
   const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<Set<string>>(new Set())
   const [publishTargets, setPublishTargets] = useState<AssessmentPayload[]>([])
@@ -811,6 +811,14 @@ const GradebookClass = () => {
                   Publish{selectedAssessmentIds.size > 0 ? ` (${selectedAssessmentIds.size})` : ''}
                 </button>
                 <button
+                  onClick={() => setMessagePreset({})}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-50 border border-cyan-200 text-cyan-700 rounded-xl hover:bg-cyan-100 transition-all font-medium cursor-pointer shadow-sm"
+                  title="Write to a student's guardians"
+                >
+                  <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                  Message parents
+                </button>
+                <button
                   onClick={handleGoToAssessments}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
                   title="Add, edit, or delete this class's assessments"
@@ -1391,7 +1399,7 @@ const GradebookClass = () => {
         onOpenConversation={(conversationId) => router.push(`/messages?thread=${encodeURIComponent(conversationId)}`)}
         onMessageGuardians={(assessmentId) => {
           if (!selectedStudent) return
-          setMessagePreset({ studentId: selectedStudent.studentId, assessmentId })
+          setMessagePreset({ studentId: selectedStudent.studentId, assessmentId, mode: assessmentId ? 'assessment' : 'general' })
         }}
       />
 

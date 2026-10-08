@@ -6,6 +6,7 @@ export interface MessagingResponse<T> {
 }
 
 export type ConversationStatus = 'open' | 'resolved';
+export type ConversationKind = 'assessment' | 'general';
 export type SenderRole = 'PARENT' | 'TEACHER' | 'ADMIN';
 
 export interface LastMessage {
@@ -23,10 +24,15 @@ export interface ConversationItem {
   conversationId: string;
   studentId: string;
   studentName: string;
-  classId: string;
+  /** null for a homeroom-anchored general thread. */
+  classId: string | null;
   classSubject: string;
   assessmentId: string | null;
-  /** Snapshot of the assessment name at creation. */
+  /** 'general' threads have no assessment; title is the author's subject. */
+  kind: ConversationKind;
+  /** Set for homeroom-anchored general threads with no class row. */
+  teacherId: string | null;
+  /** Snapshot of the assessment name at creation, or the general subject. */
   title: string;
   status: ConversationStatus;
   lastMessageAt: string;
@@ -71,6 +77,24 @@ export interface Participant {
   name: string;
   role: SenderRole;
   relation: string | null;
+  /** Invited guardian who has not set a password yet. */
+  invitePending: boolean;
+}
+
+/** Staff-only context strip for general threads. */
+export interface StudentContext {
+  studentId: string;
+  name: string;
+  grade: string | number | null;
+  homeroomTeacherName: string | null;
+  attendancePct: number | null;
+}
+
+export type InviteStatus = 'invited' | 'linked' | 'skipped' | 'failed';
+export interface InviteResult {
+  linkId: string;
+  name: string;
+  status: InviteStatus;
 }
 
 export interface AssessmentContext {
@@ -91,10 +115,14 @@ export interface AssessmentContext {
 export interface Thread {
   conversation: ConversationItem;
   context: AssessmentContext | null;
+  /** Present for staff on general threads. */
+  student: StudentContext | null;
   participants: Participant[];
   messages: Message[];
   lastReadAt: string | null;
   muted: boolean;
+  /** Returned on create/reply when guardians were invited or linked. */
+  invites?: InviteResult[];
 }
 
 export interface UnreadSummary {
@@ -126,10 +154,26 @@ export interface ParentTargetClass {
   assessments: ParentTargetAssessment[];
 }
 
+export interface ParentTargetTeacher {
+  userId: string;
+  name: string;
+  /** "Homeroom" or the class subject. */
+  via: string;
+}
+
+export interface ParentTargets {
+  classes: ParentTargetClass[];
+  teachers: ParentTargetTeacher[];
+}
+
 export interface StaffTargetGuardian {
+  linkId: string;
   name: string | null;
   relation: string | null;
+  email: string | null;
   hasAccount: boolean;
+  invitePending: boolean;
+  invitedAt: string | null;
 }
 
 export interface StaffTargets {
@@ -146,24 +190,38 @@ export interface ListFilters {
   limit?: number;
 }
 
-export interface NewConversationInput {
+interface NewConversationBase {
   studentId: string;
-  classId: string;
-  assessmentId: string;
   body: string;
   files?: File[];
+  /** Staff only: invite guardians who have an email but no account (default true). */
+  invite?: boolean;
+  /** Staff only: quote the first lines of the message in the invite email (default true). */
+  includePreview?: boolean;
 }
+export interface NewAssessmentConversationInput extends NewConversationBase {
+  classId: string;
+  assessmentId: string;
+}
+export interface NewGeneralConversationInput extends NewConversationBase {
+  teacherId: string;
+  title: string;
+}
+export type NewConversationInput = NewAssessmentConversationInput | NewGeneralConversationInput;
 
 export interface NewMessageInput {
   body: string;
   files?: File[];
+  invite?: boolean;
+  includePreview?: boolean;
 }
 
 export type ConversationListResponse = MessagingResponse<ConversationItem[]>;
 export type ThreadResponse = MessagingResponse<Thread>;
 export type UnreadSummaryResponse = MessagingResponse<UnreadSummary>;
 export type ThreadStubsResponse = MessagingResponse<ThreadStub[]>;
-export type ParentTargetsResponse = MessagingResponse<ParentTargetClass[]>;
+export type ParentTargetsResponse = MessagingResponse<ParentTargets>;
+export type ResendInviteResponse = MessagingResponse<{ linkId: string; status: InviteStatus }>;
 export type StaffTargetsResponse = MessagingResponse<StaffTargets>;
 export type EditMessageResponse = MessagingResponse<{ messageId: string; body: string; editedAt: string }>;
 export type DeleteMessageResponse = MessagingResponse<{ messageId: string; deletedAt: string }>;

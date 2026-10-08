@@ -25,6 +25,7 @@ import { useUserStore } from '@/store/useUserStore'
 import Composer from './Composer'
 import MessageBubble from './MessageBubble'
 import ThreadContextCard from './ThreadContextCard'
+import StudentContextCard from './StudentContextCard'
 import { displayName, formatDayLabel, othersLabel } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
@@ -260,8 +261,9 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
     )
   }
 
-  const { conversation, context, participants } = thread
+  const { conversation, context, participants, student } = thread
   const resolved = conversation.status === 'resolved'
+  const general = conversation.kind === 'general'
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -289,12 +291,15 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
             >
               {resolved ? 'Resolved' : 'Open'}
             </span>
+            {general && (
+              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-px text-[10px] font-medium text-slate-600">General</span>
+            )}
           </div>
           <p className="truncate text-xs text-slate-500">
             {isStaff ? `${conversation.classSubject} · with ` : `About ${conversation.studentName.split(' ')[0]} · ${conversation.classSubject} · with `}
             {participants
               .filter((p) => p.userId !== user.id)
-              .map((p) => displayName(p))
+              .map((p) => (p.invitePending ? `${displayName(p)} · invited` : displayName(p)))
               .join(', ') || 'no one else yet'}
           </p>
         </div>
@@ -346,17 +351,23 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
         </div>
       </div>
 
-      {/* Context */}
-      <div className="px-4 pt-3 sm:px-5">
-        <ThreadContextCard
-          context={context}
-          title={conversation.title}
-          classId={conversation.classId}
-          classSubject={conversation.classSubject}
-          tone={tone}
-          role={role}
-        />
-      </div>
+      {/* Context: the score strip for assessment threads; the student strip (staff) for general ones */}
+      {(!general || student) && (
+        <div className="px-4 pt-3 sm:px-5">
+          {general && student ? (
+            <StudentContextCard student={student} tone={tone} />
+          ) : (
+            <ThreadContextCard
+              context={context}
+              title={conversation.title}
+              classId={conversation.classId ?? ''}
+              classSubject={conversation.classSubject}
+              tone={tone}
+              role={role}
+            />
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-4 py-4 sm:px-5">

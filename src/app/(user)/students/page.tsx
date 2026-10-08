@@ -13,7 +13,9 @@ import { getAllStudents, getArchivedStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
-import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import NewConversationModal from '@/components/messaging/NewConversationModal';
 import Spinner from '@/components/Spinner';
 import { getGradeOptions, getGradeNumericValue, getGradeDisplayName } from '@/lib/schoolUtils';
 import { useFilterParams } from '@/hooks/useFilterParams';
@@ -37,6 +39,8 @@ const StudentsContent = () => {
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null);
     const [archiveTarget, setArchiveTarget] = useState<StudentPayload | null>(null);
     const [unarchiveTarget, setUnarchiveTarget] = useState<StudentPayload | null>(null);
+    const [messageTarget, setMessageTarget] = useState<StudentPayload | null>(null);
+    const router = useRouter();
 
     const loadStudents = useCallback(async () => {
         if (!user.school) return;
@@ -318,6 +322,15 @@ const StudentsContent = () => {
                                                     <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         {/* Row itself opens the view modal, so keep these actions from bubbling into it. */}
                                                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                            {!showArchived && (
+                                                                <button
+                                                                    onClick={() => setMessageTarget(student)}
+                                                                    className="p-2 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors cursor-pointer"
+                                                                    title="Message guardians"
+                                                                >
+                                                                    <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => setViewStudent(student)}
                                                                 className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -425,6 +438,18 @@ const StudentsContent = () => {
                         onUnarchived={() => loadStudents()}
                     />
                 )}
+
+                <NewConversationModal
+                        isOpen={messageTarget !== null}
+                        onClose={() => setMessageTarget(null)}
+                        tone="staff"
+                        role={user?.role === 'ADMIN' ? 'ADMIN' : 'TEACHER'}
+                        preset={messageTarget ? { studentId: messageTarget.studentId, mode: 'general' } : undefined}
+                        onCreated={(thread) => {
+                            setMessageTarget(null)
+                            router.push(`/messages?thread=${encodeURIComponent(thread.conversation.conversationId)}`)
+                        }}
+                    />
             </main>
         </>
     );

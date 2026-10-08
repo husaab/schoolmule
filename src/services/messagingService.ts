@@ -17,6 +17,7 @@ import type {
   NewConversationInput,
   NewMessageInput,
   ParentTargetsResponse,
+  ResendInviteResponse,
   SetMutedResponse,
   SetStatusResponse,
   StaffTargetsResponse,
@@ -30,6 +31,11 @@ const thread = (id: string) => `${base}/${encodeURIComponent(id)}`;
 
 const withFiles = (form: FormData, files?: File[]) => {
   (files ?? []).forEach((f) => form.append('files', f, f.name));
+  return form;
+};
+const withFlags = (form: FormData, input: { invite?: boolean; includePreview?: boolean }) => {
+  if (input.invite !== undefined) form.set('invite', String(input.invite));
+  if (input.includePreview !== undefined) form.set('includePreview', String(input.includePreview));
   return form;
 };
 
@@ -71,6 +77,20 @@ export const getStaffTargets = async (classId: string): Promise<StaffTargetsResp
   apiClient<StaffTargetsResponse>(`${base}/targets?classId=${encodeURIComponent(classId)}`);
 
 /**
+ * One student's guardians for the picker when no class is in hand (Students page).
+ * GET /messaging/conversations/targets?studentId=
+ */
+export const getStaffTargetsForStudent = async (studentId: string): Promise<StaffTargetsResponse> =>
+  apiClient<StaffTargetsResponse>(`${base}/targets?studentId=${encodeURIComponent(studentId)}`);
+
+/**
+ * Re-send the invite email to a guardian who has not set a password yet.
+ * POST /messaging/conversations/invites/:linkId/resend
+ */
+export const resendInvite = async (linkId: string): Promise<ResendInviteResponse> =>
+  apiClient<ResendInviteResponse>(`${base}/invites/${encodeURIComponent(linkId)}/resend`, { method: 'POST' });
+
+/**
  * Existing threads for chips on the gradebook / grades page.
  * GET /messaging/conversations/stubs?classId=|studentId=
  */
@@ -88,10 +108,15 @@ export const getThreadStubs = async (scope: { classId?: string; studentId?: stri
 export const createConversation = async (input: NewConversationInput): Promise<ThreadResponse> => {
   const form = new FormData();
   form.set('studentId', input.studentId);
-  form.set('classId', input.classId);
-  form.set('assessmentId', input.assessmentId);
+  if ('assessmentId' in input) {
+    form.set('classId', input.classId);
+    form.set('assessmentId', input.assessmentId);
+  } else {
+    form.set('teacherId', input.teacherId);
+    form.set('title', input.title);
+  }
   form.set('body', input.body);
-  return apiUpload<ThreadResponse>(base, withFiles(form, input.files));
+  return apiUpload<ThreadResponse>(base, withFlags(withFiles(form, input.files), input));
 };
 
 /**
@@ -108,7 +133,7 @@ export const getConversation = async (id: string): Promise<ThreadResponse> =>
 export const postMessage = async (id: string, input: NewMessageInput): Promise<ThreadResponse> => {
   const form = new FormData();
   form.set('body', input.body);
-  return apiUpload<ThreadResponse>(`${thread(id)}/messages`, withFiles(form, input.files));
+  return apiUpload<ThreadResponse>(`${thread(id)}/messages`, withFlags(withFiles(form, input.files), input));
 };
 
 /**

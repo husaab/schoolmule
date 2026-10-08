@@ -42,10 +42,11 @@ const Row: React.FC<{
   const isParent = role === 'PARENT'
   // Parents read the thread as "about my child with this teacher";
   // staff read it as "this student, these guardians".
+  const general = item.kind === 'general'
   const headline = isParent ? item.title : `${item.studentName} · ${item.title}`
   const meta = isParent
-    ? [item.studentName.split(' ')[0], item.classSubject, item.leadTeacherName].filter(Boolean).join(' · ')
-    : [item.classSubject, item.lastMessage?.senderRole === 'PARENT' ? item.lastMessage.senderName : null].filter(Boolean).join(' · ')
+    ? [item.studentName.split(' ')[0], general ? item.leadTeacherName : item.classSubject, general ? item.classSubject : item.leadTeacherName].filter(Boolean).join(' · ')
+    : [general ? 'General' : item.classSubject, item.lastMessage?.senderRole === 'PARENT' ? item.lastMessage.senderName : null].filter(Boolean).join(' · ')
   const snippet = item.lastMessage
     ? item.lastMessage.deleted
       ? 'Message removed'

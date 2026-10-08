@@ -23,6 +23,9 @@ const ResetPasswordPage: FC = () => {
   const token = searchParams.get('token') || ''
   // Admin-created accounts land here from their invite email to set a first password.
   const isInvite = searchParams.get('invite') === '1'
+  // Guardian invites from a teacher's message land in that thread after login.
+  const nextParam = searchParams.get('next') || ''
+  const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : ''
   const notify = useNotificationStore(s => s.showNotification)
 
   const [newPassword, setNewPassword] = useState('')
@@ -66,7 +69,7 @@ const ResetPasswordPage: FC = () => {
       const response = await resetPassword(token, newPassword)
       if (response.success) {
         notify(isInvite ? 'Password set. You can now log in.' : 'Password reset successfully. You can now log in.', 'success')
-        router.push('/login')
+        router.push(next ? `/login?next=${encodeURIComponent(next)}` : '/login')
       } else {
         notify(response.message || 'Failed to reset password.', 'error')
       }

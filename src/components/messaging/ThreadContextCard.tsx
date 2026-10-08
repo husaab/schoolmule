@@ -29,7 +29,7 @@ const formatDate = (iso: string | null) => {
 const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, classId, classSubject, tone, role }) => {
   const t = toneClasses(tone)
   const isParent = role === 'PARENT'
-  const href = isParent ? '/parent/grades' : `/gradebook/${encodeURIComponent(classId)}`
+  const href = isParent ? '/parent/grades' : classId ? `/gradebook/${encodeURIComponent(classId)}` : '/gradebook'
   const meta = context
     ? [
         classSubject,

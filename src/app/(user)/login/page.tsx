@@ -150,7 +150,11 @@ const LoginForm: FC = () => {
           if (!user.isVerifiedSchool) {
             router.replace('/school-approval')
           } else {
-            if (user.role == 'PARENT') {
+            const nextParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') || '' : ''
+            const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : ''
+            if (next) {
+              router.replace(next)
+            } else if (user.role == 'PARENT') {
               router.replace('/parent/dashboard')
             } else {
               router.replace('/dashboard')
