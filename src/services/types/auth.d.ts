@@ -32,7 +32,6 @@ export interface RegisterResponse {
     role: string;
     isVerified: boolean;
     isVerifiedSchool: boolean;
-    emailToken: string;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;

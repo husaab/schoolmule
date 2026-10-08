@@ -8,14 +8,13 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { RegisterRequest, RegisterResponse } from '@/services/types/auth'
 import { register as registerUser, setToken } from '@/services/authService'
 import type { SignupSchool } from '@/lib/schoolUtils'
+import type { SignupRole } from '@/services/types/adminApproval'
 import {
   EyeIcon,
   EyeSlashIcon,
   EnvelopeIcon,
   LockClosedIcon,
-  UserIcon,
-  AcademicCapIcon,
-  UserGroupIcon
+  UserIcon
 } from '@heroicons/react/24/outline'
 
 interface SignUpFormInputs {
@@ -23,28 +22,24 @@ interface SignUpFormInputs {
   email: string
   password: string
   confirmPassword: string
-  role: string
   website?: string // Honeypot field
 }
 
 interface SignupFormProps {
   /** The school this signup is scoped to (chosen on the directory). */
   school: SignupSchool
+  /** Fixed by the page the form sits on (/parent or /teacher). */
+  role: SignupRole
 }
-
-const ROLES = [
-  { value: 'TEACHER', label: 'Teacher', icon: AcademicCapIcon, hint: 'Manage classes & grades' },
-  { value: 'PARENT', label: 'Parent', icon: UserGroupIcon, hint: "Follow your child's progress" }
-] as const
 
 const inputClass = 'w-full pl-12 pr-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400'
 
 /**
- * Account form scoped to a single school. The school comes from the route, so
- * this form only collects role + identity. Submits through the existing
- * registerUser flow and preserves the redirect to /verify-email.
+ * Account form scoped to a single school and role. Both come from the route
+ * (/signup/[school]/parent or /teacher), so this form only collects identity.
+ * Submits through the existing registerUser flow and redirects to /verify-email.
  */
-const SignupForm: FC<SignupFormProps> = ({ school }) => {
+const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
   const router = useRouter()
   const showNotification = useNotificationStore(state => state.showNotification)
   const setUser = useUserStore.getState().setUser
@@ -54,13 +49,9 @@ const SignupForm: FC<SignupFormProps> = ({ school }) => {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors, isSubmitting }
-  } = useForm<SignUpFormInputs>({ defaultValues: { role: 'TEACHER' } })
-
-  // Register role so RHF validates it; the value is driven by the role cards below.
-  register('role', { required: 'Please select your role' })
-  const selectedRole = watch('role')
+  } = useForm<SignUpFormInputs>()
+  const isParent = role === 'PARENT'
 
   const onSubmit: SubmitHandler<SignUpFormInputs> = async data => {
     // Honeypot check - bots fill this hidden field, humans don't
@@ -73,7 +64,7 @@ const SignupForm: FC<SignupFormProps> = ({ school }) => {
       username: data.fullName,
       email: data.email,
       password: data.password,
-      role: data.role,
+      role,
       school: school.schoolCode
     }
     try {
@@ -109,34 +100,6 @@ const SignupForm: FC<SignupFormProps> = ({ school }) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Role selector */}
-      <div>
-        <span className="block text-sm font-semibold text-slate-700 mb-2">I am a&hellip;</span>
-        <div className="grid grid-cols-2 gap-3">
-          {ROLES.map(({ value, label, icon: Icon, hint }) => {
-            const active = selectedRole === value
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setValue('role', value, { shouldValidate: true })}
-                aria-pressed={active}
-                className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                  active
-                    ? 'border-cyan-500 bg-cyan-50 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <Icon className={`w-6 h-6 ${active ? 'text-cyan-600' : 'text-slate-400'}`} />
-                <span className="font-semibold text-slate-800">{label}</span>
-                <span className="text-xs text-slate-500">{hint}</span>
-              </button>
-            )
-          })}
-        </div>
-        {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>}
-      </div>
-
       {/* Full Name */}
       <div>
         <label htmlFor="fullName" className="block text-sm font-semibold text-slate-700 mb-2">
@@ -169,12 +132,17 @@ const SignupForm: FC<SignupFormProps> = ({ school }) => {
           <input
             id="email"
             type="email"
-            placeholder="you@school.edu"
+            placeholder={isParent ? 'you@example.com' : 'you@school.edu'}
             {...register('email', { required: 'Email is required' })}
             className={inputClass}
           />
         </div>
         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+        {isParent && !errors.email && (
+          <p className="text-xs text-slate-500 mt-1.5">
+            Use the email you gave the school at registration so we can match you to your children.
+          </p>
+        )}
       </div>
 
       {/* Password Row */}

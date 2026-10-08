@@ -1,0 +1,50 @@
+// src/services/types/adminApproval.d.ts
+
+import { SchoolUser } from './adminUser';
+
+/** Roles a public signup can be approved as. Admins are made from the Users page. */
+export type SignupRole = 'TEACHER' | 'PARENT';
+
+/** A signup waiting in the queue, or one that was declined (isArchived + declinedAt). */
+export type ApprovalUser = SchoolUser;
+
+export interface ChildCandidate {
+  studentId: string;
+  name: string;
+  grade: string;
+}
+
+/** A student whose family email on file matches the signup's email. */
+export interface SuggestedChild extends ChildCandidate {
+  relation: string;
+}
+
+export interface ChildCandidatesResponse {
+  /** Every active-year student, for the search box. */
+  students: ChildCandidate[];
+  suggested: SuggestedChild[];
+}
+
+export interface ChildLink {
+  studentId: string;
+  relation: string;
+}
+
+export interface ApproveSignupRequest {
+  /** Omit to keep the role they picked at signup. */
+  role?: SignupRole;
+  /** Parents only. */
+  children?: ChildLink[];
+  sendEmail?: boolean;
+}
+
+export interface ApproveSignupResult {
+  user: ApprovalUser;
+  linkedCount: number;
+  emailSent: boolean;
+}
+
+export interface DeclineSignupResult {
+  user: ApprovalUser;
+  emailSent: boolean;
+}
