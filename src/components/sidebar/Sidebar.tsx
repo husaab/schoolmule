@@ -91,7 +91,7 @@ const Sidebar = () => {
 
   const newSubmissionCount = useRegistrationStore((s) => s.newSubmissionCount);
   const setNewSubmissionCount = useRegistrationStore((s) => s.setNewSubmissionCount);
-  const unreadConversations = useMessagingStore((s) => s.summary.unreadConversations);
+  const unreadTotal = useMessagingStore((s) => s.summary.unreadConversations + s.summary.unreadAnnouncements);
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -277,7 +277,7 @@ const Sidebar = () => {
                 ? pathname === link.href || pathname.startsWith(link.href + '/')
                 : pathname === link.href
             }
-            badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadConversations : undefined}
+            badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
           />
         ))}
 
