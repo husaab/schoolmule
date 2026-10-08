@@ -23,7 +23,19 @@ interface NewConversationModalProps {
   /** Staff: the class the picker is scoped to (gradebook). */
   classId?: string
   /** Pre-select (grades row, gradebook modal, Students page). */
-  preset?: { studentId?: string; assessmentId?: string; mode?: Mode }
+  preset?: {
+    studentId?: string
+    assessmentId?: string
+    mode?: Mode
+    /** "Ask about this": lock the recipient to the announcement's author and prefill the subject. */
+    teacherId?: string
+    title?: string
+    announcementId?: string
+    announcementScopeLabel?: string
+    authorName?: string
+    /** Children the announcement reached; the child picker is limited to these. */
+    childIds?: string[]
+  }
   onCreated: (thread: Thread) => void
 }
 
@@ -71,17 +83,20 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   // Reset on open, honouring presets.
   useEffect(() => {
     if (!isOpen) return
-    const defaultChild = preset?.studentId ?? (children.find((c) => c.studentId === selectedChildId)?.studentId ?? children[0]?.studentId ?? '')
+    const childIds = preset?.childIds
+    const allowed = childIds?.length ? children.filter((c) => childIds.includes(c.studentId)) : children
+    const defaultChild =
+      preset?.studentId ?? (allowed.find((c) => c.studentId === selectedChildId)?.studentId ?? allowed[0]?.studentId ?? '')
     setStudentId(isParent ? defaultChild : preset?.studentId ?? '')
     setPickedClassId(classId ?? '')
     setStaffClassId(classId ?? '')
     setAssessmentId(preset?.assessmentId ?? '')
-    setMode(preset?.mode ?? (preset?.assessmentId ? 'assessment' : classId ? 'assessment' : 'general'))
-    setTeacherId('')
-    setTitle('')
+    setMode(preset?.announcementId ? 'general' : preset?.mode ?? (preset?.assessmentId ? 'assessment' : classId ? 'assessment' : 'general'))
+    setTeacherId(preset?.teacherId ?? '')
+    setTitle(preset?.title ?? '')
     setInvite(true)
     setIncludePreview(true)
-  }, [isOpen, preset?.studentId, preset?.assessmentId, preset?.mode, classId, isParent, children, selectedChildId])
+  }, [isOpen, preset?.studentId, preset?.assessmentId, preset?.mode, preset?.teacherId, preset?.title, preset?.announcementId, preset?.childIds, classId, isParent, children, selectedChildId])
 
   // Parent: classes, assessments and teachers for the chosen child.
   useEffect(() => {
@@ -98,14 +113,14 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
           const withAssessment = data.classes.find((c) => c.assessments.some((a) => a.assessmentId === assessmentId))
           return withAssessment?.classId ?? data.classes[0]?.classId ?? ''
         })
-        setTeacherId((cur) => (data.teachers.some((x) => x.userId === cur) ? cur : data.teachers[0]?.userId ?? ''))
+        setTeacherId((cur) => (data.teachers.some((x) => x.userId === cur) || (cur && cur === preset?.teacherId) ? cur : data.teachers[0]?.userId ?? ''))
       })
       .catch(() => showNotification('Could not load teachers', 'error'))
       .finally(() => !cancelled && setLoading(false))
     return () => {
       cancelled = true
     }
-    // assessmentId is read for a one-time reconciliation only.
+    // assessmentId / preset.teacherId are read for a one-time reconciliation only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isParent, studentId, showNotification])
 
@@ -140,7 +155,10 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const pending = guardians.filter((g) => g.invitePending)
   const withAccount = guardians.filter((g) => g.hasAccount)
   const existingId = isParent && mode === 'assessment' ? parentClass?.assessments.find((a) => a.assessmentId === assessmentId)?.conversationId ?? null : null
-  const teacher = parentTargets?.teachers.find((x) => x.userId === teacherId) ?? null
+  const fromAnnouncement = Boolean(preset?.announcementId)
+  const teacher =
+    parentTargets?.teachers.find((x) => x.userId === teacherId) ??
+    (fromAnnouncement && teacherId ? { userId: teacherId, name: preset?.authorName ?? 'the author', via: 'Announcement' } : null)
 
   const ready =
     Boolean(studentId) &&
@@ -174,6 +192,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
             teacherId: isParent ? teacherId : (me?.id as string),
             title: title.trim(),
             ...(!isParent && staffClassId ? { classId: staffClassId } : {}),
+            ...(isParent && preset?.announcementId ? { announcementId: preset.announcementId } : {}),
             body,
             files,
             ...flags,
@@ -213,13 +232,21 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
         tone={isParent ? 'warning' : 'brand'}
       />
       <ModalBody>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">What is this about?</p>
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {choice('assessment', 'A specific assessment', 'The score sits beside the chat.', ClipboardDocumentCheckIcon)}
-            {choice('general', 'General', 'Attendance, homework, a concern, a thank-you.', ChatBubbleLeftRightIcon)}
+        {fromAnnouncement ? (
+          <p className={`rounded-xl px-3 py-2 text-xs ${t.context}`}>
+            About the announcement <strong className="font-medium">{(preset?.title ?? '').replace(/^Re: /, '')}</strong>
+            {preset?.announcementScopeLabel ? ` · ${preset.announcementScopeLabel}` : ''}. This starts a private conversation with{' '}
+            {preset?.authorName ?? 'the author'}.
+          </p>
+        ) : (
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">What is this about?</p>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {choice('assessment', 'A specific assessment', 'The score sits beside the chat.', ClipboardDocumentCheckIcon)}
+              {choice('general', 'General', 'Attendance, homework, a concern, a thank-you.', ChatBubbleLeftRightIcon)}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={isParent ? 'Child' : 'Student'} htmlFor="nc-student" required>
@@ -234,7 +261,10 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
               disabled={!isParent && Boolean(preset?.studentId)}
             >
               <option value="">Select…</option>
-              {(isParent ? children.map((c) => ({ id: c.studentId, name: c.name })) : (staffTargets?.students ?? []).map((s) => ({ id: s.studentId, name: s.name }))).map((s) => (
+              {(isParent
+                ? children.filter((c) => !preset?.childIds?.length || preset.childIds.includes(c.studentId)).map((c) => ({ id: c.studentId, name: c.name }))
+                : (staffTargets?.students ?? []).map((s) => ({ id: s.studentId, name: s.name }))
+              ).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -267,8 +297,17 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
 
           {isParent && mode === 'general' && (
             <Field label="To" htmlFor="nc-teacher" required>
-              <select id="nc-teacher" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className={selectClass} disabled={loading || !parentTargets?.teachers.length}>
+              <select
+                id="nc-teacher"
+                value={teacherId}
+                onChange={(e) => setTeacherId(e.target.value)}
+                className={selectClass}
+                disabled={fromAnnouncement || loading || !parentTargets?.teachers.length}
+              >
                 <option value="">Select…</option>
+                {fromAnnouncement && teacherId && !parentTargets?.teachers.some((x) => x.userId === teacherId) && (
+                  <option value={teacherId}>{preset?.authorName ?? 'Announcement author'} · Announcement</option>
+                )}
                 {(parentTargets?.teachers ?? []).map((x) => (
                   <option key={x.userId} value={x.userId}>
                     {x.name} · {x.via}
