@@ -53,8 +53,10 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
   bump: () => get().load(true),
 
   startPolling: () => {
-    if (typeof window === 'undefined' || timer) return;
+    if (typeof window === 'undefined') return;
+    // Always refresh: a different user may have signed in on this tab.
     void get().load(true);
+    if (timer) return;
     timer = setInterval(() => {
       if (document.hidden) return;
       void get().load(true);
