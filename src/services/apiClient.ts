@@ -31,6 +31,31 @@ export class ApiError extends Error {
 
 export const isApiError = (err: unknown): err is ApiError => err instanceof ApiError;
 
+type ErrorBody = { code?: string | null; message?: string } | null | undefined;
+
+// verifyUserMiddleware's 403 for a JWT minted before the account was approved.
+// The message fallback covers a backend deployed without `code`; remove it
+// once the backend carrying ACCOUNT_NOT_VERIFIED is live.
+const isAccountNotVerified = (status: number, body: ErrorBody): boolean =>
+  status === 403 &&
+  (body?.code === 'ACCOUNT_NOT_VERIFIED' || /not fully verified/i.test(body?.message ?? ''));
+
+/**
+ * Shared by every fetch wrapper: signs the user out when the response says
+ * the session is dead (401) or stale (403 ACCOUNT_NOT_VERIFIED). Both handlers
+ * are idempotent and preview-aware; see services/sessionExpiry.ts.
+ */
+export const handleSessionFailure = async (status: number, body: ErrorBody, sentToken: string | null): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  if (status === 401) {
+    const { handleUnauthorized } = await import('./sessionExpiry');
+    await handleUnauthorized(sentToken);
+  } else if (isAccountNotVerified(status, body)) {
+    const { handleAccountNotVerified } = await import('./sessionExpiry');
+    await handleAccountNotVerified(sentToken);
+  }
+};
+
 interface ApiClientOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: T;
@@ -66,12 +91,7 @@ async function apiClient<T, B = unknown>(
         const errorBody = await response.json();
         console.log(errorBody)
         
-        // Handle 401 Unauthorized - token expired or invalid. The handler is
-        // idempotent and preview-aware; see services/sessionExpiry.ts.
-        if (response.status === 401 && typeof window !== 'undefined') {
-            const { handleUnauthorized } = await import('./sessionExpiry');
-            await handleUnauthorized(token);
-        }
+        await handleSessionFailure(response.status, errorBody, token);
 
         // Writes attempted during an admin "view as" preview. The server
         // refuses them all; say so in one consistent, friendly way.

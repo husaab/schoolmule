@@ -5,7 +5,7 @@
 // headers, same ApiError on a non-2xx response — but the body is a FormData
 // and the browser sets Content-Type (with the boundary) itself.
 
-import { ApiError } from './apiClient';
+import { ApiError, handleSessionFailure } from './apiClient';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
@@ -40,10 +40,7 @@ export async function apiUpload<T>(
     } catch {
       // A proxy or multer failure may answer with no JSON body at all.
     }
-    if (response.status === 401 && typeof window !== 'undefined') {
-      const { handleUnauthorized } = await import('./sessionExpiry');
-      await handleUnauthorized(token);
-    }
+    await handleSessionFailure(response.status, errorBody, token);
     throw new ApiError(errorBody.message || 'Something went wrong', {
       status: response.status,
       code: errorBody.code ?? null,

@@ -1,29 +1,35 @@
 // services/sessionExpiry.ts
-// One place that decides what a 401 means for the signed-in session.
+// One place that decides what a dead session means for the signed-in user.
 //
-// Normally: the token is dead, so sign out and send the user to the front
-// page. During an admin "view as" preview: only the short-lived preview token
-// died, so hand the admin their own session back instead.
+// 401: the token is dead, so sign out and send the user to the front page.
+// 403 ACCOUNT_NOT_VERIFIED while the app believes the user is approved: the
+// token was minted before the school approved the account, and only a fresh
+// sign-in mints one with the new claims, so sign out and say so on the login
+// page. During an admin "view as" preview only the preview token died, so
+// hand the admin their own session back instead.
 //
-// Idempotent on purpose. A page often has several requests in flight when a
-// token expires, and every one of them comes back 401. Only the first may act;
-// the rest see that `auth_token` is no longer the token they were sent with
-// and do nothing, so a later 401 can never wipe a session that was just
-// restored.
+// Idempotent on purpose: several requests are usually in flight when a token
+// dies, and only the first may act. The rest see that `auth_token` is no
+// longer the token they were sent with and do nothing.
 
 import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { useSelectedChildStore } from '@/store/useSelectedChildStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useImpersonationStore } from '@/store/useImpersonationStore';
+import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice';
 
-export const handleUnauthorized = async (sentToken: string | null): Promise<void> => {
-  if (typeof window === 'undefined') return;
-
+// True when the token this request was sent with is still the live session.
+const sessionUnchangedSince = (sentToken: string | null): boolean => {
   const current = localStorage.getItem('auth_token');
-  // The session already changed since this request went out (a preview just
-  // ended, or another 401 already signed us out). Nothing left to do.
-  if (!current || (sentToken && current !== sentToken)) return;
+  return Boolean(current) && (!sentToken || current === sentToken);
+};
+
+// Ends the session (or just the preview, if one is active) and then runs
+// `leave`, which decides where the user lands and what they are told.
+const endSession = async (sentToken: string | null, leave: () => void): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  if (!sessionUnchangedSince(sentToken)) return;
 
   if (useImpersonationStore.getState().session) {
     const { endImpersonation } = await import('./impersonation');
@@ -35,6 +41,23 @@ export const handleUnauthorized = async (sentToken: string | null): Promise<void
   useUserStore.getState().clearUser();
   useSchoolYearStore.getState().clearYears();
   useSelectedChildStore.getState().clearChildren();
-  useNotificationStore.getState().showNotification('Your login session has expired, please login again', 'error');
-  window.location.href = '/';
+  leave();
+};
+
+export const handleUnauthorized = (sentToken: string | null): Promise<void> =>
+  endSession(sentToken, () => {
+    useNotificationStore.getState().showNotification('Your login session has expired, please login again', 'error');
+    window.location.href = '/';
+  });
+
+export const handleAccountNotVerified = async (sentToken: string | null): Promise<void> => {
+  // A user the app still shows as pending (parked on /school-approval) gets
+  // this 403 legitimately; only a mismatch means the token is stale.
+  const { user } = useUserStore.getState();
+  if (!user.isVerifiedEmail || !user.isVerifiedSchool) return;
+
+  await endSession(sentToken, () => {
+    // A hard navigation drops in-memory toasts, so the reason travels in the URL.
+    window.location.href = `/login?${LOGIN_NOTICE_PARAM}=${LOGIN_NOTICE_APPROVED}`;
+  });
 };

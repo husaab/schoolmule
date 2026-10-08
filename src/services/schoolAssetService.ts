@@ -1,6 +1,6 @@
 // File: src/services/schoolAssetService.ts
 
-import apiClient from './apiClient';
+import apiClient, { handleSessionFailure } from './apiClient';
 import type {
   SchoolAssetResponse,
   SchoolAssetsListResponse,
@@ -95,13 +95,7 @@ export const uploadSchoolAsset = async (
 
   if (!response.ok) {
     const errorBody = await response.json();
-    
-    // Handle 401 Unauthorized - token expired or invalid
-    if (response.status === 401 && typeof window !== 'undefined') {
-      const { handleUnauthorized } = await import('./sessionExpiry');
-      await handleUnauthorized(token);
-    }
-    
+    await handleSessionFailure(response.status, errorBody, token);
     throw new Error(errorBody.message || 'Upload failed');
   }
 

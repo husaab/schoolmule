@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, FC } from 'react'
+import React, { useState, useEffect, Suspense, FC } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import Link from 'next/link'
 import Image from 'next/image'
 import { login, setToken } from '@/services/authService'
-import { useRouter } from 'next/navigation'
+import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
@@ -17,12 +18,49 @@ import {
   AcademicCapIcon,
   ChartBarIcon,
   UserGroupIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline'
 
 interface LoginFormInputs {
   email: string
   password: string
+}
+
+// Why the user was sent here, keyed by the ?notice= value sessionExpiry sets.
+// It lives in the URL because the forced sign-out is a hard navigation, which
+// drops the in-memory toast store.
+const NOTICES: Record<string, string> = {
+  [LOGIN_NOTICE_APPROVED]: 'Your account has been approved. Please sign in again to continue.'
+}
+
+// Needs a Suspense boundary (useSearchParams). The message is captured once
+// so it survives stripping the param from the URL.
+const LoginNotice: FC = () => {
+  const searchParams = useSearchParams()
+  const [message] = useState<string | null>(
+    () => NOTICES[searchParams.get(LOGIN_NOTICE_PARAM) ?? ''] ?? null
+  )
+
+  useEffect(() => {
+    if (!message) return
+    // Strip the param so a refresh or a bookmark doesn't repeat the notice.
+    const params = new URLSearchParams(window.location.search)
+    params.delete(LOGIN_NOTICE_PARAM)
+    const query = params.toString()
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+  }, [message])
+
+  if (!message) return null
+  return (
+    <div
+      role="status"
+      className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+    >
+      <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+      <p>{message}</p>
+    </div>
+  )
 }
 
 const features = [
@@ -93,6 +131,9 @@ const LoginPage: FC = () => {
                 </p>
               </div>
 
+              <Suspense fallback={null}>
+                <LoginNotice />
+              </Suspense>
               <LoginForm />
 
               <p className="text-center mt-8 text-sm text-slate-600">

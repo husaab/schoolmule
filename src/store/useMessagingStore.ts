@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getUnreadSummary } from '@/services/messagingService';
+import { isApiError } from '@/services/apiClient';
 import type { UnreadSummary } from '@/services/types/messaging';
 
 // Unread message counts, shared by the sidebar pill, the navbar bell and the
@@ -40,8 +41,11 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       .then((res) => {
         set({ summary: res.status === 'success' && res.data ? res.data : EMPTY, loaded: true });
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         // A badge is not worth an error toast; keep the last known count.
+        // A 403 means this session may never read messages (stale token or
+        // wrong role), so stop polling.
+        if (isApiError(err) && err.status === 403) get().stopPolling();
         set({ loaded: true });
       })
       .finally(() => set({ inFlight: null }));
