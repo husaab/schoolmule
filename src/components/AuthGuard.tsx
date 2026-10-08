@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
-import { validateSession, getToken } from '@/services/authService'
+import { validateSession, getToken, setToken } from '@/services/authService'
 import { getUnreadPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
@@ -75,6 +75,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
           if (response.success && response.data) {
             // Update user store with data from token validation
             const userData = response.data
+            // The server reissues the token when its claims fell behind the
+            // database (approved after sign-in); keep it or the old one 403s.
+            if (userData.token) setToken(userData.token)
             useUserStore.getState().setUser({
               id: userData.userId,
               username: userData.username,

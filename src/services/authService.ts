@@ -83,6 +83,8 @@ export interface SessionValidationResponse {
     schoolYears?: SchoolYear[];
     /** Set when the token is an admin "view as" preview token. */
     impersonator?: { userId: string; username: string; fullName: string } | null;
+    /** A fresh token, present only when the sent token's claims were stale (e.g. approved after sign-in). */
+    token?: string;
   };
 }
 
