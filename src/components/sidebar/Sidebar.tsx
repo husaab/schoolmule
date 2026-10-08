@@ -90,7 +90,11 @@ const Sidebar = () => {
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
-  const isAdminPanelPath = pathname.startsWith('/admin-panel') && !isRegistrationPath;
+  const isSchoolSchedulePath = pathname === '/school-schedule';
+  const isAdmin = user?.role === 'ADMIN';
+  // Admins reach School Schedule through the Admin Panel dropdown; other staff get a top-level link.
+  const isAdminPanelPath =
+    (pathname.startsWith('/admin-panel') && !isRegistrationPath) || (isAdmin && isSchoolSchedulePath);
   const isFinancePath = pathname.startsWith('/finance');
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
@@ -178,12 +182,19 @@ const Sidebar = () => {
           <ChevronRightIcon className="w-4 h-4 text-slate-400" />
         )}
       </button>
-      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[64rem] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="ml-4 mt-1 pl-4 border-l-2 border-slate-100 space-y-1">
           {children}
         </div>
       </div>
     </div>
+  );
+
+  // Small label that splits a long dropdown into scannable groups
+  const SubNavGroup = ({ label }: { label: string }) => (
+    <p className="px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-slate-400 select-none">
+      {label}
+    </p>
   );
 
   const SubNavItem = ({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; exact?: boolean }) => {
@@ -311,7 +322,7 @@ const Sidebar = () => {
             </div>
 
             {/* Attendance log: admins manage everyone's, other staff see their own */}
-            {user?.role === 'ADMIN' ? (
+            {isAdmin ? (
               <NavItem
                 href="/staff-attendance"
                 label="Staff Attendance"
@@ -327,18 +338,19 @@ const Sidebar = () => {
               />
             )}
 
-            {/* School Schedule — the published timetable, readable by all staff */}
-            <NavItem
-              href="/school-schedule"
-              label="School Schedule"
-              icon={CalendarDaysIcon}
-              isActive={pathname === '/school-schedule'}
-            />
+            {/* School Schedule — the published timetable. Non-admin staff get it here; admins find it under Admin Panel. */}
+            {!isAdmin && (
+              <NavItem
+                href="/school-schedule"
+                label="School Schedule"
+                icon={CalendarDaysIcon}
+                isActive={isSchoolSchedulePath}
+              />
+            )}
 
-            {/* Admin Panel */}
-            {user?.role === 'ADMIN' && (
+            {/* Admin tools: Forms and Finance stay on the side; everything else lives in the Admin Panel dropdown */}
+            {isAdmin && (
               <>
-                {/* Forms */}
                 <DropdownSection
                   label="Forms"
                   icon={ClipboardDocumentListIcon}
@@ -355,18 +367,6 @@ const Sidebar = () => {
                   </div>
                 </DropdownSection>
 
-                <NavItem
-                  href="/admin-panel/schedule-planner"
-                  label="Schedule Planner"
-                  icon={TableCellsIcon}
-                  isActive={pathname.startsWith('/admin-panel/schedule-planner')}
-                />
-                <NavItem
-                  href="/admin-panel/agendas"
-                  label="Agenda Editor"
-                  icon={BookOpenIcon}
-                  isActive={pathname.startsWith('/admin-panel/agendas')}
-                />
                 <DropdownSection
                   label="Finance"
                   icon={BanknotesIcon}
@@ -376,6 +376,7 @@ const Sidebar = () => {
                 >
                   <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
                 </DropdownSection>
+
                 <DropdownSection
                   label="Admin Panel"
                   icon={ShieldCheckIcon}
@@ -384,14 +385,21 @@ const Sidebar = () => {
                   isActive={isAdminPanelPath}
                 >
                   <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
+
+                  <SubNavGroup label="People" />
                   <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
-                  <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
-                  <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
-                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
-                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
                   <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
                   <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
+
+                  <SubNavGroup label="School setup" />
+                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
+                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
                   <SubNavItem href="/admin-panel/school-assets" label="School Assets" icon={PhotoIcon} />
+
+                  <SubNavGroup label="Planning" />
+                  <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
+                  <SubNavItem href="/school-schedule" label="School Schedule" icon={CalendarDaysIcon} exact />
+                  <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
                 </DropdownSection>
               </>
             )}

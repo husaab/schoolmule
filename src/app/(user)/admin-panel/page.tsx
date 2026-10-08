@@ -79,6 +79,15 @@ const adminLinks = [
     borderColor: 'border-emerald-100',
   },
   {
+    href: '/school-schedule',
+    label: 'School Schedule',
+    description: 'The published whole-school timetable, filterable by day, teacher, class or course.',
+    icon: CalendarDaysIcon,
+    color: 'bg-sky-500',
+    bgColor: 'from-sky-50 to-cyan-50',
+    borderColor: 'border-sky-100',
+  },
+  {
     href: '/admin-panel/agendas',
     label: 'Agenda Editor',
     description: 'Compose and print the yearly student agenda book.',
