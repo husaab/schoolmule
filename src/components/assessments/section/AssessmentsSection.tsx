@@ -15,6 +15,7 @@ import AssessmentInlineForm from './AssessmentInlineForm'
 import AssessmentDeleteInlineConfirm from './AssessmentDeleteInlineConfirm'
 import TotalPointsBanner from './TotalPointsBanner'
 import type { AssessmentMutation } from './useAssessmentForm'
+import { mergeAssessmentMutation } from '@/lib/assessmentMutation'
 
 interface AssessmentsSectionProps {
   classId: string
@@ -68,20 +69,7 @@ const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMuta
 
   // Single reconciliation point for every mutation (add/edit/delete)
   const applyMutation = ({ updated, deletedIds, needsRefetch }: AssessmentMutation) => {
-    setAssessments((prev) => {
-      const filtered = prev.filter(
-        (a) =>
-          !deletedIds.includes(a.assessmentId) &&
-          !(a.parentAssessmentId && deletedIds.includes(a.parentAssessmentId))
-      )
-      const next = [...filtered]
-      updated.forEach((u) => {
-        const i = next.findIndex((a) => a.assessmentId === u.assessmentId)
-        if (i >= 0) next[i] = u
-        else next.push(u)
-      })
-      return next
-    })
+    setAssessments((prev) => mergeAssessmentMutation(prev, { updated, deletedIds }))
     setRowMode({ kind: 'view' })
     setComposerOpen(false)
     // Safety net after multi-request parent edits — soft re-sync, errors swallowed

@@ -1,40 +1,19 @@
 'use client'
 
-import React, { ChangeEvent, useState } from 'react'
-import Modal from '../../shared/modal'
+import React, { ChangeEvent, useMemo, useState } from 'react'
+import Modal from '@/components/shared/modal'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
-import { createExclusion, deleteExclusion } from '@/services/excludedAssessmentService'
-import { useNotificationStore } from '@/store/useNotificationStore'
 import type { AssessmentPublicationState } from '@/services/types/assessmentPublication'
-import {
-  Button,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  inputClass,
-} from '../../shared/modalKit'
-import {
-  ArrowPathIcon,
-  CheckIcon,
-  ExclamationTriangleIcon,
-  Squares2X2Icon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline'
+import { Button, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
+import { CheckIcon, ExclamationTriangleIcon, Squares2X2Icon } from '@heroicons/react/24/outline'
+import PublishStateBadge from '@/components/assessments/publish/PublishStateBadge'
+import { summarizePublication } from '@/lib/publicationSummary'
+import ScoreCell from '@/components/assessments/scores/ScoreCell'
+import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
+import { useExclusionToggle } from '@/components/assessments/scores/useExclusionToggle'
+import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 
-interface ScoreRow {
-  student_id: string
-  student_name: string
-  assessment_id: string
-  assessment_name: string
-  weight_percent: number
-  weight_points: number
-  max_score: number
-  is_parent: boolean
-  parent_assessment_id: string | null
-  score: number | null
-  is_excluded: boolean
-}
 
 interface ChildAssessmentsModalProps {
   isOpen: boolean
@@ -67,14 +46,11 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   publications,
   onPublish,
 }) => {
-  const showNotification = useNotificationStore((s) => s.showNotification)
-
   // Individual items are publishable on their own, so they get the same
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
-  // Which student|assessment cell is mid exclusion toggle, so the cell can show
-  // progress instead of looking inert while the round trip runs.
-  const [togglingKey, setTogglingKey] = useState<string | null>(null)
+  const { togglingKey, toggle } = useExclusionToggle({ classId, onRefreshExclusions })
+  const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
 
   const toggleChildSelected = (assessmentId: string) => {
     setSelectedChildIds((prev) => {
@@ -86,14 +62,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }
 
   const selectedChildren = childAssessments.filter((c) => selectedChildIds.has(c.assessmentId))
-  // Build lookups for existing scores and exclusions
-  const existingScoreMap: Record<string, number | null> = {}
-  const exclusionMap: Record<string, boolean> = {}
-  scoresMatrix.forEach((row) => {
-    const key = `${row.student_id}|${row.assessment_id}`
-    existingScoreMap[key] = row.score
-    exclusionMap[key] = row.is_excluded
-  })
+  const { existing: existingScoreMap, excluded: exclusionMap } = useMemo(
+    () => buildScoreLookups(scoresMatrix),
+    [scoresMatrix]
+  )
 
   // Calculate parent score for a student based on child scores (excluding excluded children)
   const calculateParentScore = (studentId: string) => {
@@ -150,87 +122,9 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }, 0)
   const parentPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
   const pointsWarning = Math.abs(totalChildPoints - parentPoints) > 0.01
-  const parentPublished = publications[parentAssessment.assessmentId]?.isPublished
-
-  const handleToggleExclusion = async (
-    key: string,
-    studentId: string,
-    assessmentId: string,
-    isExcluded: boolean
-  ) => {
-    setTogglingKey(key)
-    try {
-      if (isExcluded) {
-        // Include the assessment
-        await deleteExclusion(studentId, classId, assessmentId)
-        showNotification('Assessment included', 'success')
-      } else {
-        // Exclude the assessment
-        await createExclusion({
-          studentId: studentId,
-          classId: classId,
-          assessmentId: assessmentId
-        })
-        showNotification('Assessment excluded', 'success')
-      }
-      // Refresh exclusions and scores
-      await onRefreshExclusions()
-    } catch (error) {
-      console.error('Error toggling exclusion:', error)
-      showNotification('Failed to update exclusion', 'error')
-    } finally {
-      setTogglingKey(null)
-    }
-  }
-
-  const handleArrowNav = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    rowIndex: number,
-    colIndex: number
-  ) => {
-    const maxRow = students.length - 1
-    const maxCol = childAssessments.length - 1
-
-    let nextRow = rowIndex
-    let nextCol = colIndex
-
-    switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault()
-        nextRow = Math.max(0, rowIndex - 1)
-        break
-      case 'ArrowDown':
-        e.preventDefault()
-        nextRow = Math.min(maxRow, rowIndex + 1)
-        break
-      case 'ArrowLeft':
-        e.preventDefault()
-        nextCol = Math.max(0, colIndex - 1)
-        break
-      case 'ArrowRight':
-        e.preventDefault()
-        nextCol = Math.min(maxCol, colIndex + 1)
-        break
-      case 'Enter':
-        e.preventDefault()
-        nextRow = Math.min(maxRow, rowIndex + 1)
-        break
-      default:
-        return // let other keys behave normally
-    }
-
-    // If nothing changed, don't do anything
-    if (nextRow === rowIndex && nextCol === colIndex) return
-
-    const nextInput = document.getElementById(
-      `child-grade-${nextRow}-${nextCol}`
-    ) as HTMLInputElement | null
-
-    if (nextInput) {
-      nextInput.focus()
-      nextInput.select() // optional: highlight value
-    }
-  }
+  // Judged by the children: the category's own flag stays stale after a
+  // partial publish, and parents see whichever items are live.
+  const summary = summarizePublication(parentAssessment, childAssessments, publications)
 
   return (
     // Wider than the rest of the set on purpose: this one is a grade grid, and
@@ -244,16 +138,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
       <ModalBody className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          {parentPublished ? (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2 py-1 text-sm font-medium text-emerald-700">
-              <CheckIcon className="h-4 w-4" />
-              Live to parents
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-sm text-slate-500 ring-1 ring-slate-200">
-              Not published to parents yet
-            </span>
-          )}
+          <PublishStateBadge summary={summary} variant="chip" />
         </div>
 
         {pointsWarning && (
@@ -365,7 +250,6 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
                           const isExcluded = exclusionMap[key] || false
-                          const isToggling = togglingKey === key
                           const currentValue = editedScores[key] !== undefined
                             ? editedScores[key]
                             : existingScoreMap[key] ?? ''
@@ -373,70 +257,19 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           const maxScore = Number(child.maxScore || 100)
 
                           return (
-                            <td
+                            <ScoreCell
                               key={child.assessmentId}
-                              className="group relative px-2 py-1.5 text-center"
-                            >
-                              {/* Hover-triggered exclusion toggle button */}
-                              <button
-                                onClick={() =>
-                                  handleToggleExclusion(key, student.studentId, child.assessmentId, isExcluded)
-                                }
-                                disabled={togglingKey !== null}
-                                className={`absolute right-1 top-1 z-10 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed ${
-                                  isToggling ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                } ${
-                                  isExcluded
-                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                    : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-                                }`}
-                                title={
-                                  isExcluded
-                                    ? 'Count this assessment for this student again'
-                                    : 'Drop this assessment from this student’s grade'
-                                }
-                              >
-                                {isToggling ? (
-                                  <ArrowPathIcon className="h-3 w-3 animate-spin" />
-                                ) : isExcluded ? (
-                                  <CheckIcon className="h-3 w-3" />
-                                ) : (
-                                  <XMarkIcon className="h-3 w-3" />
-                                )}
-                              </button>
-
-                              {isExcluded ? (
-                                <div className="flex items-center justify-center">
-                                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-500">
-                                    Excluded
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-1">
-                                  <div className="w-20">
-                                    <input
-                                      id={`child-grade-${rowIndex}-${colIndex}`}
-                                      type="number"
-                                      min="0"
-                                      max={maxScore}
-                                      step="1"
-                                      className={`${inputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
-                                      value={currentValue}
-                                      onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
-                                      onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
-                                      onKeyPress={(e) => {
-                                        // Only allow numbers, decimal point, and navigation keys
-                                        if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                                          e.preventDefault()
-                                        }
-                                      }}
-                                      placeholder="0"
-                                    />
-                                  </div>
-                                  <span className="text-sm text-slate-400">/{maxScore}</span>
-                                </div>
-                              )}
-                            </td>
+                              inputId={nav.inputId(rowIndex, colIndex)}
+                              label={`${student.name} score for ${child.name}`}
+                              value={currentValue}
+                              maxScore={maxScore}
+                              isExcluded={isExcluded}
+                              isToggling={togglingKey === key}
+                              toggleDisabled={togglingKey !== null}
+                              onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                              onToggleExclusion={() => toggle(student.studentId, child.assessmentId, isExcluded)}
+                              onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
+                            />
                           )
                         })}
 
@@ -466,10 +299,21 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         </Button>
         <Button
           variant="secondary"
-          onClick={() => onPublish([parentAssessment])}
-          title="Publish this category and every graded item inside it"
+          onClick={() =>
+            // Live children ride along so the publish window can unpublish or
+            // resend what parents already see, not just the category flag.
+            onPublish([
+              parentAssessment,
+              ...childAssessments.filter((c) => publications[c.assessmentId]?.isPublished),
+            ])
+          }
+          title={
+            summary.state === 'none'
+              ? 'Publish this category and every graded item inside it'
+              : 'Resend, edit notes, or unpublish what is live'
+          }
         >
-          {parentPublished ? 'Manage category' : 'Publish category'}
+          {summary.state === 'none' ? 'Publish category' : 'Manage category'}
         </Button>
         {selectedChildren.length > 0 && (
           <Button

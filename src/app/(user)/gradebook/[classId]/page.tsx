@@ -27,6 +27,12 @@ import AssessmentsSection from '@/components/assessments/section/AssessmentsSect
 import PublishAssessmentsModal from '@/components/gradebook/publish/PublishAssessmentsModal';
 import { getPublicationState } from '@/services/assessmentPublicationService';
 import type { AssessmentPublicationState } from '@/services/types/assessmentPublication';
+import StandaloneAssessmentModal from '@/components/assessments/standalone/StandaloneAssessmentModal';
+import PublishStateBadge from '@/components/assessments/publish/PublishStateBadge';
+import { summarizePublication } from '@/lib/publicationSummary';
+import { mergeAssessmentMutation } from '@/lib/assessmentMutation';
+import type { AssessmentMutation } from '@/components/assessments/section/useAssessmentForm';
+import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
 import { getThreadStubs } from '@/services/messagingService';
 import type { ThreadStub } from '@/services/types/messaging';
@@ -49,19 +55,6 @@ import {
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 
-interface ScoreRow {
-  student_id: string
-  student_name: string
-  assessment_id: string
-  assessment_name: string
-  weight_percent: number
-  weight_points: number
-  max_score: number
-  is_parent: boolean
-  parent_assessment_id: string | null
-  score: number | null
-  is_excluded: boolean
-}
 
 const GradebookClass = () => {
   const { classId } = useParams() as { classId: string }
@@ -78,6 +71,9 @@ const GradebookClass = () => {
   // Child assessments modal state
   const [selectedParentAssessment, setSelectedParentAssessment] = useState<AssessmentPayload | null>(null);
   const [isChildAssessmentsModalOpen, setIsChildAssessmentsModalOpen] = useState(false);
+  // Standalone column modal. Stored by id so an edit made inside it is
+  // reflected straight away (the object is re-derived from `assessments`).
+  const [standaloneAssessmentId, setStandaloneAssessmentId] = useState<string | null>(null);
 
   // Student assessments modal state
   const [selectedStudent, setSelectedStudent] = useState<{ studentId: string; name: string } | null>(null);
@@ -357,15 +353,12 @@ const GradebookClass = () => {
 
   // Filter assessments to show only parent and standalone (hide children)
   const displayedAssessments = assessments.filter(a => !a.parentAssessmentId)
+  const standaloneAssessment = standaloneAssessmentId
+    ? assessments.find(a => a.assessmentId === standaloneAssessmentId && !a.isParent) ?? null
+    : null
 
   // Build quick lookups
-  const existingScoreMap: Record<string, number | null> = {}
-  const exclusionMap: Record<string, boolean> = {}
-  scoresMatrix.forEach((row) => {
-    const key = `${row.student_id}|${row.assessment_id}`
-    existingScoreMap[key] = row.score
-    exclusionMap[key] = row.is_excluded
-  })
+  const { existing: existingScoreMap, excluded: exclusionMap } = buildScoreLookups(scoresMatrix)
 
   const handleExportExcel = async () => {
     try {
@@ -656,6 +649,40 @@ const GradebookClass = () => {
     setSelectedParentAssessment(parentAssessment)
     setIsChildAssessmentsModalOpen(true)
   }
+
+  // Name / points / max score / date edited from the standalone modal. The
+  // header, the Total column and the score clamp all read `assessments`, so a
+  // merge is enough — no refetch.
+  const applyAssessmentMutation = (result: AssessmentMutation) => {
+    // A lower max score must pull unsaved drafts down with it, or a 95 typed
+    // against /100 would be saved against /50.
+    const loweredMax = new Map<string, number>()
+    result.updated.forEach((u) => {
+      const before = assessments.find((a) => a.assessmentId === u.assessmentId)
+      const max = Number(u.maxScore)
+      if (before && max > 0 && Number(before.maxScore) !== max) loweredMax.set(u.assessmentId, max)
+    })
+    if (loweredMax.size > 0) {
+      setEditedScores((prev) => {
+        const next = { ...prev }
+        Object.entries(prev).forEach(([key, value]) => {
+          const max = loweredMax.get(key.split('|')[1])
+          if (max !== undefined && typeof value === 'number' && value > max) next[key] = max
+        })
+        return next
+      })
+    }
+    setAssessments((prev) => mergeAssessmentMutation(prev, result))
+  }
+
+  // What "manage" means for a column: the item itself, plus (for a category)
+  // whichever children are already live, so the publish window offers
+  // Unpublish / resend for what parents can actually see. The header badge
+  // counts children, so the targets must too.
+  const manageTargets = (a: AssessmentPayload): AssessmentPayload[] =>
+    a.isParent
+      ? [a, ...assessments.filter((c) => c.parentAssessmentId === a.assessmentId && publications[c.assessmentId]?.isPublished)]
+      : [a]
 
   const handleScoreUpdateFromModal = async () => {
     try {
@@ -960,15 +987,15 @@ const GradebookClass = () => {
                       <th
                         key={a.assessmentId}
                         ref={(el) => { thRefs.current[a.assessmentId] = el }}
-                        className={`px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[100px] transition-shadow duration-300 ${
-                          a.isParent ? 'cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors' : ''
+                        className={`px-3 py-3 text-center text-sm font-semibold text-slate-700 min-w-[100px] cursor-pointer transition-colors duration-300 ${
+                          a.isParent ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-slate-100'
                         } ${
                           highlightedAssessmentId === a.assessmentId
                             ? 'ring-2 ring-cyan-400 ring-inset'
                             : ''
                         }`}
-                        onClick={a.isParent ? () => handleParentAssessmentClick(a) : undefined}
-                        title={a.isParent ? 'Click to edit individual assessments' : undefined}
+                        onClick={() => (a.isParent ? handleParentAssessmentClick(a) : setStandaloneAssessmentId(a.assessmentId))}
+                        title={a.isParent ? 'Click to edit individual assessments' : 'Click to see every score, edit details or publish'}
                       >
                         <div className="flex items-center justify-center gap-1.5">
                           {/* stopPropagation: the <th> itself opens the child
@@ -993,22 +1020,14 @@ const GradebookClass = () => {
                         <div className="text-xs font-normal text-slate-400 mt-0.5">
                           {a.weightPoints || a.weightPercent || 0} pts
                         </div>
-                        {publications[a.assessmentId]?.isPublished ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openPublishModal([a]) }}
-                            className="inline-block mt-1 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded cursor-pointer hover:bg-emerald-200"
-                            title="Live to parents — click to manage or unpublish"
-                          >
-                            ● Live
-                          </button>
-                        ) : (
-                          <span
-                            className="inline-block mt-1 px-1.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-400 rounded"
-                            title="Not visible to parents yet"
-                          >
-                            Not sent
-                          </span>
-                        )}
+                        {/* Categories are judged by their children: "2 of 13 sent" rather
+                            than the category's own flag. Clicking a live badge manages
+                            publishing; "Not sent" falls through to the header click. */}
+                        <PublishStateBadge
+                          summary={summarizePublication(a, assessments, publications)}
+                          variant="header"
+                          onClick={() => openPublishModal(manageTargets(a))}
+                        />
                       </th>
                     ))}
                     <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700 min-w-[80px] bg-emerald-50">
@@ -1375,6 +1394,28 @@ const GradebookClass = () => {
             setIsChildAssessmentsModalOpen(false)
             openPublishModal(targets)
           }}
+        />
+      )}
+
+      {standaloneAssessment && (
+        <StandaloneAssessmentModal
+          key={standaloneAssessment.assessmentId}
+          isOpen
+          onClose={() => setStandaloneAssessmentId(null)}
+          assessment={standaloneAssessment}
+          allAssessments={assessments}
+          students={students}
+          scoresMatrix={scoresMatrix}
+          editedScores={editedScores}
+          onScoreChange={handleScoreChange}
+          classId={classId}
+          onRefreshExclusions={refreshExclusionsData}
+          publications={publications}
+          onPublish={(targets) => {
+            setStandaloneAssessmentId(null)
+            openPublishModal(targets)
+          }}
+          onAssessmentMutated={applyAssessmentMutation}
         />
       )}
 
