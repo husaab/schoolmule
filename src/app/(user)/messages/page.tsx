@@ -1,16 +1,18 @@
 'use client'
 
 // Staff inbox: every parent conversation across the classes the caller
-// teaches; admins see every thread in the school here and get the
-// oversight table under Admin Panel as well.
+// teaches, and the announcements those classes receive. Admins see every
+// thread and post in the school here and get the oversight table under
+// Admin Panel as well.
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import StatTile from '@/components/ui/StatTile'
 import MessagingInbox from '@/components/messaging/MessagingInbox'
-import StaffInboxFilters, { EMPTY_STAFF_FILTER, staffFilterPredicate, type StaffInboxFilter } from '@/components/messaging/StaffInboxFilters'
+import MessagesTabs, { useMessagesTab } from '@/components/messaging/MessagesTabs'
+import AnnouncementsPanel from '@/components/announcements/AnnouncementsPanel'
 import { getAllClasses } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -18,15 +20,67 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
 import type { SenderRole } from '@/services/types/messaging'
 
+const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }> = ({ classes, role }) => {
+  const summary = useMessagingStore((s) => s.summary)
+  const [tab, setTab] = useMessagesTab('conversations')
+  const [classId, setClassId] = useState('')
+
+  return (
+    <>
+      <MessagesTabs
+        tone="staff"
+        active={tab}
+        onChange={setTab}
+        counts={{ conversations: summary.unreadConversations, announcements: summary.unreadAnnouncements }}
+      />
+      {tab === 'announcements' ? (
+        <AnnouncementsPanel
+          tone="staff"
+          classes={classes.map((c) => ({ classId: c.classId, subject: c.subject, grade: c.grade == null ? null : String(c.grade) }))}
+          presetClassId={classId || undefined}
+        />
+      ) : (
+        <MessagingInbox
+          tone="staff"
+          role={role}
+          fixedFilters={classId ? { classId } : undefined}
+          newMessageClassId={classId || classes[0]?.classId}
+          emptyHint={
+            classes.length === 0
+              ? 'You are not assigned to any class this year.'
+              : 'Parents start conversations from their grades page; you can start one from a class gradebook or the New message button.'
+          }
+          listHeaderSlot={
+            classes.length > 0 ? (
+              <label className="block">
+                <span className="sr-only">Class</span>
+                <select
+                  value={classId}
+                  onChange={(e) => setClassId(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-200 cursor-pointer"
+                >
+                  <option value="">All classes</option>
+                  {classes.map((c) => (
+                    <option key={c.classId} value={c.classId}>
+                      {c.subject} · Gr {c.grade}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null
+          }
+        />
+      )}
+    </>
+  )
+}
+
 const StaffMessagesPage: React.FC = () => {
   const user = useUserStore((s) => s.user)
   const summary = useMessagingStore((s) => s.summary)
   const loaded = useMessagingStore((s) => s.loaded)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [classes, setClasses] = useState<ClassPayload[]>([])
-  const [filter, setFilter] = useState<StaffInboxFilter>(EMPTY_STAFF_FILTER)
-  const classId = filter.mode === 'class' ? filter.classId : ''
-  const clientFilter = useMemo(() => staffFilterPredicate(filter), [filter])
 
   useEffect(() => {
     if (!user.id || !user.school) return
@@ -59,32 +113,21 @@ const StaffMessagesPage: React.FC = () => {
                 <ChatBubbleLeftRightIcon className="h-7 w-7 text-cyan-600" /> Messages
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Conversations with parents, each tied to the assessment it is about.
+                Conversations with parents and announcements to your classes.
                 {summary.needsReply > 0 && ` ${summary.needsReply} ${summary.needsReply === 1 ? 'needs' : 'need'} a reply.`}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:max-w-2xl">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:max-w-3xl">
             <StatTile label="Needs reply" value={summary.needsReply} tone={summary.needsReply > 0 ? 'warn' : 'neutral'} loading={!loaded} />
             <StatTile label="Unread conversations" value={summary.unreadConversations} loading={!loaded} />
             <StatTile label="Unread messages" value={summary.unreadMessages} loading={!loaded} />
+            <StatTile label="New announcements" value={summary.unreadAnnouncements} loading={!loaded} />
           </div>
 
           <Suspense fallback={<div className="h-[520px] rounded-2xl border border-slate-200/70 bg-white" />}>
-            <MessagingInbox
-              tone="staff"
-              role={role}
-              fixedFilters={classId ? { classId } : undefined}
-              newMessageClassId={classId || classes[0]?.classId}
-              emptyHint={
-                classes.length === 0
-                  ? 'You are not assigned to any class this year.'
-                  : 'Parents start conversations from their grades page; you can start one from a class gradebook or the New message button.'
-              }
-              clientFilter={clientFilter}
-              listHeaderSlot={(items) => <StaffInboxFilters value={filter} onChange={setFilter} classes={classes} items={items} />}
-            />
+            <StaffMessagesBody classes={classes} role={role} />
           </Suspense>
         </div>
       </main>

@@ -133,6 +133,8 @@ export interface UnreadSummary {
   unreadConversations: number;
   unreadMessages: number;
   needsReply: number;
+  /** Visible announcements the caller has not opened (never their own). */
+  unreadAnnouncements: number;
 }
 
 export interface ThreadStub {
@@ -224,6 +226,8 @@ export interface NewGeneralConversationInput extends NewConversationBase {
   title: string;
   /** Optional: the class (subject) the thread is about. */
   classId?: string;
+  /** "Ask about this": the announcement this thread is about (parents only). */
+  announcementId?: string;
 }
 export type NewConversationInput = NewAssessmentConversationInput | NewGeneralConversationInput;
 

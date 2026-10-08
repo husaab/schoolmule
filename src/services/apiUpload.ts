@@ -15,13 +15,17 @@ const getToken = (): string | null => {
   return localStorage.getItem('auth_token');
 };
 
-export async function apiUpload<T>(endpoint: string, form: FormData): Promise<T> {
+export async function apiUpload<T>(
+  endpoint: string,
+  form: FormData,
+  options: { method?: 'POST' | 'PATCH' } = {},
+): Promise<T> {
   const token = getToken();
   const selectedYearId =
     typeof window === 'undefined' ? null : useSchoolYearStore.getState().selectedYearId;
 
   const response = await fetch(`${baseURL}${endpoint}`, {
-    method: 'POST',
+    method: options.method ?? 'POST',
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),
       ...(selectedYearId && { 'X-School-Year': selectedYearId }),

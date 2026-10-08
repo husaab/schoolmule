@@ -10,7 +10,7 @@ import type { UnreadSummary } from '@/services/types/messaging';
 // sends a reply): it re-fetches immediately instead of waiting for the tick.
 
 const POLL_MS = 30_000;
-const EMPTY: UnreadSummary = { unreadConversations: 0, unreadMessages: 0, needsReply: 0 };
+const EMPTY: UnreadSummary = { unreadConversations: 0, unreadMessages: 0, needsReply: 0, unreadAnnouncements: 0 };
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let visibilityBound = false;

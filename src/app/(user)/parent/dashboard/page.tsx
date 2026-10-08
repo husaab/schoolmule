@@ -21,6 +21,7 @@ import ChildOverviewCard from '@/components/parent/ChildOverviewCard'
 import ChildSectionHeader from '@/components/parent/ChildSectionHeader'
 import RecentPublicationsFeed from '@/components/parent/RecentPublicationsFeed'
 import MessagesCard from '@/components/parent/MessagesCard'
+import AnnouncementsCard from '@/components/parent/AnnouncementsCard'
 import AiWeeklySummaryCard from '@/components/parent/AiWeeklySummaryCard'
 import Spinner from '@/components/Spinner'
 
@@ -126,6 +127,8 @@ const ParentDashboardPage: React.FC = () => {
           )}
 
           {/* What's new, across every child */}
+          <AnnouncementsCard />
+
           <RecentPublicationsFeed limit={8} />
 
           {/* Conversations with teachers, unread first */}

@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRightIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { ArrowRightIcon, ChatBubbleLeftRightIcon, MegaphoneIcon } from '@heroicons/react/24/outline'
 import { listConversations } from '@/services/messagingService'
 import type { ConversationItem } from '@/services/types/messaging'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -55,7 +55,7 @@ const InboxBell: React.FC = () => {
 
   const isParent = user.role === 'PARENT'
   const inbox = inboxPathFor(user.role)
-  const count = summary.unreadConversations
+  const count = summary.unreadConversations + summary.unreadAnnouncements
   const label = count > 0 ? `Messages, ${count} unread` : 'Messages'
 
   return (
@@ -89,6 +89,19 @@ const InboxBell: React.FC = () => {
               Open inbox
             </Link>
           </div>
+          {summary.unreadAnnouncements > 0 && (
+            <Link
+              href={`${inbox}?tab=announcements`}
+              onClick={() => setOpen(false)}
+              className={`flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm hover:bg-slate-50 ${isParent ? 'text-amber-800' : 'text-cyan-800'}`}
+            >
+              <MegaphoneIcon className="h-5 w-5 flex-shrink-0" />
+              <span className="flex-1 font-medium">
+                {summary.unreadAnnouncements} new announcement{summary.unreadAnnouncements === 1 ? '' : 's'}
+              </span>
+              <ArrowRightIcon className="h-4 w-4 text-slate-300" />
+            </Link>
+          )}
           {loading && items.length === 0 ? (
             <div className="space-y-2 p-4">
               {[0, 1, 2].map((i) => (
@@ -102,7 +115,7 @@ const InboxBell: React.FC = () => {
               {items.map((c) => (
                 <li key={c.conversationId}>
                   <Link
-                    href={`${inbox}?thread=${encodeURIComponent(c.conversationId)}`}
+                    href={`${inbox}?tab=conversations&thread=${encodeURIComponent(c.conversationId)}`}
                     onClick={() => setOpen(false)}
                     className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50"
                   >

@@ -44,6 +44,7 @@ import AcademicsPanel from '@/components/dashboard/AcademicsPanel'
 import MyClassesPanel from '@/components/dashboard/MyClassesPanel'
 import AttendanceCard from '@/components/dashboard/AttendanceCard'
 import ThisWeekCard from '@/components/dashboard/ThisWeekCard'
+import AnnouncementsRailCard from '@/components/dashboard/AnnouncementsRailCard'
 import { useDashboardTerms } from '@/components/dashboard/useDashboardTerms'
 import {
   AcademicCapIcon,
@@ -304,6 +305,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+              <AnnouncementsRailCard />
               {user.school && <ThisWeekCard school={user.school} isAdmin={isAdmin} />}
               {user.school && (
                 <DailyBriefing
