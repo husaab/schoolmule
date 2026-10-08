@@ -38,6 +38,10 @@ export interface ConversationItem {
   lastMessageAt: string;
   createdAt: string;
   leadTeacherName: string | null;
+  /** The class's term, for the staff inbox's term filter. */
+  termName: string | null;
+  /** Every guardian of the student (accounts and free-text rows), for the parent filter. */
+  guardianNames: string[];
   unreadCount: number;
   /** The last real message came from the other side of the table. */
   needsReply: boolean;

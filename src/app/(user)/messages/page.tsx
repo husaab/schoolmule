@@ -4,12 +4,13 @@
 // teaches; admins see every thread in the school here and get the
 // oversight table under Admin Panel as well.
 
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import StatTile from '@/components/ui/StatTile'
 import MessagingInbox from '@/components/messaging/MessagingInbox'
+import StaffInboxFilters, { EMPTY_STAFF_FILTER, staffFilterPredicate, type StaffInboxFilter } from '@/components/messaging/StaffInboxFilters'
 import { getAllClasses } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -23,7 +24,9 @@ const StaffMessagesPage: React.FC = () => {
   const loaded = useMessagingStore((s) => s.loaded)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [classes, setClasses] = useState<ClassPayload[]>([])
-  const [classId, setClassId] = useState('')
+  const [filter, setFilter] = useState<StaffInboxFilter>(EMPTY_STAFF_FILTER)
+  const classId = filter.mode === 'class' ? filter.classId : ''
+  const clientFilter = useMemo(() => staffFilterPredicate(filter), [filter])
 
   useEffect(() => {
     if (!user.id || !user.school) return
@@ -79,25 +82,8 @@ const StaffMessagesPage: React.FC = () => {
                   ? 'You are not assigned to any class this year.'
                   : 'Parents start conversations from their grades page; you can start one from a class gradebook or the New message button.'
               }
-              listHeaderSlot={
-                classes.length > 0 ? (
-                  <label className="block">
-                    <span className="sr-only">Class</span>
-                    <select
-                      value={classId}
-                      onChange={(e) => setClassId(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-200 cursor-pointer"
-                    >
-                      <option value="">All classes</option>
-                      {classes.map((c) => (
-                        <option key={c.classId} value={c.classId}>
-                          {c.subject} · Gr {c.grade}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null
-              }
+              clientFilter={clientFilter}
+              listHeaderSlot={(items) => <StaffInboxFilters value={filter} onChange={setFilter} classes={classes} items={items} />}
             />
           </Suspense>
         </div>

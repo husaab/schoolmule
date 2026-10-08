@@ -17,8 +17,10 @@ interface MessagingInboxProps {
   role: SenderRole
   /** Filters the page imposes (a parent's selected child, a class). */
   fixedFilters?: Pick<ListFilters, 'classId' | 'studentId'>
-  /** Extra controls under the search box. */
-  listHeaderSlot?: React.ReactNode
+  /** Extra controls under the search box; a function receives the loaded rows (to build filter options). */
+  listHeaderSlot?: React.ReactNode | ((items: ConversationItem[]) => React.ReactNode)
+  /** Client-side narrowing on top of the server filters (student, parent, assessment). */
+  clientFilter?: (item: ConversationItem) => boolean
   /** Staff: scope the "New message" picker to one class. */
   newMessageClassId?: string
   /** Hide the New message button (admin oversight). */
@@ -38,6 +40,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
   role,
   fixedFilters,
   listHeaderSlot,
+  clientFilter,
   newMessageClassId,
   hideNewMessage = false,
   emptyHint,
@@ -101,10 +104,10 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
     return () => clearInterval(timer)
   }, [load, selectedYearId])
 
-  const visible = useMemo(
-    () => (view === 'needsReply' ? items.filter((i) => i.needsReply) : items),
-    [items, view],
-  )
+  const visible = useMemo(() => {
+    const base = view === 'needsReply' ? items.filter((i) => i.needsReply) : items
+    return clientFilter ? base.filter(clientFilter) : base
+  }, [items, view, clientFilter])
 
   const setThread = useCallback(
     (id: string | null) => {
@@ -160,7 +163,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
             tone={tone}
             role={role}
             loading={loading}
-            headerSlot={listHeaderSlot}
+            headerSlot={typeof listHeaderSlot === 'function' ? listHeaderSlot(items) : listHeaderSlot}
             emptyHint={emptyHint}
           />
         </div>
