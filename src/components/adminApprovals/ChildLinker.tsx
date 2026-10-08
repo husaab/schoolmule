@@ -127,19 +127,33 @@ const ChildLinker: React.FC<ChildLinkerProps> = ({ students, suggested, selected
         </ul>
       )}
 
-      <div className="relative">
-        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={students.length === 0 ? 'No students in the active school year' : 'Add another student by name'}
-          disabled={students.length === 0}
-          aria-label="Search students"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
-        />
+      <div className="space-y-2">
+        <div className="relative">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={students.length === 0 ? 'No students in the active school year' : 'Add another student by name'}
+            disabled={students.length === 0}
+            aria-label="Search students"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
+          />
+          {query.trim() && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {/* In flow (not absolutely positioned) so the modal grows and scrolls
+            instead of the sticky footer clipping the results. */}
         {query.trim() && (
-          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+          <ul className="max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white py-1">
             {matches.length === 0 ? (
               <li className="px-3 py-2 text-sm text-slate-400">No students match</li>
             ) : (
@@ -158,16 +172,6 @@ const ChildLinker: React.FC<ChildLinkerProps> = ({ students, suggested, selected
               ))
             )}
           </ul>
-        )}
-        {query.trim() && (
-          <button
-            type="button"
-            onClick={() => setQuery('')}
-            aria-label="Clear search"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
         )}
       </div>
     </div>

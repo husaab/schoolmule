@@ -26,6 +26,7 @@ import {
   InboxIcon,
   MagnifyingGlassIcon,
   ShieldCheckIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 
 type Tab = 'pending' | 'declined'
@@ -36,6 +37,29 @@ const ROLE_TABS: { value: RoleFilter; label: string }[] = [
   { value: 'TEACHER', label: 'Teachers' },
   { value: 'PARENT', label: 'Parents' },
 ]
+
+// Who the school already has on file for this email. Approving links them;
+// the review window lets the admin untick any that aren't theirs.
+const MatchedChildren = ({ students }: { students: ApprovalUser['matchedChildren'] }) => {
+  if (students.length === 0) {
+    return <span className="text-xs text-slate-400">None matched</span>
+  }
+  const shown = students.slice(0, 2).map((c) => c.name.split(' ')[0])
+  const extra = students.length - shown.length
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm text-slate-700">
+      <SparklesIcon className="h-4 w-4 flex-shrink-0 text-amber-500" aria-hidden />
+      <span>
+        <span className="font-medium">{students.length}</span>
+        <span className="text-slate-500">
+          {' '}
+          · {shown.join(', ')}
+          {extra > 0 && ` +${extra}`}
+        </span>
+      </span>
+    </span>
+  )
+}
 
 const ApprovalsPage = () => {
   const notify = useNotificationStore((s) => s.showNotification)
@@ -282,6 +306,11 @@ const ApprovalsPage = () => {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         {tab === 'pending' ? 'Signed up as' : 'Role'}
                       </th>
+                      {tab === 'pending' && (
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          Children on file
+                        </th>
+                      )}
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                         {tab === 'pending' ? 'Signed up' : 'Declined'}
                       </th>
@@ -340,6 +369,11 @@ const ApprovalsPage = () => {
                               <RoleBadge role={u.role} />
                             )}
                           </td>
+                          {isPending && (
+                            <td className="px-4 py-3 text-sm">
+                              <MatchedChildren students={u.matchedChildren} />
+                            </td>
+                          )}
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                             {formatDate(isPending ? u.createdAt : u.declinedAt)}
                           </td>
@@ -352,7 +386,7 @@ const ApprovalsPage = () => {
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 cursor-pointer"
                                   >
                                     <CheckIcon className="h-4 w-4" />
-                                    Approve
+                                    Review &amp; approve
                                   </button>
                                   <button
                                     onClick={() => setDeclining(u)}

@@ -5,13 +5,16 @@ import { SchoolUser } from './adminUser';
 /** Roles a public signup can be approved as. Admins are made from the Users page. */
 export type SignupRole = 'TEACHER' | 'PARENT';
 
-/** A signup waiting in the queue, or one that was declined (isArchived + declinedAt). */
-export type ApprovalUser = SchoolUser;
-
 export interface ChildCandidate {
   studentId: string;
   name: string;
   grade: string;
+}
+
+/** A signup waiting in the queue, or one that was declined (isArchived + declinedAt). */
+export interface ApprovalUser extends SchoolUser {
+  /** Active-year students whose family email on file matches this signup's email. */
+  matchedChildren: ChildCandidate[];
 }
 
 /** A student whose family email on file matches the signup's email. */
