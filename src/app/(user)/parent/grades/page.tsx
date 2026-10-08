@@ -33,7 +33,9 @@ const ClassCard: React.FC<{
   missingCount: number
   child: ChildLite
   threadStubs: Record<string, ThreadStub>
-}> = ({ cls, missingCount, child, threadStubs }) => {
+  /** False when the grades on screen belong to a past term: no "Ask the teacher" (new threads are current-term only). */
+  canAsk: boolean
+}> = ({ cls, missingCount, child, threadStubs, canAsk }) => {
   const [expanded, setExpanded] = useState(false)
 
   const scored = cls.assessmentScores.filter(
@@ -109,12 +111,16 @@ const ClassCard: React.FC<{
             <ParentAssessmentTable
               scores={cls.assessmentScores}
               threadStubs={threadStubs}
-              ask={{
-                studentId: child.studentId,
-                studentFirstName: child.name.split(' ')[0],
-                classId: cls.classId,
-                teacherName: cls.teacherName,
-              }}
+              ask={
+                canAsk
+                  ? {
+                      studentId: child.studentId,
+                      studentFirstName: child.name.split(' ')[0],
+                      classId: cls.classId,
+                      teacherName: cls.teacherName,
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -126,6 +132,8 @@ const ClassCard: React.FC<{
 interface ChildGradesSectionProps {
   child: ChildLite
   termId: string
+  /** The year's active term, or null when none is active (then every term is askable). */
+  activeTermId: string | null
   subjectFilter: string
   onSubjectsLoaded: (studentId: string, subjects: string[]) => void
 }
@@ -133,6 +141,7 @@ interface ChildGradesSectionProps {
 const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   child,
   termId,
+  activeTermId,
   subjectFilter,
   onSubjectsLoaded,
 }) => {
@@ -279,7 +288,8 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
         </div>
       )}
 
-      {/* Class cards */}
+      {/* Class cards. "Ask the teacher" is hidden while a past term is on screen; under
+          "All terms" the rows stay askable and the server refuses past-term ones. */}
       {classes.map((cls) => (
         <ClassCard
           key={cls.classId}
@@ -287,6 +297,7 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
           missingCount={missingWork.filter((m) => m.classId === cls.classId).length}
           child={child}
           threadStubs={threadStubs}
+          canAsk={!activeTermId || !grades.termId || grades.termId === 'all' || grades.termId === activeTermId}
         />
       ))}
     </div>
@@ -295,6 +306,7 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
 
 const ParentGradesPage: React.FC = () => {
   const [termId, setTermId] = useState('')
+  const [activeTermId, setActiveTermId] = useState<string | null>(null)
   const [subjectFilter, setSubjectFilter] = useState('')
   const [subjectsByChild, setSubjectsByChild] = useState<Record<string, string[]>>({})
   const visibleChildren = useVisibleChildren()
@@ -345,7 +357,7 @@ const ParentGradesPage: React.FC = () => {
             </option>
           ))}
         </select>
-        <TermPicker value={termId} onChange={setTermId} />
+        <TermPicker value={termId} onChange={setTermId} onTermsLoaded={(terms) => setActiveTermId(terms.find((t) => t.isActive)?.termId ?? null)} />
       </ParentFilterBar>
 
       <ChildSections
@@ -353,6 +365,7 @@ const ParentGradesPage: React.FC = () => {
           <ChildGradesSection
             child={child}
             termId={termId}
+            activeTermId={activeTermId}
             subjectFilter={subjectFilter}
             onSubjectsLoaded={onSubjectsLoaded}
           />

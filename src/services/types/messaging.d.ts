@@ -169,8 +169,18 @@ export interface ParentTargetTeacher {
   role: 'TEACHER' | 'ADMIN';
 }
 
+/** The term new threads may be started about (the school's active term in the selected year). */
+export interface CurrentTerm {
+  termId: string;
+  name: string;
+}
+
 export interface ParentTargets {
+  /** null = no term is active, so every class of the year is offered. */
+  currentTerm: CurrentTerm | null;
+  /** Only current-term classes (all classes of the year when no term is active). */
   classes: ParentTargetClass[];
+  /** Teachers of current-term classes, the homeroom teacher and titled admins. */
   teachers: ParentTargetTeacher[];
 }
 
@@ -192,6 +202,9 @@ export interface StaffTargetAssessment {
 }
 
 export interface StaffTargets {
+  currentTerm: CurrentTerm | null;
+  /** Class-scoped picker: false when the class belongs to a past term (teachers cannot start threads about it; admins can). */
+  inCurrentTerm?: boolean;
   students: { studentId: string; name: string; guardians: StaffTargetGuardian[] }[];
   /** Class-scoped picker (gradebook): the assessments of that one class. */
   assessments: StaffTargetAssessment[];

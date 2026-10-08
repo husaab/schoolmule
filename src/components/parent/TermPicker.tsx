@@ -11,10 +11,12 @@ interface TermPickerProps {
   value: string
   onChange: (termId: string) => void
   includeAll?: boolean
+  /** The year's terms once loaded, for pages that need to know which one is active. */
+  onTermsLoaded?: (terms: TermPayload[]) => void
 }
 
 /** Small term selector for parent pages. */
-const TermPicker: React.FC<TermPickerProps> = ({ value, onChange, includeAll = true }) => {
+const TermPicker: React.FC<TermPickerProps> = ({ value, onChange, includeAll = true, onTermsLoaded }) => {
   const user = useUserStore((s) => s.user)
   const [terms, setTerms] = useState<TermPayload[]>([])
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // term list is year-scoped server-side
@@ -23,8 +25,14 @@ const TermPicker: React.FC<TermPickerProps> = ({ value, onChange, includeAll = t
   useEffect(() => {
     if (!user?.school) return
     getTermsBySchool(user.school)
-      .then((res) => setTerms(res.data || []))
+      .then((res) => {
+        const list = res.data || []
+        setTerms(list)
+        onTermsLoaded?.(list)
+      })
       .catch(() => {})
+    // onTermsLoaded is a notification callback; re-fetching when its identity changes would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.school, selectedYearId])
 
   return (

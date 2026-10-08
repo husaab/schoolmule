@@ -108,7 +108,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     getParentTargets(studentId)
       .then((res) => {
         if (cancelled) return
-        const data = res.data ?? { classes: [], teachers: [] }
+        const data = res.data ?? { currentTerm: null, classes: [], teachers: [] }
         setParentTargets(data)
         setPickedClassId((cur) => {
           if (data.classes.some((c) => c.classId === cur)) return cur
@@ -162,7 +162,15 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     parentTargets?.teachers.find((x) => x.userId === teacherId) ??
     (fromAnnouncement && teacherId ? { userId: teacherId, name: preset?.authorName ?? 'the author', via: 'Announcement' } : null)
 
+  // Threads may only be started about current-term classes. The backend
+  // enforces this; here it shapes the hints and, for a teacher opening the
+  // picker from a past-term gradebook, blocks sending up front.
+  const currentTerm = (isParent ? parentTargets?.currentTerm : staffTargets?.currentTerm) ?? null
+  const pastTermClass = !isParent && Boolean(classId) && staffTargets?.inCurrentTerm === false
+  const blockedByTerm = pastTermClass && role === 'TEACHER'
+
   const ready =
+    !blockedByTerm &&
     Boolean(studentId) &&
     (mode === 'assessment'
       ? Boolean(assessmentId) && (isParent ? Boolean(pickedClassId) : Boolean(staffClassId))
@@ -275,7 +283,20 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
           </Field>
 
           {isParent && mode === 'assessment' && (
-            <Field label="Class" htmlFor="nc-class" required>
+            <Field
+              label="Class"
+              htmlFor="nc-class"
+              required
+              hint={
+                parentTargets && parentTargets.classes.length === 0
+                  ? currentTerm
+                    ? `No ${currentTerm.name} classes yet`
+                    : 'No classes this year yet'
+                  : currentTerm
+                    ? `${currentTerm.name} classes`
+                    : undefined
+              }
+            >
               <select
                 id="nc-class"
                 value={pickedClassId}
@@ -298,7 +319,12 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
           )}
 
           {isParent && mode === 'general' && (
-            <Field label="To" htmlFor="nc-teacher" required>
+            <Field
+              label="To"
+              htmlFor="nc-teacher"
+              required
+              hint={currentTerm && !fromAnnouncement ? `Teachers of ${currentTerm.name} classes, the homeroom teacher and the school office` : undefined}
+            >
               <select
                 id="nc-teacher"
                 value={teacherId}
@@ -409,6 +435,18 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
 
         {existingId && (
           <p className={`rounded-xl px-3 py-2 text-xs ${t.context}`}>There is already a conversation about this assessment. Your message will be added to it.</p>
+        )}
+
+        {pastTermClass && (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+            <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p>
+              This class is from a past term{currentTerm ? ` (the current term is ${currentTerm.name})` : ''}.{' '}
+              {blockedByTerm
+                ? 'New conversations can only be started about current-term classes. Existing conversations stay open for replies in your inbox.'
+                : 'Teachers cannot start new conversations about it; as an admin you can.'}
+            </p>
+          </div>
         )}
 
         {!isParent && unlinked.length > 0 && (
