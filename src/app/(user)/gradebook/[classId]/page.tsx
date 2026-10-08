@@ -28,6 +28,10 @@ import PublishAssessmentsModal from '@/components/gradebook/publish/PublishAsses
 import { getPublicationState } from '@/services/assessmentPublicationService';
 import type { AssessmentPublicationState } from '@/services/types/assessmentPublication';
 import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
+import { getThreadStubs } from '@/services/messagingService';
+import type { ThreadStub } from '@/services/types/messaging';
+import NewConversationModal from '@/components/messaging/NewConversationModal';
+import { useMessagingStore } from '@/store/useMessagingStore';
 import {
   MinusCircleIcon,
   AcademicCapIcon,
@@ -38,6 +42,7 @@ import {
   CheckCircleIcon,
   CalendarDaysIcon,
   ChatBubbleBottomCenterTextIcon,
+  ChatBubbleLeftRightIcon,
   ClipboardDocumentCheckIcon,
   PencilSquareIcon,
   MegaphoneIcon
@@ -95,6 +100,12 @@ const GradebookClass = () => {
   // Parent publishing: which assessments are live, and which are ticked for
   // the next publish action.
   const [publications, setPublications] = useState<Record<string, AssessmentPublicationState>>({})
+
+  // Parent conversations: chips beside a student's name (open threads) and
+  // inside a score cell (that assessment has a thread). Keyed "studentId|assessmentId".
+  const [threadStubs, setThreadStubs] = useState<Record<string, ThreadStub>>({})
+  const [messagePreset, setMessagePreset] = useState<{ studentId?: string; assessmentId?: string } | null>(null)
+  const bumpUnread = useMessagingStore((s) => s.bump)
   const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<Set<string>>(new Set())
   const [publishTargets, setPublishTargets] = useState<AssessmentPayload[]>([])
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
@@ -159,6 +170,21 @@ const GradebookClass = () => {
       refreshScoresMatrix()
     ])
   }
+
+  const loadThreadStubs = useCallback(async () => {
+    try {
+      const res = await getThreadStubs({ classId })
+      if (res.status === 'success' && res.data) {
+        setThreadStubs(Object.fromEntries(res.data.map((st) => [`${st.studentId}|${st.assessmentId}`, st])))
+      }
+    } catch (error) {
+      // Chips are informational — a failure here must not block grade entry.
+      console.error('Error loading conversation stubs:', error)
+    }
+  }, [classId])
+
+  const openThreadsFor = (studentId: string) =>
+    Object.values(threadStubs).filter((st) => st.studentId === studentId && st.status === 'open').length
 
   // Publish state drives the Live / Not sent badges on each column header.
   const loadPublications = useCallback(async () => {
@@ -225,6 +251,7 @@ const GradebookClass = () => {
 
         loadExclusionsData()
         loadPublications()
+        loadThreadStubs()
       })
       .catch((err) => {
         console.error(err)
@@ -233,7 +260,7 @@ const GradebookClass = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, loadExclusionsData, loadPublications])
+  }, [classId, loadExclusionsData, loadPublications, loadThreadStubs])
 
   // Fetch term details when classData becomes available
   useEffect(() => {
@@ -1018,6 +1045,16 @@ const GradebookClass = () => {
                               >
                                 {stu.name}
                               </button>
+                              {openThreadsFor(stu.studentId) > 0 && (
+                                <button
+                                  onClick={() => router.push(`/messages?classId=${encodeURIComponent(classId)}&q=${encodeURIComponent(stu.name)}`)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-1.5 py-px text-[10px] font-medium text-cyan-700 hover:bg-cyan-100 cursor-pointer"
+                                  title={`${openThreadsFor(stu.studentId)} open parent conversation(s)`}
+                                >
+                                  <ChatBubbleLeftRightIcon className="h-3 w-3" />
+                                  {openThreadsFor(stu.studentId)}
+                                </button>
+                              )}
 
                               <button
                                 onClick={() => {
@@ -1188,6 +1225,18 @@ const GradebookClass = () => {
                                     {isExcluded ? '✓' : '×'}
                                   </button>
 
+                                  {threadStubs[key] && (
+                                    <button
+                                      onClick={() => router.push(`/messages?thread=${encodeURIComponent(threadStubs[key].conversationId)}`)}
+                                      className={`absolute top-1 left-1 flex h-4 w-4 items-center justify-center rounded-md cursor-pointer ${
+                                        threadStubs[key].unreadCount > 0 ? 'bg-cyan-600 text-white' : 'bg-cyan-50 text-cyan-600 border border-cyan-200'
+                                      }`}
+                                      title={threadStubs[key].unreadCount > 0 ? `${threadStubs[key].unreadCount} unread in the parent conversation` : 'Open parent conversation'}
+                                    >
+                                      <ChatBubbleLeftRightIcon className="h-2.5 w-2.5" />
+                                    </button>
+                                  )}
+
                                   {isExcluded ? (
                                     <div className="inline-block px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-400">
                                       Excluded
@@ -1338,6 +1387,27 @@ const GradebookClass = () => {
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}
+        threadStubs={threadStubs}
+        onOpenConversation={(conversationId) => router.push(`/messages?thread=${encodeURIComponent(conversationId)}`)}
+        onMessageGuardians={(assessmentId) => {
+          if (!selectedStudent) return
+          setMessagePreset({ studentId: selectedStudent.studentId, assessmentId })
+        }}
+      />
+
+      <NewConversationModal
+        isOpen={messagePreset !== null}
+        onClose={() => setMessagePreset(null)}
+        tone="staff"
+        role="TEACHER"
+        classId={classId}
+        preset={messagePreset ?? undefined}
+        onCreated={(thread) => {
+          setMessagePreset(null)
+          void loadThreadStubs()
+          void bumpUnread()
+          router.push(`/messages?thread=${encodeURIComponent(thread.conversation.conversationId)}`)
+        }}
       />
 
       <PublishAssessmentsModal

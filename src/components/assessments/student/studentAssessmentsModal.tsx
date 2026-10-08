@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Modal from '../../shared/modal'
 import { useNotificationStore } from '../../../store/useNotificationStore'
 import { upsertScoresByClass } from '../../../services/classService'
+import type { ThreadStub } from '@/services/types/messaging'
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 
 interface Assessment {
   assessmentId: string
@@ -35,6 +37,11 @@ interface StudentAssessmentsModalProps {
   existingScores: StudentScore[]
   currentEditedScores: { [key: string]: number | '' }
   onRefreshScores: () => void
+  /** Parent conversations keyed "studentId|assessmentId" (gradebook page loads them). */
+  threadStubs?: Record<string, ThreadStub>
+  onOpenConversation?: (conversationId: string) => void
+  /** Start a thread with this student's guardians about an assessment (undefined = let the teacher pick). */
+  onMessageGuardians?: (assessmentId?: string) => void
 }
 
 export default function StudentAssessmentsModal({
@@ -45,7 +52,10 @@ export default function StudentAssessmentsModal({
   assessments,
   existingScores,
   currentEditedScores,
-  onRefreshScores
+  onRefreshScores,
+  threadStubs = {},
+  onOpenConversation,
+  onMessageGuardians,
 }: StudentAssessmentsModalProps) {
   const [editedScores, setEditedScores] = useState<Record<string, string>>({})
   const [hasChanges, setHasChanges] = useState(false)
@@ -67,6 +77,34 @@ export default function StudentAssessmentsModal({
     if (!student) return false
     const key = `${student.studentId}|${assessmentId}`
     return exclusionMap[key] || false
+  }
+
+  // Per-row parent conversation action: open the existing thread or start one.
+  const messageAction = (assessmentId: string) => {
+    if (!student || !onMessageGuardians) return null
+    const stub = threadStubs[`${student.studentId}|${assessmentId}`]
+    const base = 'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium cursor-pointer whitespace-nowrap'
+    return stub ? (
+      <button
+        type="button"
+        onClick={() => onOpenConversation?.(stub.conversationId)}
+        className={`${base} ${stub.unreadCount > 0 ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100'}`}
+        title="Open the parent conversation about this assessment"
+      >
+        <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
+        {stub.unreadCount > 0 ? `${stub.unreadCount} unread` : 'Conversation'}
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => onMessageGuardians(assessmentId)}
+        className={`${base} border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}
+        title="Message this student's guardians about this assessment"
+      >
+        <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
+        Message guardians
+      </button>
+    )
   }
 
   // Initialize edited scores when modal opens
@@ -224,6 +262,16 @@ export default function StudentAssessmentsModal({
 
           </div>
           <div className="flex space-x-2">
+            {onMessageGuardians && (
+              <button
+                onClick={() => onMessageGuardians(undefined)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-cyan-700 border border-cyan-200 bg-cyan-50 rounded hover:bg-cyan-100 cursor-pointer"
+                title="Start a conversation with this student's guardians"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                Message guardians
+              </button>
+            )}
             <button
               onClick={handleCancel}
               className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 cursor-pointer"
@@ -318,7 +366,9 @@ export default function StudentAssessmentsModal({
                               <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
                             </div>
                             
-                            <div className="text-right min-w-16">
+                            {messageAction(assessment.assessmentId)}
+                            {messageAction(assessment.assessmentId)}
+                        <div className="text-right min-w-16">
                               {!isExcluded && percentage !== null && (
                                 <>
                                   <div className="text-sm font-medium">{percentage}%</div>
@@ -383,6 +433,7 @@ export default function StudentAssessmentsModal({
                           <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
                         </div>
                         
+                        {messageAction(assessment.assessmentId)}
                         <div className="text-right min-w-16">
                           {!isExcluded && percentage !== null && (
                             <>

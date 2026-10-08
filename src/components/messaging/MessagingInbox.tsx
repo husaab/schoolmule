@@ -50,10 +50,11 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
   const bump = useMessagingStore((s) => s.bump)
 
   const threadId = searchParams.get('thread')
+  const urlClassId = searchParams.get('classId') || undefined
   const [items, setItems] = useState<ConversationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<ListView>('open')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [newOpen, setNewOpen] = useState(false)
   const debounced = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -70,11 +71,11 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
     () => ({
       status: view === 'resolved' ? 'resolved' : 'open',
       q: debouncedQuery || undefined,
-      classId: fixedFilters?.classId,
+      classId: fixedFilters?.classId ?? urlClassId,
       studentId: fixedFilters?.studentId,
       limit: 100,
     }),
-    [view, debouncedQuery, fixedFilters?.classId, fixedFilters?.studentId],
+    [view, debouncedQuery, fixedFilters?.classId, fixedFilters?.studentId, urlClassId],
   )
 
   const load = useCallback(

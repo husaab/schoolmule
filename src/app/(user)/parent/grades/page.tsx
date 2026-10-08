@@ -11,6 +11,8 @@ import {
 import { ChildLite, useVisibleChildren } from '@/store/useSelectedChildStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getChildGrades } from '@/services/parentPortalService'
+import { getThreadStubs } from '@/services/messagingService'
+import type { ThreadStub } from '@/services/types/messaging'
 import { ChildGrades, ChildClassGrades } from '@/services/types/parentPortal'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ChildSections from '@/components/parent/ChildSections'
@@ -18,16 +20,20 @@ import ChildJumpNav from '@/components/parent/ChildJumpNav'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import ParentAssessmentTable from '@/components/parent/ParentAssessmentTable'
+import Link from 'next/link'
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import ClassGradesBarChart from '@/components/parent/ClassGradesBarChart'
 import TermPicker from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
 import TrendLineChart from '@/app/(user)/analytics/_components/charts/TrendLineChart'
 import { gradeTextColor } from '@/components/parent/childColors'
 
-const ClassCard: React.FC<{ cls: ChildClassGrades; missingCount: number }> = ({
-  cls,
-  missingCount,
-}) => {
+const ClassCard: React.FC<{
+  cls: ChildClassGrades
+  missingCount: number
+  child: ChildLite
+  threadStubs: Record<string, ThreadStub>
+}> = ({ cls, missingCount, child, threadStubs }) => {
   const [expanded, setExpanded] = useState(false)
 
   const scored = cls.assessmentScores.filter(
@@ -42,6 +48,7 @@ const ClassCard: React.FC<{ cls: ChildClassGrades; missingCount: number }> = ({
     label: s.name,
     value: Math.round(((s.score as number) / (s.maxScore as number)) * 1000) / 10,
   }))
+  const openThreads = cls.assessmentScores.filter((s) => threadStubs[s.assessmentId]?.status === 'open').length
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 overflow-hidden">
@@ -51,9 +58,21 @@ const ClassCard: React.FC<{ cls: ChildClassGrades; missingCount: number }> = ({
       >
         <div className="min-w-0">
           <h4 className="text-base font-semibold text-slate-900 truncate">{cls.subject}</h4>
-          <p className="text-sm text-slate-500 truncate">
-            {cls.teacherName || 'Teacher TBD'}
-            {cls.classAvg != null && ` · Class average: ${cls.classAvg}%`}
+          <p className="text-sm text-slate-500 truncate flex items-center gap-2">
+            <span className="truncate">
+              {cls.teacherName || 'Teacher TBD'}
+              {cls.classAvg != null && ` · Class average: ${cls.classAvg}%`}
+            </span>
+            {openThreads > 0 && (
+              <Link
+                href="/parent/messages"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex flex-shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-px text-[11px] font-medium text-amber-800 hover:bg-amber-100"
+              >
+                <ChatBubbleLeftRightIcon className="h-3 w-3" />
+                {openThreads} {openThreads === 1 ? 'conversation' : 'conversations'}
+              </Link>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -87,7 +106,16 @@ const ClassCard: React.FC<{ cls: ChildClassGrades; missingCount: number }> = ({
             </div>
           )}
           <div className="pt-3">
-            <ParentAssessmentTable scores={cls.assessmentScores} />
+            <ParentAssessmentTable
+              scores={cls.assessmentScores}
+              threadStubs={threadStubs}
+              ask={{
+                studentId: child.studentId,
+                studentFirstName: child.name.split(' ')[0],
+                classId: cls.classId,
+                teacherName: cls.teacherName,
+              }}
+            />
           </div>
         </div>
       )}
@@ -111,7 +139,25 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   const [grades, setGrades] = useState<ChildGrades | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [threadStubs, setThreadStubs] = useState<Record<string, ThreadStub>>({})
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
+
+  // Existing conversations drive the chips on each row. Informational: a
+  // failure here must never hide the grades.
+  useEffect(() => {
+    let cancelled = false
+    getThreadStubs({ studentId: child.studentId })
+      .then((res) => {
+        if (cancelled) return
+        const byAssessment: Record<string, ThreadStub> = {}
+        for (const stub of res.data ?? []) if (stub.assessmentId) byAssessment[stub.assessmentId] = stub
+        setThreadStubs(byAssessment)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [child.studentId, selectedYearId])
 
   useEffect(() => {
     // ChildSections keys on studentId, so this component survives a term
@@ -239,6 +285,8 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
           key={cls.classId}
           cls={cls}
           missingCount={missingWork.filter((m) => m.classId === cls.classId).length}
+          child={child}
+          threadStubs={threadStubs}
         />
       ))}
     </div>
