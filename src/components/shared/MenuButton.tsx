@@ -9,6 +9,8 @@ import { CheckIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 export interface MenuItem {
   key: string
   label: string
+  /** One quiet line under the label saying what the item does. */
+  description?: string
   icon?: React.ComponentType<{ className?: string }>
   onSelect: () => void
   danger?: boolean
@@ -35,6 +37,7 @@ const defaultTrigger =
 const MenuButton: React.FC<MenuButtonProps> = ({ items, label, trigger, triggerClassName, align = 'right', heading }) => {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
+  const described = items.some((i) => i.description)
 
   useEffect(() => {
     if (!open) return
@@ -71,7 +74,7 @@ const MenuButton: React.FC<MenuButtonProps> = ({ items, label, trigger, triggerC
       {open && (
         <div
           role="menu"
-          className={`absolute top-full z-40 mt-1 w-56 rounded-xl border border-slate-200 bg-white p-1 shadow-lg ${
+          className={`absolute top-full z-40 mt-1 rounded-xl border border-slate-200 bg-white p-1 shadow-lg ${described ? 'w-72' : 'w-56'} ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
@@ -86,12 +89,15 @@ const MenuButton: React.FC<MenuButtonProps> = ({ items, label, trigger, triggerC
                 setOpen(false)
                 item.onSelect()
               }}
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                 item.danger ? 'text-rose-700 hover:bg-rose-50' : 'text-slate-700 hover:bg-slate-50'
               }`}
             >
               {item.icon ? <item.icon className="h-4 w-4 shrink-0" /> : null}
-              <span className="flex-1">{item.label}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-medium">{item.label}</span>
+                {item.description && <span className="block text-xs text-slate-500">{item.description}</span>}
+              </span>
               {item.checked && <CheckIcon className="h-4 w-4 shrink-0 text-cyan-600" aria-label="Current" />}
             </button>
           ))}

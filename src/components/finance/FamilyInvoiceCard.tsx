@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon, ArrowUturnLeftIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import type { FamilyInvoice, InvoiceKind } from '@/services/types/finance'
 import { KindBadge } from './badges'
-import MenuButton, { type MenuItem } from './MenuButton'
+import MenuButton, { type MenuItem } from '@/components/shared/MenuButton'
 import { formatDate, formatMoney, invoiceLabel, kindLabel, qboInvoiceUrl } from './format'
 
 const tag = 'rounded-md px-1.5 py-0.5 text-[11px] font-medium'

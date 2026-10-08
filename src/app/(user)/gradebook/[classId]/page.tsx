@@ -49,11 +49,14 @@ import {
   CalendarDaysIcon,
   ChatBubbleBottomCenterTextIcon,
   ChatBubbleLeftRightIcon,
+  ChevronDownIcon,
   ClipboardDocumentCheckIcon,
+  EllipsisHorizontalIcon,
   PencilSquareIcon,
   MegaphoneIcon
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
+import MenuButton from '@/components/shared/MenuButton';
 
 
 const GradebookClass = () => {
@@ -740,6 +743,7 @@ const GradebookClass = () => {
   }
 
   // Calculate class statistics
+  const liveAssessmentCount = displayedAssessments.filter((a) => publications[a.assessmentId]?.isPublished).length
   const classAverage = students.length > 0
     ? students.reduce((sum, stu) => sum + computeTotalForStudent(stu.studentId), 0) / students.length
     : 0
@@ -801,42 +805,7 @@ const GradebookClass = () => {
               </div>
 
               {activeView === 'grades' && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={navigateToBulkFeedback}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-all font-medium cursor-pointer shadow-sm"
-                  title="Enter feedback that appears on report cards"
-                >
-                  <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-                  Report Card Feedback
-                </button>
-                <button
-                  onClick={navigateToBulkProgress}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-all font-medium cursor-pointer shadow-sm"
-                  title="Enter feedback that appears on progress reports (not report cards)"
-                >
-                  <ClipboardDocumentCheckIcon className="h-4 w-4" />
-                  Progress Report Feedback
-                </button>
-                <button
-                  onClick={() =>
-                    openPublishModal(
-                      displayedAssessments.filter((a: AssessmentPayload) =>
-                        selectedAssessmentIds.has(a.assessmentId)
-                      )
-                    )
-                  }
-                  disabled={selectedAssessmentIds.size === 0}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-medium shadow-sm ${
-                    selectedAssessmentIds.size === 0
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-cyan-500 text-white hover:bg-cyan-600 cursor-pointer'
-                  }`}
-                  title="Publish the selected assessments to parents"
-                >
-                  <MegaphoneIcon className="h-4 w-4" />
-                  Publish{selectedAssessmentIds.size > 0 ? ` (${selectedAssessmentIds.size})` : ''}
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setMessagePreset({})}
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-50 border border-cyan-200 text-cyan-700 rounded-xl hover:bg-cyan-100 transition-all font-medium cursor-pointer shadow-sm"
@@ -845,114 +814,99 @@ const GradebookClass = () => {
                   <ChatBubbleLeftRightIcon className="h-4 w-4" />
                   Message parents
                 </button>
-                <button
-                  onClick={handleGoToAssessments}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
-                  title="Add, edit, or delete this class's assessments"
-                >
-                  <PencilSquareIcon className="h-4 w-4" />
-                  Edit Assessments
-                </button>
-                <button
-                  onClick={handleExportExcel}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
-                >
-                  <ArrowDownTrayIcon className="h-4 w-4" />
-                  Export
-                </button>
-                <button
-                  onClick={handleSaveAll}
-                  disabled={saving || Object.keys(editedScores).length === 0}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm cursor-pointer ${
-                    saving || Object.keys(editedScores).length === 0
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-lg hover:shadow-xl'
-                  }`}
-                >
-                  <CheckCircleIcon className="h-4 w-4" />
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
+                <MenuButton
+                  label="Feedback"
+                  items={[
+                    {
+                      key: 'report',
+                      label: 'Report card feedback',
+                      description: 'Comments that print on the report card',
+                      icon: ChatBubbleBottomCenterTextIcon,
+                      onSelect: navigateToBulkFeedback,
+                    },
+                    {
+                      key: 'progress',
+                      label: 'Progress report feedback',
+                      description: 'Comments for the progress report only',
+                      icon: ClipboardDocumentCheckIcon,
+                      onSelect: navigateToBulkProgress,
+                    },
+                  ]}
+                  triggerClassName="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-all font-medium cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  trigger={
+                    <>
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Feedback
+                      <ChevronDownIcon className="h-3.5 w-3.5" />
+                    </>
+                  }
+                />
+                <MenuButton
+                  label="More actions"
+                  items={[
+                    {
+                      key: 'export',
+                      label: 'Export to Excel',
+                      description: 'Every student and assessment in this class',
+                      icon: ArrowDownTrayIcon,
+                      onSelect: () => { void handleExportExcel() },
+                    },
+                    {
+                      key: 'manage',
+                      label: 'Manage assessments',
+                      description: 'Opens the Assessments tab',
+                      icon: ClipboardDocumentListIcon,
+                      onSelect: () => { void handleGoToAssessments() },
+                    },
+                  ]}
+                  triggerClassName="inline-flex h-11 w-11 items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  trigger={<EllipsisHorizontalIcon className="h-5 w-5" />}
+                />
               </div>
               )}
             </div>
 
-            {/* View switch: Grade Entry / Assessments */}
-            <div className="mt-6 inline-flex p-1 bg-slate-100 rounded-xl">
-              <button
-                onClick={activeView === 'assessments' ? handleBackToGrades : undefined}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                  activeView === 'grades'
-                    ? 'bg-white text-cyan-700 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Grade Entry
-              </button>
-              <button
-                onClick={activeView === 'grades' ? handleGoToAssessments : undefined}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                  activeView === 'assessments'
-                    ? 'bg-white text-cyan-700 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Assessments
-              </button>
+            {/* View switch and the class at a glance */}
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+              <div className="inline-flex p-1 bg-slate-100 rounded-xl">
+                <button
+                  onClick={activeView === 'assessments' ? handleBackToGrades : undefined}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    activeView === 'grades'
+                      ? 'bg-white text-cyan-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Grade Entry
+                </button>
+                <button
+                  onClick={activeView === 'grades' ? handleGoToAssessments : undefined}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    activeView === 'assessments'
+                      ? 'bg-white text-cyan-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Assessments
+                </button>
+              </div>
+              {activeView === 'grades' && (
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-slate-500">
+                  <span>
+                    <strong className="font-semibold text-slate-900 tabular-nums">{students.length}</strong>{' '}
+                    {students.length === 1 ? 'student' : 'students'}
+                  </span>
+                  <span>
+                    <strong className="font-semibold text-slate-900 tabular-nums">{displayedAssessments.length}</strong>{' '}
+                    {displayedAssessments.length === 1 ? 'assessment' : 'assessments'}
+                    {displayedAssessments.length > 0 && `, ${liveAssessmentCount} live for parents`}
+                  </span>
+                  <span>
+                    <strong className="font-semibold text-slate-900 tabular-nums">{classAverage.toFixed(1)}%</strong> class average
+                  </span>
+                </div>
+              )}
             </div>
-
-            {/* Statistics Cards */}
-            {activeView === 'grades' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-50 flex items-center justify-center">
-                    <UserGroupIcon className="w-5 h-5 text-cyan-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{students.length}</p>
-                    <p className="text-xs text-slate-500">Students</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center">
-                    <ClipboardDocumentListIcon className="w-5 h-5 text-teal-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{displayedAssessments.length}</p>
-                    <p className="text-xs text-slate-500">Assessments</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <AcademicCapIcon className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{classAverage.toFixed(1)}%</p>
-                    <p className="text-xs text-slate-500">Class Average</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    hasUnsavedChanges ? 'bg-amber-50' : 'bg-slate-50'
-                  }`}>
-                    <CheckCircleIcon className={`w-5 h-5 ${
-                      hasUnsavedChanges ? 'text-amber-500' : 'text-slate-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{Object.keys(editedScores).length}</p>
-                    <p className="text-xs text-slate-500">Unsaved Changes</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            )}
           </div>
 
           {/* Assessments management view */}
@@ -1319,55 +1273,57 @@ const GradebookClass = () => {
           )}
         </div>
 
-        {/* Sticky action bars. Unsaved grades and a pending publish selection
-            are independent concerns, so both can be showing at once. */}
+        {/* Floating action trays. Publish appears when assessments are ticked,
+            Save when a score changed. Independent concerns, so both can show. */}
         {(hasUnsavedChanges || selectedAssessmentIds.size > 0) && activeView === 'grades' && (
-          <div className="fixed bottom-0 left-0 right-0 lg:left-72 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
+          <div className="pointer-events-none fixed bottom-4 left-0 right-0 lg:left-72 z-20 flex flex-col items-center gap-2 px-4">
             {selectedAssessmentIds.size > 0 && (
-              <div className="p-3 border-b border-slate-100">
-                <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
-                  <span className="text-sm text-cyan-700 font-medium">
-                    {selectedAssessmentIds.size} assessment
-                    {selectedAssessmentIds.size === 1 ? '' : 's'} selected
-                  </span>
-                  <button
-                    onClick={() => setSelectedAssessmentIds(new Set())}
-                    className="text-sm text-slate-500 hover:text-slate-700 cursor-pointer"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    onClick={() =>
-                      openPublishModal(
-                        displayedAssessments.filter((a: AssessmentPayload) =>
-                          selectedAssessmentIds.has(a.assessmentId)
-                        )
+              <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-cyan-200 bg-cyan-50/95 py-2 pl-4 pr-2 shadow-lg backdrop-blur-sm">
+                <span className="mr-2 text-sm font-semibold text-cyan-800">
+                  {selectedAssessmentIds.size} assessment{selectedAssessmentIds.size === 1 ? '' : 's'} selected
+                </span>
+                <button
+                  onClick={() => setSelectedAssessmentIds(new Set())}
+                  className="rounded-xl px-3 py-2 text-sm font-medium text-cyan-800 hover:bg-cyan-100 cursor-pointer"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() =>
+                    openPublishModal(
+                      displayedAssessments.filter((a: AssessmentPayload) =>
+                        selectedAssessmentIds.has(a.assessmentId)
                       )
-                    }
-                    className="inline-flex items-center gap-2 px-6 py-2 bg-cyan-500 text-white rounded-xl hover:bg-cyan-600 transition-all font-medium cursor-pointer shadow"
-                  >
-                    <MegaphoneIcon className="h-4 w-4" />
-                    Publish to Parents
-                  </button>
-                </div>
+                    )
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700 transition-colors cursor-pointer"
+                >
+                  <MegaphoneIcon className="h-4 w-4" />
+                  Publish to parents
+                </button>
               </div>
             )}
 
             {hasUnsavedChanges && (
-              <div className="p-4">
-                <div className="flex justify-center items-center gap-4 max-w-7xl mx-auto">
-                  <span className="text-sm text-amber-600 font-medium">
-                    You have {Object.keys(editedScores).length} unsaved changes
-                  </span>
-                  <button
-                    onClick={handleSaveAll}
-                    disabled={saving}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer shadow-lg"
-                  >
-                    <CheckCircleIcon className="h-4 w-4" />
-                    {saving ? 'Saving...' : 'Save All Changes'}
-                  </button>
-                </div>
+              <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-900 py-2 pl-4 pr-2 text-white shadow-xl">
+                <span className="mr-2 text-sm font-semibold">
+                  {Object.keys(editedScores).length} score{Object.keys(editedScores).length === 1 ? '' : 's'} changed
+                </span>
+                <button
+                  onClick={() => setEditedScores({})}
+                  disabled={saving}
+                  className="rounded-xl px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  {saving ? 'Saving…' : 'Save changes'}
+                </button>
               </div>
             )}
           </div>

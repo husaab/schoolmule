@@ -31,7 +31,7 @@ import {
 } from '@/services/financeService'
 import type { ContactInput, FamilyContact, FamilyDetail } from '@/services/types/finance'
 import type { ConfirmRequest } from './ConfirmActionModal'
-import MenuButton from './MenuButton'
+import MenuButton from '@/components/shared/MenuButton'
 import { RELATION_OPTIONS, amountText, looksLikeEmail, outlineButton, parseAmount, relationLabel } from './familyUi'
 import { compareGrades, errorMessage, financeErrorText, formatDate, gradeShort } from './format'
 
