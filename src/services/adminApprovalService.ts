@@ -33,6 +33,13 @@ export const changeSignupRole = (userId: string, role: SignupRole) =>
     body: { role },
   });
 
+/** PATCH /admin/approvals/:id/name — fix a pending signup's name (e.g. a parent who typed their child's) */
+export const renameSignup = (userId: string, body: RenameSignupRequest) =>
+  apiClient<AdminUserResponse<{ user: ApprovalUser }>, RenameSignupRequest>(`/admin/approvals/${userId}/name`, {
+    method: 'PATCH',
+    body,
+  });
+
 /** POST /admin/approvals/:id/decline — archives the signup; optionally emails them */
 export const declineSignup = (userId: string, sendEmail: boolean) =>
   apiClient<AdminUserResponse<DeclineSignupResult>>(`/admin/approvals/${userId}/decline`, {

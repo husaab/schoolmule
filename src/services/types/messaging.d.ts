@@ -161,8 +161,10 @@ export interface ParentTargetClass {
 export interface ParentTargetTeacher {
   userId: string;
   name: string;
-  /** "Homeroom" or the class subject. */
+  /** "Homeroom", the class subject, or an admin's staff title ("Principal"). */
   via: string;
+  /** TEACHER for the child's teachers; ADMIN for school leadership with a title. */
+  role: 'TEACHER' | 'ADMIN';
 }
 
 export interface ParentTargets {

@@ -38,6 +38,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<SchoolRole>('TEACHER')
   const [hasAccess, setHasAccess] = useState(true)
+  const [staffTitle, setStaffTitle] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -47,6 +48,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
     setEmail(user?.email ?? '')
     setRole(user?.role ?? 'TEACHER')
     setHasAccess(user?.isVerifiedSchool ?? true)
+    setStaffTitle(user?.staffTitle ?? '')
   }, [isOpen, user])
 
   const canSubmit =
@@ -63,6 +65,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           lastName: lastName.trim(),
           role,
           isVerifiedSchool: hasAccess,
+          staffTitle: role === 'ADMIN' ? staffTitle.trim() : '',
         })
         notify('User updated', 'success')
         onSaved(res.data)
@@ -173,6 +176,28 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
             </div>
             {isSelf && (
               <p className="text-xs text-slate-400">You can&apos;t change your own role.</p>
+            )}
+            {isEdit && role === 'ADMIN' && (
+              <Field
+                label="Title shown to parents"
+                htmlFor="user-staff-title"
+                hint="Parents can message any admin with a title from their inbox, e.g. Principal or Vice Principal. Leave blank to keep this account off their list."
+              >
+                <input
+                  id="user-staff-title"
+                  className={inputClass}
+                  value={staffTitle}
+                  onChange={(e) => setStaffTitle(e.target.value)}
+                  placeholder="Principal"
+                  maxLength={60}
+                  list="user-staff-title-options"
+                />
+                <datalist id="user-staff-title-options">
+                  <option value="Principal" />
+                  <option value="Vice Principal" />
+                  <option value="Office" />
+                </datalist>
+              </Field>
             )}
           </FormSection>
 

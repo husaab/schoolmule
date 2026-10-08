@@ -260,7 +260,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
           <div className="flex gap-2.5 rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-amber-900">
             <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <p className="text-sm">
-              Individual points total {totalChildPoints}, but the category is worth {parentPoints}.
+              Individual points total {Math.round(totalChildPoints * 100) / 100}, but the category is worth {parentPoints}.
               Edit the category to bring them back in line.
             </p>
           </div>

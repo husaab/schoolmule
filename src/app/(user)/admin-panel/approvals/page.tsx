@@ -14,6 +14,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ApprovalReviewModal from '@/components/adminApprovals/ApprovalReviewModal'
 import ApprovalDeclineModal from '@/components/adminApprovals/ApprovalDeclineModal'
 import ApprovalRestoreModal from '@/components/adminApprovals/ApprovalRestoreModal'
+import ApprovalRenameModal from '@/components/adminApprovals/ApprovalRenameModal'
 import { RoleBadge, UserAvatar, formatDate } from '@/components/adminUsers/userDisplay'
 import { changeSignupRole, getApprovals } from '@/services/adminApprovalService'
 import { ApprovalUser, SignupRole } from '@/services/types/adminApproval'
@@ -25,6 +26,7 @@ import {
   CheckIcon,
   InboxIcon,
   MagnifyingGlassIcon,
+  PencilSquareIcon,
   ShieldCheckIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
@@ -74,6 +76,7 @@ const ApprovalsPage = () => {
   const [reviewing, setReviewing] = useState<ApprovalUser | null>(null)
   const [declining, setDeclining] = useState<ApprovalUser | null>(null)
   const [restoring, setRestoring] = useState<ApprovalUser | null>(null)
+  const [renaming, setRenaming] = useState<ApprovalUser | null>(null)
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -113,10 +116,14 @@ const ApprovalsPage = () => {
     )
   }, [pool, roleFilter, search])
 
+  // Single-user responses (role change, rename, decline) don't recompute the
+  // children on file, so keep what the list already knows.
   const upsert = (saved: ApprovalUser) =>
-    setUsers((prev) => (prev.some((u) => u.userId === saved.userId)
-      ? prev.map((u) => (u.userId === saved.userId ? saved : u))
-      : [saved, ...prev]))
+    setUsers((prev) => {
+      const existing = prev.find((u) => u.userId === saved.userId)
+      const next = { ...saved, matchedChildren: saved.matchedChildren ?? existing?.matchedChildren ?? [] }
+      return existing ? prev.map((u) => (u.userId === saved.userId ? next : u)) : [next, ...prev]
+    })
   const remove = (userId: string) => setUsers((prev) => prev.filter((u) => u.userId !== userId))
 
   // Fix a wrong-role signup without approving yet (e.g. a parent who picked Teacher).
@@ -389,6 +396,14 @@ const ApprovalsPage = () => {
                                     Review &amp; approve
                                   </button>
                                   <button
+                                    onClick={() => setRenaming(u)}
+                                    title="Rename"
+                                    aria-label={`Rename ${u.fullName}`}
+                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                                  >
+                                    <PencilSquareIcon className="h-4 w-4" />
+                                  </button>
+                                  <button
                                     onClick={() => setDeclining(u)}
                                     title="Decline"
                                     aria-label={`Decline ${u.fullName}`}
@@ -433,6 +448,14 @@ const ApprovalsPage = () => {
           onClose={() => setDeclining(null)}
           user={declining}
           onDeclined={upsert}
+        />
+      )}
+      {renaming && (
+        <ApprovalRenameModal
+          isOpen
+          onClose={() => setRenaming(null)}
+          user={renaming}
+          onRenamed={upsert}
         />
       )}
       {restoring && (

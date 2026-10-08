@@ -269,11 +269,24 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
             <Field label="To" htmlFor="nc-teacher" required>
               <select id="nc-teacher" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} className={selectClass} disabled={loading || !parentTargets?.teachers.length}>
                 <option value="">Select…</option>
-                {(parentTargets?.teachers ?? []).map((x) => (
-                  <option key={x.userId} value={x.userId}>
-                    {x.name} · {x.via}
-                  </option>
-                ))}
+                {(() => {
+                  const all = parentTargets?.teachers ?? []
+                  const teachers = all.filter((x) => x.role !== 'ADMIN')
+                  const office = all.filter((x) => x.role === 'ADMIN')
+                  const opt = (x: (typeof all)[number]) => (
+                    <option key={x.userId} value={x.userId}>
+                      {x.name} · {x.via}
+                    </option>
+                  )
+                  // Group only once there is a second group to tell apart.
+                  if (!office.length) return teachers.map(opt)
+                  return (
+                    <>
+                      <optgroup label="Teachers">{teachers.map(opt)}</optgroup>
+                      <optgroup label="School office">{office.map(opt)}</optgroup>
+                    </>
+                  )
+                })()}
               </select>
             </Field>
           )}

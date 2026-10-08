@@ -126,7 +126,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <RoleBadge role={user.role} />
+          <RoleBadge role={user.role} title={user.staffTitle} />
           <StatusBadge user={user} />
         </div>
       </header>

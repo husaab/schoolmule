@@ -21,13 +21,15 @@ const roleStyles: Record<string, string> = {
 export const roleLabel = (role: string) =>
   ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role
 
-export const RoleBadge = ({ role }: { role: string }) => (
+export const RoleBadge = ({ role, title }: { role: string; title?: string | null }) => (
   <span
     className={`inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
       roleStyles[role] ?? 'bg-slate-100 text-slate-600 ring-slate-200'
     }`}
+    title={title ? 'Parents can message this account' : undefined}
   >
     {roleLabel(role)}
+    {title && <span className="ml-1 font-normal opacity-80">· {title}</span>}
   </span>
 )
 

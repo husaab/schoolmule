@@ -340,7 +340,7 @@ const UsersPage = () => {
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <RoleBadge role={u.role} />
+                            <RoleBadge role={u.role} title={u.staffTitle} />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <StatusBadge user={u} />

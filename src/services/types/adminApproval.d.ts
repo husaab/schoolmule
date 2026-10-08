@@ -33,6 +33,12 @@ export interface ChildLink {
   relation: string;
 }
 
+export interface RenameSignupRequest {
+  firstName: string;
+  /** May be empty for a single-name user. */
+  lastName: string;
+}
+
 export interface ApproveSignupRequest {
   /** Omit to keep the role they picked at signup. */
   role?: SignupRole;

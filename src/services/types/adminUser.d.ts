@@ -12,6 +12,8 @@ export interface SchoolUser {
   email: string;
   school: string;
   role: SchoolRole;
+  /** Admins only: the title parents see when they message them (e.g. "Principal"). null = parents can't message them. */
+  staffTitle: string | null;
   isVerified: boolean;
   isVerifiedSchool: boolean;
   /** Archived: kept with all their records, hidden from staff lists, can't sign in. */
@@ -63,6 +65,8 @@ export interface UpdateSchoolUserRequest {
   lastName: string;
   role: SchoolRole;
   isVerifiedSchool: boolean;
+  /** Admins only; empty or omitted clears it. Ignored for other roles. */
+  staffTitle?: string;
 }
 
 /** POST /admin/users/:id/impersonate — a login-shaped payload for the previewed user. */
