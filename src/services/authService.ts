@@ -81,7 +81,11 @@ export interface SessionValidationResponse {
     fullName: string;
     email: string;
     school: string;
+    /** The active view (what every guard reads). */
     role: string;
+    /** Database role, and every view the account may switch to. */
+    baseRole?: string;
+    roles?: string[];
     isVerified: boolean;
     isVerifiedSchool: boolean;
     /** True only for the platform owner (backend env allowlist). */

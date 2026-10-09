@@ -9,6 +9,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { updatePassword, updateUser } from '@/services/userService';
 import { EyeIcon, EyeSlashIcon, UserCircleIcon, KeyIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import DeleteUserModal from '@/components/user/delete/DeleteUserModal';
+import { roleLabel } from '@/components/adminUsers/userDisplay';
 
 const Settings = () => {
   const user = useUserStore((state) => state.user);
@@ -64,8 +65,9 @@ const Settings = () => {
         email:    user.email!,      // ← send the current one back
         username: username,        // ← the new one the user typed
         school:   user.school!,     // ← send the current one back
-        role:     user.role!        // ← send the current one back
-        
+        // The database role, never the active view: a teacher in parent view
+        // must not post PARENT back for a TEACHER row.
+        role:     (user.baseRole ?? user.role)!
       });
 
       setUser({
@@ -102,8 +104,13 @@ const Settings = () => {
                 <h2 className="text-xl font-semibold text-slate-900">{user.username}</h2>
                 <p className="text-slate-500 text-sm">{user.email}</p>
                 <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">
-                  {user.role}
+                  {roleLabel(user.baseRole ?? user.role ?? '')}
                 </span>
+                {(user.roles?.length ?? 0) > 1 && (
+                  <span className="inline-flex items-center mt-1 ml-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                    Also a parent
+                  </span>
+                )}
               </div>
             </div>
 

@@ -84,6 +84,8 @@ export interface ChildClassGrades {
   classId: string;
   subject: string;
   teacherName: string | null;
+  /** True when the signed-in user teaches this class (a staff member in parent view): no "Ask the teacher". */
+  taughtByViewer?: boolean;
   finalPct: number | null;
   classAvg: number | null;
   missingCount: number;

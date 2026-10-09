@@ -11,6 +11,7 @@ import SchoolYearSelector from './SchoolYearSelector';
 import PastYearBanner from './PastYearBanner';
 import ScheduleMenu from '@/components/schedulePlanner/ScheduleMenu';
 import InboxBell from '@/components/messaging/InboxBell';
+import ViewSwitcher from './ViewSwitcher';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -54,9 +55,8 @@ const NavBar: FC = () => {
                 <h1 className="text-lg font-semibold text-slate-900">
                   {user?.school ? getSchoolName(user.school) : 'SchoolMule'}
                 </h1>
-                <p className="text-xs text-slate-500">
-                  {user?.role === 'ADMIN' ? 'Administrator' : user?.role === 'PARENT' ? 'Parent Portal' : 'Teacher Portal'}
-                </p>
+                {/* Portal label; becomes the view switcher for staff who are also parents */}
+                <ViewSwitcher variant="label" />
               </div>
             </div>
           </div>
@@ -85,7 +85,9 @@ const NavBar: FC = () => {
             {/* User Avatar (Mobile) */}
             <Link
               href="/settings"
-              className="lg:hidden w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm"
+              className={`lg:hidden w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm ${
+                user?.role === 'PARENT' ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
+              }`}
             >
               {user?.username?.charAt(0).toUpperCase() || 'U'}
             </Link>

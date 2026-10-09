@@ -77,6 +77,9 @@ export interface ImpersonationStart {
   email: string;
   school: string;
   role: SchoolRole;
+  /** Dual-role claims, when the backend sends them. The switcher is hidden during a preview anyway. */
+  baseRole?: string;
+  roles?: string[];
   isVerified: boolean;
   isVerifiedSchool: boolean;
   activeTerm: string | false;

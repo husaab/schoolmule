@@ -13,6 +13,12 @@ export type User = {
     // Platform owner (env allowlist on the backend). Optional so the other
     // setUser callers (impersonation, approvals) need no change: absent is false.
     isPlatformOwner?: boolean;
+    // Dual-role view switch (staff who are also parents). `role` above is the
+    // active view; `baseRole` is the database role and `roles` every view the
+    // account holds. Optional: a user persisted before these existed has
+    // neither, and reads as single-role until /auth/me fills them in.
+    baseRole?: string | null;
+    roles?: string[];
 }
 
 type UserStore = {

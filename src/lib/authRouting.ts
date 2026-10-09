@@ -18,10 +18,14 @@
 
 export type RouteUser = {
   id: string | null
+  /** The active view. A staff member in parent view is routed as a PARENT. */
   role: string | null
   isVerifiedEmail: boolean
   isVerifiedSchool: boolean
   isPlatformOwner?: boolean
+  // Dual-role claims. Present for information only: routing reads `role`.
+  baseRole?: string | null
+  roles?: string[]
 }
 
 export type RouteState = {

@@ -131,6 +131,16 @@ School Mule is a comprehensive school management system with separate frontend a
 ## Memory Persistence
 **IMPORTANT**: Claude Code doesn't retain information between sessions. This `CLAUDE.md` file serves as persistent memory. Always reference this file when working on the School Mule system.
 
+## Dual-Role Accounts (staff who are also parents)
+
+One account per person. A TEACHER or ADMIN row linked to a current-year student through `parent_students.parent_id` also holds the PARENT view. Eligibility is derived from those links (`utils/sessionContext.getRolesForUser`), never stored.
+
+- **Token claims**: `role` is the active view and is what every guard and routing rule reads; `baseRole` is the database role; `roles` lists every view the account holds. Sign-in always starts in the database role.
+- **Switching**: `POST /api/auth/view { view }` re-checks eligibility and reissues the 7-day token. The frontend (`services/viewSwitch.ts`) swaps the token, clears parent-only and messaging stores, keeps the school-year selection, and hard-reloads into `/parent/dashboard` or `/dashboard` (same hygiene as admin impersonation).
+- **`/auth/me`** keeps the active view on a reissue as long as it is still held; when the last link disappears the user falls back to the database role.
+- **UI**: `components/navbar/ViewSwitcher.tsx` renders in the navbar portal label (desktop) and the sidebar footer card (mobile and desktop). Hidden during an admin "view as" preview.
+- **Rules**: in parent view a user never messages themself (`taughtByViewer` on parent grades hides "Ask the teacher"; the API refuses the thread). The admin link picker lists staff accounts too, marked as such.
+
 ## Development Conventions
 
 - **Every feature must support full CRUD in the UI, not just creation.** Whenever a new entity is added (rules, blocks, teachers, courses, etc.), the frontend must allow creating, editing, AND deleting it from the start — backend PATCH/DELETE endpoints alone are not enough; wire them into the UI in the same change. Never ship a list of items the user can add but not modify.

@@ -58,7 +58,11 @@ export interface LoginResponse {
     fullName: string;
     email: string;
     school: string;
+    /** The active view; sign-in always starts in the database role. */
     role: string;
+    /** Database role, and every view the account may switch to. */
+    baseRole?: string;
+    roles?: string[];
     isVerified: boolean;
     isVerifiedSchool: boolean;
     isPlatformOwner: boolean;

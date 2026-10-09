@@ -50,6 +50,8 @@ export const startImpersonation = (adminToken: string, preview: ImpersonationSta
     username: preview.username,
     email: preview.email,
     role: preview.role,
+    baseRole: preview.baseRole ?? preview.role,
+    roles: preview.roles ?? [preview.role],
     school: preview.school,
     isVerifiedEmail: preview.isVerified,
     isVerifiedSchool: preview.isVerifiedSchool,

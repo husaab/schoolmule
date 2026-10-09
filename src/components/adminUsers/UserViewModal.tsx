@@ -283,6 +283,27 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
                 <Quiet>No staff directory entry uses this email.</Quiet>
               )}
             </section>
+
+            {/* Staff linked to a student are also parents: they get the parent
+                view on this account, so show who it covers. */}
+            {details.children.length > 0 && (
+              <section className="space-y-2">
+                <SectionLabel>Also a parent of</SectionLabel>
+                <ul className="divide-y divide-slate-100 rounded-xl border border-amber-100 bg-amber-50/40">
+                  {details.children.map((child) => (
+                    <li key={child.studentId} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                      <span className="flex min-w-0 items-center gap-2 text-sm text-slate-800">
+                        <UserGroupIcon className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                        <span className="truncate">{child.name}</span>
+                        {child.relation && <span className="text-xs text-slate-400">· {child.relation}</span>}
+                      </span>
+                      <span className="flex-shrink-0 text-xs text-slate-500">{getGradeDisplayName(child.grade)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Quiet>They can switch to the parent portal from their own account.</Quiet>
+              </section>
+            )}
           </>
         ) : null}
       </div>

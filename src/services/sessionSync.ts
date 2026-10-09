@@ -28,6 +28,8 @@ export const applySession = async (data: SessionData, sentToken: string | null):
     email: data.email,
     school: data.school,
     role: data.role,
+    baseRole: data.baseRole ?? data.role,
+    roles: data.roles ?? [data.role],
     isVerifiedEmail: data.isVerified,
     isVerifiedSchool: data.isVerifiedSchool,
     activeTerm: data.activeTerm || null,
@@ -48,12 +50,16 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
   const next = {
     ...current,
     role: data.role,
+    baseRole: data.baseRole ?? data.role,
+    roles: data.roles ?? [data.role],
     isVerifiedEmail: data.isVerified,
     isVerifiedSchool: data.isVerifiedSchool,
     isPlatformOwner: Boolean(data.isPlatformOwner),
   }
   const changed =
     next.role !== current.role ||
+    next.baseRole !== current.baseRole ||
+    next.roles.join() !== (current.roles ?? []).join() ||
     next.isVerifiedEmail !== current.isVerifiedEmail ||
     next.isVerifiedSchool !== current.isVerifiedSchool ||
     next.isPlatformOwner !== current.isPlatformOwner

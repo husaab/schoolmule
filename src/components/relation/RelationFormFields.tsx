@@ -127,11 +127,16 @@ const RelationFormFields: React.FC<RelationFormFieldsProps> = ({
   loadingParents,
 }) => {
   // Name first, email underneath; an account with no name shows its email alone.
-  const parentOptions: ComboOption[] = parents.map((p) => ({
-    id: p.userId,
-    primary: p.fullName || p.email,
-    secondary: p.fullName ? p.email : undefined,
-  }))
+  // Staff accounts are listed too (a teacher or admin may be a parent here) and
+  // say so, so an admin never links a child to the wrong "Fatima".
+  const parentOptions: ComboOption[] = parents.map((p) => {
+    const staff = p.role && p.role !== 'PARENT' ? ` · ${p.role === 'ADMIN' ? 'Admin' : 'Teacher'} account` : ''
+    return {
+      id: p.userId,
+      primary: p.fullName || p.email,
+      secondary: p.fullName ? `${p.email}${staff}` : staff.replace(/^ · /, '') || undefined,
+    }
+  })
 
   // Only the active mode's fields are submitted (see buildParentFields), so
   // switching tabs never clears anything — saving in Manual mode is what

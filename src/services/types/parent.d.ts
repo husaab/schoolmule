@@ -16,6 +16,8 @@ export interface ParentPayload {
   email: string;
   /** School identifier */
   school: string;
+  /** PARENT for a parent account; TEACHER or ADMIN for staff who are also parents. */
+  role?: string;
   /** ISO timestamp when this user was created */
   createdAt: string;
 }

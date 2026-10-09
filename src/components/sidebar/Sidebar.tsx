@@ -47,6 +47,9 @@ import { useMessagingStore } from '@/store/useMessagingStore'
 import { getNewSubmissionCount } from '@/services/registrationService'
 import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
 import ChildSwitcher from '@/components/parent/ChildSwitcher'
+import ViewSwitcher from '@/components/navbar/ViewSwitcher'
+import { canSwitchViews, viewLabelFor } from '@/lib/viewSwitch'
+import { roleLabel } from '@/components/adminUsers/userDisplay'
 
 interface NavLink {
   href: string;
@@ -466,17 +469,29 @@ const Sidebar = () => {
         </div>
       </nav>
 
-      {/* User Info Footer */}
-      <div className="p-4 border-t border-slate-100 bg-slate-50">
+      {/* User Info Footer. For staff who are also parents it names the active
+          view and carries the switch; this is the only placement on phones. */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-semibold text-sm">
+          <div
+            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm ${
+              user.role === 'PARENT' ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
+            }`}
+          >
             {user.username?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
-            <p className="text-xs text-slate-500 truncate">{user.role}</p>
+            <p className="text-xs text-slate-500 truncate">
+              {canSwitchViews(user)
+                ? user.role === 'PARENT'
+                  ? `${viewLabelFor(user.role)} · ${roleLabel(user.baseRole ?? '')} account`
+                  : `${roleLabel(user.role ?? '')} · also a parent`
+                : roleLabel(user.role ?? '')}
+            </p>
           </div>
         </div>
+        <ViewSwitcher variant="card" />
       </div>
     </aside>
   )

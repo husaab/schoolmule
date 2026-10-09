@@ -146,7 +146,8 @@ const ClassCard: React.FC<{
               scores={cls.assessmentScores}
               threadStubs={threadStubs}
               ask={
-                canAsk
+                // A staff member in parent view never asks themself about a class they teach.
+                canAsk && !cls.taughtByViewer
                   ? {
                       studentId: child.studentId,
                       studentFirstName: child.name.split(' ')[0],

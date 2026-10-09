@@ -173,6 +173,8 @@ const LoginForm: FC = () => {
           username: response.data.username,
           email: response.data.email,
           role: response.data.role,
+          baseRole: response.data.baseRole ?? response.data.role,
+          roles: response.data.roles ?? [response.data.role],
           school: response.data.school,
           isVerifiedEmail: response.data.isVerified,
           isVerifiedSchool: response.data.isVerifiedSchool,

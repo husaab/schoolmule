@@ -109,6 +109,44 @@ describe('guarded pages stay protected', () => {
   })
 })
 
+// A staff member who is also a parent carries roles [TEACHER|ADMIN, PARENT]
+// and flips `role` between them. Routing follows the active view only; the
+// base role and the list of views must never open or close a door.
+describe('dual-role users route by their active view', () => {
+  const staff = { id: 'd1', isVerifiedEmail: true, isVerifiedSchool: true }
+  const teacherInParentView: RouteUser = { ...staff, role: 'PARENT', baseRole: 'TEACHER', roles: ['TEACHER', 'PARENT'] }
+  const adminInParentView: RouteUser = { ...staff, role: 'PARENT', baseRole: 'ADMIN', roles: ['ADMIN', 'PARENT'] }
+  const teacherInStaffView: RouteUser = { ...staff, role: 'TEACHER', baseRole: 'TEACHER', roles: ['TEACHER', 'PARENT'] }
+  const plainParent: RouteUser = { ...staff, role: 'PARENT' }
+  const plainTeacher: RouteUser = { ...staff, role: 'TEACHER' }
+
+  it('a teacher in parent view is confined exactly like a parent', () => {
+    for (const p of PATHS) {
+      expect(resolveRedirect(p, { hasToken: true, user: teacherInParentView })).toBe(resolveRedirect(p, { hasToken: true, user: plainParent }))
+    }
+    expect(homeFor(teacherInParentView)).toBe('/parent/dashboard')
+  })
+
+  it('an admin in parent view loses the admin pages until they switch back', () => {
+    expect(resolveRedirect('/admin-panel/users', { hasToken: true, user: adminInParentView })).toBe('/parent/dashboard')
+    expect(resolveRedirect('/finance', { hasToken: true, user: adminInParentView })).toBe('/parent/dashboard')
+    expect(resolveRedirect('/parent/grades', { hasToken: true, user: adminInParentView })).toBeNull()
+  })
+
+  it('a teacher in staff view routes exactly like a plain teacher', () => {
+    for (const p of PATHS) {
+      expect(resolveRedirect(p, { hasToken: true, user: teacherInStaffView })).toBe(resolveRedirect(p, { hasToken: true, user: plainTeacher }))
+    }
+    expect(homeFor(teacherInStaffView)).toBe('/dashboard')
+  })
+
+  it('landing after sign-in honours ?next= within the active view only', () => {
+    expect(landingFor(teacherInParentView, '/gradebook')).toBe('/parent/dashboard')
+    expect(landingFor(teacherInParentView, '/parent/grades')).toBe('/parent/grades')
+    expect(landingFor(teacherInStaffView, '/gradebook')).toBe('/gradebook')
+  })
+})
+
 // Redirects pages make on their own, outside AuthGuard. Each landing must
 // settle without leading back to the page that sent the user there.
 const PAGE_REDIRECTS: { from: string; to: string; signedIn: boolean; roles: (string | null)[] }[] = [
