@@ -7,6 +7,7 @@ import {
   SchoolUserDetails,
   UpdateSchoolUserRequest,
 } from './types/adminUser';
+import type { PreviewView } from '@/lib/previewViews';
 
 // Admin-only. The backend scopes every call to the signed-in admin's school.
 
@@ -59,9 +60,11 @@ export const deleteSchoolUser = (userId: string) =>
 /**
  * POST /admin/users/:id/impersonate — "View as". Returns a read-only preview
  * token for a teacher or parent; see services/impersonation.ts for how it is
- * swapped in.
+ * swapped in. `view` opens a dual-role teacher in their parent portal instead
+ * of the teacher portal; omitted, the preview starts in their database role.
  */
-export const impersonateSchoolUser = (userId: string) =>
-  apiClient<AdminUserResponse<ImpersonationStart>>(`/admin/users/${userId}/impersonate`, {
+export const impersonateSchoolUser = (userId: string, view?: PreviewView) =>
+  apiClient<AdminUserResponse<ImpersonationStart>, { view?: PreviewView }>(`/admin/users/${userId}/impersonate`, {
     method: 'POST',
+    body: view ? { view } : {},
   });

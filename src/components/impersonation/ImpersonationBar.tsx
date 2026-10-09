@@ -77,7 +77,12 @@ export default function ImpersonationBar() {
             </p>
             <p className="truncate text-sm font-semibold">
               {target.fullName}
-              <span className="ml-1.5 font-normal text-slate-300">· {roleLabel(target.role)}</span>
+              <span className="ml-1.5 font-normal text-slate-300">
+                · {roleLabel(target.baseRole ?? target.role)}
+                {target.baseRole && target.baseRole !== target.role && (
+                  <span className="text-amber-200"> · parent view</span>
+                )}
+              </span>
             </p>
           </div>
 

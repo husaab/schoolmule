@@ -24,6 +24,7 @@ import {
 } from '@/components/adminUsers/userDisplay'
 import { getSchoolUsers } from '@/services/adminUserService'
 import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
+import type { PreviewView } from '@/lib/previewViews'
 import { useUserStore } from '@/store/useUserStore'
 import {
   ArchiveBoxArrowDownIcon,
@@ -63,7 +64,7 @@ const UsersPage = () => {
   const [deleting, setDeleting] = useState<SchoolUser | null>(null)
   const [archiving, setArchiving] = useState<SchoolUser | null>(null)
   const [unarchiving, setUnarchiving] = useState<SchoolUser | null>(null)
-  const [previewing, setPreviewing] = useState<SchoolUser | null>(null)
+  const [previewing, setPreviewing] = useState<{ user: SchoolUser; view?: PreviewView } | null>(null)
   const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
@@ -352,7 +353,7 @@ const UsersPage = () => {
                             <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               {canImpersonate(u, currentUserId) && (
                                 <button
-                                  onClick={() => setPreviewing(u)}
+                                  onClick={() => setPreviewing({ user: u })}
                                   title="View as (read-only)"
                                   aria-label={`View School Mule as ${u.fullName}`}
                                   className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-violet-50 hover:text-violet-600 cursor-pointer"
@@ -421,11 +422,16 @@ const UsersPage = () => {
           onDelete={() => setDeleting(viewing)}
           onArchive={() => setArchiving(viewing)}
           onUnarchive={() => setUnarchiving(viewing)}
-          onImpersonate={() => setPreviewing(viewing)}
+          onImpersonate={(view) => setPreviewing({ user: viewing, view })}
         />
       )}
       {previewing && (
-        <UserImpersonateModal isOpen={Boolean(previewing)} onClose={() => setPreviewing(null)} user={previewing} />
+        <UserImpersonateModal
+          isOpen={Boolean(previewing)}
+          onClose={() => setPreviewing(null)}
+          user={previewing.user}
+          view={previewing.view}
+        />
       )}
       {archiving && (
         <UserArchiveModal

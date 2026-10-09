@@ -10,19 +10,25 @@ import { SchoolUser } from '@/services/types/adminUser'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { EyeIcon } from '@heroicons/react/24/outline'
 import { roleLabel, statusOf } from './userDisplay'
+import type { PreviewView } from '@/lib/previewViews'
 
 interface UserImpersonateModalProps {
   isOpen: boolean
   onClose: () => void
   user: SchoolUser
+  /** The portal to open. Defaults to the user's own role; PARENT previews a dual-role teacher as a parent. */
+  view?: PreviewView
 }
 
-const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onClose, user }) => {
+const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onClose, user, view }) => {
   const notify = useNotificationStore((s) => s.showNotification)
   const [starting, setStarting] = useState(false)
 
   const firstName = user.firstName || user.fullName
-  const portal = user.role === 'PARENT' ? 'the parent portal' : 'the teacher portal'
+  const asParent = (view ?? user.role) === 'PARENT'
+  const portal = asParent ? 'the parent portal' : 'the teacher portal'
+  // A teacher being previewed as a parent: say so, since the role fact below reads "Teacher".
+  const crossView = asParent && user.role !== 'PARENT'
 
   const handleStart = async () => {
     const adminToken = getToken()
@@ -32,7 +38,7 @@ const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onC
     }
     setStarting(true)
     try {
-      const res = await impersonateSchoolUser(user.userId)
+      const res = await impersonateSchoolUser(user.userId, view)
       // Full page load follows; keep the spinner on until it happens.
       startImpersonation(adminToken, res.data)
     } catch (err) {
@@ -79,6 +85,7 @@ const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onC
           facts={[
             { label: 'Email', value: user.email },
             { label: 'Role', value: roleLabel(user.role) },
+            ...(crossView ? [{ label: 'Previewing', value: 'Parent view (their children)' }] : []),
           ]}
         />
       </ModalBody>

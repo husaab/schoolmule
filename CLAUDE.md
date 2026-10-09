@@ -139,6 +139,7 @@ One account per person. A TEACHER or ADMIN row linked to a current-year student 
 - **Switching**: `POST /api/auth/view { view }` re-checks eligibility and reissues the 7-day token. The frontend (`services/viewSwitch.ts`) swaps the token, clears parent-only and messaging stores, keeps the school-year selection, and hard-reloads into `/parent/dashboard` or `/dashboard` (same hygiene as admin impersonation).
 - **`/auth/me`** keeps the active view on a reissue as long as it is still held; when the last link disappears the user falls back to the database role.
 - **UI**: `components/navbar/ViewSwitcher.tsx` renders in the navbar portal label (desktop) and the sidebar footer card (mobile and desktop). Hidden during an admin "view as" preview.
+- **Admin preview**: `POST /api/admin/users/:id/impersonate { view? }` opens a dual-role teacher in either portal (`lib/previewViews.ts` decides which buttons the user modal offers). The preview token keeps `impersonator`, so it stays read-only; to change portal, exit and start the other preview.
 - **Rules**: in parent view a user never messages themself (`taughtByViewer` on parent grades hides "Ask the teacher"; the API refuses the thread). The admin link picker lists staff accounts too, marked as such.
 
 ## Development Conventions

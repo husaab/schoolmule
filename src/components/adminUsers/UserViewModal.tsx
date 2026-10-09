@@ -10,6 +10,7 @@ import { SchoolUser, SchoolUserDetails } from '@/services/types/adminUser'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
+import { previewViewsFor, type PreviewView } from '@/lib/previewViews'
 import {
   AcademicCapIcon,
   ArchiveBoxArrowDownIcon,
@@ -35,8 +36,8 @@ interface UserViewModalProps {
   onDelete: () => void
   onArchive: () => void
   onUnarchive: () => void
-  /** "View as": open the read-only preview confirmation. */
-  onImpersonate: () => void
+  /** "View as": open the read-only preview confirmation, in the given portal. */
+  onImpersonate: (view: PreviewView) => void
 }
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -329,17 +330,27 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-          {canImpersonate(user, currentUserId) && (
-            <Button
-              variant="secondary"
-              onClick={onImpersonate}
-              className="text-violet-700 hover:bg-violet-50"
-              title="See School Mule exactly as this user does (read-only)"
-            >
-              <EyeIcon className="h-4 w-4" />
-              View as
-            </Button>
-          )}
+          {canImpersonate(user, currentUserId) &&
+            (() => {
+              // A teacher who is also a parent can be previewed in either portal.
+              const views = previewViewsFor(user.role, details ? details.children.length > 0 : null)
+              return views.map((view) => (
+                <Button
+                  key={view}
+                  variant="secondary"
+                  onClick={() => onImpersonate(view)}
+                  className={view === 'PARENT' && views.length > 1 ? 'text-amber-700 hover:bg-amber-50' : 'text-violet-700 hover:bg-violet-50'}
+                  title={
+                    view === 'PARENT' && views.length > 1
+                      ? 'See the parent portal exactly as this user does (read-only)'
+                      : 'See School Mule exactly as this user does (read-only)'
+                  }
+                >
+                  <EyeIcon className="h-4 w-4" />
+                  {views.length > 1 ? (view === 'PARENT' ? 'View as parent' : 'View as teacher') : 'View as'}
+                </Button>
+              ))
+            })()}
           {status === 'archived' ? (
             <Button onClick={onUnarchive}>
               <ArrowUturnLeftIcon className="h-4 w-4" />

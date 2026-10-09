@@ -39,7 +39,7 @@ export const startImpersonation = (adminToken: string, preview: ImpersonationSta
   useImpersonationStore.getState().setSession({
     adminToken,
     admin: { userId: preview.impersonator.userId, fullName: preview.impersonator.fullName },
-    target: { userId: preview.userId, fullName: preview.fullName, role: preview.role },
+    target: { userId: preview.userId, fullName: preview.fullName, role: preview.role, baseRole: preview.baseRole ?? preview.role },
     startedAt: new Date().toISOString(),
   });
 

@@ -11,7 +11,8 @@ export type ImpersonationSession = {
   /** The admin's real session token, restored on exit. */
   adminToken: string;
   admin: { userId: string; fullName: string };
-  target: { userId: string; fullName: string; role: string };
+  /** `role` is the portal being previewed; `baseRole` the account's own role when they differ (teacher previewed as parent). */
+  target: { userId: string; fullName: string; role: string; baseRole?: string };
   startedAt: string;
 };
 
