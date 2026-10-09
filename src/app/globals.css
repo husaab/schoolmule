@@ -847,3 +847,19 @@ body {
   background: #fff;
 }
 .patch-note-body p:has(> img:only-child) { margin-top: 1rem; }
+
+/* Observe console: a dark shell inside a light app. Scoped so nothing else changes. */
+.observe-root {
+  color-scheme: dark;
+  background: #020617;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+.observe-root ::selection { background: rgba(34, 211, 238, 0.3); }
+.observe-root ::-webkit-scrollbar { width: 8px; height: 8px; }
+.observe-root ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+.observe-root ::-webkit-scrollbar-track { background: transparent; }
+@keyframes observe-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+.observe-live-dot { animation: observe-pulse 1.6s ease-in-out infinite; }
+@keyframes observe-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.observe-in { animation: observe-in 320ms var(--ease-out-expo) both; }
