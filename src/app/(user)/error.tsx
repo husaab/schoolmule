@@ -1,6 +1,7 @@
 'use client'
 // A render crash used to be a white screen. Report it and offer a reset.
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { reportClientEvent } from '@/services/clientErrors'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
@@ -17,7 +18,7 @@ export default function UserError({ error, reset }: { error: Error & { digest?: 
         <p className="text-sm text-slate-500 mt-2">This page hit an error. It has been reported. You can try again or go back to your dashboard.</p>
         <div className="mt-6 flex justify-center gap-3">
           <button onClick={reset} className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700">Try again</button>
-          <a href="/dashboard" className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">Dashboard</a>
+          <Link href="/dashboard" className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">Dashboard</Link>
         </div>
       </div>
     </div>
