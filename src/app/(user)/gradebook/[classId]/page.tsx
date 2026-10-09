@@ -741,7 +741,14 @@ const GradebookClass = () => {
   }
 
   // Calculate class statistics
-  const liveAssessmentCount = displayedAssessments.filter((a) => publications[a.assessmentId]?.isPublished).length
+  // "Live" counts the items parents can actually see: standalones plus the
+  // items inside categories. A category's own flag is not an item.
+  const gradedItems = assessments.filter((a) => !a.isParent)
+  const liveItemCount = gradedItems.filter((a) => publications[a.assessmentId]?.isPublished).length
+  const liveLabel =
+    gradedItems.length === displayedAssessments.length
+      ? `${liveItemCount} live for parents`
+      : `${liveItemCount} of ${gradedItems.length} items live for parents`
   const classAverage = students.length > 0
     ? students.reduce((sum, stu) => sum + computeTotalForStudent(stu.studentId), 0) / students.length
     : 0
@@ -884,7 +891,7 @@ const GradebookClass = () => {
                   <span>
                     <strong className="font-semibold text-slate-900 tabular-nums">{displayedAssessments.length}</strong>{' '}
                     {displayedAssessments.length === 1 ? 'assessment' : 'assessments'}
-                    {displayedAssessments.length > 0 && `, ${liveAssessmentCount} live for parents`}
+                    {displayedAssessments.length > 0 && `, ${liveLabel}`}
                   </span>
                   <span>
                     <strong className="font-semibold text-slate-900 tabular-nums">{classAverage.toFixed(1)}%</strong> class average

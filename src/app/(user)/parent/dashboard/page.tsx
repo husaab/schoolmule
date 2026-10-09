@@ -12,7 +12,7 @@ import {
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useVisibleChildren } from '@/store/useSelectedChildStore'
-import { getParentSummary } from '@/services/parentPortalService'
+import { getParentSummary, getRecentPublications } from '@/services/parentPortalService'
 import { ChildSummary } from '@/services/types/parentPortal'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
@@ -49,6 +49,8 @@ const ParentDashboardPage: React.FC = () => {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Marks published in the last 7 days, per child, for the "View grades" hint.
+  const [recentMarks, setRecentMarks] = useState<Record<string, number>>({})
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
 
   useEffect(() => {
@@ -71,6 +73,28 @@ const ParentDashboardPage: React.FC = () => {
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
+    return () => {
+      cancelled = true
+    }
+  }, [user.id, selectedYearId])
+
+  // Informational only — a failure here just leaves the hint without a count.
+  useEffect(() => {
+    if (!user.id) return
+    let cancelled = false
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    getRecentPublications(50)
+      .then((res) => {
+        if (cancelled) return
+        const counts: Record<string, number> = {}
+        for (const item of res.data?.items ?? []) {
+          if (new Date(item.publishedAt).getTime() >= weekAgo) {
+            counts[item.studentId] = (counts[item.studentId] ?? 0) + 1
+          }
+        }
+        setRecentMarks(counts)
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -161,7 +185,7 @@ const ParentDashboardPage: React.FC = () => {
                   )}
                   <div className="flex flex-col lg:flex-row gap-5 items-stretch">
                     <div className="lg:w-[380px] flex-shrink-0">
-                      <ChildOverviewCard summary={summary} />
+                      <ChildOverviewCard summary={summary} recentMarks={recentMarks[summary.studentId] ?? 0} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <AiWeeklySummaryCard

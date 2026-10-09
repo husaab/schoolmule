@@ -16,7 +16,7 @@ import { childColor, childInitial, gradeTextColor } from './childColors'
  * Where each card link goes, with a one-line hint built from the numbers
  * already on the card so a parent knows what is waiting before they tap.
  */
-const navLinks = (s: ChildSummary) => {
+const navLinks = (s: ChildSummary, recentMarks: number) => {
   const missedDays = s.attendance ? s.attendance.totalDays - s.attendance.presentDays : null
   return [
     {
@@ -24,11 +24,13 @@ const navLinks = (s: ChildSummary) => {
       icon: BookOpenIcon,
       path: '/parent/grades',
       hint:
-        s.overallAvg != null
-          ? `Every mark by class · ${s.overallAvg}% overall`
-          : s.classCount > 0
-            ? 'Every mark by class · nothing published yet'
-            : 'Every mark by class',
+        recentMarks > 0
+          ? `Every mark by class · ${recentMarks} new this week`
+          : s.overallAvg != null
+            ? `Every mark by class · ${s.overallAvg}% overall`
+            : s.classCount > 0
+              ? 'Every mark by class · nothing published yet'
+              : 'Every mark by class',
     },
     {
       label: 'View attendance',
@@ -53,7 +55,10 @@ const navLinks = (s: ChildSummary) => {
 }
 
 /** One child's headline numbers on the parent dashboard. */
-const ChildOverviewCard: React.FC<{ summary: ChildSummary }> = ({ summary }) => {
+const ChildOverviewCard: React.FC<{ summary: ChildSummary; recentMarks?: number }> = ({
+  summary,
+  recentMarks = 0,
+}) => {
   const selectChild = useSelectedChildStore((s) => s.selectChild)
   const color = childColor(summary.studentId)
 
@@ -125,7 +130,7 @@ const ChildOverviewCard: React.FC<{ summary: ChildSummary }> = ({ summary }) => 
           clear these leave the dashboard. Selecting the child first means the
           destination opens already filtered to them, not to "All children". */}
       <nav aria-label={`${summary.name} pages`} className="rounded-xl border border-stone-200 divide-y divide-stone-100 overflow-hidden">
-        {navLinks(summary).map(({ label, icon: Icon, path, hint }) => (
+        {navLinks(summary, recentMarks).map(({ label, icon: Icon, path, hint }) => (
           <Link
             key={path}
             href={path}
