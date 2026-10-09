@@ -55,3 +55,10 @@ export const tickFormatterFor = (window: WindowKey) => (iso: string): string => 
 export const deltaRatio = (now: number, prev: number): number | null => (prev > 0 ? (now - prev) / prev : now > 0 ? null : 0)
 
 export const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// '15 minutes' (the API's bucket label) -> 900000
+export const bucketToMs = (bucket: string): number => {
+  const [n, unit] = bucket.split(' ')
+  const base = unit.startsWith('minute') ? 60_000 : unit.startsWith('hour') ? 3_600_000 : unit.startsWith('day') ? 86_400_000 : 1000
+  return (parseInt(n, 10) || 1) * base
+}

@@ -64,7 +64,14 @@ export interface RecentError {
   ts: string; source: 'server' | 'client'; fingerprint: string; location: string | null; message: string
   status: number | null; requestId: string | null; user: ObserveUserRef | null
 }
-export interface ErrorsData { window: ObserveWindow; groups: (ErrorGroup & { spark: number[] })[]; recent: RecentError[] }
+export interface ErrorSeriesPoint { ts: string; server: number; client: number }
+export interface ErrorsData { window: ObserveWindow; groups: (ErrorGroup & { spark: number[] })[]; recent: RecentError[]; series: ErrorSeriesPoint[] }
+
+export interface ErrorRangeData {
+  from: string; to: string
+  errors: (RecentError & { stack: string | null })[]
+  groups: { fingerprint: string; source: 'server' | 'client'; location: string | null; message: string; count: number }[]
+}
 
 export interface ErrorGroupData {
   window: ObserveWindow; group: ErrorGroup; series: { ts: string; count: number }[]

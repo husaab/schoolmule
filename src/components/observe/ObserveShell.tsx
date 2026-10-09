@@ -4,6 +4,7 @@
 // It replaces Navbar/Sidebar entirely; the back link is the only way out.
 import { ReactNode, Suspense, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Squares2X2Icon, PresentationChartLineIcon, UsersIcon, RectangleStackIcon, ExclamationTriangleIcon,
@@ -94,7 +95,9 @@ export default function ObserveShell({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-white/[0.06] bg-slate-950/80 sticky top-0 h-dvh">
         <div className="px-5 pt-6 pb-4">
           <div className="flex items-center gap-2.5">
-            <span className="h-7 w-7 rounded-lg bg-gradient-to-br from-cyan-400 to-teal-500 shadow-[0_0_24px_-6px_rgba(34,211,238,0.8)]" />
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-white flex items-center justify-center overflow-hidden shadow-[0_0_24px_-8px_rgba(34,211,238,0.9)]">
+              <Image src="/logo/trimmedlogo.png" alt="SchoolMule" width={36} height={36} unoptimized className="h-full w-full object-contain p-0.5" />
+            </span>
             <div>
               <p className="font-display text-base font-semibold leading-none text-white">Observe</p>
               <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 mt-1">SchoolMule</p>
