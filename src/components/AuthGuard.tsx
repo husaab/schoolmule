@@ -19,7 +19,7 @@ const KNOWN_APP_ROUTES = [
   'admin-panel', 'settings', 'support',
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
-  'finance', 'messages',
+  'finance', 'messages', 'observe',
   'forbidden', 'api', '_next',
 ];
 
@@ -86,7 +86,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
               role: userData.role,
               isVerifiedEmail: userData.isVerified,
               isVerifiedSchool: userData.isVerifiedSchool,
-              activeTerm: userData.activeTerm || null
+              activeTerm: userData.activeTerm || null,
+              isPlatformOwner: Boolean(userData.isPlatformOwner),
             })
 
             const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
@@ -143,13 +144,15 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         path !== '/school-approval'
       ) {
         router.replace('/school-approval')
+      } else if (path.startsWith('/observe') && !user.isPlatformOwner) {
+        router.replace('/dashboard')
       } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance') || path.startsWith('/finance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
       } else if (user.role === 'PARENT' && !isParentPath(path) && !isPublicSchedulePath(path)) {
         router.replace("/parent/dashboard")
       }
     }
-  }, [hasHydrated, user.id, user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, clearUser, setUnread, previewing])
+  }, [hasHydrated, user.id, user.isVerifiedEmail, path, router, user.role, user.isVerifiedSchool, user.isPlatformOwner, clearUser, setUnread, previewing])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

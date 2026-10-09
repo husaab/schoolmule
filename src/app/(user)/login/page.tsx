@@ -175,7 +175,8 @@ const LoginForm: FC = () => {
           school: response.data.school,
           isVerifiedEmail: response.data.isVerified,
           isVerifiedSchool: response.data.isVerifiedSchool,
-          activeTerm: response.data.activeTerm
+          activeTerm: response.data.activeTerm,
+          isPlatformOwner: Boolean(response.data.isPlatformOwner),
         }
         setUser(user)
 

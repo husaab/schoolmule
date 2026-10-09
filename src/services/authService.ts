@@ -76,6 +76,8 @@ export interface SessionValidationResponse {
     role: string;
     isVerified: boolean;
     isVerifiedSchool: boolean;
+    /** True only for the platform owner (backend env allowlist). */
+    isPlatformOwner?: boolean;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;

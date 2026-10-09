@@ -32,6 +32,7 @@ export interface RegisterResponse {
     role: string;
     isVerified: boolean;
     isVerifiedSchool: boolean;
+    isPlatformOwner?: boolean;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;
@@ -60,6 +61,7 @@ export interface LoginResponse {
     role: string;
     isVerified: boolean;
     isVerifiedSchool: boolean;
+    isPlatformOwner: boolean;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;

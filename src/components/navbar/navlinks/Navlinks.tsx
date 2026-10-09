@@ -3,7 +3,7 @@ import { FC } from 'react'
 import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { getInitials } from '@/lib/utility'
-import { QuestionMarkCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import { QuestionMarkCircleIcon, EnvelopeIcon, ChartBarSquareIcon } from '@heroicons/react/24/outline'
 
 interface NavLinksProps {
   vertical?: boolean
@@ -16,6 +16,15 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
   if (vertical) {
     return (
       <div className="flex flex-col space-y-1">
+        {user.isPlatformOwner && (
+          <Link
+            href="/observe"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-900 hover:text-white transition-colors"
+          >
+            <ChartBarSquareIcon className="w-5 h-5 text-slate-400" />
+            <span className="text-sm font-medium">Observe</span>
+          </Link>
+        )}
         <Link
           href="/support"
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
@@ -45,6 +54,16 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
 
   return (
     <div className="flex items-center gap-2">
+      {user.isPlatformOwner && (
+        <Link
+          href="/observe"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-900 hover:text-white transition-colors"
+          title="Observe console"
+        >
+          <ChartBarSquareIcon className="w-4 h-4" />
+          <span className="hidden xl:inline">Observe</span>
+        </Link>
+      )}
       <Link
         href="/support"
         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"

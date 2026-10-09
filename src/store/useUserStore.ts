@@ -9,7 +9,10 @@ export type User = {
     school: string | null;
     isVerifiedEmail: boolean,
     isVerifiedSchool: boolean,
-    activeTerm: string | null
+    activeTerm: string | null;
+    // Platform owner (env allowlist on the backend). Optional so the other
+    // setUser callers (impersonation, approvals) need no change: absent is false.
+    isPlatformOwner?: boolean;
 }
 
 type UserStore = {
