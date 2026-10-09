@@ -6,8 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useUserStore } from '@/store/useUserStore'
 import { deleteUserAccount } from '@/services/userService'
-import { logout, validateSession, removeToken, getToken } from '@/services/authService'
-import { applySession } from '@/services/sessionSync'
+import { validateSession, getToken } from '@/services/authService'
+import { applySession, signOutLocally } from '@/services/sessionSync'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
@@ -28,22 +28,16 @@ export default function SchoolApprovalPage() {
     }
     try {
       await deleteUserAccount(user.id!)
-      removeToken()
-      useUserStore.getState().clearUser()
+      signOutLocally()
       router.replace('/signup')
     } catch {
       notify('Failed to delete account', 'error')
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      useUserStore.getState().clearUser()
-      router.replace('/login')
-    } catch {
-      notify('Logout failed. Please try again.', 'error')
-    }
+  const handleLogout = () => {
+    signOutLocally()
+    router.replace('/login')
   }
 
   // Ask the server every minute (and whenever the tab comes back) whether the

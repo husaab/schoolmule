@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { confirmEmail, removeToken } from '@/services/authService'
+import { confirmEmail } from '@/services/authService'
+import { signOutLocally } from '@/services/sessionSync'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import { CheckBadgeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
@@ -40,8 +40,7 @@ export default function VerifyEmailTokenPage() {
 
           // Sign out fully: a token left behind would make AuthGuard sign
           // them straight back in while this page sends them to /login.
-          removeToken()
-          useUserStore.getState().clearUser()
+          signOutLocally()
 
           // Navigate after clearing
           setTimeout(() => {

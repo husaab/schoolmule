@@ -4,7 +4,7 @@ import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteUserAccount } from '@/services/userService'
-import { removeToken } from '@/services/authService'
+import { signOutLocally } from '@/services/sessionSync'
 import {
   Button,
   ConfirmBody,
@@ -26,7 +26,6 @@ interface DeleteUserModalProps {
 const DeleteUserModal: React.FC<DeleteUserModalProps> = ({ isOpen, onClose, onDeleted }) => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
-  const clearUser = useUserStore((state) => state.clearUser)
   const showNotification = useNotificationStore((state) => state.showNotification)
 
   const [confirmation, setConfirmation] = useState('')
@@ -40,8 +39,7 @@ const DeleteUserModal: React.FC<DeleteUserModalProps> = ({ isOpen, onClose, onDe
       if (!user.id) return
       await deleteUserAccount(user.id)
       showNotification('Account deleted successfully', 'success')
-      removeToken()
-      clearUser()
+      signOutLocally()
       onDeleted()
       onClose()
       router.replace('/login')

@@ -117,11 +117,22 @@ export const resolveRedirect = (path: string, state: RouteState): string | null 
   return null
 }
 
-// A same-origin path from ?next=, or null. Rejects '//host' and '/\host',
-// which browsers treat as another origin.
+// A same-origin path from ?next=, or null. Browsers drop tabs and newlines
+// from a URL and read '\' as '/', so '/\t/evil.com' is really '//evil.com':
+// refuse those characters outright, then let the URL parser have the last
+// word on whether the path stays on this site.
+// The path is returned normalised, so what is checked is what is navigated to.
+const SAFE_ORIGIN = 'https://same.origin'
 export const safeNextPath = (next: string | null | undefined): string | null => {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return null
-  return next
+  if (!next || !next.startsWith('/') || /[\u0000-\u001f\u007f\\]/.test(next)) return null
+  try {
+    const url = new URL(next, SAFE_ORIGIN)
+    // Normalising can still produce '//host' (e.g. '/..//evil.com').
+    if (url.origin !== SAFE_ORIGIN || url.pathname.startsWith('//')) return null
+    return url.pathname + url.search + url.hash
+  } catch {
+    return null
+  }
 }
 
 // Where to go right after signing in: ?next= when the user may open it,

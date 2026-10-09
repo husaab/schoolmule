@@ -6,8 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { resendVerificationEmail, logout, validateSession, getToken } from '@/services/authService'
-import { refreshAccessFlags } from '@/services/sessionSync'
+import { resendVerificationEmail, validateSession, getToken } from '@/services/authService'
+import { refreshAccessFlags, signOutLocally } from '@/services/sessionSync'
 import { isApiError } from '@/services/apiClient'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
@@ -68,14 +68,9 @@ export default function VerifyEmailPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      useUserStore.getState().clearUser()
-      router.replace('/login')
-    } catch {
-      notify('Logout failed. Please try again.', 'error')
-    }
+  const handleLogout = () => {
+    signOutLocally()
+    router.replace('/login')
   }
 
   return (

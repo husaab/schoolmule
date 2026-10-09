@@ -16,6 +16,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { CheckIcon } from '@heroicons/react/24/solid'
+import { safeNextPath } from '@/lib/authRouting'
 
 const ResetPasswordPage: FC = () => {
   const searchParams = useSearchParams()
@@ -24,8 +25,7 @@ const ResetPasswordPage: FC = () => {
   // Admin-created accounts land here from their invite email to set a first password.
   const isInvite = searchParams.get('invite') === '1'
   // Guardian invites from a teacher's message land in that thread after login.
-  const nextParam = searchParams.get('next') || ''
-  const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : ''
+  const next = safeNextPath(searchParams.get('next')) ?? ''
   const notify = useNotificationStore(s => s.showNotification)
 
   const [newPassword, setNewPassword] = useState('')

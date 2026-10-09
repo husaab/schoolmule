@@ -262,6 +262,37 @@ describe('landingFor / safeNextPath', () => {
     expect(safeNextPath('https://evil.com')).toBeNull()
     expect(safeNextPath('/ok')).toBe('/ok')
   })
+
+  // Browsers strip tabs and newlines before parsing, so each of these is
+  // '//evil.com' by the time the router sees it.
+  it.each(['/\t/evil.com', '/\n/evil.com', '/\r/evil.com', '/\t\\evil.com', '/\u0000/evil.com'])(
+    'rejects %j, which browsers read as another origin',
+    (next) => {
+      expect(safeNextPath(next)).toBeNull()
+      expect(landingFor(teacher, next)).toBe('/dashboard')
+    },
+  )
+
+  it('keeps an encoded tab as a harmless same-site path', () => {
+    // '%09' only becomes a tab if decoded twice; as written it is a path segment.
+    expect(new URL(safeNextPath('/%09/evil.com')!, 'https://app.example').origin).toBe('https://app.example')
+  })
+
+  it('rejects a path that normalises to another origin', () => {
+    expect(safeNextPath('/..//evil.com')).toBeNull()
+    expect(safeNextPath('/a/..//evil.com')).toBeNull()
+  })
+
+  it('every next it accepts stays on this site', () => {
+    const tries = ['/a', '/a?b=1#c', '/./a', '/..//evil.com', '/a/../../b', '/%2F%2Fevil.com']
+    for (const next of tries) {
+      const safe = safeNextPath(next)
+      if (safe) {
+        expect(safe.startsWith('//')).toBe(false)
+        expect(new URL(safe, 'https://app.example').origin).toBe('https://app.example')
+      }
+    }
+  })
 })
 
 describe('createLoopDetector', () => {

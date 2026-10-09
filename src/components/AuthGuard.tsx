@@ -3,8 +3,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
-import { validateSession, getToken, removeToken } from '@/services/authService'
-import { applySession, refreshAccessFlags } from '@/services/sessionSync'
+import { validateSession, getToken } from '@/services/authService'
+import { applySession, refreshAccessFlags, signOutLocally } from '@/services/sessionSync'
 import { reportClientEvent, flushClientEvents } from '@/services/clientErrors'
 import { getUnreadPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
@@ -167,8 +167,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 // loop has already been reported; signing out clears whatever state caused it.
 function RedirectLoopNotice() {
   const signOut = () => {
-    removeToken()
-    useUserStore.getState().clearUser()
+    signOutLocally()
     window.location.href = '/login'
   }
 

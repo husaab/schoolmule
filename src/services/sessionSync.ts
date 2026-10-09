@@ -4,8 +4,11 @@
 // fields the same way, and so a reissued token is never dropped (the old one
 // 403s once the account's claims changed).
 
-import { getToken, setToken, type SessionValidationResponse } from './authService'
+import { getToken, setToken, removeToken, type SessionValidationResponse } from './authService'
 import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useSelectedChildStore } from '@/store/useSelectedChildStore'
+import { useImpersonationStore } from '@/store/useImpersonationStore'
 
 export type SessionData = NonNullable<SessionValidationResponse['data']>
 
@@ -30,7 +33,6 @@ export const applySession = async (data: SessionData, sentToken: string | null):
     activeTerm: data.activeTerm || null,
     isPlatformOwner: Boolean(data.isPlatformOwner),
   })
-  const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
   useSchoolYearStore.getState().setYears(data.schoolYears ?? [])
   useSchoolYearStore.getState().selectYear(data.activeSchoolYear?.schoolYearId ?? null)
   return true
@@ -57,4 +59,16 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
     next.isPlatformOwner !== current.isPlatformOwner
   if (changed) useUserStore.getState().setUser(next)
   return changed
+}
+
+// Signs this browser out: token, user and every per-user store. Ends an
+// admin "view as" preview too, or "Exit preview" on /login would hand the
+// parked admin token back to a browser that looks signed out. Every sign-out
+// path uses this so none of them can forget a piece.
+export const signOutLocally = (): void => {
+  removeToken()
+  useUserStore.getState().clearUser()
+  useSchoolYearStore.getState().clearYears()
+  useSelectedChildStore.getState().clearChildren()
+  useImpersonationStore.getState().clearSession()
 }
