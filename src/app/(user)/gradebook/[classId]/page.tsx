@@ -42,7 +42,6 @@ import {
   MinusCircleIcon,
   AcademicCapIcon,
   UserGroupIcon,
-  ClipboardDocumentListIcon,
   ArrowDownTrayIcon,
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -51,7 +50,6 @@ import {
   ChatBubbleLeftRightIcon,
   ChevronDownIcon,
   ClipboardDocumentCheckIcon,
-  EllipsisHorizontalIcon,
   PencilSquareIcon,
   MegaphoneIcon
 } from '@heroicons/react/24/outline';
@@ -841,27 +839,14 @@ const GradebookClass = () => {
                     </>
                   }
                 />
-                <MenuButton
-                  label="More actions"
-                  items={[
-                    {
-                      key: 'export',
-                      label: 'Export to Excel',
-                      description: 'Every student and assessment in this class',
-                      icon: ArrowDownTrayIcon,
-                      onSelect: () => { void handleExportExcel() },
-                    },
-                    {
-                      key: 'manage',
-                      label: 'Manage assessments',
-                      description: 'Opens the Assessments tab',
-                      icon: ClipboardDocumentListIcon,
-                      onSelect: () => { void handleGoToAssessments() },
-                    },
-                  ]}
-                  triggerClassName="inline-flex h-11 w-11 items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all cursor-pointer shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
-                  trigger={<EllipsisHorizontalIcon className="h-5 w-5" />}
-                />
+                <button
+                  onClick={() => { void handleExportExcel() }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium cursor-pointer shadow-sm"
+                  title="Download this class's gradebook as a spreadsheet"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" />
+                  Export
+                </button>
               </div>
               )}
             </div>
