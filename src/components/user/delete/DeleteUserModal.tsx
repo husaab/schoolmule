@@ -4,6 +4,7 @@ import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteUserAccount } from '@/services/userService'
+import { removeToken } from '@/services/authService'
 import {
   Button,
   ConfirmBody,
@@ -39,6 +40,7 @@ const DeleteUserModal: React.FC<DeleteUserModalProps> = ({ isOpen, onClose, onDe
       if (!user.id) return
       await deleteUserAccount(user.id)
       showNotification('Account deleted successfully', 'success')
+      removeToken()
       clearUser()
       onDeleted()
       onClose()

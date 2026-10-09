@@ -3,6 +3,8 @@
 // Approvals: everyone who signed up for this school and is waiting to be let
 // in, plus the signups that were declined. Approving fixes the role they
 // picked, links a parent to their children and emails them, all in one step.
+// Signups who haven't verified their email sit in their own section below the
+// queue: they can't be approved yet, but the admin can resend or vouch.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -15,8 +17,10 @@ import ApprovalReviewModal from '@/components/adminApprovals/ApprovalReviewModal
 import ApprovalDeclineModal from '@/components/adminApprovals/ApprovalDeclineModal'
 import ApprovalRestoreModal from '@/components/adminApprovals/ApprovalRestoreModal'
 import ApprovalRenameModal from '@/components/adminApprovals/ApprovalRenameModal'
+import ApprovalVerifyEmailModal from '@/components/adminApprovals/ApprovalVerifyEmailModal'
 import { RoleBadge, UserAvatar, formatDate } from '@/components/adminUsers/userDisplay'
-import { changeSignupRole, getApprovals } from '@/services/adminApprovalService'
+import { changeSignupRole, getApprovals, resendVerification } from '@/services/adminApprovalService'
+import { isApiError } from '@/services/apiClient'
 import { ApprovalUser, SignupRole } from '@/services/types/adminApproval'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import {
@@ -24,6 +28,8 @@ import {
   ArrowUturnLeftIcon,
   CheckCircleIcon,
   CheckIcon,
+  EnvelopeIcon,
+  EnvelopeOpenIcon,
   InboxIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -77,7 +83,9 @@ const ApprovalsPage = () => {
   const [declining, setDeclining] = useState<ApprovalUser | null>(null)
   const [restoring, setRestoring] = useState<ApprovalUser | null>(null)
   const [renaming, setRenaming] = useState<ApprovalUser | null>(null)
+  const [verifying, setVerifying] = useState<ApprovalUser | null>(null)
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -95,7 +103,10 @@ const ApprovalsPage = () => {
     load()
   }, [load])
 
-  const pending = useMemo(() => users.filter((u) => !u.isArchived), [users])
+  // `=== false` so a backend that doesn't send unverified rows (or the field)
+  // still lists everyone as pending, as before.
+  const unverified = useMemo(() => users.filter((u) => !u.isArchived && u.isVerified === false), [users])
+  const pending = useMemo(() => users.filter((u) => !u.isArchived && u.isVerified !== false), [users])
   const declined = useMemo(() => users.filter((u) => u.isArchived), [users])
   const pool = tab === 'pending' ? pending : declined
 
@@ -107,14 +118,19 @@ const ApprovalsPage = () => {
   const pendingCounts = useMemo(() => countRoles(pending), [pending])
   const counts = useMemo(() => countRoles(pool), [pool])
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return pool.filter(
-      (u) =>
+  // The search and role filter apply to the unverified section too.
+  const matches = useCallback(
+    (u: ApprovalUser) => {
+      const q = search.trim().toLowerCase()
+      return (
         (roleFilter === 'ALL' || u.role === roleFilter) &&
         (!q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-    )
-  }, [pool, roleFilter, search])
+      )
+    },
+    [roleFilter, search]
+  )
+  const filtered = useMemo(() => pool.filter(matches), [pool, matches])
+  const filteredUnverified = useMemo(() => unverified.filter(matches), [unverified, matches])
 
   // Single-user responses (role change, rename, decline) don't recompute the
   // children on file, so keep what the list already knows.
@@ -138,6 +154,22 @@ const ApprovalsPage = () => {
       notify(err instanceof Error ? err.message : 'Failed to change role', 'error')
     } finally {
       setChangingRoleId(null)
+    }
+  }
+
+  // A 409 means they verified (or were declined) since the list loaded, so
+  // reload to put them where they now belong.
+  const handleResend = async (user: ApprovalUser) => {
+    setResendingId(user.userId)
+    try {
+      const res = await resendVerification(user.userId)
+      const sent = res.data.emailSent
+      notify(sent ? `Verification email sent to ${user.email}` : "Couldn't send the verification email", sent ? 'success' : 'error')
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Failed to resend the email', 'error')
+      if (isApiError(err) && err.status === 409) load()
+    } finally {
+      setResendingId(null)
     }
   }
 
@@ -431,6 +463,60 @@ const ApprovalsPage = () => {
               </div>
             )}
           </div>
+
+          {/* Awaiting email verification */}
+          {tab === 'pending' && !loading && !error && filteredUnverified.length > 0 && (
+            <section className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-100" aria-labelledby="unverified-heading">
+              <div className="border-b border-slate-100 p-4">
+                <h2 id="unverified-heading" className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                  <EnvelopeIcon className="h-5 w-5 text-amber-500" aria-hidden />
+                  Awaiting email verification
+                  <span className="font-mono tabular-nums text-xs font-normal text-slate-400">{filteredUnverified.length}</span>
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  They signed up but haven&apos;t clicked the link in their email yet. Once they do, they move up to
+                  the queue for you to approve.
+                </p>
+              </div>
+              <ul className="divide-y divide-slate-50">
+                {filteredUnverified.map((u) => (
+                  <li
+                    key={u.userId}
+                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <UserAvatar user={u} />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-slate-900">{u.fullName}</div>
+                        <div className="truncate text-xs text-slate-500">{u.email}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-11 sm:pl-0 sm:flex-nowrap sm:flex-shrink-0">
+                      <RoleBadge role={u.role} />
+                      <span className="whitespace-nowrap text-sm text-slate-500">Signed up {formatDate(u.createdAt)}</span>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => handleResend(u)}
+                          disabled={resendingId === u.userId}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <EnvelopeIcon className="h-4 w-4" />
+                          {resendingId === u.userId ? 'Sending' : 'Resend email'}
+                        </button>
+                        <button
+                          onClick={() => setVerifying(u)}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
+                        >
+                          <EnvelopeOpenIcon className="h-4 w-4" />
+                          Mark verified
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </main>
 
@@ -464,6 +550,15 @@ const ApprovalsPage = () => {
           onClose={() => setRestoring(null)}
           user={restoring}
           onRestored={upsert}
+        />
+      )}
+      {verifying && (
+        <ApprovalVerifyEmailModal
+          isOpen
+          onClose={() => setVerifying(null)}
+          user={verifying}
+          onVerified={upsert}
+          onStale={load}
         />
       )}
     </>

@@ -38,8 +38,14 @@ export const register = async (userData: RegisterRequest): Promise<RegisterRespo
   });
 };
 
+export interface ResendVerificationResponse {
+  success: boolean;
+  message: string;
+  data?: { alreadyVerified?: boolean };
+}
+
 export function resendVerificationEmail({ email }: { email: string }) {
-  return apiClient('/auth/verify-email', {
+  return apiClient<ResendVerificationResponse>('/auth/verify-email', {
     method: 'POST',
     body: { email },
   });
@@ -50,10 +56,12 @@ export interface ConfirmEmailResponse {
   status: number;
   message: string;
   data?: {
-    id: string;
-    email: string;
-    username: string;
-    isVerified: boolean;
+    id?: string;
+    email?: string;
+    username?: string;
+    isVerified?: boolean;
+    /** The link was already used: the account was verified earlier. */
+    alreadyVerified?: boolean;
   };
 }
 

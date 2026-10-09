@@ -7,6 +7,7 @@ import CategoryTag from './CategoryTag'
 import ImageLightbox from './ImageLightbox'
 import { dismissPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
+import { useUserStore } from '@/store/useUserStore'
 import type { PatchNote } from '@/services/types/patchNote'
 import DOMPurify from 'dompurify'
 
@@ -19,6 +20,7 @@ interface PatchNotesModalProps {
 export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesModalProps) {
   const router = useRouter()
   const clearUnread = usePatchNotesStore((s) => s.clearUnread)
+  const isParent = useUserStore((s) => s.user.role === 'PARENT')
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
 
   if (notes.length === 0) return null
@@ -92,12 +94,15 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
 
           {/* Footer */}
           <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-            <button
-              onClick={handleViewAll}
-              className="text-cyan-600 text-sm font-medium hover:text-cyan-700 transition-colors"
-            >
-              View all updates →
-            </button>
+            {/* /whats-new is staff-only; parents are sent back to their portal. */}
+            {isParent ? <span /> : (
+              <button
+                onClick={handleViewAll}
+                className="text-cyan-600 text-sm font-medium hover:text-cyan-700 transition-colors"
+              >
+                View all updates →
+              </button>
+            )}
             <button
               onClick={handleDismiss}
               className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:from-cyan-500 hover:to-teal-500 transition-all shadow-sm"

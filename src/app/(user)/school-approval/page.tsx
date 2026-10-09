@@ -6,7 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useUserStore } from '@/store/useUserStore'
 import { deleteUserAccount } from '@/services/userService'
-import { logout, validateSession, setToken } from '@/services/authService'
+import { logout, validateSession, removeToken, getToken } from '@/services/authService'
+import { applySession } from '@/services/sessionSync'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
@@ -27,6 +28,7 @@ export default function SchoolApprovalPage() {
     }
     try {
       await deleteUserAccount(user.id!)
+      removeToken()
       useUserStore.getState().clearUser()
       router.replace('/signup')
     } catch {
@@ -44,40 +46,22 @@ export default function SchoolApprovalPage() {
     }
   }
 
-  useEffect(() => {
-    if (!user?.id) {
-      router.replace('/login')
-    }
-  }, [user?.id, router])
-
   // Ask the server every minute (and whenever the tab comes back) whether the
   // school has approved the account, so nobody has to refresh or sign in
-  // again. /auth/me reissues the token when the claims changed.
+  // again. /auth/me reissues the token when the claims changed, and
+  // applySession keeps it.
   useEffect(() => {
     if (!user?.id) return
     let cancelled = false
 
     const check = async () => {
       try {
+        const sentToken = getToken()
         const res = await validateSession()
-        const data = res.data
-        if (cancelled || !data?.isVerifiedSchool) return
-        if (data.token) setToken(data.token)
-        useUserStore.getState().setUser({
-          id: data.userId,
-          username: data.username,
-          email: data.email,
-          school: data.school,
-          role: data.role,
-          isVerifiedEmail: data.isVerified,
-          isVerifiedSchool: data.isVerifiedSchool,
-          activeTerm: data.activeTerm || null
-        })
-        const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
-        useSchoolYearStore.getState().setYears(data.schoolYears ?? [])
-        useSchoolYearStore.getState().selectYear(data.activeSchoolYear?.schoolYearId ?? null)
+        if (cancelled || !res.data?.isVerifiedSchool) return
+        // AuthGuard sees the new flags and takes them to their home page.
+        if (!(await applySession(res.data, sentToken))) return
         notify('Your account has been approved', 'success')
-        router.replace(data.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
       } catch {
         // Not approved yet, or offline: try again on the next tick.
       }
@@ -94,7 +78,7 @@ export default function SchoolApprovalPage() {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [user?.id, router, notify])
+  }, [user?.id, notify])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">

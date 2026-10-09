@@ -126,10 +126,11 @@ const RelationFormFields: React.FC<RelationFormFieldsProps> = ({
   parents,
   loadingParents,
 }) => {
+  // Name first, email underneath; an account with no name shows its email alone.
   const parentOptions: ComboOption[] = parents.map((p) => ({
     id: p.userId,
-    primary: p.fullName,
-    secondary: p.email,
+    primary: p.fullName || p.email,
+    secondary: p.fullName ? p.email : undefined,
   }))
 
   // Only the active mode's fields are submitted (see buildParentFields), so

@@ -2,7 +2,7 @@
 // Collects browser-side failures and sends them to the backend in small
 // batches. Fire-and-forget: nothing here may throw or loop on its own
 // failures, so the reporter never reports itself.
-export type ClientEventKind = 'js_error' | 'unhandled_rejection' | 'api_failure' | 'render_error'
+export type ClientEventKind = 'js_error' | 'unhandled_rejection' | 'api_failure' | 'render_error' | 'redirect_loop'
 
 export interface ClientEvent {
   kind: ClientEventKind

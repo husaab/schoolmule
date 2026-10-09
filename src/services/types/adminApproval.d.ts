@@ -11,8 +11,13 @@ export interface ChildCandidate {
   grade: string;
 }
 
-/** A signup waiting in the queue, or one that was declined (isArchived + declinedAt). */
+/**
+ * A signup waiting in the queue, one that was declined (isArchived + declinedAt),
+ * or one that hasn't clicked the link in their verification email (!isVerified).
+ */
 export interface ApprovalUser extends SchoolUser {
+  /** false until they verify their email; approving 409s until then. */
+  isVerified: boolean;
   /** Active-year students whose family email on file matches this signup's email. */
   matchedChildren: ChildCandidate[];
 }
@@ -58,5 +63,9 @@ export interface ApproveSignupResult {
 
 export interface DeclineSignupResult {
   user: ApprovalUser;
+  emailSent: boolean;
+}
+
+export interface ResendVerificationResult {
   emailSent: boolean;
 }

@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { resendVerificationEmail, logout } from '@/services/authService'
+import { resendVerificationEmail, logout, validateSession, getToken } from '@/services/authService'
+import { refreshAccessFlags } from '@/services/sessionSync'
+import { isApiError } from '@/services/apiClient'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
   EnvelopeIcon,
@@ -20,20 +22,47 @@ export default function VerifyEmailPage() {
   const notify = useNotificationStore((s) => s.showNotification)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!user?.id) {
-      router.replace('/login')
+  // Redirects are AuthGuard's job: it moves the user on as soon as
+  // isVerifiedEmail turns true, so this page only has to keep that flag fresh.
+  const recheck = useCallback(async () => {
+    try {
+      const sentToken = getToken()
+      const res = await validateSession()
+      if (res.success && res.data) refreshAccessFlags(res.data, sentToken)
+    } catch {
+      // Offline or signed out: try again on the next tick.
     }
-  }, [user?.id, router])
+  }, [])
+
+  // Ask the server every 30s (and whenever the tab comes back) so a user who
+  // verified on another device isn't left waiting here.
+  useEffect(() => {
+    if (!user?.id) return
+    void recheck()
+    const timer = setInterval(recheck, 30_000)
+    const onVisible = () => {
+      if (!document.hidden) void recheck()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [user?.id, recheck])
 
   const handleResend = async () => {
     if (!user.email) return
     setLoading(true)
     try {
-      await resendVerificationEmail({ email: user.email })
-      notify('Verification email sent!', 'success')
-    } catch {
-      notify('Failed to resend email', 'error')
+      const res = await resendVerificationEmail({ email: user.email })
+      if (res.data?.alreadyVerified) {
+        notify('Your email is already verified', 'success')
+        await recheck()
+      } else {
+        notify('Verification email sent!', 'success')
+      }
+    } catch (err) {
+      notify(isApiError(err) && err.message ? err.message : 'Failed to resend email', 'error')
     } finally {
       setLoading(false)
     }

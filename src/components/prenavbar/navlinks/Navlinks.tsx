@@ -3,6 +3,7 @@ import { FC } from 'react'
 import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { removeToken } from '@/services/authService'
 import { ArrowRightIcon } from '@heroicons/react/24/outline'
 
 interface NavLinksProps {
@@ -64,6 +65,9 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false, onLinkClick }) => {
           </Link>
           <button
             onClick={() => {
+              // The token must go too, or the next visit to /login signs
+              // the same user straight back in.
+              removeToken()
               clearUser()
               notify('Logged out', 'success')
               localStorage.removeItem('user-storage')

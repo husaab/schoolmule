@@ -7,12 +7,13 @@ import {
   ChildCandidatesResponse,
   DeclineSignupResult,
   RenameSignupRequest,
+  ResendVerificationResult,
   SignupRole,
 } from './types/adminApproval';
 
 // Admin-only. The backend scopes every call to the signed-in admin's school.
 
-/** GET /admin/approvals — pending signups plus declined ones (isArchived) */
+/** GET /admin/approvals — pending signups, declined ones (isArchived) and ones still to verify their email (!isVerified) */
 export const getApprovals = () =>
   apiClient<AdminUserResponse<ApprovalUser[]>>('/admin/approvals');
 
@@ -51,5 +52,17 @@ export const declineSignup = (userId: string, sendEmail: boolean) =>
 /** POST /admin/approvals/:id/restore — back to pending, grants nothing */
 export const restoreSignup = (userId: string) =>
   apiClient<AdminUserResponse<{ user: ApprovalUser }>>(`/admin/approvals/${userId}/restore`, {
+    method: 'POST',
+  });
+
+/** POST /admin/approvals/:id/resend-verification — emails an unverified signup a fresh link; 409 once they're verified */
+export const resendVerification = (userId: string) =>
+  apiClient<AdminUserResponse<ResendVerificationResult>>(`/admin/approvals/${userId}/resend-verification`, {
+    method: 'POST',
+  });
+
+/** POST /admin/approvals/:id/verify-email — vouch for their email; they join the pending queue, still not approved */
+export const markEmailVerified = (userId: string) =>
+  apiClient<AdminUserResponse<ApprovalUser>>(`/admin/approvals/${userId}/verify-email`, {
     method: 'POST',
   });

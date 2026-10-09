@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { login, setToken } from '@/services/authService'
 import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice'
+import { landingFor } from '@/lib/authRouting'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -186,23 +187,10 @@ const LoginForm: FC = () => {
 
         showNotification('Logged in successfully', 'success')
 
-        if (!user.isVerifiedEmail) {
-          router.replace('/verify-email')
-        } else if (user.isVerifiedEmail) {
-          if (!user.isVerifiedSchool) {
-            router.replace('/school-approval')
-          } else {
-            const nextParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') || '' : ''
-            const next = nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : ''
-            if (next) {
-              router.replace(next)
-            } else if (user.role == 'PARENT') {
-              router.replace('/parent/dashboard')
-            } else {
-              router.replace('/dashboard')
-            }
-          }
-        }
+        // Same decision AuthGuard makes when it sees a signed-in user on
+        // /login, so the two navigations always agree.
+        const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null
+        router.replace(landingFor(user, next))
       }
     } catch {
       showNotification('Login failed, invalid email or password', 'error')
