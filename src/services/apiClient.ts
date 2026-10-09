@@ -88,9 +88,14 @@ async function apiClient<T, B = unknown>(
 
     const response = await fetch(`${baseURL}${endpoint}`, config);
     if (!response.ok) {
-        const errorBody = await response.json();
-        console.log(errorBody)
-        
+        // A proxy or crash page is HTML, not JSON: keep the status, not a SyntaxError.
+        let errorBody: { code?: string | null; message?: string; data?: unknown } = {};
+        try {
+            errorBody = await response.json();
+        } catch {
+            errorBody = { message: response.statusText || `Request failed (${response.status})` };
+        }
+
         await handleSessionFailure(response.status, errorBody, token);
 
         // Writes attempted during an admin "view as" preview. The server
@@ -101,6 +106,17 @@ async function apiClient<T, B = unknown>(
                 "You're in a read-only preview — exit it to make changes",
                 'error'
             );
+        }
+
+        // Session failures are expected flow, not errors worth a report.
+        if (response.status !== 401 && errorBody.code !== 'ACCOUNT_NOT_VERIFIED' && typeof window !== 'undefined') {
+            const { reportClientEvent } = await import('./clientErrors');
+            reportClientEvent({
+                kind: 'api_failure',
+                message: `${method} ${endpoint.split('?')[0]} → ${response.status}: ${errorBody.message || 'Something went wrong'}`,
+                requestId: response.headers.get('X-Request-Id'),
+                status: response.status,
+            });
         }
 
         throw new ApiError(errorBody.message || 'Something went wrong', {
