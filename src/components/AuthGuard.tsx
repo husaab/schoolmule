@@ -39,6 +39,10 @@ const isPublicSchedulePath = (path: string) => {
 };
 const PARENT_PATHS = ['/parent', '/settings', '/support', '/contact-us']
 
+// Onboarding pages any role must be able to stay on until verified/approved;
+// without this the parent redirect below ping-pongs with the verify redirect.
+const ONBOARDING_PATHS = ['/verify-email', '/verify-email-token', '/school-approval']
+
 // Check if path matches parent patterns (including dynamic routes)
 const isParentPath = (path: string) => {
   return PARENT_PATHS.some(parentPath => path.startsWith(parentPath))
@@ -164,7 +168,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         router.replace('/dashboard')
       } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance') || path.startsWith('/finance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
-      } else if (user.role === 'PARENT' && !isParentPath(path) && !isPublicSchedulePath(path)) {
+      } else if (user.role === 'PARENT' && !isParentPath(path) && !isPublicSchedulePath(path) && !ONBOARDING_PATHS.includes(path)) {
         router.replace("/parent/dashboard")
       }
     }
