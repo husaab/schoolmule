@@ -1,6 +1,6 @@
 // src/components/AuthGuard.tsx
 'use client'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { validateSession, getToken, setToken } from '@/services/authService'
@@ -52,6 +52,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   const clearUser = useUserStore(s => s.clearUser)
   const [showPatchNotes, setShowPatchNotes] = useState(false)
   const [patchNotesChecked, setPatchNotesChecked] = useState(false)
+  // One owner-flag refresh per mount for sessions stored before the flag existed.
+  const ownerCheck = useRef(false)
   const setUnread = usePatchNotesStore((s) => s.setUnread)
   const unreadNotes = usePatchNotesStore((s) => s.unreadNotes)
   // During an admin "view as" preview, "What's new" belongs to the previewed
@@ -113,6 +115,20 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         })
     }
 
+    // A session stored before the platform-owner flag existed has no
+    // isPlatformOwner at all. Ask the server once rather than making the
+    // owner sign out and back in to reach /observe.
+    if (token && user.id && user.isPlatformOwner === undefined && !previewing && !ownerCheck.current) {
+      ownerCheck.current = true
+      const settle = (isPlatformOwner: boolean) => {
+        const current = useUserStore.getState().user
+        if (current.id === user.id) useUserStore.getState().setUser({ ...current, isPlatformOwner })
+      }
+      validateSession()
+        .then((response) => settle(Boolean(response.success && response.data?.isPlatformOwner)))
+        .catch(() => settle(false))
+    }
+
     // Check for unread patch notes when user is already logged in (once per session)
     if (token && user.id && user.isVerifiedEmail && user.isVerifiedSchool && !patchNotesChecked && !previewing) {
       setPatchNotesChecked(true)
@@ -144,7 +160,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         path !== '/school-approval'
       ) {
         router.replace('/school-approval')
-      } else if (path.startsWith('/observe') && !user.isPlatformOwner) {
+      } else if (path.startsWith('/observe') && user.isPlatformOwner === false) {
         router.replace('/dashboard')
       } else if ((path.startsWith('/admin-panel') || path.startsWith('/staff-attendance') || path.startsWith('/finance')) && user.role !== "ADMIN") {
         router.replace('/dashboard')
@@ -159,11 +175,15 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return null
   }
 
+  // The Observe console has its own chrome; product announcements belong
+  // to the app, not the owner's ops view.
+  const onObserve = path.startsWith('/observe')
+
   return (
     <>
       {children}
       <PatchNotesModal
-        isOpen={showPatchNotes}
+        isOpen={showPatchNotes && !onObserve}
         onClose={() => setShowPatchNotes(false)}
         notes={unreadNotes}
       />

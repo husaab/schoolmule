@@ -15,8 +15,8 @@ export default function LiveFeed({ items }: { items: FeedItem[] }) {
           <MethodTag method={it.method} />
           <span className="font-mono text-slate-300 truncate min-w-0 flex-1" title={it.path}>{it.route}</span>
           {it.impersonated && <ImpersonationMark />}
-          <span className="font-mono text-slate-500 tabular-nums w-14 text-right shrink-0">{it.durationMs} ms</span>
-          <span className="w-36 shrink-0 min-w-0"><UserChip user={it.user} compact /></span>
+          <span className="font-mono text-slate-500 tabular-nums w-14 text-right shrink-0 hidden 2xl:inline">{it.durationMs} ms</span>
+          <span className="w-28 shrink-0 min-w-0"><UserChip user={it.user} compact /></span>
           {it.errorMessage && <span className="hidden xl:inline text-rose-300/90 truncate max-w-[220px]" title={it.errorMessage}>{it.errorMessage}</span>}
         </li>
       ))}

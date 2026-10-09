@@ -96,7 +96,12 @@ async function apiClient<T, B = unknown>(
             errorBody = { message: response.statusText || `Request failed (${response.status})` };
         }
 
-        await handleSessionFailure(response.status, errorBody, token);
+        // A refused sign-in is a verdict on the credentials, not on any
+        // session already in storage; never let a wrong password sign
+        // someone out.
+        if (!endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/register')) {
+            await handleSessionFailure(response.status, errorBody, token);
+        }
 
         // Writes attempted during an admin "view as" preview. The server
         // refuses them all; say so in one consistent, friendly way.

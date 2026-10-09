@@ -43,7 +43,11 @@ export const fmtDateTime = (iso: string | null | undefined): string =>
 export const tickFormatterFor = (window: WindowKey) => (iso: string): string => {
   const d = new Date(iso)
   if (window === '1h' || window === '24h') return d.toLocaleTimeString('en-CA', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false })
-  if (window === '7d') return d.toLocaleString('en-CA', { timeZone: TZ, weekday: 'short', hour: '2-digit', hour12: false })
+  if (window === '7d') {
+    const day = d.toLocaleDateString('en-CA', { timeZone: TZ, weekday: 'short' })
+    const hour = d.toLocaleTimeString('en-CA', { timeZone: TZ, hour: '2-digit', hour12: false })
+    return `${day} ${hour}:00`
+  }
   return d.toLocaleDateString('en-CA', { timeZone: TZ, month: 'short', day: 'numeric' })
 }
 
