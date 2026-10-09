@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
+  ArrowRightIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
   ChatBubbleLeftRightIcon,
@@ -11,24 +12,50 @@ import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { ChildSummary } from '@/services/types/parentPortal'
 import { childColor, childInitial, gradeTextColor } from './childColors'
 
-const QUICK_LINKS = [
-  { label: 'Grades', icon: BookOpenIcon, path: '/parent/grades' },
-  { label: 'Attendance', icon: ClipboardDocumentCheckIcon, path: '/parent/attendance' },
-  { label: 'Feedback', icon: ChatBubbleLeftRightIcon, path: '/parent/feedback' },
-]
+/**
+ * Where each card link goes, with a one-line hint built from the numbers
+ * already on the card so a parent knows what is waiting before they tap.
+ */
+const navLinks = (s: ChildSummary) => {
+  const missedDays = s.attendance ? s.attendance.totalDays - s.attendance.presentDays : null
+  return [
+    {
+      label: 'View grades',
+      icon: BookOpenIcon,
+      path: '/parent/grades',
+      hint:
+        s.overallAvg != null
+          ? `Every mark by class · ${s.overallAvg}% overall`
+          : s.classCount > 0
+            ? 'Every mark by class · nothing published yet'
+            : 'Every mark by class',
+    },
+    {
+      label: 'View attendance',
+      icon: ClipboardDocumentCheckIcon,
+      path: '/parent/attendance',
+      hint:
+        missedDays == null
+          ? 'Day-by-day record'
+          : missedDays === 0
+            ? 'Day-by-day record · no days missed'
+            : `Day-by-day record · ${missedDays} ${missedDays === 1 ? 'day' : 'days'} missed`,
+    },
+    {
+      label: 'Read teacher feedback',
+      icon: ChatBubbleLeftRightIcon,
+      path: '/parent/feedback',
+      hint: s.latestFeedback?.subject
+        ? `Report card comments · latest from ${s.latestFeedback.subject}`
+        : 'Report card comments and notes',
+    },
+  ]
+}
 
 /** One child's headline numbers on the parent dashboard. */
 const ChildOverviewCard: React.FC<{ summary: ChildSummary }> = ({ summary }) => {
-  const router = useRouter()
   const selectChild = useSelectedChildStore((s) => s.selectChild)
   const color = childColor(summary.studentId)
-
-  // Deep links carry the child through, so the destination page opens
-  // already filtered to them rather than to "All children".
-  const goTo = (path: string) => {
-    selectChild(summary.studentId)
-    router.push(path)
-  }
 
   return (
     <div className="h-full bg-white rounded-2xl shadow-sm border border-stone-200/70 p-6">
@@ -94,19 +121,28 @@ const ChildOverviewCard: React.FC<{ summary: ChildSummary }> = ({ summary }) => 
         </div>
       )}
 
-      {/* Quick links */}
-      <div className="flex flex-wrap gap-2">
-        {QUICK_LINKS.map(({ label, icon: Icon, path }) => (
-          <button
-            key={label}
-            onClick={() => goTo(path)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 bg-stone-50 border border-stone-200 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-800 transition-colors cursor-pointer"
+      {/* Where to go next. Real links (verb label, hint, arrow) so it is
+          clear these leave the dashboard. Selecting the child first means the
+          destination opens already filtered to them, not to "All children". */}
+      <nav aria-label={`${summary.name} pages`} className="rounded-xl border border-stone-200 divide-y divide-stone-100 overflow-hidden">
+        {navLinks(summary).map(({ label, icon: Icon, path, hint }) => (
+          <Link
+            key={path}
+            href={path}
+            onClick={() => selectChild(summary.studentId)}
+            className="group flex items-center gap-3 px-3.5 py-3 bg-white hover:bg-amber-50/70 transition-colors"
           >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 group-hover:bg-amber-100">
+              <Icon className="w-[18px] h-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-slate-900">{label}</span>
+              <span className="block truncate text-xs text-slate-500">{hint}</span>
+            </span>
+            <ArrowRightIcon className="w-4 h-4 flex-shrink-0 text-amber-600 transition-transform group-hover:translate-x-0.5" />
+          </Link>
         ))}
-      </div>
+      </nav>
     </div>
   )
 }

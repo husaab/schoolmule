@@ -4,9 +4,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   BookOpenIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   ExclamationTriangleIcon,
   FunnelIcon,
+  ListBulletIcon,
 } from '@heroicons/react/24/outline'
 import { ChildLite, useVisibleChildren } from '@/store/useSelectedChildStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -51,12 +51,24 @@ const ClassCard: React.FC<{
     value: Math.round(((s.score as number) / (s.maxScore as number)) * 1000) / 10,
   }))
   const openThreads = cls.assessmentScores.filter((s) => threadStubs[s.assessmentId]?.status === 'open').length
+  // Everything the API returns here is published; categories are wrappers,
+  // so count the items a parent can actually open.
+  const publishedCount = cls.assessmentScores.filter((s) => !s.isParent).length
+  const canExpand = publishedCount > 0
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 overflow-hidden">
+    <div
+      className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${
+        missingCount > 0 ? 'border-amber-200' : 'border-stone-200/70'
+      }`}
+    >
       <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-stone-50/60 transition-colors cursor-pointer"
+        onClick={() => canExpand && setExpanded(!expanded)}
+        disabled={!canExpand}
+        aria-expanded={canExpand ? expanded : undefined}
+        className={`w-full flex items-center justify-between gap-4 p-5 text-left transition-colors ${
+          canExpand ? 'hover:bg-stone-50/60 cursor-pointer' : 'cursor-default'
+        }`}
       >
         <div className="min-w-0">
           <h4 className="text-base font-semibold text-slate-900 truncate">{cls.subject}</h4>
@@ -76,20 +88,42 @@ const ClassCard: React.FC<{
               </Link>
             )}
           </p>
+          {/* What is behind the row, and that it opens right here — a bare
+              chevron reads as "go to another page". */}
+          {canExpand ? (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] font-medium text-amber-700">
+              <ListBulletIcon className="w-4 h-4" aria-hidden />
+              <span>
+                {publishedCount} {publishedCount === 1 ? 'mark' : 'marks'} published
+              </span>
+              {missingCount > 0 && (
+                <span className="rounded-full bg-amber-50 border border-amber-100 px-2 py-px text-xs text-amber-800">
+                  {missingCount} missing
+                </span>
+              )}
+              <span className="font-normal text-slate-400">
+                · {expanded ? 'tap to hide' : 'tap to see each one'}
+              </span>
+            </p>
+          ) : (
+            <p className="mt-1.5 text-[13px] text-slate-400">
+              Nothing published yet — the teacher hasn&apos;t shared any marks for this class.
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          {missingCount > 0 && (
-            <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-100">
-              {missingCount} missing
-            </span>
-          )}
           <span className={`text-xl font-bold ${gradeTextColor(cls.finalPct)}`}>
             {cls.finalPct != null ? `${cls.finalPct}%` : '—'}
           </span>
-          {expanded ? (
-            <ChevronDownIcon className="w-5 h-5 text-slate-400" />
-          ) : (
-            <ChevronRightIcon className="w-5 h-5 text-slate-400" />
+          {canExpand && (
+            <span
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition-transform ${
+                expanded ? 'rotate-180' : ''
+              }`}
+              aria-hidden
+            >
+              <ChevronDownIcon className="w-4.5 h-4.5" />
+            </span>
           )}
         </div>
       </button>
