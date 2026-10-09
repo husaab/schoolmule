@@ -192,8 +192,7 @@ function GenerateReportCardsPageContent() {
 
   // Look up the signed PDF URL for a freshly generated report card.
   const resolveReportCardUrl = async (studentId: string): Promise<string | null> => {
-    if (!user.school) return null;
-    const res = await getGeneratedReportCardsByStudentId(studentId, term, user.school);
+    const res = await getGeneratedReportCardsByStudentId(studentId, term);
     if (res.status === 'success' && res.data.length > 0) {
       return getSignedReportCardUrl(res.data[0].file_path);
     }

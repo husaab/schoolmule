@@ -103,16 +103,16 @@ export const getGeneratedReportCards = async (
 };
 
 /**
- * GET /report-cards/view/student?studentId=...&term=...&school=...
- * → Get all generated report cards for a specific student, term, and school
+ * GET /report-cards/view/student?studentId=...&term=...
+ * → Get all generated report cards for a specific student and term. The
+ *   school is the caller's own; a parent only gets a child they are linked to.
  */
 export const getGeneratedReportCardsByStudentId = async (
   studentId: string,
-  term: string,
-  school: string
+  term: string
 ): Promise<ReportCardStatusResponse> => {
   return apiClient<ReportCardStatusResponse>(
-    `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}&school=${encodeURIComponent(school)}`
+    `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`
   );
 };
 

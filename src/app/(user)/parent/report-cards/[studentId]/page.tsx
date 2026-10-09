@@ -103,10 +103,10 @@ const ParentStudentReportCardsPage: React.FC = () => {
 
   // Fetch report cards when term is selected
   useEffect(() => {
-    if (!student || !term || !user.school) return
+    if (!student || !term) return
 
     setLoadingReports(true)
-    getGeneratedReportCardsByStudentId(studentId, term, user.school)
+    getGeneratedReportCardsByStudentId(studentId, term)
       .then((res) => {
         if (res.status === 'success') {
           setReportCards(res.data)
@@ -119,7 +119,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
       .finally(() => {
         setLoadingReports(false)
       })
-  }, [student, term, studentId, user.school, showNotification])
+  }, [student, term, studentId, showNotification])
 
   const handlePreview = async (filePath: string) => {
     if (signedUrls[filePath]) {
