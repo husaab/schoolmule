@@ -65,7 +65,7 @@ export default function UsersPage() {
       }
     >
       {loading && !data ? <StateBlock kind="loading" /> : (
-        <DataTable columns={columns} rows={rows} rowKey={(u) => u.id} onRowClick={(u) => router.push(`/observe/users/${u.id}`)} initialSort={{ key: 'lastSeen', dir: 'desc' }} empty="No users match" />
+        <DataTable columns={columns} rows={rows} rowKey={(u) => u.id} onRowClick={(u) => router.push(`/observe/users/${u.id}`)} initialSort={{ key: 'lastSeen', dir: 'desc' }} empty="No users match" maxHeight="calc(100dvh - 220px)" />
       )}
     </Panel>
   )

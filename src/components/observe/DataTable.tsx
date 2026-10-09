@@ -13,9 +13,11 @@ interface Props<T> {
   initialSort?: { key: string; dir: 'asc' | 'desc' }
   empty?: string
   dense?: boolean
+  /** Caps the table's height; the body scrolls under a sticky header. */
+  maxHeight?: number | string
 }
 
-export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initialSort, empty = 'Nothing here', dense }: Props<T>) {
+export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initialSort, empty = 'Nothing here', dense, maxHeight }: Props<T>) {
   const [sort, setSort] = useState(initialSort ?? null)
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -39,9 +41,9 @@ export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initia
   const pad = dense ? 'px-3 py-1.5' : 'px-3 py-2.5'
 
   return (
-    <div className="overflow-x-auto -mx-5">
+    <div className="overflow-auto -mx-5" style={maxHeight ? { maxHeight } : undefined}>
       <table className="min-w-full text-sm">
-        <thead>
+        <thead className={maxHeight ? 'sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm' : undefined}>
           <tr className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
             {columns.map((c) => (
               <th key={c.key} style={{ width: c.width }} className={`${pad} font-semibold text-left first:pl-5 last:pr-5 ${c.align === 'right' ? 'text-right' : ''} ${c.sortValue ? 'cursor-pointer select-none hover:text-slate-300' : ''}`} onClick={() => toggle(c)}>
