@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { CheckCircleIcon, ExclamationTriangleIcon, LockClosedIcon, MegaphoneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, EnvelopeIcon, ExclamationTriangleIcon, LockClosedIcon, MegaphoneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, Field, FieldRow, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
+import { useUserStore } from '@/store/useUserStore'
 import { createAnnouncement, getAnnouncementTargets, previewAudience, sendAnnouncementPreviewEmail, updateAnnouncement } from '@/services/announcementService'
 import type { AnnouncementDetail, AnnouncementScope, AnnouncementTargets, AudiencePreview } from '@/services/types/announcement'
 import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
@@ -13,6 +14,10 @@ import type { Tone } from '@/components/messaging/tones'
 import { useAnnouncementFiles } from './useAnnouncementFiles'
 
 const MAX_TITLE = 120
+const MAX_PREVIEW_RECIPIENTS = 5
+
+/** "a@x.com, b@y.com" → ['a@x.com', 'b@y.com'] (commas, semicolons or whitespace). */
+const parseRecipients = (raw: string) => [...new Set(raw.split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))]
 
 interface Props {
   isOpen: boolean
@@ -52,6 +57,9 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
   const [preview, setPreview] = useState<AudiencePreview | null>(null)
   const [saving, setSaving] = useState(false)
   const [previewing, setPreviewing] = useState(false)
+  const myEmail = useUserStore((s) => s.user.email) ?? ''
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewTo, setPreviewTo] = useState('')
   const files = useAnnouncementFiles(keepAttachments.length)
   const resetFiles = files.reset
 
@@ -77,7 +85,9 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     }
     resetFiles()
     setPreview(null)
-  }, [isOpen, mode, existing, presetClassId, resetFiles])
+    setPreviewOpen(false)
+    setPreviewTo(myEmail)
+  }, [isOpen, mode, existing, presetClassId, resetFiles, myEmail])
 
   // Create: what may I post to?
   useEffect(() => {
@@ -128,9 +138,12 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     body.length <= MAX_BODY &&
     (mode === 'edit' || scope === 'school' || (scope === 'class' ? Boolean(classId) : Boolean(grade)))
 
-  // The email a guardian will get, sent to the author first.
+  const previewRecipients = parseRecipients(previewTo)
+  const previewTooMany = previewRecipients.length > MAX_PREVIEW_RECIPIENTS
+
+  // The email a guardian will get, sent to the author or to colleagues they name.
   const emailPreview = async () => {
-    if (!ready || previewing) return
+    if (!ready || previewing || previewTooMany) return
     setPreviewing(true)
     try {
       const audience = mode === 'edit' && existing ? existing : { scope, classId, grade }
@@ -141,9 +154,11 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
         title: title.trim(),
         body: body.trim(),
         attachmentCount: files.files.length + keepAttachments.length,
+        to: previewRecipients,
       })
       if (res.status !== 'success' || !res.data) throw new Error(res.message || 'Could not send the preview')
-      showNotification(`Preview sent to ${res.data.sentTo}`, 'success')
+      showNotification(`Preview sent to ${res.data.sentTo.join(', ')}`, 'success')
+      setPreviewOpen(false)
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Could not send the preview', 'error')
     } finally {
@@ -342,10 +357,30 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
             </p>
           </div>
         )}
+        {previewOpen && (
+          <div className="space-y-2 rounded-xl border border-cyan-100 bg-cyan-50/50 px-3.5 py-3">
+            <Field label="Send a preview to" htmlFor="an-preview-to" hint={`Exactly what a guardian will receive, marked [Preview]. Separate addresses with commas, up to ${MAX_PREVIEW_RECIPIENTS}.`}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="an-preview-to"
+                  value={previewTo}
+                  onChange={(e) => setPreviewTo(e.target.value)}
+                  placeholder="you@school.ca, principal@school.ca"
+                  className={inputClass}
+                  autoFocus
+                />
+                <Button type="button" onClick={emailPreview} disabled={!ready || saving || previewRecipients.length === 0 || previewTooMany} loading={previewing} className="sm:flex-shrink-0">
+                  <EnvelopeIcon className="h-4 w-4" /> Send preview
+                </Button>
+              </div>
+            </Field>
+            {previewTooMany && <p className="text-xs text-rose-600">At most {MAX_PREVIEW_RECIPIENTS} addresses per preview.</p>}
+          </div>
+        )}
       </ModalBody>
       <ModalFooter>
-        <Button type="button" variant="secondary" onClick={emailPreview} disabled={!ready || saving} loading={previewing} className="mr-auto" title="Send yourself the email guardians will get">
-          Email me a preview
+        <Button type="button" variant="secondary" onClick={() => setPreviewOpen((v) => !v)} disabled={!ready || saving} className="mr-auto" title="Email the message as guardians will get it, to yourself or a colleague">
+          <EnvelopeIcon className="h-4 w-4" /> {previewOpen ? 'Hide preview' : 'Email a preview'}
         </Button>
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancel

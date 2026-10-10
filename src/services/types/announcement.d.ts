@@ -130,8 +130,10 @@ export interface AnnouncementPreviewEmailInput {
   title: string;
   body: string;
   attachmentCount?: number;
+  /** Up to 5 addresses; omitted or empty means the caller. */
+  to?: string[];
 }
-export type AnnouncementPreviewEmailResponse = AnnouncementResponse<{ sentTo: string }>;
+export type AnnouncementPreviewEmailResponse = AnnouncementResponse<{ sentTo: string[] }>;
 
 export interface EditAnnouncementInput {
   title?: string;
