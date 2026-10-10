@@ -345,7 +345,7 @@ const SchoolSettingsPage = () => {
                     {(schoolData?.emailReplyTo?.length || schoolData?.email) ? (
                       <ul className="text-gray-900">
                         {(schoolData?.emailReplyTo || []).map((addr) => <li key={addr}>{addr}</li>)}
-                        {schoolData?.email && !(schoolData.emailReplyTo || []).includes(schoolData.email.toLowerCase()) && (
+                        {schoolData?.email && !(schoolData.emailReplyTo || []).some((a) => a.toLowerCase() === schoolData.email?.toLowerCase()) && (
                           <li>{schoolData.email} <span className="text-gray-500 text-sm">(school email)</span></li>
                         )}
                       </ul>
