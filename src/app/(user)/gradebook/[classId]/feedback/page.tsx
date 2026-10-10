@@ -296,10 +296,12 @@ const BulkFeedbackPage = () => {
 
     setGeneratingAI((prev) => new Set(prev).add(studentId))
 
-    // Get grade for this student (may be undefined if no grades)
-    // null when nothing is graded yet; the route tells the model so.
-    const grade = studentGrades[studentId]?.pct ?? null
-    const coverage = studentGrades[studentId]?.coverage ?? undefined
+    // undefined: the gradebook never handed us this student's grade (direct
+    // visit, other device), so say nothing about it. null: the gradebook
+    // confirmed nothing is graded yet, and the route tells the model so.
+    const stored = studentGrades[studentId]
+    const grade = stored ? stored.pct : undefined
+    const coverage = stored?.coverage ?? undefined
 
     try {
       const response = await fetch('/api/ai/generate-comment', {

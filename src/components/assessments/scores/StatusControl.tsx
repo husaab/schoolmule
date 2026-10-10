@@ -69,7 +69,7 @@ const StatusControl: React.FC<StatusControlProps> = ({ label, status, busy, disa
         aria-expanded={open}
         aria-label={`Change status for ${label}`}
         title="Mark missing, excuse, or clear"
-        disabled={disabled && !busy}
+        disabled={disabled || busy}
         onClick={() => setOpen((o) => !o)}
         className={`flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-opacity hover:bg-slate-200 disabled:cursor-not-allowed ${
           busy || open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'

@@ -14,7 +14,7 @@ import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
-import { buildScoreLookup, computeAssessmentForStudent } from '@/lib/gradeEngine'
+import { buildScoreLookup, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade'
 
 
@@ -74,16 +74,30 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
   // The category roll-up comes from the engine: counted items weighted by
   // their points, blanks carry nothing, missing counts as 0, excused never counts.
-  const engineAssessments = toEngineAssessments([parentAssessment, ...childAssessments])
-  const engineParent = engineAssessments[0]
-  const lookupFor = (studentId: string) =>
-    buildScoreLookup(liveRowsForStudent(studentId, rowsByStudent[studentId], editedScores))
-  const categoryResultFor = (studentId: string) =>
-    computeAssessmentForStudent(engineParent, engineAssessments, lookupFor(studentId))
-  const childStatesFor = (studentId: string) => {
-    const lookup = lookupFor(studentId)
-    return engineAssessments.slice(1).map((c) => lookup[c.assessment_id]?.state ?? 'blank')
-  }
+  const engineAssessments = useMemo(
+    () => toEngineAssessments([parentAssessment, ...childAssessments]),
+    [parentAssessment, childAssessments]
+  )
+  // One lookup per student per render, shared by the category roll-up and the
+  // per-item states, instead of rebuilding it twice for every row.
+  const liveByStudent = useMemo(() => {
+    const engineParent = engineAssessments[0]
+    const engineChildren = engineAssessments.slice(1)
+    return new Map(
+      students.map((student) => {
+        const lookup = buildScoreLookup(
+          liveRowsForStudent(student.studentId, rowsByStudent[student.studentId], editedScores)
+        )
+        return [
+          student.studentId,
+          {
+            result: computeAssessmentForStudent(engineParent, engineAssessments, lookup),
+            childStates: engineChildren.map((c): CellState => lookup[c.assessment_id]?.state ?? 'blank'),
+          },
+        ] as const
+      })
+    )
+  }, [students, rowsByStudent, editedScores, engineAssessments])
 
   // Check if all child points add up to parent points
   const totalChildPoints = childAssessments.reduce((sum, child) => {
@@ -208,6 +222,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                 ) : (
                   students.map((student, rowIndex) => {
                     const categoryKey = `${student.studentId}|${parentAssessment.assessmentId}`
+                    const live = liveByStudent.get(student.studentId) ?? {
+                      result: computeAssessmentForStudent(engineAssessments[0], engineAssessments, {}),
+                      childStates: [],
+                    }
                     return (
                       <tr
                         key={student.studentId}
@@ -244,8 +262,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
                         <CategoryCell
                           label={`${student.name} score for ${parentAssessment.name}`}
-                          result={categoryResultFor(student.studentId)}
-                          childStates={childStatesFor(student.studentId)}
+                          result={live.result}
+                          childStates={live.childStates}
                           isToggling={togglingKey === categoryKey}
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}

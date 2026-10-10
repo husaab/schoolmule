@@ -468,6 +468,13 @@ const GradebookClass = () => {
   }
 
   const handleSaveAll = async (): Promise<boolean> => {
+    // A missing/excused flag is saved before the matrix is re-read, and only
+    // the re-read purges the stale edit for that cell. Saving in between would
+    // resubmit the old score and silently clear the flag, so wait it out.
+    if (togglingKey !== null) {
+      showNotification('Wait for the status change to finish, then save', 'error')
+      return false
+    }
     setSaving(true)
     setError(null)
 
@@ -1083,14 +1090,14 @@ const GradebookClass = () => {
                 </span>
                 <button
                   onClick={() => setEditedScores({})}
-                  disabled={saving}
+                  disabled={saving || togglingKey !== null}
                   className="rounded-xl px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Discard
                 </button>
                 <button
                   onClick={handleSaveAll}
-                  disabled={saving}
+                  disabled={saving || togglingKey !== null}
                   className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <CheckCircleIcon className="h-4 w-4" />

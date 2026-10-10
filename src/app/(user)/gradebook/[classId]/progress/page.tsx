@@ -312,9 +312,12 @@ const BulkProgressPage = () => {
 
     setGeneratingAI((prev) => new Set(prev).add(studentId))
 
-    // null when nothing is graded yet; the route tells the model so.
-    const grade = studentGrades[studentId]?.pct ?? null
-    const coverage = studentGrades[studentId]?.coverage ?? undefined
+    // undefined: the gradebook never handed us this student's grade (direct
+    // visit, other device), so say nothing about it. null: the gradebook
+    // confirmed nothing is graded yet, and the route tells the model so.
+    const stored = studentGrades[studentId]
+    const grade = stored ? stored.pct : undefined
+    const coverage = stored?.coverage ?? undefined
 
     try {
       const response = await fetch('/api/ai/generate-progress-comment', {
@@ -855,7 +858,7 @@ const BulkProgressPage = () => {
           studentName={modalStudent.name}
           classId={classId}
           subjectName={classData.subject}
-          studentGrade={studentGrades[modalStudent.id]?.pct ?? null}
+          studentGrade={studentGrades[modalStudent.id] ? studentGrades[modalStudent.id].pct : undefined}
           coverage={studentGrades[modalStudent.id]?.coverage ?? undefined}
           initialTerm={selectedTerm}
         />
