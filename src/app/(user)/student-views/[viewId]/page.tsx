@@ -276,7 +276,7 @@ export default function StudentViewDetailPage() {
                         <td className="px-5 py-2 font-medium text-slate-900">{s.studentName}</td>
                         <td className="px-5 py-2 text-slate-600">{s.grade}</td>
                         <td className="px-5 py-2 text-right text-slate-700">
-                          {s.displayMetric.toFixed(1)}%
+                          {s.displayMetric == null ? '—' : `${s.displayMetric.toFixed(1)}%`}
                         </td>
                         <td className="px-5 py-2 text-right">
                           <div className="inline-flex items-center justify-end gap-1">

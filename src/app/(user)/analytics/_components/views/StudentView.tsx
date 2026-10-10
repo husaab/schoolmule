@@ -9,10 +9,11 @@ import {
   PresentationChartLineIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
-import { StudentData, StudentClassBreakdown } from '@/services/types/analytics'
+import { StudentData, StudentClassBreakdown, AssessmentCellStatus } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
-import { computeAtRiskScore } from '@/lib/analyticsUtils'
+import { computeAtRiskScore, coverageTitle, notYetGradedOf, shortCoverage } from '@/lib/analyticsUtils'
 import StatCard from '../StatCard'
 import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
@@ -28,15 +29,37 @@ const fmtPct = (v: number | null | undefined) => (v == null ? '—' : `${v}%`)
 const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) => {
   const [expandedClass, setExpandedClass] = useState<string | null>(null)
 
+  // Overall coverage = the sum across classes; blank cells are "not yet
+  // graded" and carry no weight, so they are reported but never scored.
+  const overallCoverage = useMemo(() => {
+    const sum = { assessed: 0, graded: 0, missing: 0, excused: 0, blank: 0, total: 0, countedWeight: 0, totalWeight: 0 }
+    let any = false
+    for (const c of student.classes) {
+      if (!c.coverage) continue
+      any = true
+      sum.assessed += c.coverage.assessed
+      sum.graded += c.coverage.graded
+      sum.missing += c.coverage.missing
+      sum.excused += c.coverage.excused
+      sum.blank += c.coverage.blank
+      sum.total += c.coverage.total
+      sum.countedWeight += c.coverage.countedWeight
+      sum.totalWeight += c.coverage.totalWeight
+    }
+    return any ? sum : null
+  }, [student.classes])
+  const notYetGraded = student.overall.notYetGradedCount ?? overallCoverage?.blank ?? 0
+
   const risk = useMemo(
     () =>
       computeAtRiskScore({
         gradePercent: student.overall.avg,
         attendancePercent: student.attendance?.pct ?? null,
         missingWorkCount: student.overall.missingCount,
+        notYetGradedCount: notYetGraded,
         trajectoryDelta: student.termTrajectory?.diff ?? 0,
       }),
-    [student]
+    [student, notYetGraded]
   )
 
   const classColumns: Column<StudentClassBreakdown>[] = [
@@ -55,21 +78,36 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
       key: 'finalPct',
       label: 'Grade',
       numeric: true,
+      // null = nothing counts yet (never 0); the muted line is the coverage.
       render: (c) =>
         c.finalPct == null ? (
-          <span className="text-slate-400">no grades</span>
+          <span className="text-slate-400" title={coverageTitle(c.coverage)}>no graded work yet</span>
         ) : (
-          <span className={`font-semibold ${c.finalPct >= 80 ? 'text-emerald-600' : c.finalPct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>{c.finalPct}%</span>
+          <span className="inline-flex flex-col items-end leading-tight" title={coverageTitle(c.coverage)}>
+            <span className={`font-semibold ${c.finalPct >= 80 ? 'text-emerald-600' : c.finalPct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>{c.finalPct}%</span>
+            {c.coverage && <span className="text-[10px] font-normal text-slate-400">{shortCoverage(c.coverage)}</span>}
+          </span>
         ),
     },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
     { key: 'percentileInClass', label: 'Percentile', numeric: true, lowPriority: true, render: (c) => (c.percentileInClass == null ? '—' : Math.round(c.percentileInClass)) },
     {
       key: 'missingCount',
-      label: 'Missing',
+      label: 'Missing (flagged)',
       numeric: true,
       render: (c) =>
-        c.missingCount > 0 ? <span className="font-medium text-amber-600">{c.missingCount}</span> : <span className="text-slate-400">0</span>,
+        c.missingCount > 0 ? <span className="font-medium text-rose-600">{c.missingCount}</span> : <span className="text-slate-400">0</span>,
+    },
+    {
+      key: 'notYetGraded',
+      label: 'Not yet graded',
+      numeric: true,
+      lowPriority: true,
+      accessor: (c) => notYetGradedOf(c),
+      render: (c) => {
+        const n = notYetGradedOf(c)
+        return n > 0 ? <span className="text-slate-500">{n}</span> : <span className="text-slate-400">0</span>
+      },
     },
   ]
 
@@ -100,7 +138,7 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 animate-fade-in-up">
         <StatCard
           label="Overall Average"
           value={fmtPct(student.overall.avg)}
@@ -108,7 +146,13 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
           color="from-cyan-500 to-cyan-600"
           delta={student.termTrajectory?.diff ?? null}
           deltaLabel="vs compared term"
-          sub={`across ${student.overall.classCount} classes`}
+          sub={
+            student.overall.avg == null
+              ? 'no graded work yet'
+              : overallCoverage
+                ? `based on ${overallCoverage.assessed} of ${overallCoverage.total} assessments · ${student.overall.classCount} classes`
+                : `across ${student.overall.classCount} classes`
+          }
         />
         <StatCard
           label="Grade Percentile"
@@ -125,10 +169,18 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
           sub={student.attendance ? `${student.attendance.presentDays}/${student.attendance.totalDays} days` : 'no records'}
         />
         <StatCard
-          label="Missing Work"
+          label="Missing (flagged)"
           value={student.overall.missingCount}
           icon={ExclamationTriangleIcon}
           color={student.overall.missingCount >= 3 ? 'from-rose-500 to-rose-600' : 'from-slate-400 to-slate-500'}
+          sub="marked by the teacher · counts as 0"
+        />
+        <StatCard
+          label="Not yet graded"
+          value={notYetGraded}
+          icon={ClockIcon}
+          color="from-slate-400 to-slate-500"
+          sub="carries no weight"
         />
       </div>
 
@@ -177,20 +229,29 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
                     {expanded.assessmentScores
                       .filter((a) => !a.isParent)
                       .map((a) => {
-                        const pct = a.score != null && a.maxScore ? Math.round((a.score / a.maxScore) * 1000) / 10 : null
+                        // Status is the API's resolved cell state — never inferred
+                        // from a null score (a blank cell is "not yet graded").
+                        const status: AssessmentCellStatus =
+                          a.status ?? (a.isExcluded ? 'excused' : a.score == null ? 'blank' : 'graded')
+                        const pct =
+                          status === 'graded' && a.score != null && a.maxScore
+                            ? Math.round((a.score / a.maxScore) * 1000) / 10
+                            : null
                         return (
                           <tr key={a.assessmentId} className="border-b border-slate-50">
                             <td className="py-2 pr-4 text-slate-800">{a.name}</td>
-                            <td className="py-2 px-4 text-right tabular-nums">{a.score ?? '—'}</td>
+                            <td className="py-2 px-4 text-right tabular-nums">{status === 'graded' ? (a.score ?? '—') : '—'}</td>
                             <td className="py-2 px-4 text-right tabular-nums text-slate-500">{a.maxScore ?? '—'}</td>
                             <td className={`py-2 px-4 text-right tabular-nums font-medium ${pct == null ? 'text-slate-400' : pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>
-                              {pct == null ? '—' : `${pct}%`}
+                              {pct == null ? (status === 'missing' ? '0%' : '—') : `${pct}%`}
                             </td>
                             <td className="py-2 pl-4 text-right">
-                              {a.isExcluded ? (
-                                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">excluded</span>
-                              ) : a.score == null ? (
-                                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-full">missing</span>
+                              {status === 'excused' ? (
+                                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full">excused</span>
+                              ) : status === 'missing' ? (
+                                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded-full">missing</span>
+                              ) : status === 'blank' ? (
+                                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded-full">not yet graded</span>
                               ) : (
                                 <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">graded</span>
                               )}
@@ -206,9 +267,11 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
 
           {student.missingWork.length > 0 && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900 mb-3">
-                Missing Work <span className="text-slate-400 font-normal">({student.missingWork.length})</span>
+              <h2 className="text-base font-semibold text-slate-900 mb-1">
+                Missing work (flagged by the teacher){' '}
+                <span className="text-slate-400 font-normal">({student.missingWork.length})</span>
               </h2>
+              <p className="text-xs text-slate-500 mb-3">Each counts as 0 until handed in. Work not yet graded is not listed and carries no weight.</p>
               <ul className="divide-y divide-slate-50">
                 {student.missingWork.map((m) => (
                   <li key={`${m.classId}-${m.assessmentId}`} className="py-2.5 flex items-center justify-between gap-4">

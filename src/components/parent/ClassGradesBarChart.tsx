@@ -47,6 +47,8 @@ const ChartTooltip: React.FC<{
  * One bar per class, colored by grade band (>=80 / 60-79 / <60).
  */
 const ClassGradesBarChart: React.FC<{ classes: ChildClassGrades[] }> = ({ classes }) => {
+  // A class with nothing counted yet has no bar — null is skipped, never drawn
+  // as 0 — and is named underneath so the chart doesn't look incomplete.
   const data: Row[] = classes
     .filter((c) => c.finalPct != null)
     .map((c) => ({
@@ -55,6 +57,7 @@ const ClassGradesBarChart: React.FC<{ classes: ChildClassGrades[] }> = ({ classe
       classAvg: c.classAvg,
       teacher: c.teacherName,
     }))
+  const notYetGraded = classes.filter((c) => c.finalPct == null).map((c) => c.subject)
 
   if (data.length < 2) return null
 
@@ -93,6 +96,11 @@ const ClassGradesBarChart: React.FC<{ classes: ChildClassGrades[] }> = ({ classe
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {notYetGraded.length > 0 && (
+        <p className="mt-2 text-[11px] text-slate-400">
+          Not yet graded: {notYetGraded.join(', ')}
+        </p>
+      )}
     </div>
   )
 }

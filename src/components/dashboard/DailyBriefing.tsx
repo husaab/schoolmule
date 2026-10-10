@@ -39,10 +39,12 @@ const buildContext = (p: DailyBriefingProps): string => {
     `Attendance today: ${pct(p.summary.todaysAttendance)}`,
     `Attendance this week: ${pct(p.summary.weeklyAttendance)}`,
     `Attendance this month: ${pct(p.summary.monthlyAttendance)}`,
+    // Graded work only: a null average means nothing has been marked yet, so
+    // the model must not read it as 0% or as a decline.
     `Average student grade: ${
       typeof p.summary.averageStudentGrade === 'number'
-        ? `${p.summary.averageStudentGrade.toFixed(1)}%`
-        : 'no grades entered yet'
+        ? `${p.summary.averageStudentGrade.toFixed(1)}% (over graded work only; work not yet graded carries no weight)`
+        : 'No graded work yet'
     }`,
     `Report cards generated: ${p.summary.reportCardsCount ?? 0}`,
     `Weekly timetable published: ${p.hasPublishedSchedule ? 'yes' : 'no'}`,

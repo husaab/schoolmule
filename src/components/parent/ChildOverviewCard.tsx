@@ -89,11 +89,24 @@ const ChildOverviewCard: React.FC<{ summary: ChildSummary; recentMarks?: number 
           <p className={`text-2xl font-bold ${gradeTextColor(summary.overallAvg)}`}>
             {summary.overallAvg != null ? `${summary.overallAvg}%` : '—'}
           </p>
+          {/* How much of the term's work the number rests on. A null average
+              with classes means nothing counts yet — never 0%. */}
           <p className="text-xs text-slate-400 mt-0.5">
-            {summary.classCount > 0
-              ? `across ${summary.classCount} ${summary.classCount === 1 ? 'class' : 'classes'}`
-              : 'no classes this term'}
+            {summary.classCount === 0
+              ? 'no classes this term'
+              : summary.overallAvg == null
+                ? 'nothing published yet'
+                : summary.coverage
+                  ? `Based on ${summary.coverage.assessed} of ${summary.coverage.total} ${
+                      summary.coverage.total === 1 ? 'assessment' : 'assessments'
+                    }`
+                  : `across ${summary.classCount} ${summary.classCount === 1 ? 'class' : 'classes'}`}
           </p>
+          {summary.overallAvg != null && summary.coverage && summary.coverage.missing > 0 && (
+            <p className="text-xs text-rose-600 mt-0.5">
+              {summary.coverage.missing} marked missing
+            </p>
+          )}
         </div>
         <div className="rounded-xl bg-stone-50 border border-stone-100 p-4">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">

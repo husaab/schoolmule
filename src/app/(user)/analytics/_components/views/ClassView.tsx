@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { ClassData, ClassStudentRow, AssessmentStatsRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
+import { coverageTitle, notYetGradedOf, shortCoverage } from '@/lib/analyticsUtils'
 import StatCard from '../StatCard'
 import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import TrendLineChart from '../charts/TrendLineChart'
@@ -90,19 +91,24 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
       key: 'finalPct',
       label: 'Grade',
       numeric: true,
+      // null = nothing counts yet (never 0). The muted coverage line says how
+      // much of the class's work the number rests on.
       render: (r) =>
         r.finalPct == null ? (
-          <span className="text-slate-400">no grades</span>
+          <span className="text-slate-400" title={coverageTitle(r.coverage)}>no graded work yet</span>
         ) : (
-          <span className={`font-semibold ${r.finalPct >= 80 ? 'text-emerald-600' : r.finalPct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>
-            {r.finalPct}%
+          <span className="inline-flex flex-col items-end leading-tight" title={coverageTitle(r.coverage)}>
+            <span className={`font-semibold ${r.finalPct >= 80 ? 'text-emerald-600' : r.finalPct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>
+              {r.finalPct}%
+            </span>
+            {r.coverage && <span className="text-[10px] font-normal text-slate-400">{shortCoverage(r.coverage)}</span>}
           </span>
         ),
     },
     { key: 'percentileInClass', label: 'Percentile', numeric: true, lowPriority: true, render: (r) => (r.percentileInClass == null ? '—' : `${Math.round(r.percentileInClass)}`) },
     {
       key: 'missingCount',
-      label: 'Missing',
+      label: 'Missing (flagged)',
       numeric: true,
       render: (r) =>
         r.missingCount > 0 ? (
@@ -111,7 +117,18 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
           <span className="text-slate-400">0</span>
         ),
     },
-    { key: 'excludedCount', label: 'Excluded', numeric: true, lowPriority: true, render: (r) => (r.excludedCount > 0 ? r.excludedCount : <span className="text-slate-400">0</span>) },
+    {
+      key: 'notYetGraded',
+      label: 'Not yet graded',
+      numeric: true,
+      lowPriority: true,
+      accessor: (r) => notYetGradedOf(r),
+      render: (r) => {
+        const n = notYetGradedOf(r)
+        return n > 0 ? <span className="text-slate-500">{n}</span> : <span className="text-slate-400">0</span>
+      },
+    },
+    { key: 'excludedCount', label: 'Excused', numeric: true, lowPriority: true, render: (r) => (r.excludedCount > 0 ? r.excludedCount : <span className="text-slate-400">0</span>) },
   ]
 
   const trendData = classData.trend.map((t) => ({

@@ -12,7 +12,7 @@ import {
   ChevronUpIcon,
 } from '@heroicons/react/24/outline'
 import { SnapshotData, SnapshotStudent, AtRiskResult } from '@/services/types/analytics'
-import { computeAtRiskScore } from '@/lib/analyticsUtils'
+import { computeAtRiskScore, coverageTitle, shortCoverage } from '@/lib/analyticsUtils'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 
 interface AtRiskWatchlistProps {
@@ -80,9 +80,13 @@ const StudentCard: React.FC<{ student: ScoredStudent; params: UseAnalyticsParams
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900 truncate">{student.studentName}</p>
-          <p className="text-xs text-slate-500">
-            Grade {student.gradeLevel} · avg {student.overallAvg ?? '—'}% · att{' '}
-            {student.attendancePct ?? '—'}% · {student.missingCount} missing
+          {/* avg is null (not 0) until something counts; "missing" is only
+              work the teacher flagged. Coverage shows when the API sends it. */}
+          <p className="text-xs text-slate-500" title={coverageTitle(student.coverage)}>
+            Grade {student.gradeLevel} · avg{' '}
+            {student.overallAvg == null ? 'no graded work yet' : `${student.overallAvg}%`}
+            {student.coverage ? ` (${shortCoverage(student.coverage)})` : ''} · att{' '}
+            {student.attendancePct ?? '—'}% · {student.missingCount} missing (flagged)
           </p>
         </div>
         <div className="text-right flex-shrink-0">

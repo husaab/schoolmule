@@ -286,7 +286,7 @@ export default function EmailCertificatesModal({
                           <span className="text-sm">{s.studentName}</span>
                           <span className="text-xs text-gray-500">Grade {s.grade}</span>
                         </div>
-                        <span className="text-xs text-gray-600">{s.displayMetric.toFixed(1)}%</span>
+                        <span className="text-xs text-gray-600">{s.displayMetric == null ? "—" : `${s.displayMetric.toFixed(1)}%`}</span>
                       </label>
                     ))
                   )}

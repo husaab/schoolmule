@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { OverviewData, GradeStudentRow, SubjectClassRow } from '@/services/types/analytics'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
+import { coverageTitle, shortCoverage } from '@/lib/analyticsUtils'
 import StatCard from '../StatCard'
 import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
@@ -66,11 +67,25 @@ const GradeCohortView: React.FC<GradeCohortViewProps> = ({ overview, params, aiP
 
   const studentColumns: Column<GradeStudentRow>[] = [
     { key: 'studentName', label: 'Student', render: (r) => <span className="font-medium text-slate-900">{r.studentName}</span> },
-    { key: 'overallAvg', label: 'Overall Avg', numeric: true, render: (r) => (r.overallAvg == null ? '—' : `${r.overallAvg}%`) },
+    {
+      key: 'overallAvg',
+      label: 'Overall Avg',
+      numeric: true,
+      // null = nothing counts yet (never 0); the muted line is the coverage when the API sends it.
+      render: (r) =>
+        r.overallAvg == null ? (
+          <span className="text-slate-400" title={coverageTitle(r.coverage)}>no graded work yet</span>
+        ) : (
+          <span className="inline-flex flex-col items-end leading-tight" title={coverageTitle(r.coverage)}>
+            <span>{r.overallAvg}%</span>
+            {r.coverage && <span className="text-[10px] text-slate-400">{shortCoverage(r.coverage)}</span>}
+          </span>
+        ),
+    },
     { key: 'classCount', label: 'Classes', numeric: true, lowPriority: true },
     {
       key: 'missingCount',
-      label: 'Missing Work',
+      label: 'Missing (flagged)',
       numeric: true,
       render: (r) =>
         r.missingCount > 0 ? (

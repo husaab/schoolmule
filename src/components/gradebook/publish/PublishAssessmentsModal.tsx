@@ -281,8 +281,8 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
               ))}
               {result.emailSummary.results.length === 0 && (
                 <li className="py-2.5 text-sm text-slate-500">
-                  Published. No students have a grade on these assessments yet, so no emails were
-                  sent.
+                  Published. No students have been graded on these assessments yet, so no emails
+                  were sent.
                 </li>
               )}
             </ul>
@@ -305,9 +305,16 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                         {loadingPreview ? (
                           <span className="text-xs text-slate-400">checking…</span>
                         ) : warning ? (
-                          <span className="flex items-center gap-1 text-xs text-amber-700 whitespace-nowrap">
-                            <ExclamationTriangleIcon className="w-4 h-4" />
-                            {warning.ungradedStudentCount} of {warning.totalStudents} ungraded
+                          <span className="flex flex-col items-end gap-0.5 text-xs text-amber-700 whitespace-nowrap">
+                            <span className="flex items-center gap-1">
+                              <ExclamationTriangleIcon className="w-4 h-4" />
+                              {warning.ungradedStudentCount} student{warning.ungradedStudentCount === 1 ? '' : 's'} not yet graded (they will not be included)
+                            </span>
+                            {(warning.missingStudentCount ?? 0) > 0 && (
+                              <span className="text-rose-700">
+                                {warning.missingStudentCount} marked missing (count as 0)
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-xs text-emerald-600 whitespace-nowrap">
@@ -379,8 +386,8 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                       </p>
                     )}
                     <p className="text-slate-500">
-                      Students without a grade are left out of this send — publish again once
-                      they&rsquo;re marked.
+                      Students not yet graded are left out of this send — publish again once
+                      they&rsquo;re marked. Students marked missing are included with a 0.
                     </p>
                   </>
                 )}

@@ -10,9 +10,12 @@ import { CheckIcon, ExclamationTriangleIcon, Squares2X2Icon } from '@heroicons/r
 import PublishStateBadge from '@/components/assessments/publish/PublishStateBadge'
 import { summarizePublication } from '@/lib/publicationSummary'
 import ScoreCell from '@/components/assessments/scores/ScoreCell'
+import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
-import { useExclusionToggle } from '@/components/assessments/scores/useExclusionToggle'
+import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
+import { buildScoreLookup, computeAssessmentForStudent } from '@/lib/gradeEngine'
+import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade'
 
 
 interface ChildAssessmentsModalProps {
@@ -25,7 +28,8 @@ interface ChildAssessmentsModalProps {
   editedScores: { [key: string]: number | '' }
   onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
   classId: string
-  onRefreshExclusions: () => Promise<void>
+  /** Re-reads the score matrix after a status change. */
+  onRefresh: () => Promise<void>
   /** Publish state keyed by assessmentId, for the per-child Publish controls. */
   publications: Record<string, AssessmentPublicationState>
   /** Opens the publish modal for the given assessments (children here). */
@@ -42,14 +46,14 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   editedScores,
   onScoreChange,
   classId,
-  onRefreshExclusions,
+  onRefresh,
   publications,
   onPublish,
 }) => {
   // Individual items are publishable on their own, so they get the same
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
-  const { togglingKey, toggle } = useExclusionToggle({ classId, onRefreshExclusions })
+  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh })
   const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
 
   const toggleChildSelected = (assessmentId: string) => {
@@ -62,57 +66,23 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }
 
   const selectedChildren = childAssessments.filter((c) => selectedChildIds.has(c.assessmentId))
-  const { existing: existingScoreMap, excluded: exclusionMap } = useMemo(
+  const { existing: existingScoreMap, status: statusMap } = useMemo(
     () => buildScoreLookups(scoresMatrix),
     [scoresMatrix]
   )
+  const rowsByStudent = useMemo(() => groupRowsByStudent(scoresMatrix), [scoresMatrix])
 
-  // Calculate parent score for a student based on child scores (excluding excluded children)
-  const calculateParentScore = (studentId: string) => {
-    let totalPoints = 0
-    let maxPossiblePoints = 0
-    let totalActiveWeight = 0
-
-    childAssessments.forEach(child => {
-      const key = `${studentId}|${child.assessmentId}`
-      const isExcluded = exclusionMap[key] || false
-
-      if (isExcluded) {
-        // Skip excluded child assessments
-        return
-      }
-
-      const rawValue = editedScores[key] !== undefined
-        ? editedScores[key]
-        : existingScoreMap[key] ?? null
-
-      const rawScore = typeof rawValue === 'number' ? rawValue : (rawValue ? parseFloat(String(rawValue)) : 0)
-
-      // Get weight points (how many points this assessment contributes to parent)
-      const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-      // Use the actual maxScore, not the convoluted logic
-      const maxScore = Number(child.maxScore || 100)
-
-      // Convert raw score to percentage, then multiply by weight points
-      const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
-      const earnedPoints = percentage * childPoints
-
-      totalPoints += earnedPoints
-      maxPossiblePoints += childPoints
-      totalActiveWeight += childPoints
-    })
-
-    // If some assessments are excluded, redistribute proportionally
-    const parentTotalPoints = Number(parentAssessment.weightPoints || parentAssessment.weightPercent || 0)
-    if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
-      // Scale up proportionally to account for excluded assessments
-      const scaleFactor = parentTotalPoints / totalActiveWeight
-      totalPoints = totalPoints * scaleFactor
-      maxPossiblePoints = parentTotalPoints
-    }
-
-    // Return earned/total format for display
-    return { earned: totalPoints, total: maxPossiblePoints }
+  // The category roll-up comes from the engine: counted items weighted by
+  // their points, blanks carry nothing, missing counts as 0, excused never counts.
+  const engineAssessments = toEngineAssessments([parentAssessment, ...childAssessments])
+  const engineParent = engineAssessments[0]
+  const lookupFor = (studentId: string) =>
+    buildScoreLookup(liveRowsForStudent(studentId, rowsByStudent[studentId], editedScores))
+  const categoryResultFor = (studentId: string) =>
+    computeAssessmentForStudent(engineParent, engineAssessments, lookupFor(studentId))
+  const childStatesFor = (studentId: string) => {
+    const lookup = lookupFor(studentId)
+    return engineAssessments.slice(1).map((c) => lookup[c.assessment_id]?.state ?? 'blank')
   }
 
   // Check if all child points add up to parent points
@@ -237,7 +207,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                   </tr>
                 ) : (
                   students.map((student, rowIndex) => {
-                    const parentScore = calculateParentScore(student.studentId)
+                    const categoryKey = `${student.studentId}|${parentAssessment.assessmentId}`
                     return (
                       <tr
                         key={student.studentId}
@@ -249,7 +219,6 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
                         {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
-                          const isExcluded = exclusionMap[key] || false
                           const currentValue = editedScores[key] !== undefined
                             ? editedScores[key]
                             : existingScoreMap[key] ?? ''
@@ -263,19 +232,25 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               label={`${student.name} score for ${child.name}`}
                               value={currentValue}
                               maxScore={maxScore}
-                              isExcluded={isExcluded}
+                              status={statusMap[key] ?? 'graded'}
                               isToggling={togglingKey === key}
                               toggleDisabled={togglingKey !== null}
                               onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
-                              onToggleExclusion={() => toggle(student.studentId, child.assessmentId, isExcluded)}
+                              onSetStatus={(status) => setStatus(student.studentId, child.assessmentId, status)}
                               onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
                             />
                           )
                         })}
 
-                        <td className="bg-cyan-50/70 px-4 py-2 text-center text-sm font-medium text-cyan-800">
-                          {parentScore.earned.toFixed(1)}/{parentAssessment.weightPoints || parentAssessment.weightPercent || 0}
-                        </td>
+                        <CategoryCell
+                          label={`${student.name} score for ${parentAssessment.name}`}
+                          result={categoryResultFor(student.studentId)}
+                          childStates={childStatesFor(student.studentId)}
+                          isToggling={togglingKey === categoryKey}
+                          toggleDisabled={togglingKey !== null}
+                          onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
+                          className="bg-cyan-50/70 px-4"
+                        />
                       </tr>
                     )
                   })
@@ -287,8 +262,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
         <ul className="space-y-1 text-xs text-slate-400">
           <li>Arrow keys move between score cells; Enter moves down.</li>
-          <li>Each score is weighted by its points to make up the category score.</li>
-          <li>Hover a cell to drop that assessment from one student’s grade.</li>
+          <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight.</li>
+          <li>Hover a cell for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
           <li>Save from the main gradebook when you are done — scores are not saved here.</li>
         </ul>
       </ModalBody>

@@ -5,7 +5,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { GradeEngine, AnalyticsViewLevel } from '@/services/types/analytics'
+import { AnalyticsViewLevel } from '@/services/types/analytics'
 
 export interface AnalyticsParams {
   view: AnalyticsViewLevel
@@ -15,7 +15,6 @@ export interface AnalyticsParams {
   subject: string | null
   classId: string | null
   studentId: string | null
-  engine: GradeEngine
 }
 
 export interface UseAnalyticsParams extends AnalyticsParams {
@@ -32,12 +31,13 @@ export function useAnalyticsParams(): UseAnalyticsParams {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  // A legacy `engine` param (from an old bookmark) is simply ignored: there is
+  // one grade engine now and the API no longer reads it either.
   const params = useMemo<AnalyticsParams>(() => {
     const rawView = searchParams.get('view')
     const view = VIEWS.includes(rawView as AnalyticsViewLevel)
       ? (rawView as AnalyticsViewLevel)
       : 'school'
-    const rawEngine = searchParams.get('engine')
     return {
       view,
       termId: searchParams.get('termId'),
@@ -46,13 +46,13 @@ export function useAnalyticsParams(): UseAnalyticsParams {
       subject: searchParams.get('subject'),
       classId: searchParams.get('classId'),
       studentId: searchParams.get('studentId'),
-      engine: rawEngine === 'null_zero' ? 'null_zero' : 'null_skip',
     }
   }, [searchParams])
 
   const setParams = useCallback(
     (patch: Partial<AnalyticsParams>) => {
       const next = new URLSearchParams(searchParams.toString())
+      next.delete('engine')
       for (const [key, value] of Object.entries(patch)) {
         if (value == null || value === '') next.delete(key)
         else next.set(key, String(value))

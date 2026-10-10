@@ -38,9 +38,12 @@ const ClassCard: React.FC<{
 }> = ({ cls, missingCount, child, threadStubs, canAsk }) => {
   const [expanded, setExpanded] = useState(false)
 
+  // Only graded cells are points on the trend line: blank cells are "not yet
+  // graded", flagged-missing ones have no score of their own, excused never count.
   const scored = cls.assessmentScores.filter(
-    (s) => !s.isExcluded && s.score != null && s.maxScore,
+    (s) => s.status === 'graded' && s.score != null && s.maxScore,
   )
+  const coverage = cls.coverage
   // Chronological only when every assessment is dated; otherwise keep the
   // teacher's gradebook order (rows already arrive sorted by sort_order).
   const ordered = scored.every((s) => s.date)
@@ -97,7 +100,7 @@ const ClassCard: React.FC<{
                 {publishedCount} {publishedCount === 1 ? 'mark' : 'marks'} published
               </span>
               {missingCount > 0 && (
-                <span className="rounded-full bg-amber-50 border border-amber-100 px-2 py-px text-xs text-amber-800">
+                <span className="rounded-full bg-rose-50 border border-rose-100 px-2 py-px text-xs text-rose-700">
                   {missingCount} missing
                 </span>
               )}
@@ -112,8 +115,21 @@ const ClassCard: React.FC<{
           )}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className={`text-xl font-bold ${gradeTextColor(cls.finalPct)}`}>
-            {cls.finalPct != null ? `${cls.finalPct}%` : '—'}
+          {/* "—" (never 0%) until something counts; the coverage line says how
+              much of the class's work the number rests on. */}
+          <span className="flex flex-col items-end">
+            <span className={`text-xl font-bold ${gradeTextColor(cls.finalPct)}`}>
+              {cls.finalPct != null ? `${cls.finalPct}%` : '—'}
+            </span>
+            {coverage && coverage.total > 0 && (
+              <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                {cls.finalPct == null
+                  ? 'Not yet graded'
+                  : `Based on ${coverage.assessed} of ${coverage.total} ${
+                      coverage.total === 1 ? 'assessment' : 'assessments'
+                    }`}
+              </span>
+            )}
           </span>
           {canExpand && (
             <span
@@ -292,10 +308,10 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-stone-200/70 p-4">
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
-              Missing Work
+              Marked Missing
             </p>
             <p
-              className={`text-2xl font-bold ${missingWork.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}
+              className={`text-2xl font-bold ${missingWork.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}
             >
               {missingWork.length}
             </p>
@@ -311,8 +327,12 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-2">
             <ExclamationTriangleIcon className="w-5 h-5 text-amber-600" />
-            <h4 className="text-sm font-semibold text-amber-800">Missing Work</h4>
+            <h4 className="text-sm font-semibold text-amber-800">Missing work (marked by the teacher)</h4>
           </div>
+          <p className="text-xs text-amber-800/80 mb-2">
+            These count as 0 until they are handed in. Work the teacher hasn&apos;t graded yet is not
+            listed here and doesn&apos;t affect the average.
+          </p>
           <ul className="space-y-1">
             {missingWork.map((m) => (
               <li key={`${m.classId}-${m.assessmentId}`} className="text-sm text-slate-700">
@@ -376,7 +396,7 @@ const ParentGradesPage: React.FC = () => {
   return (
     <ParentPageShell
       title="Grades"
-      subtitle="Every assessment, average and trend — the same numbers as the report card."
+      subtitle="Every assessment, average and trend — the same numbers your child's teacher sees in the gradebook."
       badge={{ icon: BookOpenIcon, label: 'Grades' }}
     >
       <ParentFilterBar>

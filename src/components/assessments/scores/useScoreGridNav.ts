@@ -1,15 +1,15 @@
 'use client'
 
-// Arrow keys move between score inputs; Enter moves down. Cells are found by
-// id (`${gridId}-${row}-${col}`), so an excluded cell, which has no input,
-// simply keeps focus where it is.
+// Arrow keys move between score cells; Enter moves down. Cells are found by
+// id (`${gridId}-${row}-${col}`): a number input, or the focusable pill a
+// missing/excused cell renders instead.
 
 import type { KeyboardEvent } from 'react'
 
 export function useScoreGridNav(gridId: string, rowCount: number, colCount: number) {
   const inputId = (row: number, col: number) => `${gridId}-${row}-${col}`
 
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>, row: number, col: number) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>, row: number, col: number) => {
     const maxRow = rowCount - 1
     const maxCol = colCount - 1
     let nextRow = row
@@ -35,10 +35,10 @@ export function useScoreGridNav(gridId: string, rowCount: number, colCount: numb
     e.preventDefault()
     if (nextRow === row && nextCol === col) return
 
-    const next = document.getElementById(inputId(nextRow, nextCol)) as HTMLInputElement | null
+    const next = document.getElementById(inputId(nextRow, nextCol))
     if (next) {
       next.focus()
-      next.select()
+      if (next instanceof HTMLInputElement) next.select()
     }
   }
 

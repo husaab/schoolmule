@@ -3,9 +3,19 @@
 import { useState, useEffect } from 'react'
 import Modal from '../../shared/modal'
 import { useNotificationStore } from '../../../store/useNotificationStore'
-import { upsertScoresByClass } from '../../../services/classService'
+import { upsertScoresByClass, type ScoreUpsertItem } from '../../../services/classService'
 import type { ThreadStub } from '@/services/types/messaging'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import {
+  buildScoreLookup,
+  computeAssessmentForStudent,
+  type EngineAssessment,
+  type EngineScoreRow,
+  type ScoreStatus,
+} from '@/lib/gradeEngine'
+import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
+import StatusControl from '@/components/assessments/scores/StatusControl'
+import { pillClass } from '@/components/assessments/scores/ScoreCell'
 
 interface Assessment {
   assessmentId: string
@@ -22,7 +32,8 @@ interface StudentScore {
   studentId: string
   assessmentId: string
   score: number | null
-  isExcluded?: boolean
+  /** graded (blank when score is null) | missing (counts as 0) | excused (never counts) */
+  status?: ScoreStatus
 }
 
 interface StudentAssessmentsModalProps {
@@ -63,21 +74,24 @@ export default function StudentAssessmentsModal({
   
   const showNotification = useNotificationStore((state) => state.showNotification)
 
-  // Build exclusion map from existing scores
-  const exclusionMap: Record<string, boolean> = {}
-  existingScores.forEach(score => {
-    if (score.studentId === student?.studentId) {
-      const key = `${score.studentId}|${score.assessmentId}`
-      exclusionMap[key] = score.isExcluded || false
-    }
-  })
-
-  // Check if an assessment is excluded
-  const isAssessmentExcluded = (assessmentId: string) => {
-    if (!student) return false
-    const key = `${student.studentId}|${assessmentId}`
-    return exclusionMap[key] || false
+  // Missing / excused flags save straight away and the gradebook re-reads.
+  const { togglingKey, setStatus: setCellStatus } = useCellStatus({ classId, onRefresh: onRefreshScores })
+  // A status flag replaces whatever the teacher had typed into that cell.
+  const setStatus = async (studentId: string, assessmentId: string, next: ScoreStatus) => {
+    setEditedScores((prev) => {
+      const copy = { ...prev }
+      delete copy[`${studentId}|${assessmentId}`]
+      return copy
+    })
+    await setCellStatus(studentId, assessmentId, next)
   }
+
+  // This student's saved rows, by assessment.
+  const savedByAssessment: Record<string, StudentScore> = {}
+  existingScores.forEach((score) => {
+    if (score.studentId === student?.studentId) savedByAssessment[score.assessmentId] = score
+  })
+  const statusFor = (assessmentId: string): ScoreStatus => savedByAssessment[assessmentId]?.status ?? 'graded'
 
   // Per-row parent conversation action: open the existing thread or start one.
   const messageAction = (assessmentId: string) => {
@@ -165,21 +179,24 @@ export default function StudentAssessmentsModal({
     if (!student || saving) return
 
     setSaving(true)
-    const toUpsert: Array<{ studentId: string; assessmentId: string; score: number }> = []
-    
+    const toUpsert: ScoreUpsertItem[] = []
+
     Object.entries(editedScores).forEach(([key, value]) => {
       const [studentId, assessmentId] = key.split('|')
-      if (studentId === student.studentId) {
-        const numValue = value.trim() === '' ? null : parseFloat(value)
-        if (typeof numValue === 'number' && !isNaN(numValue)) {
-          toUpsert.push({ studentId, assessmentId, score: numValue })
-        }
-        // Note: We don't handle null values in batch updates for now
+      if (studentId !== student.studentId) return
+      const saved = savedByAssessment[assessmentId]?.score ?? null
+      const numValue = value.trim() === '' ? null : parseFloat(value)
+      if (typeof numValue === 'number' && !isNaN(numValue)) {
+        if (numValue !== saved) toUpsert.push({ studentId, assessmentId, score: numValue })
+      } else if (numValue === null && saved !== null) {
+        // Clearing a cell puts it back to "not yet graded".
+        toUpsert.push({ studentId, assessmentId, score: null })
       }
     })
 
     if (toUpsert.length === 0) {
-      showNotification('No scores to save', 'error')
+      showNotification('No changes to save', 'success')
+      setHasChanges(false)
       setSaving(false)
       return
     }
@@ -215,18 +232,33 @@ export default function StudentAssessmentsModal({
     return editedScores[key] || ''
   }
 
-  const calculatePercentage = (score: number | null, maxScore: number | null | undefined) => {
-    if (score === null || !maxScore || maxScore === 0) return null
-    return ((score / maxScore) * 100).toFixed(1)
-  }
-
-  const getLetterGrade = (percentage: number | null) => {
-    if (percentage === null) return '-'
-    if (percentage >= 90) return 'A'
-    if (percentage >= 80) return 'B'
-    if (percentage >= 70) return 'C'
-    if (percentage >= 60) return 'D'
-    return 'F'
+  // Per-assessment results come from the grade engine, with the modal's
+  // unsaved edits merged over the saved rows.
+  const engineAssessments: EngineAssessment[] = assessments.map((a) => ({
+    assessment_id: a.assessmentId,
+    weight_points: a.weightPoints || a.weightPercent || 0,
+    max_score: a.maxScore,
+    is_parent: a.isParent,
+    parent_assessment_id: a.parentAssessmentId ?? null,
+  }))
+  const liveRows: EngineScoreRow[] = student
+    ? assessments
+        .filter((a) => !a.isParent)
+        .map((a) => {
+          const raw = editedScores[`${student.studentId}|${a.assessmentId}`]
+          const saved = savedByAssessment[a.assessmentId]
+          const parsed = raw === undefined ? saved?.score ?? null : raw.trim() === '' ? null : parseFloat(raw)
+          return {
+            assessment_id: a.assessmentId,
+            score: typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null,
+            status: saved?.status ?? 'graded',
+          }
+        })
+    : []
+  const lookup = buildScoreLookup(liveRows)
+  const resultFor = (assessmentId: string) => {
+    const a = engineAssessments.find((e) => e.assessment_id === assessmentId)
+    return a ? computeAssessmentForStudent(a, engineAssessments, lookup) : null
   }
 
   // Group assessments by parent/child relationship
@@ -247,6 +279,74 @@ export default function StudentAssessmentsModal({
   }, [] as Array<{ parent: Assessment | null; children: Assessment[] }>)
 
   if (!student) return null
+
+  const renderRow = (assessment: Assessment, gap: string) => {
+    const key = `${student.studentId}|${assessment.assessmentId}`
+    const status = statusFor(assessment.assessmentId)
+    const result = resultFor(assessment.assessmentId)
+    const scoreValue = getScoreDisplay(assessment.assessmentId)
+    const muted = status !== 'graded'
+    const label = `${student.name} score for ${assessment.name}`
+
+    return (
+      <div
+        key={assessment.assessmentId}
+        className={`group relative flex items-center justify-between p-3 bg-white rounded border ${muted ? 'text-gray-400' : 'text-black'}`}
+      >
+        <StatusControl
+          label={label}
+          status={status}
+          busy={togglingKey === key}
+          disabled={togglingKey !== null}
+          onSetStatus={(next) => setStatus(student.studentId, assessment.assessmentId, next)}
+        />
+        <div className="flex-1">
+          <div className="font-medium">{assessment.name}</div>
+          <div className="text-sm text-gray-600">
+            Worth: {assessment.weightPoints || assessment.weightPercent} pts | Out of: {assessment.maxScore}
+          </div>
+          {assessment.date && (
+            <div className="text-xs text-gray-500">Date: {new Date(assessment.date).toLocaleDateString()}</div>
+          )}
+          {status === 'excused' && (
+            <div className="text-xs text-gray-500 mt-1">Excused — this assessment never counts toward the grade</div>
+          )}
+          {status === 'missing' && (
+            <div className="text-xs text-rose-600 mt-1">Missing — counts as 0 until a score is entered</div>
+          )}
+        </div>
+
+        <div className={`flex items-center ${gap}`}>
+          <div className="text-right">
+            {status !== 'graded' ? (
+              <div className={`w-20 rounded-lg px-2 py-1 text-center text-xs font-semibold ring-1 ring-inset ${pillClass[status]}`}>
+                {status === 'missing' ? 'M' : 'Excused'}
+              </div>
+            ) : (
+              <input
+                type="number"
+                aria-label={label}
+                value={scoreValue}
+                onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
+                className={`w-20 px-2 py-1 border rounded text-center ${scoreValue === '' ? 'border-dashed placeholder:text-slate-400' : ''}`}
+                placeholder="—"
+                title={scoreValue === '' ? 'Not yet graded — carries no weight' : undefined}
+                min="0"
+                max={assessment.maxScore || 100}
+                step="0.1"
+              />
+            )}
+            <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
+          </div>
+
+          {messageAction(assessment.assessmentId)}
+          <div className="text-right min-w-16 text-sm font-medium tabular-nums">
+            {result?.isCounted && result.pct != null ? `${result.pct.toFixed(1)}%` : <span className="text-gray-400">—</span>}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Modal
@@ -320,134 +420,12 @@ export default function StudentAssessmentsModal({
                   
                   {/* Individual assessments */}
                   <div className="space-y-2 ml-4">
-                    {group.children.map((assessment) => {
-                      const scoreValue = getScoreDisplay(assessment.assessmentId)
-                      const numScore = scoreValue ? parseFloat(scoreValue) : null
-                      const percentage = calculatePercentage(numScore, assessment.maxScore)
-                      const isExcluded = isAssessmentExcluded(assessment.assessmentId)
-                      
-                      return (
-                        <div key={assessment.assessmentId} className={`flex items-center justify-between p-3 bg-white rounded border ${isExcluded ? 'text-gray-400' : 'text-black'}`}>
-                          <div className="flex-1">
-                            <div className="font-medium">{assessment.name}</div>
-                            <div className="text-sm text-gray-600">
-                              Worth: {assessment.weightPoints || assessment.weightPercent} pts | Out of: {assessment.maxScore}
-                            </div>
-                            {assessment.date && (
-                              <div className="text-xs text-gray-500">
-                                Date: {new Date(assessment.date).toLocaleDateString()}
-                              </div>
-                            )}
-                            {isExcluded && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                ⚠️ This assessment is excluded from grade calculations
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center space-x-5">
-                            <div className="text-right">
-                              {isExcluded ? (
-                                <div className="w-20 px-2 py-1 border border-gray-300 rounded text-center bg-gray-100 text-gray-500 text-xs">
-                                  Excluded
-                                </div>
-                              ) : (
-                                <input
-                                  type="number"
-                                  value={scoreValue}
-                                  onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
-                                  className="w-20 px-2 py-1 border rounded text-center"
-                                  placeholder="0"
-                                  min="0"
-                                  max={assessment.maxScore || 100}
-                                  step="0.1"
-                                />
-                              )}
-                              <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
-                            </div>
-                            
-                            {messageAction(assessment.assessmentId)}
-                            <div className="text-right min-w-16">
-                              {!isExcluded && percentage !== null && (
-                                <>
-                                  <div className="text-sm font-medium">{percentage}%</div>
-                                  <div className="text-xs text-gray-600">{getLetterGrade(parseFloat(percentage))}</div>
-                                </>
-                              )}
-                              {isExcluded && (
-                                <div className="text-xs text-gray-500">Excluded</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {group.children.map((assessment) => renderRow(assessment, 'space-x-5'))}
                   </div>
                 </>
               ) : (
                 // Standalone assessment
-                group.children.map((assessment) => {
-                  const scoreValue = getScoreDisplay(assessment.assessmentId)
-                  const numScore = scoreValue ? parseFloat(scoreValue) : null
-                  const percentage = calculatePercentage(numScore, assessment.maxScore)
-                  const isExcluded = isAssessmentExcluded(assessment.assessmentId)
-                  
-                  return (
-                    <div key={assessment.assessmentId} className={`flex items-center justify-between p-3 bg-white rounded border ${isExcluded ? 'text-gray-400' : 'text-black'}`}>
-                      <div className="flex-1">
-                        <div className="font-medium">{assessment.name}</div>
-                        <div className="text-sm text-gray-600">
-                          Worth: {assessment.weightPoints || assessment.weightPercent} pts | Out of: {assessment.maxScore}
-                        </div>
-                        {assessment.date && (
-                          <div className="text-xs text-gray-500">
-                            Date: {new Date(assessment.date).toLocaleDateString()}
-                          </div>
-                        )}
-                        {isExcluded && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            ⚠️ This assessment is excluded from grade calculations
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-1">
-                        <div className="text-right">
-                          {isExcluded ? (
-                            <div className="w-20 px-3 py-1 border border-gray-300 rounded text-center bg-gray-100 text-gray-500 text-xs">
-                              Excluded
-                            </div>
-                          ) : (
-                            <input
-                              type="number"
-                              value={scoreValue}
-                              onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
-                              className="w-20 px-3 py-1 border rounded text-center"
-                              placeholder="0"
-                              min="0"
-                              max={assessment.maxScore || undefined}
-                              step="0.1"
-                            />
-                          )}
-                          <div className="text-xs text-gray-500">/ {assessment.maxScore || 100}</div>
-                        </div>
-                        
-                        {messageAction(assessment.assessmentId)}
-                        <div className="text-right min-w-16">
-                          {!isExcluded && percentage !== null && (
-                            <>
-                              <div className="text-sm font-medium">{percentage}%</div>
-                              <div className="text-xs text-gray-600">{getLetterGrade(parseFloat(percentage))}</div>
-                            </>
-                          )}
-                          {isExcluded && (
-                            <div className="text-xs text-gray-500">Excluded</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
+                group.children.map((assessment) => renderRow(assessment, 'space-x-1'))
               )}
             </div>
           ))}
@@ -456,8 +434,8 @@ export default function StudentAssessmentsModal({
         {/* Summary */}
         <div className="border-t pt-4">
           <div className="text-sm text-gray-600">
-            <p>&bull; Enter scores for each assessment</p>
-            <p>&bull; Changes are automatically calculated and shown as percentages</p>
+            <p>&bull; Enter scores for each assessment. Blank cells are not yet graded and carry no weight; a typed 0 is a real 0.</p>
+            <p>&bull; Hover a row for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear.</p>
             <p>&bull; Click &quot;Save Changes&quot; to update the gradebook</p>
           </div>
         </div>

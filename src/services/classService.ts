@@ -267,15 +267,53 @@ export const getScoresByClass = async (
   return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`);
 };
 
+export type ScoreStatus = 'graded' | 'missing' | 'excused';
+
+export interface ScoreUpsertItem {
+  studentId: string;
+  assessmentId: string;
+  /** null clears the cell back to "not yet graded". */
+  score: number | null;
+  /** Optional; sending a numeric score resets the status to graded server-side. */
+  status?: ScoreStatus;
+}
+
 export const upsertScoresByClass = async (
   classId: string,
-  scores: Array<{ studentId: string; assessmentId: string; score: number | null }>
+  scores: ScoreUpsertItem[]
 ) => {
   return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: { scores },
   });
+};
+
+export interface ScoreStatusRow {
+  student_id: string;
+  assessment_id: string;
+  score: number | null;
+  status: ScoreStatus;
+}
+
+/**
+ * Mark one cell missing (counts as 0), excused (never counts) or graded
+ * (clears a flag). A category assessment id expands to all of its children,
+ * which is why the response is an array.
+ * PATCH /studentAssessments/classes/:classId/status
+ */
+export const setScoreStatus = async (
+  classId: string,
+  payload: { studentId: string; assessmentId: string; status: ScoreStatus }
+) => {
+  return apiClient<{ status: string; data: ScoreStatusRow[]; message?: string }>(
+    `/studentAssessments/classes/${encodeURIComponent(classId)}/status`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    }
+  );
 };
 
 /**

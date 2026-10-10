@@ -1,13 +1,13 @@
 'use client'
 
 // Sticky global filter strip: term + compare-term selectors, grade/subject
-// filters, the grade-engine toggle, and the AI chat launcher.
+// filters, and the AI chat launcher. (The old grade-engine toggle is gone:
+// there is one engine now — graded work only.)
 
 import React from 'react'
 import { SparklesIcon, DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../_hooks/useAnalyticsParams'
-import EngineTooltip from './EngineTooltip'
 import StudentPicker, { PickerStudent } from './StudentPicker'
 import FilterDropdown from './FilterDropdown'
 
@@ -105,33 +105,6 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
         <div className="flex-1" />
 
-        {/* Engine segmented toggle */}
-        <div className="flex items-center gap-1.5">
-          <div className="inline-flex bg-slate-100 rounded-xl p-0.5" role="group" aria-label="Grade engine">
-            <button
-              onClick={() => params.setParams({ engine: 'null_skip' })}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-[10px] transition-colors ${
-                params.engine === 'null_skip'
-                  ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Skip Ungraded
-            </button>
-            <button
-              onClick={() => params.setParams({ engine: 'null_zero' })}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-[10px] transition-colors ${
-                params.engine === 'null_zero'
-                  ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Count as Zero
-            </button>
-          </div>
-          <EngineTooltip />
-        </div>
-
         {/* AI actions */}
         <button
           onClick={onOpenReport}
@@ -149,7 +122,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
         </button>
 
         {/* Clear filters — far right, always reachable since the bar is sticky.
-            Resets to the plain school overview; keeps term + engine. */}
+            Resets to the plain school overview; keeps term. */}
         {(params.view !== 'school' || params.grade || params.subject || params.compareTerm) && (
           <button
             onClick={() =>

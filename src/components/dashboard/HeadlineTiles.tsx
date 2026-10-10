@@ -29,7 +29,10 @@ interface HeadlineTilesProps {
 // is never what that means — so a zero rate reads as no data, not as bad.
 const rate = (v: number | null | undefined) => (typeof v === 'number' && v > 0 ? `${(v * 100).toFixed(1)}%` : '—')
 const rateTone = (v: number | null | undefined) => (typeof v === 'number' && v > 0 ? toneForRate(v) : 'neutral')
+// A null average means nothing has been graded yet — never 0. Blank cells
+// carry no weight, so a class with no marks has no average rather than 0%.
 const score = (v: number | null | undefined) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—')
+const NO_GRADED_WORK = 'No graded work yet'
 
 const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
   isAdmin,
@@ -43,7 +46,8 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
 }) => {
   const schoolAvg = overview.data?.school.stats?.avg ?? null
   // Analytics failing must not blank the tile: fall back to the summary's
-  // (cached, null-zero) average and simply drop the delta.
+  // (cached) average and simply drop the delta. Both are computed from graded
+  // work only, so a null here means "nothing graded yet", not a failure.
   const avgShown = overview.error ? (summary.averageStudentGrade ?? null) : schoolAvg
   const diff = overview.data?.termDiff?.school?.avgDiff
   const delta =
@@ -71,7 +75,9 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
           sub={
             overview.data?.school.stats
               ? `median ${overview.data.school.stats.median.toFixed(1)}%`
-              : undefined
+              : !pending && !overview.loading && avgShown == null
+                ? NO_GRADED_WORK
+                : undefined
           }
         />
       </div>
@@ -95,7 +101,13 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
         tone={toneForScore(myAvg)}
         href={analyticsHref({ termId })}
         loading={loading}
-        sub={schoolAvg != null ? `school ${schoolAvg.toFixed(1)}%` : undefined}
+        sub={
+          !loading && myAvg == null
+            ? NO_GRADED_WORK
+            : schoolAvg != null
+              ? `school ${schoolAvg.toFixed(1)}%`
+              : undefined
+        }
       />
       <StatTile
         label="Missing work"
@@ -103,7 +115,7 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
         tone={loading || !classes.length ? 'neutral' : missing === 0 ? 'good' : 'warn'}
         href="/gradebook"
         loading={loading}
-        sub="ungraded items across your classes"
+        sub="marked missing across your classes"
       />
     </div>
   )

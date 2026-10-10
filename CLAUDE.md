@@ -42,8 +42,8 @@ School Mule is a comprehensive school management system with separate frontend a
 
 #### student_assessments
 - **Primary Key**: (student_id, assessment_id)
-- **Fields**: score
-- **Purpose**: Individual student assessment scores
+- **Fields**: score, status ('graded' | 'missing' | 'excused')
+- **Purpose**: Individual student assessment scores. A blank cell (no row, or null score with status graded) is "not yet graded" and carries NO weight; `missing` counts as 0; `excused` never counts. The one grade engine is `schoolmule-backend/services/gradeEngine.js` (TS port for the live grid: `src/lib/gradeEngine.ts`). `student_excluded_assessments` is legacy and no longer read.
 
 ### Attendance System
 

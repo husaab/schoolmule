@@ -4,14 +4,23 @@ import React from 'react'
 import { AssessmentStatus } from '@/lib/assessmentGrouping'
 
 // Full literal class strings — never assembled dynamically (see childColors.ts).
+//
+// Three distinct looks on purpose: "Missing" is the only one that costs marks
+// (it counts as 0), so it is the only one in a warning colour. "Not yet
+// graded" and "Awaiting scores" are neutral — that work carries no weight —
+// and "Excused" is quiet slate because it never counts either way.
 const STYLES: Record<Exclude<AssessmentStatus, null>, { label: string; className: string }> = {
-  excluded: {
-    label: 'Excluded',
+  excused: {
+    label: 'Excused',
     className: 'bg-slate-100 text-slate-500',
   },
   missing: {
     label: 'Missing',
-    className: 'bg-amber-50 text-amber-700 border border-amber-100',
+    className: 'bg-rose-50 text-rose-700 border border-rose-100',
+  },
+  not_graded: {
+    label: 'Not yet graded',
+    className: 'bg-stone-100 text-stone-500',
   },
   awaiting: {
     label: 'Awaiting scores',

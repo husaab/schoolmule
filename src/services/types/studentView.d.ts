@@ -74,7 +74,8 @@ export interface EvaluatedStudent {
   homeroomTeacherId: string | null;
   perTerm: Record<string, { qualified: boolean; metric: number }>;
   qualified: boolean;
-  displayMetric: number;
+  /** Headline metric; null when the student had no graded work in scope. */
+  displayMetric: number | null;
 }
 
 export interface StudentViewListResponse {

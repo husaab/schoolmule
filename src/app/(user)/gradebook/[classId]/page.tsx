@@ -33,7 +33,13 @@ import { summarizePublication } from '@/lib/publicationSummary';
 import { mergeAssessmentMutation } from '@/lib/assessmentMutation';
 import type { AssessmentMutation } from '@/components/assessments/section/useAssessmentForm';
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types';
-import { getExclusionsByClass, createExclusion, deleteExclusion } from '@/services/excludedAssessmentService';
+import { buildScoreLookup, computeAssessmentForStudent, computeClassGrade, formatCoverage } from '@/lib/gradeEngine';
+import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade';
+import ScoreCell from '@/components/assessments/scores/ScoreCell';
+import CategoryCell from '@/components/assessments/scores/CategoryCell';
+import { useCellStatus } from '@/components/assessments/scores/useCellStatus';
+import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav';
+import { writeStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades';
 import { getThreadStubs } from '@/services/messagingService';
 import type { ThreadStub } from '@/services/types/messaging';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
@@ -80,10 +86,9 @@ const GradebookClass = () => {
   const [selectedStudent, setSelectedStudent] = useState<{ studentId: string; name: string } | null>(null);
   const [isStudentAssessmentsModalOpen, setIsStudentAssessmentsModalOpen] = useState(false);
 
-  // Exclusions modal state
+  // Excused assessments modal state
   const [selectedExclusionStudent, setSelectedExclusionStudent] = useState<{ studentId: string; name: string } | null>(null);
   const [isExclusionsModalOpen, setIsExclusionsModalOpen] = useState(false);
-  const [exclusionsData, setExclusionsData] = useState<{ [studentId: string]: number }>({});
 
   // Edited scores: keyed by "studentId|assessmentId" → number or '' (empty means "no entry yet")
   const [editedScores, setEditedScores] = useState<{ [key: string]: number | '' }>({})
@@ -119,25 +124,6 @@ const GradebookClass = () => {
   // Check if there are unsaved changes
   const hasUnsavedChanges = Object.keys(editedScores).length > 0
 
-  // Load exclusions data for all students in one efficient API call
-  const loadExclusionsData = useCallback(async () => {
-    try {
-      const res = await getExclusionsByClass(classId)
-      if (res.status === 'success') {
-        const exclusionCounts: { [studentId: string]: number } = {}
-        res.data.forEach(exclusion => {
-          exclusionCounts[exclusion.studentId] = (exclusionCounts[exclusion.studentId] || 0) + 1
-        })
-        setExclusionsData(exclusionCounts)
-      } else {
-        setExclusionsData({})
-      }
-    } catch (error) {
-      console.error('Error loading exclusions data:', error)
-      setExclusionsData({})
-    }
-  }, [classId])
-
   // Selection for publishing. Mirrors the Set<string> pattern used by the
   // report-card generator's student picker.
   const toggleAssessmentSelected = (assessmentId: string) => {
@@ -158,14 +144,6 @@ const GradebookClass = () => {
   const handlePublishChanged = async () => {
     await loadPublications()
     setSelectedAssessmentIds(new Set())
-  }
-
-  // Refresh exclusions data AND scores matrix to update visual indicators
-  const refreshExclusionsData = async () => {
-    await Promise.all([
-      loadExclusionsData(),
-      refreshScoresMatrix()
-    ])
   }
 
   const loadThreadStubs = useCallback(async () => {
@@ -201,17 +179,41 @@ const GradebookClass = () => {
     }
   }, [classId])
 
-  // Refresh scores matrix from backend
-  const refreshScoresMatrix = async () => {
+  // Refresh scores matrix from backend (scores and cell statuses live there)
+  const refreshScoresMatrix = useCallback(async () => {
     try {
       const refreshed = await getScoresByClass(classId)
       if (refreshed.status === 'success') {
-        setScoresMatrix(refreshed.data as ScoreRow[])
+        const rows = refreshed.data as ScoreRow[]
+        setScoresMatrix(rows)
+        // A cell flagged missing/excused since the teacher typed into it keeps
+        // the flag: drop the stale unsaved edit so Save cannot undo the flag.
+        const flagged = new Set(
+          rows.filter((r) => r.status === 'missing' || r.status === 'excused').map((r) => `${r.student_id}|${r.assessment_id}`),
+        )
+        if (flagged.size > 0) {
+          setEditedScores((prev) => {
+            const next = { ...prev }
+            let changed = false
+            for (const key of Object.keys(next)) {
+              if (flagged.has(key)) { delete next[key]; changed = true }
+            }
+            return changed ? next : prev
+          })
+        }
       }
     } catch (error) {
       console.error('Error refreshing scores matrix:', error)
     }
-  }
+  }, [classId])
+
+  // Missing / excused flags save straight away, then the matrix is re-read.
+  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh: refreshScoresMatrix })
+  const nav = useScoreGridNav(
+    'grade',
+    students.length,
+    assessments.filter((a) => !a.parentAssessmentId).length,
+  )
 
   useEffect(() => {
     if (!classId) return
@@ -246,7 +248,6 @@ const GradebookClass = () => {
         }
         setScoresMatrix(scoreRes.data as ScoreRow[])
 
-        loadExclusionsData()
         loadPublications()
         loadThreadStubs()
       })
@@ -257,7 +258,7 @@ const GradebookClass = () => {
       .finally(() => {
         setLoading(false)
       })
-  }, [classId, loadExclusionsData, loadPublications, loadThreadStubs])
+  }, [classId, loadPublications, loadThreadStubs])
 
   // Fetch term details when classData becomes available
   useEffect(() => {
@@ -359,7 +360,23 @@ const GradebookClass = () => {
     : null
 
   // Build quick lookups
-  const { existing: existingScoreMap, excluded: exclusionMap } = buildScoreLookups(scoresMatrix)
+  const { existing: existingScoreMap, status: statusMap } = buildScoreLookups(scoresMatrix)
+
+  // All grade maths goes through the engine. Live rows merge the teacher's
+  // unsaved edits over the saved matrix so totals preview what will be saved.
+  const engineAssessments = toEngineAssessments(assessments)
+  const engineById = Object.fromEntries(engineAssessments.map((a) => [a.assessment_id, a]))
+  const rowsByStudent = groupRowsByStudent(scoresMatrix)
+  const liveByStudent = new Map(
+    students.map((stu) => {
+      const rows = liveRowsForStudent(stu.studentId, rowsByStudent[stu.studentId], editedScores)
+      return [stu.studentId, { lookup: buildScoreLookup(rows), grade: computeClassGrade(engineAssessments, rows) }]
+    })
+  )
+  const excusedCountFor = (studentId: string) =>
+    (rowsByStudent[studentId] || []).filter((r) => !r.is_parent && r.status === 'excused').length
+  const pctColor = (pct: number | null) =>
+    pct == null ? 'text-slate-400' : pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-slate-900' : 'text-rose-600'
 
   const handleExportExcel = async () => {
     try {
@@ -427,88 +444,15 @@ const GradebookClass = () => {
     })
   }
 
-  const computeTotalForStudent = (studentId: string) => {
-    let total = 0
-    let totalActiveWeight = 0
-
-    displayedAssessments.forEach((a) => {
-      const key = `${studentId}|${a.assessmentId}`
-      const isExcluded = exclusionMap[key] || false
-
-      if (isExcluded) {
-        return
-      }
-      let scoreToUse = 0
-      const assessmentWeight = Number(a.weightPoints || a.weightPercent || 0)
-      totalActiveWeight += assessmentWeight
-
-      if (a.isParent) {
-        const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
-        if (childAssessments.length > 0) {
-          let totalPoints = 0
-          let maxPossiblePoints = 0
-
-          childAssessments.forEach(child => {
-            const childKey = `${studentId}|${child.assessmentId}`
-            const isChildExcluded = exclusionMap[childKey] || false
-
-            if (isChildExcluded) {
-              return
-            }
-            const childRawValue = editedScores[childKey] !== undefined
-              ? editedScores[childKey]
-              : existingScoreMap[childKey] ?? null
-
-            const rawScore = typeof childRawValue === 'number'
-              ? childRawValue
-              : childRawValue !== null && childRawValue !== undefined
-              ? parseFloat(String(childRawValue)) || 0
-              : 0
-
-            const maxScore = Number(child.maxScore || 100)
-            const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-
-            const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
-            const earnedPoints = percentage * childPoints
-
-            totalPoints += earnedPoints
-            maxPossiblePoints += childPoints
-          })
-          scoreToUse = maxPossiblePoints > 0 ? (totalPoints / maxPossiblePoints) * 100 : 0
-        }
-      } else {
-        const key = `${studentId}|${a.assessmentId}`
-        const rawValue = editedScores[key] !== undefined
-          ? editedScores[key]
-          : existingScoreMap[key] ?? null
-
-        const rawScore = typeof rawValue === 'number'
-          ? rawValue
-          : rawValue !== null && rawValue !== undefined
-          ? parseFloat(String(rawValue)) || 0
-          : 0
-
-        const maxScore = Number(a.maxScore || 100)
-        scoreToUse = maxScore > 0 ? (rawScore / maxScore) * 100 : 0
-      }
-
-      total += (scoreToUse * assessmentWeight) / 100
-    })
-
-    if (totalActiveWeight > 0 && totalActiveWeight < 100) {
-      total = (total / totalActiveWeight) * 100
-    }
-
-    return total
-  }
-
-  // Helper to save all student grades to localStorage
+  // Hand each student's live grade (null = nothing graded yet) and coverage
+  // to the bulk feedback / progress pages.
   const saveGradesToLocalStorage = () => {
-    const gradesMap: Record<string, number> = {}
+    const gradesMap: StoredGrades = {}
     students.forEach((stu) => {
-      gradesMap[stu.studentId] = computeTotalForStudent(stu.studentId)
+      const grade = liveByStudent.get(stu.studentId)?.grade
+      gradesMap[stu.studentId] = { pct: grade?.pct ?? null, coverage: grade?.coverage ?? null }
     })
-    localStorage.setItem(`bulk_feedback_grades_${classId}`, JSON.stringify(gradesMap))
+    writeStoredGrades(classId, gradesMap)
   }
 
   // Navigate to bulk feedback (saves grades first)
@@ -532,6 +476,8 @@ const GradebookClass = () => {
     Object.entries(editedScores).forEach(([compositeKey, newScore]) => {
       const [stuId, assessId] = compositeKey.split('|')
       const existing = existingScoreMap[compositeKey] ?? null
+      // Never let a stale edit overwrite a saved missing/excused flag.
+      if ((statusMap[compositeKey] ?? 'graded') !== 'graded') return
 
       if (typeof newScore === 'number' && newScore !== existing) {
         toUpsert.push({
@@ -600,7 +546,6 @@ const GradebookClass = () => {
       const [assessRes] = await Promise.all([
         getAssessmentsByClass(classId),
         refreshScoresMatrix(),
-        loadExclusionsData(),
       ])
       if (assessRes.status === 'success') {
         setAssessments(assessRes.data)
@@ -696,50 +641,6 @@ const GradebookClass = () => {
     }
   }
 
-  const handleArrowNav = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    rowIndex: number,
-    colIndex: number
-  ) => {
-    const maxRow = students.length - 1
-    const maxCol = displayedAssessments.length - 1
-
-    let nextRow = rowIndex
-    let nextCol = colIndex
-
-    switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault()
-        nextRow = Math.max(0, rowIndex - 1)
-        break
-      case 'ArrowDown':
-        e.preventDefault()
-        nextRow = Math.min(maxRow, rowIndex + 1)
-        break
-      case 'ArrowLeft':
-        e.preventDefault()
-        nextCol = Math.max(0, colIndex - 1)
-        break
-      case 'ArrowRight':
-        e.preventDefault()
-        nextCol = Math.min(maxCol, colIndex + 1)
-        break
-      default:
-        return
-    }
-
-    if (nextRow === rowIndex && nextCol === colIndex) return
-
-    const nextInput = document.getElementById(
-      `grade-${nextRow}-${nextCol}`
-    ) as HTMLInputElement | null
-
-    if (nextInput) {
-      nextInput.focus()
-      nextInput.select()
-    }
-  }
-
   // Calculate class statistics
   // "Live" counts the items parents can actually see: standalones plus the
   // items inside categories. A category's own flag is not an item.
@@ -749,9 +650,13 @@ const GradebookClass = () => {
     gradedItems.length === displayedAssessments.length
       ? `${liveItemCount} live for parents`
       : `${liveItemCount} of ${gradedItems.length} items live for parents`
-  const classAverage = students.length > 0
-    ? students.reduce((sum, stu) => sum + computeTotalForStudent(stu.studentId), 0) / students.length
-    : 0
+  // Class average = mean of the students who have any graded work.
+  const assessedPcts = [...liveByStudent.values()]
+    .map((v) => v.grade.pct)
+    .filter((pct): pct is number => pct != null)
+  const classAverage = assessedPcts.length > 0
+    ? assessedPcts.reduce((sum, pct) => sum + pct, 0) / assessedPcts.length
+    : null
 
   return (
     <>
@@ -894,7 +799,10 @@ const GradebookClass = () => {
                     {displayedAssessments.length > 0 && `, ${liveLabel}`}
                   </span>
                   <span>
-                    <strong className="font-semibold text-slate-900 tabular-nums">{classAverage.toFixed(1)}%</strong> class average
+                    <strong className="font-semibold text-slate-900 tabular-nums">
+                      {classAverage == null ? '—' : `${classAverage.toFixed(1)}%`}
+                    </strong>{' '}
+                    class average · {assessedPcts.length} of {students.length} students assessed
                   </span>
                 </div>
               )}
@@ -1000,7 +908,11 @@ const GradebookClass = () => {
                     students
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map((stu, rowIndex) => {
-                      const total = computeTotalForStudent(stu.studentId)
+                      const live = liveByStudent.get(stu.studentId) ?? {
+                        lookup: {},
+                        grade: computeClassGrade(engineAssessments, []),
+                      }
+                      const grade = live.grade
                       return (
                         <tr
                           key={stu.studentId}
@@ -1035,12 +947,12 @@ const GradebookClass = () => {
                                   setIsExclusionsModalOpen(true)
                                 }}
                                 className="flex items-center gap-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                title={`Manage exclusions (${exclusionsData[stu.studentId] || 0} excluded)`}
+                                title={`Excused assessments (${excusedCountFor(stu.studentId)} excused)`}
                               >
                                 <MinusCircleIcon className="h-4 w-4" />
-                                {(exclusionsData[stu.studentId] || 0) > 0 && (
-                                  <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">
-                                    {exclusionsData[stu.studentId]}
+                                {excusedCountFor(stu.studentId) > 0 && (
+                                  <span className="text-xs bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full font-medium">
+                                    {excusedCountFor(stu.studentId)}
                                   </span>
                                 )}
                               </button>
@@ -1049,156 +961,49 @@ const GradebookClass = () => {
 
                           {displayedAssessments.map((a: AssessmentPayload, colIndex) => {
                             const key = `${stu.studentId}|${a.assessmentId}`
-                            const isExcluded = exclusionMap[key] || false
+                            const highlight = highlightedAssessmentId === a.assessmentId ? 'ring-2 ring-cyan-400 ring-inset' : ''
+                            const cellLabel = `${stu.name} score for ${a.name}`
 
                             if (a.isParent) {
-                              const childAssessments = assessments.filter(child => child.parentAssessmentId === a.assessmentId)
-
                               return (
-                                <td
+                                <CategoryCell
                                   key={a.assessmentId}
-                                  className={`px-2 py-2 text-center cursor-pointer hover:bg-blue-100 relative group transition-colors ${
-                                    isExcluded
-                                      ? 'bg-slate-50 text-slate-400'
-                                      : 'bg-blue-50/50'
-                                  } ${
-                                    highlightedAssessmentId === a.assessmentId
-                                      ? 'ring-2 ring-cyan-400 ring-inset'
-                                      : ''
-                                  }`}
-                                  title={isExcluded ? 'Assessment excluded from grade calculation' : 'Click to edit individual assessments'}
+                                  label={cellLabel}
+                                  result={computeAssessmentForStudent(engineById[a.assessmentId], engineAssessments, live.lookup)}
+                                  childStates={engineAssessments
+                                    .filter((c) => c.parent_assessment_id === a.assessmentId)
+                                    .map((c) => live.lookup[c.assessment_id]?.state ?? 'blank')}
+                                  isToggling={togglingKey === key}
+                                  toggleDisabled={togglingKey !== null}
+                                  onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
                                   onClick={() => handleParentAssessmentClick(a)}
-                                >
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      try {
-                                        if (isExcluded) {
-                                          await deleteExclusion(stu.studentId, classId, a.assessmentId)
-                                          showNotification('Assessment included', 'success')
-                                        } else {
-                                          await createExclusion({
-                                            studentId: stu.studentId,
-                                            classId: classId,
-                                            assessmentId: a.assessmentId
-                                          })
-                                          showNotification('Assessment excluded', 'success')
-                                        }
-                                        await refreshExclusionsData()
-                                      } catch (error) {
-                                        console.error('Error toggling exclusion:', error)
-                                        showNotification('Failed to update exclusion', 'error')
-                                      }
-                                    }}
-                                    className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0 group-hover:opacity-100 cursor-pointer ${
-                                      isExcluded
-                                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                        : 'bg-red-500 text-white hover:bg-red-600'
-                                    }`}
-                                    title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
-                                  >
-                                    {isExcluded ? '✓' : '×'}
-                                  </button>
-                                  <div className={`inline-block px-2 py-1 rounded-lg text-sm font-medium ${
-                                    isExcluded
-                                      ? 'bg-slate-100 text-slate-400'
-                                      : 'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {isExcluded ? (
-                                      'Excl.'
-                                    ) : (
-                                      (() => {
-                                        let totalEarned = 0
-                                        let totalActiveWeight = 0
-
-                                        childAssessments.forEach(child => {
-                                          const childKey = `${stu.studentId}|${child.assessmentId}`
-                                          const isChildExcluded = exclusionMap[childKey] || false
-
-                                          if (isChildExcluded) {
-                                            return
-                                          }
-
-                                          const childRawValue = editedScores[childKey] !== undefined
-                                            ? editedScores[childKey]
-                                            : existingScoreMap[childKey] ?? null
-
-                                          const rawScore = typeof childRawValue === 'number'
-                                            ? childRawValue
-                                            : childRawValue !== null && childRawValue !== undefined
-                                            ? parseFloat(String(childRawValue)) || 0
-                                            : 0
-
-                                          const maxScore = Number(child.maxScore || 100)
-                                          const childPoints = Number(child.weightPoints || child.weightPercent || 0)
-
-                                          const percentage = maxScore > 0 ? Math.min(rawScore / maxScore, 1) : 0
-                                          const earnedPoints = percentage * childPoints
-
-                                          totalEarned += earnedPoints
-                                          totalActiveWeight += childPoints
-                                        })
-
-                                        const parentTotalPoints = Number(a.weightPoints || a.weightPercent || 0)
-                                        if (totalActiveWeight > 0 && totalActiveWeight < parentTotalPoints) {
-                                          const scaleFactor = parentTotalPoints / totalActiveWeight
-                                          totalEarned = totalEarned * scaleFactor
-                                        }
-
-                                        return `${totalEarned.toFixed(1)}/${parentTotalPoints}`
-                                      })()
-                                    )}
-                                  </div>
-                                </td>
+                                  className={`bg-blue-50/50 transition-colors hover:bg-blue-100 ${highlight}`}
+                                  title="Click to edit individual assessments"
+                                />
                               )
-                            } else {
-                              const currentValue =
-                                editedScores[key] !== undefined
-                                  ? editedScores[key]
-                                  : existingScoreMap[key] ?? ''
+                            }
 
-                              return (
-                                <td
-                                  key={a.assessmentId}
-                                  className={`px-2 py-2 text-center relative group ${
-                                    isExcluded ? 'bg-slate-50' : ''
-                                  } ${
-                                    highlightedAssessmentId === a.assessmentId
-                                      ? 'ring-2 ring-cyan-400 ring-inset'
-                                      : ''
-                                  }`}
-                                >
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        if (isExcluded) {
-                                          await deleteExclusion(stu.studentId, classId, a.assessmentId)
-                                          showNotification('Assessment included', 'success')
-                                        } else {
-                                          await createExclusion({
-                                            studentId: stu.studentId,
-                                            classId: classId,
-                                            assessmentId: a.assessmentId
-                                          })
-                                          showNotification('Assessment excluded', 'success')
-                                        }
-                                        await refreshExclusionsData()
-                                      } catch (error) {
-                                        console.error('Error toggling exclusion:', error)
-                                        showNotification('Failed to update exclusion', 'error')
-                                      }
-                                    }}
-                                    className={`absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0 group-hover:opacity-100 cursor-pointer ${
-                                      isExcluded
-                                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                        : 'bg-red-500 text-white hover:bg-red-600'
-                                    }`}
-                                    title={isExcluded ? 'Click to include assessment' : 'Click to exclude assessment'}
-                                  >
-                                    {isExcluded ? '✓' : '×'}
-                                  </button>
+                            const currentValue =
+                              editedScores[key] !== undefined
+                                ? editedScores[key]
+                                : existingScoreMap[key] ?? ''
 
-                                  {threadStubs[key] && (
+                            return (
+                              <ScoreCell
+                                key={a.assessmentId}
+                                inputId={nav.inputId(rowIndex, colIndex)}
+                                label={cellLabel}
+                                value={currentValue}
+                                maxScore={Number(a.maxScore || 100)}
+                                status={statusMap[key] ?? 'graded'}
+                                isToggling={togglingKey === key}
+                                toggleDisabled={togglingKey !== null}
+                                onChange={(e) => handleScoreChange(stu.studentId, a.assessmentId, e)}
+                                onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
+                                onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
+                                className={`py-2 ${highlight}`}
+                                corner={
+                                  threadStubs[key] && (
                                     <button
                                       onClick={() => router.push(`/messages?thread=${encodeURIComponent(threadStubs[key].conversationId)}`)}
                                       className={`absolute top-1 left-1 flex h-4 w-4 items-center justify-center rounded-md cursor-pointer ${
@@ -1208,44 +1013,19 @@ const GradebookClass = () => {
                                     >
                                       <ChatBubbleLeftRightIcon className="h-2.5 w-2.5" />
                                     </button>
-                                  )}
-
-                                  {isExcluded ? (
-                                    <div className="inline-block px-2 py-1 rounded-lg text-xs bg-slate-100 text-slate-400">
-                                      Excluded
-                                    </div>
-                                  ) : (
-                                    <input
-                                      id={`grade-${rowIndex}-${colIndex}`}
-                                      type="number"
-                                      min="0"
-                                      max={Number(a.maxScore || 100)}
-                                      step="1"
-                                      className="w-16 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm text-black focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
-                                      value={currentValue}
-                                      placeholder={`/${Number(a.maxScore || 100)}`}
-                                      onChange={(e) =>
-                                        handleScoreChange(
-                                          stu.studentId,
-                                          a.assessmentId,
-                                          e
-                                        )
-                                      }
-                                      onKeyDown={(e) => handleArrowNav(e, rowIndex, colIndex)}
-                                      onKeyPress={(e) => {
-                                        if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-                                          e.preventDefault()
-                                        }
-                                      }}
-                                    />
-                                  )}
-                                </td>
-                              )
-                            }
+                                  )
+                                }
+                              />
+                            )
                           })}
 
-                          <td className="px-4 py-2 text-center bg-emerald-50/50 font-semibold text-slate-900">
-                            {total.toFixed(1)}%
+                          <td className="px-4 py-2 text-center bg-emerald-50/50">
+                            <div className={`font-semibold tabular-nums ${pctColor(grade.pct)}`}>
+                              {grade.pct == null ? '—' : `${grade.pct.toFixed(1)}%`}
+                            </div>
+                            <div className="text-[10px] font-normal text-slate-400 tabular-nums whitespace-nowrap">
+                              {formatCoverage(grade.coverage)}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -1336,7 +1116,7 @@ const GradebookClass = () => {
           editedScores={editedScores}
           onScoreChange={handleScoreChange}
           classId={classId}
-          onRefreshExclusions={refreshExclusionsData}
+          onRefresh={refreshScoresMatrix}
           publications={publications}
           onPublish={(targets) => {
             setIsChildAssessmentsModalOpen(false)
@@ -1357,7 +1137,7 @@ const GradebookClass = () => {
           editedScores={editedScores}
           onScoreChange={handleScoreChange}
           classId={classId}
-          onRefreshExclusions={refreshExclusionsData}
+          onRefresh={refreshScoresMatrix}
           publications={publications}
           onPublish={(targets) => {
             setStandaloneAssessmentId(null)
@@ -1380,7 +1160,7 @@ const GradebookClass = () => {
           studentId: score.student_id,
           assessmentId: score.assessment_id,
           score: score.score,
-          isExcluded: score.is_excluded
+          status: score.status,
         }))}
         currentEditedScores={editedScores}
         onRefreshScores={handleScoreUpdateFromModal}
@@ -1430,7 +1210,8 @@ const GradebookClass = () => {
           studentName={selectedExclusionStudent.name}
           classId={classId}
           assessments={assessments}
-          onUpdate={refreshExclusionsData}
+          scoresMatrix={scoresMatrix}
+          onUpdate={refreshScoresMatrix}
         />
       )}
     </>

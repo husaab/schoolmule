@@ -20,7 +20,6 @@ import {
   SnapshotData,
   TermComparisonData,
   ClassesHealthData,
-  GradeEngine,
 } from '@/services/types/analytics'
 
 export interface HookState<T> {
@@ -67,83 +66,71 @@ function useFetch<T>(enabled: boolean, fetcher: (() => Promise<T>) | null, deps:
 
 export function useAnalyticsOverview(
   termId: string | null,
-  engine: GradeEngine,
   compareTerm: string | null
 ): HookState<OverviewData> {
   return useFetch<OverviewData>(
     Boolean(termId),
     termId
-      ? () => getAnalyticsOverview(termId, engine, compareTerm || undefined).then((r) => r.data)
+      ? () => getAnalyticsOverview(termId, compareTerm || undefined).then((r) => r.data)
       : null,
-    [termId, engine, compareTerm]
+    [termId, compareTerm]
   )
 }
 
 export function useAnalyticsClass(
   classId: string | null,
-  engine: GradeEngine,
   termId: string | null
 ): HookState<ClassData> {
   return useFetch<ClassData>(
     Boolean(classId),
     classId
-      ? () => getAnalyticsClass(classId, engine, termId || undefined).then((r) => r.data)
+      ? () => getAnalyticsClass(classId, termId || undefined).then((r) => r.data)
       : null,
-    [classId, engine, termId]
+    [classId, termId]
   )
 }
 
 export function useAnalyticsStudent(
   studentId: string | null,
   termId: string | null,
-  engine: GradeEngine,
   compareTerm: string | null
 ): HookState<StudentData> {
   return useFetch<StudentData>(
     Boolean(studentId && termId),
     studentId && termId
       ? () =>
-          getAnalyticsStudent(studentId, termId, engine, compareTerm || undefined).then(
-            (r) => r.data
-          )
+          getAnalyticsStudent(studentId, termId, compareTerm || undefined).then((r) => r.data)
       : null,
-    [studentId, termId, engine, compareTerm]
+    [studentId, termId, compareTerm]
   )
 }
 
-export function useAnalyticsSnapshot(
-  termId: string | null,
-  engine: GradeEngine
-): HookState<SnapshotData> {
+export function useAnalyticsSnapshot(termId: string | null): HookState<SnapshotData> {
   return useFetch<SnapshotData>(
     Boolean(termId),
-    termId ? () => getAnalyticsSnapshot(termId, engine).then((r) => r.data) : null,
-    [termId, engine]
+    termId ? () => getAnalyticsSnapshot(termId).then((r) => r.data) : null,
+    [termId]
   )
 }
 
 export function useAnalyticsTermComparison(
   enabled: boolean,
   subject: string | null,
-  grade: string | null,
-  engine: GradeEngine
+  grade: string | null
 ): HookState<TermComparisonData> {
   return useFetch<TermComparisonData>(
     enabled && Boolean(subject && grade),
     enabled && subject && grade
-      ? () => getAnalyticsTermComparison(subject, grade, engine).then((r) => r.data)
+      ? () => getAnalyticsTermComparison(subject, grade).then((r) => r.data)
       : null,
-    [enabled, subject, grade, engine]
+    [enabled, subject, grade]
   )
 }
 
-export function useAnalyticsClassesHealth(
-  termId: string | null,
-  engine: GradeEngine
-): HookState<ClassesHealthData> {
+export function useAnalyticsClassesHealth(termId: string | null): HookState<ClassesHealthData> {
   return useFetch<ClassesHealthData>(
     Boolean(termId),
-    termId ? () => getAnalyticsClassesHealth(termId, engine).then((r) => r.data) : null,
-    [termId, engine]
+    termId ? () => getAnalyticsClassesHealth(termId).then((r) => r.data) : null,
+    [termId]
   )
 }

@@ -246,7 +246,7 @@ export default function EditStudentViewPage() {
                     {previewStudents.map((s) => (
                       <div key={s.studentId} className="flex justify-between text-sm py-1 border-b border-slate-100 last:border-0">
                         <span className="text-slate-700">{s.studentName}</span>
-                        <span className="text-slate-500">{s.displayMetric.toFixed(1)}%</span>
+                        <span className="text-slate-500">{s.displayMetric == null ? '—' : `${s.displayMetric.toFixed(1)}%`}</span>
                       </div>
                     ))}
                   </div>

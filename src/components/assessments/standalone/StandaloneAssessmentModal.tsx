@@ -24,8 +24,10 @@ import PublishStateBadge from '@/components/assessments/publish/PublishStateBadg
 import { summarizePublication } from '@/lib/publicationSummary'
 import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
-import { useExclusionToggle } from '@/components/assessments/scores/useExclusionToggle'
+import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
+import { cellState, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
+import { toEngineAssessment } from '@/components/assessments/scores/liveGrade'
 
 interface StandaloneAssessmentModalProps {
   isOpen: boolean
@@ -39,7 +41,8 @@ interface StandaloneAssessmentModalProps {
   editedScores: { [key: string]: number | '' }
   onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
   classId: string
-  onRefreshExclusions: () => Promise<void>
+  /** Re-reads the score matrix after a status change. */
+  onRefresh: () => Promise<void>
   publications: Record<string, AssessmentPublicationState>
   /** Opens the publish / manage flow for this assessment. */
   onPublish: (assessments: AssessmentPayload[]) => void
@@ -66,7 +69,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   editedScores,
   onScoreChange,
   classId,
-  onRefreshExclusions,
+  onRefresh,
   publications,
   onPublish,
   onAssessmentMutated,
@@ -75,7 +78,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   // it and the editor starts closed.
   const [editing, setEditing] = useState(false)
 
-  const { togglingKey, toggle } = useExclusionToggle({ classId, onRefreshExclusions })
+  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh })
   const nav = useScoreGridNav('standalone-grade', students.length, 1)
   const lookups = useMemo(() => buildScoreLookups(scoresMatrix), [scoresMatrix])
 
@@ -83,22 +86,25 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   const points = assessment.weightPoints || assessment.weightPercent || 0
   const summary = summarizePublication(assessment, allAssessments, publications)
 
-  // Resolve each student's current value (draft first, then saved) and roll
-  // up the class figures. Blanks are skipped, not counted as zero, matching
-  // how the parent portal and report cards treat ungraded work.
+  // Resolve each student's cell (draft first, then saved) and run it through
+  // the engine. Blank cells are not yet graded and carry no weight anywhere
+  // in SchoolMule; missing counts as 0; excused never counts.
+  const engineAssessment = toEngineAssessment(assessment)
   const rows = students.map((student) => {
     const key = `${student.studentId}|${assessment.assessmentId}`
     const value = editedScores[key] !== undefined ? editedScores[key] : (lookups.existing[key] ?? '')
-    const isExcluded = lookups.excluded[key] || false
-    const numeric = typeof value === 'number' ? value : value === '' ? null : parseFloat(String(value))
-    return { student, key, value, isExcluded, numeric: Number.isFinite(numeric as number) ? numeric : null }
+    const status = lookups.status[key] ?? 'graded'
+    const row = { assessment_id: assessment.assessmentId, score: value === '' ? null : value, status }
+    const result = computeAssessmentForStudent(engineAssessment, [engineAssessment], {
+      [assessment.assessmentId]: { score: row.score, state: cellState(row) },
+    })
+    return { student, key, value, status, result }
   })
-  const graded = rows.filter((r) => !r.isExcluded && r.numeric != null)
-  const excludedCount = rows.filter((r) => r.isExcluded).length
-  const pctFor = (n: number | null) =>
-    n == null || maxScore <= 0 ? null : Math.round((n / maxScore) * 1000) / 10
-  const average = graded.length ? graded.reduce((sum, r) => sum + (r.numeric as number), 0) / graded.length : null
-  const averagePct = pctFor(average)
+  const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
+  const counted = rows.filter((r) => r.result.isCounted)
+  const average = counted.length
+    ? counted.reduce((sum, r) => sum + (r.result.pct as number), 0) / counted.length
+    : null
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-2xl">
@@ -137,10 +143,11 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
               facts={[
                 {
                   label: 'Class average',
-                  value: average == null ? '—' : `${average.toFixed(1)} / ${maxScore} · ${averagePct}%`,
+                  value: average == null ? '—' : `${((average / 100) * maxScore).toFixed(1)} / ${maxScore} · ${average.toFixed(1)}%`,
                 },
-                { label: 'Graded', value: `${graded.length} of ${students.length - excludedCount}` },
-                { label: 'Excluded', value: String(excludedCount) },
+                { label: 'Assessed', value: `${counted.length} of ${students.length}` },
+                { label: 'Missing', value: String(countBy('missing')) },
+                { label: 'Excused', value: String(countBy('excused')) },
                 { label: 'Date', value: formatDate(assessment.date) ?? 'Not set' },
               ]}
             />
@@ -161,7 +168,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                   </thead>
                   <tbody>
                     {rows.map((row, rowIndex) => {
-                      const pct = row.isExcluded ? null : pctFor(row.numeric)
+                      const pct = row.result.isCounted ? row.result.pct : null
                       return (
                         <tr key={row.student.studentId} className="border-t border-slate-100 hover:bg-slate-50/70">
                           <td className="px-4 py-2 text-sm font-medium text-slate-800">{row.student.name}</td>
@@ -170,15 +177,15 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                             label={`${row.student.name} score`}
                             value={row.value}
                             maxScore={maxScore}
-                            isExcluded={row.isExcluded}
+                            status={row.status}
                             isToggling={togglingKey === row.key}
                             toggleDisabled={togglingKey !== null}
                             onChange={(e) => onScoreChange(row.student.studentId, assessment.assessmentId, e)}
-                            onToggleExclusion={() => toggle(row.student.studentId, assessment.assessmentId, row.isExcluded)}
+                            onSetStatus={(status) => setStatus(row.student.studentId, assessment.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, 0)}
                           />
                           <td className="px-4 py-2 text-right text-sm tabular-nums text-slate-500">
-                            {pct == null ? '—' : `${pct}%`}
+                            {pct == null ? '—' : `${(Math.round(pct * 10) / 10).toFixed(1)}%`}
                           </td>
                         </tr>
                       )
@@ -190,7 +197,8 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
 
             <ul className="space-y-1 text-xs text-slate-400">
               <li>Arrow keys move between students; Enter moves down.</li>
-              <li>Hover a score to drop this assessment from one student’s grade.</li>
+              <li>Blank cells are not yet graded and carry no weight anywhere in SchoolMule. A typed 0 is a real 0.</li>
+              <li>Hover a score for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
               <li>Save from the main gradebook when you are done — scores are not saved here.</li>
               <li>To delete this assessment, use the Assessments view.</li>
             </ul>

@@ -16,6 +16,8 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
+import { gradeBand, readStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades'
+import { formatCoverage } from '@/lib/gradeEngine'
 
 import {
   UserGroupIcon,
@@ -81,31 +83,15 @@ const BulkProgressPage = () => {
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
 
-  // Student grades from localStorage (computed in gradebook)
-  const [studentGrades, setStudentGrades] = useState<Record<string, number>>({})
+  // Student grades from localStorage (computed in the gradebook by the grade
+  // engine). pct is null when nothing has been graded yet — never 0.
+  const [studentGrades, setStudentGrades] = useState<StoredGrades>({})
 
   // Load grades from localStorage on mount
   useEffect(() => {
     if (!classId) return
-    const stored = localStorage.getItem(`bulk_feedback_grades_${classId}`)
-    if (stored) {
-      try {
-        setStudentGrades(JSON.parse(stored))
-      } catch {
-        console.warn('Failed to parse stored grades')
-      }
-    }
+    setStudentGrades(readStoredGrades(classId))
   }, [classId])
-
-  // Helper to get grade label based on percentage
-  const getGradeInfo = (grade: number | undefined) => {
-    if (grade === undefined) return { label: 'No grades yet', color: 'text-slate-400' }
-    if (grade >= 90) return { label: 'Excellent', color: 'text-emerald-600' }
-    if (grade >= 80) return { label: 'Good', color: 'text-blue-600' }
-    if (grade >= 70) return { label: 'Satisfactory', color: 'text-amber-600' }
-    if (grade >= 60) return { label: 'Needs Improvement', color: 'text-orange-600' }
-    return { label: 'Requires Support', color: 'text-red-600' }
-  }
 
   // Calculate if there are unsaved changes
   const hasUnsavedChanges = editedFeedback.size > 0
@@ -326,7 +312,9 @@ const BulkProgressPage = () => {
 
     setGeneratingAI((prev) => new Set(prev).add(studentId))
 
-    const grade = studentGrades[studentId]
+    // null when nothing is graded yet; the route tells the model so.
+    const grade = studentGrades[studentId]?.pct ?? null
+    const coverage = studentGrades[studentId]?.coverage ?? undefined
 
     try {
       const response = await fetch('/api/ai/generate-progress-comment', {
@@ -340,6 +328,7 @@ const BulkProgressPage = () => {
           behavior,
           term: selectedTerm,
           grade,
+          coverage,
         }),
       })
 
@@ -706,10 +695,17 @@ const BulkProgressPage = () => {
                                     )}
                                   </div>
                                   <div className="mt-0.5">
-                                    {studentGrades[stu.studentId] !== undefined ? (
-                                      <span className={`text-xs font-medium ${getGradeInfo(studentGrades[stu.studentId]).color}`}>
-                                        {studentGrades[stu.studentId].toFixed(1)}%
-                                      </span>
+                                    {studentGrades[stu.studentId]?.pct != null ? (
+                                      <>
+                                        <span className={`text-xs font-medium ${gradeBand(studentGrades[stu.studentId].pct).color}`}>
+                                          {(studentGrades[stu.studentId].pct as number).toFixed(1)}%
+                                        </span>
+                                        {studentGrades[stu.studentId].coverage && (
+                                          <span className="block text-[10px] text-slate-400 tabular-nums">
+                                            {formatCoverage(studentGrades[stu.studentId].coverage)}
+                                          </span>
+                                        )}
+                                      </>
                                     ) : (
                                       <span className="text-xs text-slate-400">No grades yet</span>
                                     )}
@@ -859,7 +855,8 @@ const BulkProgressPage = () => {
           studentName={modalStudent.name}
           classId={classId}
           subjectName={classData.subject}
-          studentGrade={studentGrades[modalStudent.id]}
+          studentGrade={studentGrades[modalStudent.id]?.pct ?? null}
+          coverage={studentGrades[modalStudent.id]?.coverage ?? undefined}
           initialTerm={selectedTerm}
         />
       )}

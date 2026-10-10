@@ -20,17 +20,16 @@ export const getParentSummary = async (termId?: string): Promise<ParentSummaryRe
 };
 
 /**
- * Fetch grades for one linked child (null-skip engine by default)
+ * Fetch grades for one linked child. One engine only: blank cells carry no
+ * weight, flagged-missing cells count as 0, excused cells never count.
  * GET /parent-portal/students/:studentId/grades
  */
 export const getChildGrades = async (
   studentId: string,
-  termId?: string,
-  engine?: string
+  termId?: string
 ): Promise<ChildGradesResponse> => {
   const params = new URLSearchParams();
   if (termId) params.set('termId', termId);
-  if (engine) params.set('engine', engine);
   const query = params.toString() ? `?${params.toString()}` : '';
   return apiClient<ChildGradesResponse>(
     `/parent-portal/students/${encodeURIComponent(studentId)}/grades${query}`

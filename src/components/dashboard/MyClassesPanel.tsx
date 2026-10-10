@@ -16,7 +16,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import type { HookState } from '@/components/analytics/useAnalyticsData'
 import type { ClassesHealthData, OverviewData, SnapshotData, AtRiskResult } from '@/services/types/analytics'
-import { computeAtRiskScore } from '@/lib/analyticsUtils'
+import { computeAtRiskScore, coverageTitle } from '@/lib/analyticsUtils'
 import { ChartSkeleton, RowsSkeleton } from './DashboardSkeletons'
 import { analyticsHref, gradebookHref } from './dashboardPaths'
 
@@ -183,7 +183,12 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
                     </Link>
                   </td>
                   <td className="py-2.5 px-3 text-right text-sm tabular-nums text-slate-700 hidden sm:table-cell">{c.studentCount}</td>
-                  <td className={`py-2.5 px-3 text-right text-sm tabular-nums font-semibold ${avgClass(c.classAvg)}`}>
+                  {/* "—" (never 0%) when nothing counts yet; the coverage line
+                      explains how much of the term's work the average rests on. */}
+                  <td
+                    className={`py-2.5 px-3 text-right text-sm tabular-nums font-semibold ${avgClass(c.classAvg)}`}
+                    title={c.classAvg == null ? 'No graded work yet' : coverageTitle(c.coverage)}
+                  >
                     {c.classAvg != null ? `${c.classAvg.toFixed(1)}%` : '—'}
                   </td>
                   <td className="py-2.5 px-3 text-right text-sm tabular-nums text-slate-700">{c.missingCount}</td>
@@ -249,7 +254,7 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
                         Gr {s.gradeLevel}
                         {s.overallAvg != null ? ` · ${s.overallAvg}%` : ''}
                         {s.attendancePct != null ? ` · att ${s.attendancePct}%` : ''}
-                        {s.missingCount > 0 ? ` · ${s.missingCount} missing` : ''}
+                        {s.missingCount > 0 ? ` · ${s.missingCount} marked missing` : ''}
                       </p>
                     </div>
                     <span className={`shrink-0 text-[10px] font-bold uppercase rounded-full px-2 py-0.5 border ${TIER[s.risk.tier]}`}>

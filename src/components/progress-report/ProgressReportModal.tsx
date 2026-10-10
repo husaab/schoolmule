@@ -32,7 +32,9 @@ interface ProgressReportModalProps {
   studentName: string;
   classId: string;
   subjectName?: string;
-  studentGrade?: number;
+  /** null = nothing graded yet; undefined = not supplied. */
+  studentGrade?: number | null;
+  coverage?: { assessed: number; total: number; missing: number; excused: number };
   initialTerm?: string;
 }
 
@@ -44,6 +46,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   classId,
   subjectName,
   studentGrade,
+  coverage,
   initialTerm,
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
@@ -164,6 +167,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
           behavior,
           term: term || 'Current Term',
           grade: studentGrade,
+          coverage,
         }),
       });
 
@@ -336,9 +340,11 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                   <h4 className="mb-1 text-sm font-semibold text-purple-900">AI-powered comments</h4>
                   <p className="text-xs leading-relaxed text-purple-700/80">
                     Select <span className="font-medium text-purple-800">Core standards</span>, <span className="font-medium text-purple-800">Work habits</span>, and <span className="font-medium text-purple-800">Behavior</span> ratings above to enable AI generation.
-                    {studentGrade !== undefined && (
-                      <> The AI also uses the student&apos;s <span className="font-medium text-purple-800">grade ({studentGrade.toFixed(0)}%)</span> to craft a personalized comment.</>
-                    )}
+                    {typeof studentGrade === 'number' ? (
+                      <> The AI also uses the student&apos;s <span className="font-medium text-purple-800">grade ({studentGrade.toFixed(0)}%)</span>{coverage ? ` (based on ${coverage.assessed} of ${coverage.total} assessments)` : ''} to craft a personalized comment.</>
+                    ) : studentGrade === null ? (
+                      <> No work has been graded yet, so the comment will be based on the ratings alone.</>
+                    ) : null}
                   </p>
                 </div>
               </div>

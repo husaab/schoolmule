@@ -73,8 +73,11 @@ interface RowProps {
  * offers "Ask the teacher", which opens an inline composer underneath.
  */
 const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask, askOpen, onToggleAsk }) => {
-  const pct = pctOf(score.score, score.maxScore)
+  // Status comes from the API's resolved cell state (see assessmentGrouping):
+  // a graded leaf shows its mark; anything else shows a badge instead of a
+  // number — a blank cell is "Not yet graded", never "Missing" and never 0.
   const status = leafStatus(score)
+  const pct = status === null ? pctOf(score.score, score.maxScore) : null
   const scoreLabel = pct != null ? `${score.score}/${score.maxScore} (${pct}%)` : null
 
   return (

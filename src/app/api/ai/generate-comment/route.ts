@@ -8,8 +8,24 @@ const RATING_LABELS: Record<string, string> = {
   N: 'Needs Improvement',
 }
 
-// Get grade context and tone guidance based on percentage
-const getGradeContext = (grade: number | undefined) => {
+interface Coverage {
+  assessed?: number
+  total?: number
+  missing?: number
+  excused?: number
+}
+
+// Get grade context and tone guidance based on percentage. A null grade means
+// nothing has been graded yet — that is told to the model, never a number.
+const getGradeContext = (grade: number | null | undefined, coverage?: Coverage | null) => {
+  if (grade === null) {
+    return {
+      gradeInfo: '- Academic Grade: no graded work yet',
+      toneGuidance:
+        'There is no graded work for this student yet, so no academic grade exists. Do not mention a grade, a percentage or a performance level; base the comment on the ratings only.',
+    }
+  }
+
   if (grade === undefined) {
     return {
       gradeInfo: '',
@@ -37,8 +53,15 @@ const getGradeContext = (grade: number | undefined) => {
     toneGuidance = `The student has a grade of ${grade.toFixed(1)}% and requires significant support. Use a caring, supportive tone. Focus on encouragement and concrete next steps. Emphasize that improvement is possible with effort and support. Avoid negative language.`
   }
 
+  const basis =
+    coverage && typeof coverage.assessed === 'number' && typeof coverage.total === 'number'
+      ? `\n- Grade basis: based on ${coverage.assessed} of ${coverage.total} assessments${
+          coverage.missing ? ` (${coverage.missing} missing, counted as 0)` : ''
+        }${coverage.excused ? ` (${coverage.excused} excused)` : ''}`
+      : ''
+
   return {
-    gradeInfo: `- Academic Grade: ${grade.toFixed(1)}% (${level})`,
+    gradeInfo: `- Academic Grade: ${grade.toFixed(1)}% (${level})${basis}`,
     toneGuidance,
   }
 }
@@ -46,7 +69,7 @@ const getGradeContext = (grade: number | undefined) => {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { studentName, subject, workHabits, behavior, term, grade } = body
+    const { studentName, subject, workHabits, behavior, term, grade, coverage } = body
 
     if (!studentName || !workHabits || !behavior) {
       return NextResponse.json(
@@ -67,7 +90,7 @@ export async function POST(request: NextRequest) {
     const behaviorLabel = RATING_LABELS[behavior] || behavior
 
     // Get grade context if available
-    const { gradeInfo, toneGuidance } = getGradeContext(grade)
+    const { gradeInfo, toneGuidance } = getGradeContext(grade, coverage)
 
     const prompt = `You are a helpful assistant writing report card comments for teachers. Generate a professional, warm, and constructive report card comment for a student.
 
@@ -89,7 +112,7 @@ Guidelines:
 - Do not include the letter grades (E, G, S, N) or the exact percentage in the comment
 - Write in a professional but warm tone suitable for parents to read
 - End on a positive or forward-looking note
-${grade !== undefined ? '- Reference the student\'s academic performance naturally without stating the exact grade' : ''}
+${typeof grade === 'number' ? '- Reference the student\'s academic performance naturally without stating the exact grade' : ''}
 
 Generate only the comment text, no additional formatting or labels.`
 

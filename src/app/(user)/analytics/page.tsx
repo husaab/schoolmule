@@ -101,7 +101,7 @@ const AnalyticsContent: React.FC = () => {
 
   // ── Data hooks (overview always — it powers school/grade views AND
   //    the control-bar filter lists; class/student fetch on demand) ──
-  const overview = useAnalyticsOverview(params.termId, params.engine, params.compareTerm)
+  const overview = useAnalyticsOverview(params.termId, params.compareTerm)
 
   // Grade + Subject that resolves to a single class → show that class's full
   // analytics inline (distribution, assessments, rankings) without an extra
@@ -116,16 +116,14 @@ const AnalyticsContent: React.FC = () => {
 
   const classDetail = useAnalyticsClass(
     params.view === 'class' ? params.classId : autoClassId,
-    params.engine,
     params.termId
   )
   const studentDetail = useAnalyticsStudent(
     params.view === 'student' ? params.studentId : null,
     params.termId,
-    params.engine,
     params.compareTerm
   )
-  const snapshot = useAnalyticsSnapshot(params.termId, params.engine)
+  const snapshot = useAnalyticsSnapshot(params.termId)
 
   const termName = useMemo(() => {
     if (params.termId === 'all') return 'All terms (combined)'
@@ -143,7 +141,6 @@ const AnalyticsContent: React.FC = () => {
     const base = {
       termName,
       compareTermName,
-      engine: params.engine,
       selectedGrade: params.grade,
       selectedSubject: params.subject,
     }
@@ -161,7 +158,6 @@ const AnalyticsContent: React.FC = () => {
     params.view,
     params.grade,
     params.subject,
-    params.engine,
     autoClassId,
     overview.data,
     classDetail.data,
@@ -298,11 +294,10 @@ const AnalyticsContent: React.FC = () => {
             </h1>
             <p className="text-slate-500 mt-1 text-sm">
               {termName}
-              {compareTermName ? ` · compared with ${compareTermName}` : ''} ·{' '}
-              {params.engine === 'null_skip' ? 'ungraded work skipped' : 'ungraded counts as zero'}
+              {compareTermName ? ` · compared with ${compareTermName}` : ''} · graded work only
             </p>
           </div>
-          {/* One-tap reset back to the plain school overview (keeps term + engine) */}
+          {/* One-tap reset back to the plain school overview (keeps term) */}
           {(params.view !== 'school' || params.grade || params.subject || params.compareTerm) && (
             <button
               onClick={() =>

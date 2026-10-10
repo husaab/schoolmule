@@ -19,7 +19,10 @@ export interface AssessmentPublicationState {
 export interface PublishWarning {
   assessmentId: string
   assessmentName: string
+  /** Blank cells: not yet graded, left out of the send. */
   ungradedStudentCount: number
+  /** Cells marked missing: count as 0 and are included. Older servers omit it. */
+  missingStudentCount?: number
   totalStudents: number
 }
 

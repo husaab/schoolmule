@@ -3,8 +3,38 @@
 // Types for the teacher analytics feature. These mirror the response
 // shapes of the Express /api/analytics/* endpoints exactly.
 
-/** Which grade engine computed the numbers (see EngineTooltip for the difference). */
-export type GradeEngine = 'null_skip' | 'null_zero'
+/**
+ * Which grade engine computed the numbers. Since the non-zero grading change
+ * there is exactly one: 'graded_only' (blank = not yet graded and carries no
+ * weight, missing = 0, excused never counts). The legacy values are kept so
+ * older payloads still type-check; the API ignores `?engine=` now.
+ */
+export type GradeEngine = 'graded_only' | 'null_skip' | 'null_zero'
+
+/**
+ * Resolved state of one student × assessment cell.
+ * - blank: no score and not flagged — "not yet graded", carries no weight
+ * - graded: has a score
+ * - missing: teacher flagged it missing — counts as 0
+ * - excused: never counts (formerly "excluded")
+ */
+export type AssessmentCellStatus = 'blank' | 'graded' | 'missing' | 'excused'
+
+/**
+ * How much of a student's work the grade is based on. `assessed` is the
+ * number of leaf assessments that count (graded + missing); `total` is every
+ * leaf assessment in the class. Mirrors the backend gradeEngine coverage.
+ */
+export interface GradeCoverage {
+  assessed: number
+  graded: number
+  missing: number
+  excused: number
+  blank: number
+  total: number
+  countedWeight: number
+  totalWeight: number
+}
 
 export type AnalyticsViewLevel = 'school' | 'grade' | 'subject' | 'class' | 'student'
 
@@ -42,8 +72,13 @@ export interface GradeStudentRow {
   studentId: string
   studentName: string
   overallAvg: number | null
+  /** Cells the teacher flagged missing (counted as 0). Blank cells are not in here. */
   missingCount: number
+  /** Blank cells — not yet graded, carry no weight. */
+  notYetGradedCount?: number
   classCount: number
+  /** Summed across the student's classes, when the API provides it. */
+  coverage?: GradeCoverage
 }
 
 export interface GradeLevelStats {
@@ -151,7 +186,10 @@ export interface AssessmentScoreCell {
   score: number | null
   maxScore: number | null
   weightPoints?: number | null
+  /** Kept for older callers: always `status === 'excused'`. */
   isExcluded: boolean
+  /** Resolved cell state — the only thing the UI should branch on. */
+  status: AssessmentCellStatus
   isParent: boolean
   parentAssessmentId: string | null
 }
@@ -162,8 +200,13 @@ export interface ClassStudentRow {
   finalPct: number | null
   rank: number | null
   percentileInClass: number | null
+  /** Cells the teacher flagged missing (counted as 0). */
   missingCount: number
+  /** Blank cells — not yet graded, carry no weight. */
+  notYetGradedCount?: number
+  /** Excused cells (never counted). Name kept for older callers. */
   excludedCount: number
+  coverage: GradeCoverage
   assessmentScores: AssessmentScoreCell[]
 }
 
@@ -216,8 +259,13 @@ export interface StudentClassBreakdown {
   finalPct: number | null
   classAvg: number | null
   percentileInClass: number | null
+  /** Cells the teacher flagged missing (counted as 0). */
   missingCount: number
+  /** Blank cells — not yet graded, carry no weight. */
+  notYetGradedCount?: number
+  /** Excused cells (never counted). Name kept for older callers. */
   excludedCount: number
+  coverage: GradeCoverage
   assessmentScores: AssessmentScoreCell[]
 }
 
@@ -241,9 +289,13 @@ export interface StudentData {
     avg: number | null
     classCount: number
     percentileInGrade: number | null
+    /** Flagged-missing cells across every class. */
     missingCount: number
+    /** Blank (not yet graded) cells across every class. */
+    notYetGradedCount?: number
   }
   classes: StudentClassBreakdown[]
+  /** Only items the teacher flagged missing — never blank cells. */
   missingWork: MissingWorkItem[]
   termTrajectory?: {
     currentTermId: string
@@ -267,10 +319,15 @@ export interface SnapshotStudent {
   gradeLevel: string
   overallAvg: number | null
   attendancePct: number | null
+  /** Flagged-missing cells (counted as 0). */
   missingCount: number
+  /** Blank (not yet graded) cells. */
+  notYetGradedCount?: number
   lowestSubject: string | null
   lowestPct: number | null
   classCount: number
+  /** Summed across the student's classes, when the API provides it. */
+  coverage?: GradeCoverage
 }
 
 export interface SnapshotData {
@@ -295,8 +352,10 @@ export interface ClassHealthRow {
   studentCount: number
   classAvg: number | null
   classMedian: number | null
-  /** Sum of every student's missing top-level assessments in this class. */
+  /** Sum of every student's flagged-missing assessments in this class. */
   missingCount: number
+  /** Coverage summed over the class's students, when the API provides it. */
+  coverage?: GradeCoverage
   studentIds: string[]
   /** Gradable (leaf) assessments. */
   assessmentCount: number

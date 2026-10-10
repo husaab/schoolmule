@@ -10,7 +10,8 @@ export interface DashboardSummaryData {
   todaysAttendance: number
   weeklyAttendance: number
   monthlyAttendance: number
-  averageStudentGrade: number
+  /** null when no student has any counted work yet — never 0 for "no evidence". */
+  averageStudentGrade: number | null
   reportCardsCount: number
   avgClassSize: number
 }

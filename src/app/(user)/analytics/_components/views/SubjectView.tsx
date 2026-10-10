@@ -28,12 +28,7 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
   // Cross-term comparison only in all-terms + grade + subject. Hook is called
   // unconditionally (rules of hooks); it self-disables otherwise.
   const wantComparison = params.termId === 'all' && params.grade != null && params.subject != null
-  const comparison = useAnalyticsTermComparison(
-    wantComparison,
-    params.subject,
-    params.grade,
-    params.engine
-  )
+  const comparison = useAnalyticsTermComparison(wantComparison, params.subject, params.grade)
 
   const subject = overview.bySubject.find((s) => s.subject === params.subject)
 
@@ -65,11 +60,14 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
   // the scope (each classAvg is itself a student mean). Exact, unlike a plain
   // mean of medians, so we only surface an aggregate median when it's a single
   // class.
-  const totalStudents = classes.reduce((sum, c) => sum + c.studentCount, 0)
+  // A class with no graded students has classAvg null and carries no weight —
+  // it must not enter the mean as a 0.
+  const gradedClasses = classes.filter((c) => c.classAvg != null)
+  const totalStudents = gradedClasses.reduce((sum, c) => sum + c.studentCount, 0)
   const weightedAvg =
     totalStudents > 0
       ? Math.round(
-          (classes.reduce((sum, c) => sum + (c.classAvg ?? 0) * c.studentCount, 0) / totalStudents) * 10
+          (gradedClasses.reduce((sum, c) => sum + (c.classAvg as number) * c.studentCount, 0) / totalStudents) * 10
         ) / 10
       : null
   const singleClassMedian = classes.length === 1 ? classes[0].classMedian : null

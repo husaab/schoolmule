@@ -1,4 +1,7 @@
 import { CalendarEventPayload } from './calendarEvent';
+import type { AssessmentCellStatus, GradeCoverage } from './analytics';
+
+export type { AssessmentCellStatus, GradeCoverage };
 
 /** Shared response envelope for parent-portal endpoints */
 export interface ParentPortalResponse<T> {
@@ -34,8 +37,11 @@ export interface ChildSummary {
   grade: string | number | null;
   relation: string;
   homeroomTeacher: string | null;
+  /** Weighted average over counted work only; null until something counts. Never 0 for "no evidence". */
   overallAvg: number | null;
   classCount: number;
+  /** Summed across the child's classes: how much of the term's work the average rests on. */
+  coverage: GradeCoverage;
   attendance: ChildAttendanceSummary | null;
   latestFeedback: ProgressFeedbackItem | null;
 }
@@ -53,7 +59,14 @@ export interface AssessmentScore {
   score: number | null;
   maxScore: number | null;
   weightPoints: number | null;
+  /** Kept for older callers: always `status === 'excused'`. */
   isExcluded: boolean;
+  /**
+   * Resolved cell state. 'blank' = not yet graded (no weight), 'missing' =
+   * flagged by the teacher (counts as 0), 'excused' = never counts. The UI
+   * must branch on this, never on `score == null`.
+   */
+  status: AssessmentCellStatus;
   isParent: boolean;
   parentAssessmentId: string | null;
   /**
@@ -86,13 +99,21 @@ export interface ChildClassGrades {
   teacherName: string | null;
   /** True when the signed-in user teaches this class (a staff member in parent view): no "Ask the teacher". */
   taughtByViewer?: boolean;
+  /** Weighted average over counted work only; null until something counts. */
   finalPct: number | null;
   classAvg: number | null;
+  /** Cells the teacher flagged missing (counted as 0). Blank cells are not in here. */
   missingCount: number;
+  /** Blank cells — not yet graded, carry no weight. */
+  notYetGradedCount?: number;
+  /** Excused cells (never counted). Name kept for older callers. */
   excludedCount: number;
+  /** How much of the class's work `finalPct` rests on. */
+  coverage: GradeCoverage;
   assessmentScores: AssessmentScore[];
 }
 
+/** One item the teacher flagged missing. Blank (not yet graded) cells never appear here. */
 export interface MissingWorkItem {
   classId: string;
   subject: string;
@@ -109,12 +130,16 @@ export interface ChildGrades {
   studentName: string | null;
   gradeLevel: string | null;
   termId: string | null;
+  /** Always 'graded_only' now; the API ignores `?engine=`. */
   engine: string;
   attendance: ChildAttendanceSummary | null;
   overall: {
     avg: number | null;
     classCount: number;
+    /** Flagged-missing cells across every class. */
     missingCount: number;
+    /** Blank (not yet graded) cells across every class. */
+    notYetGradedCount?: number;
   } | null;
   classes: ChildClassGrades[];
   missingWork: MissingWorkItem[];

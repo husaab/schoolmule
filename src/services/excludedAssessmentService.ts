@@ -1,27 +1,18 @@
 // src/services/excludedAssessmentService.ts
+//
+// Legacy read-only helpers. "Excluded" is now the 'excused' cell status on
+// student_assessments; the grid and the Excused assessments modal read it
+// from the class score matrix and change it with setScoreStatus() in
+// classService. These GETs remain for the transition only — do not add
+// writes here.
 
 import apiClient from './apiClient'
 
-/**
- * Types for excluded assessment operations
- */
 export interface ExcludedAssessmentPayload {
   studentId: string
   classId: string
   assessmentId: string
   createdAt: string
-}
-
-export interface CreateExclusionRequest {
-  studentId: string
-  classId: string
-  assessmentId: string
-}
-
-export interface ExcludedAssessmentResponse {
-  status: string
-  data?: ExcludedAssessmentPayload
-  message?: string
 }
 
 export interface AllExcludedAssessmentsResponse {
@@ -30,47 +21,8 @@ export interface AllExcludedAssessmentsResponse {
   message?: string
 }
 
-export interface CheckExclusionResponse {
-  status: string
-  data: {
-    isExcluded: boolean
-  }
-  message?: string
-}
-
 /**
- * Create a new assessment exclusion
- * POST /excluded-assessments
- */
-export const createExclusion = async (
-  payload: CreateExclusionRequest
-): Promise<ExcludedAssessmentResponse> => {
-  return apiClient<ExcludedAssessmentResponse>(`/excluded-assessments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload,
-  })
-}
-
-/**
- * Remove an assessment exclusion
- * DELETE /excluded-assessments/:studentId/:classId/:assessmentId
- */
-export const deleteExclusion = async (
-  studentId: string,
-  classId: string,
-  assessmentId: string
-): Promise<{ status: string; message: string }> => {
-  return apiClient<{ status: string; message: string }>(
-    `/excluded-assessments/${encodeURIComponent(studentId)}/${encodeURIComponent(classId)}/${encodeURIComponent(assessmentId)}`,
-    {
-      method: 'DELETE',
-    }
-  )
-}
-
-/**
- * Get all excluded assessments for a student in a specific class
+ * Get all excused assessments for a student in a specific class
  * GET /excluded-assessments/:studentId/:classId
  */
 export const getExclusionsByStudentAndClass = async (
@@ -83,21 +35,7 @@ export const getExclusionsByStudentAndClass = async (
 }
 
 /**
- * Check if specific assessment is excluded for student in class
- * GET /excluded-assessments/:studentId/:classId/:assessmentId/check
- */
-export const checkExclusion = async (
-  studentId: string,
-  classId: string,
-  assessmentId: string
-): Promise<CheckExclusionResponse> => {
-  return apiClient<CheckExclusionResponse>(
-    `/excluded-assessments/${encodeURIComponent(studentId)}/${encodeURIComponent(classId)}/${encodeURIComponent(assessmentId)}/check`
-  )
-}
-
-/**
- * Get all excluded assessments for an entire class
+ * Get all excused assessments for an entire class
  * GET /excluded-assessments/class/:classId
  */
 export const getExclusionsByClass = async (

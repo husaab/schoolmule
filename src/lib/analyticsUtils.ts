@@ -11,7 +11,38 @@ import {
   SnapshotStudent,
   AnalyticsViewLevel,
   AtRiskResult,
+  GradeCoverage,
 } from '@/services/types/analytics'
+import { formatCoverage } from '@/lib/gradeEngine'
+
+// ────────────────────────────────────────────────────────────────────
+// Coverage helpers (shared by the analytics tables and the AI context)
+// ────────────────────────────────────────────────────────────────────
+
+/** "3 of 8" — the compact form for a table cell. Empty when unknown. */
+export const shortCoverage = (c?: Pick<GradeCoverage, 'assessed' | 'total'> | null): string =>
+  c ? `${c.assessed} of ${c.total}` : ''
+
+/** "based on 3 of 8 assessments" / "no graded work yet" — for prose and the AI context. */
+export const coverageSentence = (
+  pct: number | null | undefined,
+  c?: Pick<GradeCoverage, 'assessed' | 'total' | 'missing' | 'excused'> | null
+): string => {
+  if (pct == null) return 'no graded work yet'
+  if (!c) return ''
+  const extra = [c.missing ? `${c.missing} missing` : null, c.excused ? `${c.excused} excused` : null]
+    .filter(Boolean)
+    .join(', ')
+  return `based on ${c.assessed} of ${c.total} assessments${extra ? ` (${extra})` : ''}`
+}
+
+/** Full "N of M assessed · k missing · j excused" line, for tooltips. */
+export const coverageTitle = (c?: GradeCoverage | null): string | undefined =>
+  c ? formatCoverage(c) : undefined
+
+/** Blank cells for a record, preferring the API's count over the coverage sum. */
+export const notYetGradedOf = (rec: { notYetGradedCount?: number; coverage?: GradeCoverage | null }): number =>
+  rec.notYetGradedCount ?? rec.coverage?.blank ?? 0
 
 // ────────────────────────────────────────────────────────────────────
 // AI context serialization
@@ -26,7 +57,6 @@ export interface AnalyticsContextInput {
   viewLevel: AnalyticsViewLevel
   termName: string
   compareTermName?: string | null
-  engine: string
   selectedGrade?: string | null
   selectedSubject?: string | null
   overview?: OverviewData | null
@@ -46,9 +76,7 @@ function statsLine(stats: { avg: number; median: number; q1: number; q3: number;
 export function serializeAnalyticsContext(input: AnalyticsContextInput): string {
   const lines: string[] = []
   lines.push(
-    `TERM: ${input.termName}${input.compareTermName ? ` (compared vs ${input.compareTermName})` : ''} | VIEW: ${input.viewLevel} | ENGINE: ${
-      input.engine === 'null_zero' ? 'ungraded counts as zero' : 'ungraded work skipped'
-    }`
+    `TERM: ${input.termName}${input.compareTermName ? ` (compared vs ${input.compareTermName})` : ''} | VIEW: ${input.viewLevel} | GRADING: graded work only (blank = not yet graded, no weight; "missing" = flagged by teacher, counts as 0; excused never counts; a student with no counted work has no grade, not 0)`
   )
 
   const ov = input.overview
@@ -84,13 +112,13 @@ export function serializeAnalyticsContext(input: AnalyticsContextInput): string 
 
     // Per-student rows only at grade level (school level stays aggregate).
     if (input.viewLevel === 'grade' && grades.length === 1) {
-      lines.push('STUDENTS (name | overall% | missing):')
+      lines.push('STUDENTS (name | overall% | coverage | missing (flagged)):')
       for (const stu of grades[0].students) {
         const flags: string[] = []
         if (stu.overallAvg != null && stu.overallAvg < 60) flags.push('grade<60')
         if (stu.missingCount >= 3) flags.push(`missing=${stu.missingCount}`)
         lines.push(
-          `  ${stu.studentName} | ${fmt(stu.overallAvg)} | ${stu.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
+          `  ${stu.studentName} | ${fmt(stu.overallAvg)} | ${coverageSentence(stu.overallAvg, stu.coverage)} | ${stu.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
         )
       }
     }
@@ -130,13 +158,13 @@ export function serializeAnalyticsContext(input: AnalyticsContextInput): string 
         `  ${a.name} | ${fmt(a.stats?.avg)} | ${fmt(a.stats?.median)} | ${Math.round(a.completionRate * 100)}% done${flag}`
       )
     }
-    lines.push('STUDENTS (name | grade% | rank | missing):')
+    lines.push('STUDENTS (name | grade% | coverage | rank | missing (flagged)):')
     for (const s of cd.students) {
       const flags: string[] = []
       if (s.finalPct != null && s.finalPct < 60) flags.push('grade<60')
       if (s.missingCount >= 3) flags.push(`missing=${s.missingCount}`)
       lines.push(
-        `  ${s.studentName} | ${fmt(s.finalPct)} | #${s.rank ?? '—'} | ${s.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
+        `  ${s.studentName} | ${fmt(s.finalPct)} | ${coverageSentence(s.finalPct, s.coverage)} | #${s.rank ?? '—'} | ${s.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
       )
     }
   }
@@ -144,25 +172,38 @@ export function serializeAnalyticsContext(input: AnalyticsContextInput): string 
   const sd = input.studentDetail
   if (sd && input.viewLevel === 'student') {
     lines.push(`STUDENT: ${sd.studentName} | Grade ${sd.gradeLevel}`)
+    const overallCoverage = sd.classes.reduce(
+      (acc, c) => {
+        if (!c.coverage) return acc
+        acc.assessed += c.coverage.assessed
+        acc.total += c.coverage.total
+        acc.missing += c.coverage.missing
+        acc.excused += c.coverage.excused
+        return acc
+      },
+      { assessed: 0, total: 0, missing: 0, excused: 0 }
+    )
+    const notYetGraded =
+      sd.overall.notYetGradedCount ?? sd.classes.reduce((n, c) => n + (c.coverage?.blank ?? 0), 0)
     lines.push(
-      `OVERALL: avg=${fmt(sd.overall.avg)} | percentile-in-grade=${fmt(sd.overall.percentileInGrade, '')} | attendance=${fmt(sd.attendance?.pct)} | missing=${sd.overall.missingCount}`
+      `OVERALL: avg=${fmt(sd.overall.avg)} (${coverageSentence(sd.overall.avg, overallCoverage)}) | percentile-in-grade=${fmt(sd.overall.percentileInGrade, '')} | attendance=${fmt(sd.attendance?.pct)} | missing (flagged)=${sd.overall.missingCount} | not yet graded=${notYetGraded}`
     )
     if (sd.termTrajectory) {
       const t = sd.termTrajectory
       const flag = t.diff != null && t.diff <= -5 ? ' [FLAG: declining]' : ''
       lines.push(`TRAJECTORY: ${fmt(t.compareAvg)} -> ${fmt(t.currentAvg)} (${t.diff != null && t.diff > 0 ? '+' : ''}${t.diff ?? '—'})${flag}`)
     }
-    lines.push('CLASSES (subject | student% | class avg | percentile | missing):')
+    lines.push('CLASSES (subject | student% | coverage | class avg | percentile | missing (flagged)):')
     for (const c of sd.classes) {
       const flags: string[] = []
       if (c.finalPct != null && c.finalPct < 60) flags.push('grade<60')
       if (c.finalPct != null && c.classAvg != null && c.finalPct < c.classAvg - 15) flags.push('far below class avg')
       lines.push(
-        `  ${c.subject} | ${fmt(c.finalPct)} | ${fmt(c.classAvg)} | ${fmt(c.percentileInClass, '')} | ${c.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
+        `  ${c.subject} | ${fmt(c.finalPct)} | ${coverageSentence(c.finalPct, c.coverage)} | ${fmt(c.classAvg)} | ${fmt(c.percentileInClass, '')} | ${c.missingCount}${flags.length ? ` [FLAG: ${flags.join(',')}]` : ''}`
       )
     }
     if (sd.missingWork.length > 0) {
-      lines.push('MISSING WORK:')
+      lines.push('MISSING WORK (flagged by the teacher):')
       for (const m of sd.missingWork.slice(0, 15)) {
         lines.push(`  ${m.subject}: ${m.assessmentName}${m.weightPoints ? ` (worth ${m.weightPoints} pts)` : ''}`)
       }
@@ -188,8 +229,13 @@ export interface AtRiskInput {
   gradePercent: number | null
   /** Attendance 0-100, or null when no attendance is recorded. */
   attendancePercent: number | null
-  /** Count of top-level assessments with no grade (not excluded). */
+  /** Count of assessments the teacher flagged missing (counted as 0). Blank cells are not missing. */
   missingWorkCount: number
+  /**
+   * Blank (not yet graded) cells. Accepted for completeness but contributes
+   * nothing: work the teacher hasn't marked yet is no evidence of risk.
+   */
+  notYetGradedCount?: number
   /** Grade-points change vs the compared term (negative = declining); 0 when no comparison. */
   trajectoryDelta: number
 }
@@ -200,7 +246,8 @@ export interface AtRiskInput {
 // Null policy: a null gradePercent or attendancePercent means "no data
 // yet" and contributes 0 points (no-data ≠ at-risk). New students with
 // nothing graded should not light up the watchlist; once any work is
-// graded or attendance is taken, real signals take over.
+// graded or attendance is taken, real signals take over. Likewise blank
+// (not yet graded) cells add +0 — only teacher-flagged missing work counts.
 export function computeAtRiskScore(input: AtRiskInput): AtRiskResult {
   const flags: string[] = []
   let score = 0

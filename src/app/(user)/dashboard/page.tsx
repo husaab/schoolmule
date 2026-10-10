@@ -185,9 +185,9 @@ const DashboardPage: React.FC = () => {
   //    compared against the previous term.
   const { activeTerm, previousTerm, loading: termsLoading } = useDashboardTerms(user.school, selectedYearId)
   const termId = summary && activeTerm ? activeTerm.termId : null
-  const overview = useAnalyticsOverview(termId, 'null_skip', isAdmin ? (previousTerm?.termId ?? null) : null)
-  const classesHealth = useAnalyticsClassesHealth(isAdmin ? null : termId, 'null_skip')
-  const snapshot = useAnalyticsSnapshot(isAdmin ? null : termId, 'null_skip')
+  const overview = useAnalyticsOverview(termId, isAdmin ? (previousTerm?.termId ?? null) : null)
+  const classesHealth = useAnalyticsClassesHealth(isAdmin ? null : termId)
+  const snapshot = useAnalyticsSnapshot(isAdmin ? null : termId)
   const analyticsPending = termsLoading || (Boolean(activeTerm) && !termId)
 
   if (loading) {
