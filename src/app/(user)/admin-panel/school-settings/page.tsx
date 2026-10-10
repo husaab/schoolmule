@@ -38,7 +38,8 @@ const SchoolSettingsPage = () => {
     email: '',
     timezone: '',
     academicYearStartDate: '',
-    academicYearEndDate: ''
+    academicYearEndDate: '',
+    emailReplyTo: ''
   })
   
   // Term modal states
@@ -62,7 +63,8 @@ const SchoolSettingsPage = () => {
           email: res.data.email || '',
           timezone: res.data.timezone || '',
           academicYearStartDate: res.data.academicYearStartDate ? res.data.academicYearStartDate.split('T')[0] : '',
-          academicYearEndDate: res.data.academicYearEndDate ? res.data.academicYearEndDate.split('T')[0] : ''
+          academicYearEndDate: res.data.academicYearEndDate ? res.data.academicYearEndDate.split('T')[0] : '',
+          emailReplyTo: (res.data.emailReplyTo || []).join(', ')
         })
       } 
     } catch (err) {
@@ -133,7 +135,8 @@ const SchoolSettingsPage = () => {
         email: schoolFormData.email.trim(),
         timezone: schoolFormData.timezone.trim(),
         academicYearStartDate: schoolFormData.academicYearStartDate || undefined,
-        academicYearEndDate: schoolFormData.academicYearEndDate || undefined
+        academicYearEndDate: schoolFormData.academicYearEndDate || undefined,
+        emailReplyTo: schoolFormData.emailReplyTo.split(/[,\n;]+/).map((e) => e.trim()).filter(Boolean)
       }
 
       const res = await updateSchool(schoolData.schoolId, payload)
@@ -146,7 +149,7 @@ const SchoolSettingsPage = () => {
       }
     } catch (err) {
       console.error('Error updating school:', err)
-      showNotification('Error updating school information', 'error')
+      showNotification(err instanceof Error && err.message ? err.message : 'Error updating school information', 'error')
     }
   }
 
@@ -209,7 +212,8 @@ const SchoolSettingsPage = () => {
         email: schoolData.email || '',
         timezone: schoolData.timezone || '',
         academicYearStartDate: schoolData.academicYearStartDate ? schoolData.academicYearStartDate.split('T')[0] : '',
-        academicYearEndDate: schoolData.academicYearEndDate ? schoolData.academicYearEndDate.split('T')[0] : ''
+        academicYearEndDate: schoolData.academicYearEndDate ? schoolData.academicYearEndDate.split('T')[0] : '',
+        emailReplyTo: (schoolData.emailReplyTo || []).join(', ')
       })
     }
   }
@@ -324,6 +328,31 @@ const SchoolSettingsPage = () => {
                         : 'Not set'}
                     </p>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Parent emails are sent from</label>
+                    <p className="text-gray-900">{schoolData?.emailAddresses?.academics || 'Not set'}</p>
+                    {schoolData?.emailAddresses && schoolData.emailAddresses.messages !== schoolData.emailAddresses.academics && (
+                      <p className="text-gray-900">{schoolData.emailAddresses.messages} <span className="text-gray-500 text-sm">(messages and announcements)</span></p>
+                    )}
+                    <p className="text-gray-500 text-sm mt-1">
+                      {schoolData?.emailSendingDomain
+                        ? `Your school's own domain (${schoolData.emailSendingDomain}) is verified for sending.`
+                        : 'Sent under your school\'s name from schoolmule.ca. Ask SchoolMule to verify your own domain to send from it instead.'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Parent replies go to</label>
+                    {(schoolData?.emailReplyTo?.length || schoolData?.email) ? (
+                      <ul className="text-gray-900">
+                        {(schoolData?.emailReplyTo || []).map((addr) => <li key={addr}>{addr}</li>)}
+                        {schoolData?.email && !(schoolData.emailReplyTo || []).includes(schoolData.email.toLowerCase()) && (
+                          <li>{schoolData.email} <span className="text-gray-500 text-sm">(school email)</span></li>
+                        )}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-900">Not set</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleSchoolSubmit} className="space-y-4">
@@ -395,6 +424,20 @@ const SchoolSettingsPage = () => {
                         onChange={(e) => setSchoolFormData(prev => ({ ...prev, academicYearEndDate: e.target.value }))}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label htmlFor="school-email-reply-to" className="block text-sm font-medium text-gray-700 mb-1">Parent replies go to</label>
+                      <input
+                        id="school-email-reply-to"
+                        type="text"
+                        value={schoolFormData.emailReplyTo}
+                        onChange={(e) => setSchoolFormData(prev => ({ ...prev, emailReplyTo: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        placeholder="principal@example.org, office@example.org"
+                      />
+                      <p className="text-gray-500 text-sm mt-1">
+                        When a parent replies to a report card, grade update, message or announcement, it lands in these inboxes. Separate addresses with commas. The school email above is always included.
+                      </p>
                     </div>
                   </div>
                   

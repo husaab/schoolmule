@@ -14,6 +14,9 @@ export interface SchoolPayload {
   timezone?: string;
   academicYearStartDate?: string;  // ISO date string
   academicYearEndDate?: string;    // ISO date string
+  emailSendingDomain?: string | null; // verified custom sending domain, null = platform domain
+  emailReplyTo?: string[];          // where parent replies go (the school email is always added)
+  emailAddresses?: { academics: string; messages: string }; // what parents see in the From line
   createdAt: string;              // ISO datetime string
   lastUpdatedAt?: string;         // ISO datetime string
 }
@@ -43,6 +46,7 @@ export interface UpdateSchoolRequest {
   timezone?: string;
   academicYearStartDate?: string;
   academicYearEndDate?: string;
+  emailReplyTo?: string[];
 }
 
 /**
