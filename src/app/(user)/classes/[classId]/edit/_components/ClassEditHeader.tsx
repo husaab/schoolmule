@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ClassPayload } from '@/services/types/class'
 import { getGradeDisplayName, isJK, isSK } from '@/lib/schoolUtils'
+import { useRememberedHref } from '@/hooks/useFilterParams'
 import {
   ArrowLeftIcon,
   BookOpenIcon,
@@ -19,6 +20,8 @@ interface ClassEditHeaderProps {
 
 const ClassEditHeader: React.FC<ClassEditHeaderProps> = ({ classData, onDuplicate }) => {
   const router = useRouter()
+  // Back to the Classes list as the user left it (grade/term/search filters).
+  const classesHref = useRememberedHref('/classes')
   const { classId, grade, subject, teacherName } = classData
 
   const gradebookHref = isJK(grade)
@@ -31,7 +34,7 @@ const ClassEditHeader: React.FC<ClassEditHeaderProps> = ({ classData, onDuplicat
     <div className="mb-8">
       <div className="flex flex-wrap items-center gap-3 mb-2">
         <button
-          onClick={() => router.push('/classes')}
+          onClick={() => router.push(classesHref)}
           className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <ArrowLeftIcon className="h-5 w-5" />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import BackLink from '@/components/shared/BackLink';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import AgendaOutline, { type SlotId } from '@/components/agenda/AgendaOutline';
@@ -302,12 +302,12 @@ const AgendaEditorPage = () => {
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <Link
-              href="/admin-panel/agendas"
+            <BackLink
+              to="/admin-panel/agendas"
               className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-2"
             >
               <ArrowLeftIcon className="w-4 h-4" /> All agendas
-            </Link>
+            </BackLink>
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">

@@ -16,6 +16,7 @@ import { getTermsBySchool, getTermByNameAndSchool } from '@/services/termService
 import type { TermPayload } from '@/services/types/term'
 import { isJK, isSK } from '@/lib/schoolUtils'
 import { useScrollSpy } from '@/hooks/useScrollSpy'
+import { useRememberedHref } from '@/hooks/useFilterParams'
 import Spinner from '@/components/Spinner'
 import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
 import {
@@ -38,6 +39,7 @@ import SKSubjectsSection from './_components/sk/SKSubjectsSection'
 export default function EditClassPage() {
   const { classId } = useParams() as { classId: string }
   const router = useRouter()
+  const classesHref = useRememberedHref('/classes')
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -194,7 +196,7 @@ export default function EditClassPage() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Class</h3>
               <p className="text-red-600 mb-6">{error}</p>
               <button
-                onClick={() => router.push('/classes')}
+                onClick={() => router.push(classesHref)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
@@ -284,7 +286,7 @@ export default function EditClassPage() {
           isOpen={showDuplicateModal}
           onClose={() => setShowDuplicateModal(false)}
           sourceClass={classData}
-          onDuplicated={() => router.push('/classes')}
+          onDuplicated={() => router.push(classesHref)}
         />
       )}
     </>

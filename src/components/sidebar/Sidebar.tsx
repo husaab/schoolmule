@@ -50,6 +50,7 @@ import ChildSwitcher from '@/components/parent/ChildSwitcher'
 import ViewSwitcher from '@/components/navbar/ViewSwitcher'
 import { canSwitchViews, viewLabelFor } from '@/lib/viewSwitch'
 import { roleLabel } from '@/components/adminUsers/userDisplay'
+import { useRememberedHref } from '@/hooks/useFilterParams'
 
 interface NavLink {
   href: string;
@@ -143,9 +144,11 @@ const Sidebar = () => {
 
   if (!user) return null
 
+  // Nav hrefs re-expand each page's remembered filters (filter memory), so
+  // returning to Students via the sidebar shows the grade the user had picked.
   const NavItem = ({ href, label, icon: Icon, isActive, badge }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number }) => (
     <Link
-      href={href}
+      href={useRememberedHref(href)}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
         isActive
           ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 font-medium border border-cyan-100'
@@ -213,9 +216,10 @@ const Sidebar = () => {
 
   const SubNavItem = ({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; exact?: boolean }) => {
     const isActive = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'));
+    const rememberedHref = useRememberedHref(href)
     return (
       <Link
-        href={href}
+        href={rememberedHref}
         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
           isActive
             ? 'bg-cyan-50 text-cyan-700 font-medium'

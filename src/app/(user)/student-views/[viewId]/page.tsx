@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import BackLink from '@/components/shared/BackLink'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -155,13 +156,13 @@ export default function StudentViewDetailPage() {
       <div className="lg:pl-72">
         <Navbar />
         <main className="px-6 pt-28 pb-8 max-w-6xl mx-auto">
-          <Link
-            href="/student-views"
+          <BackLink
+            to="/student-views"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Back to Student Views
-          </Link>
+          </BackLink>
           <div className="flex items-start justify-between gap-4 mb-8">
             <div className="flex items-start gap-3 min-w-0">
               <div className="p-2 bg-cyan-50 rounded-xl shrink-0">

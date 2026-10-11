@@ -17,7 +17,8 @@ import {
 } from '@/services/studentViewService'
 import type { StudentViewCriteria, EvaluatedStudent } from '@/services/types/studentView'
 import type { TermPayload } from '@/services/types/term'
-import Link from 'next/link'
+import BackLink from '@/components/shared/BackLink'
+import { useRememberedHref } from '@/hooks/useFilterParams'
 import { TrophyIcon, ArrowLeftIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 
 const DEFAULT_CRITERIA: StudentViewCriteria = {
@@ -32,6 +33,7 @@ const DEFAULT_CRITERIA: StudentViewCriteria = {
 
 export default function NewStudentViewPage() {
   const router = useRouter()
+  const listHref = useRememberedHref('/student-views')
   const searchParams = useSearchParams()
   const duplicateFromId = searchParams.get('duplicateFrom')
 
@@ -128,13 +130,13 @@ export default function NewStudentViewPage() {
       <div className="lg:pl-72">
         <Navbar />
         <main className="px-6 pt-28 pb-8 max-w-6xl mx-auto">
-          <Link
-            href="/student-views"
+          <BackLink
+            to="/student-views"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Back to Student Views
-          </Link>
+          </BackLink>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-cyan-50 rounded-xl">
               <TrophyIcon className="w-7 h-7 text-cyan-600" />
@@ -196,7 +198,7 @@ export default function NewStudentViewPage() {
               />
               <div className="flex justify-end gap-2 mt-8 pt-6 border-t border-slate-100">
                 <button
-                  onClick={() => router.push('/student-views')}
+                  onClick={() => router.push(listHref)}
                   className="px-4 py-2 text-sm rounded-lg text-slate-700 hover:bg-slate-100"
                 >
                   Cancel

@@ -10,6 +10,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { useRememberedHref } from '@/hooks/useFilterParams'
 import { useSchedulePlannerStore, sessionKey } from '@/store/useSchedulePlannerStore'
 import {
   getPlannerConfig,
@@ -48,6 +49,7 @@ const ScheduleWorkspacePage = () => {
   const scheduleId = params.scheduleId
   const isNew = scheduleId === 'new'
   const router = useRouter()
+  const plannerHref = useRememberedHref('/admin-panel/schedule-planner')
   const user = useUserStore((state) => state.user)
   const hasHydrated = useUserStore((state) => state.hasHydrated)
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -498,7 +500,7 @@ const ScheduleWorkspacePage = () => {
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => {
-                if (confirmLeave()) router.push('/admin-panel/schedule-planner')
+                if (confirmLeave()) router.push(plannerHref)
               }}
               className="p-1.5 rounded hover:bg-gray-100 cursor-pointer"
             >
