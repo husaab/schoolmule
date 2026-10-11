@@ -26,4 +26,9 @@ export const OutcomePill = ({ outcome }: { outcome: string }) => <span className
 const DEPLOY: Record<string, string> = { SUCCESS: 'bg-emerald-400/15 text-emerald-300', FAILED: 'bg-rose-400/15 text-rose-300', CRASHED: 'bg-rose-400/15 text-rose-300', BUILDING: 'bg-sky-400/15 text-sky-300', DEPLOYING: 'bg-sky-400/15 text-sky-300', REMOVED: 'bg-white/[0.06] text-slate-500', SLEEPING: 'bg-white/[0.06] text-slate-400' }
 export const DeployPill = ({ status }: { status: string }) => <span className={`${base} ${DEPLOY[status] ?? 'bg-white/[0.06] text-slate-400'}`}>{status.toLowerCase()}</span>
 
+const PATTERN: Record<string, string> = { timer: 'bg-amber-400/15 text-amber-300', duplicate: 'bg-rose-400/15 text-rose-300', burst: 'bg-violet-400/15 text-violet-300' }
+/** Scanner cadence label: timer = steady poll, duplicate = same fetch from several mounts, burst = some sub-2 s gaps. */
+export const PatternPill = ({ pattern }: { pattern: string | null }) =>
+  pattern ? <span className={`${base} ${PATTERN[pattern] ?? 'bg-white/[0.06] text-slate-400'}`}>{pattern}</span> : <span className="text-slate-600">—</span>
+
 export const ImpersonationMark = () => <span className={`${base} bg-violet-400/15 text-violet-300`} title="Admin preview session">preview</span>

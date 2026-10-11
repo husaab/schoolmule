@@ -8,7 +8,7 @@ import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Squares2X2Icon, PresentationChartLineIcon, UsersIcon, RectangleStackIcon, ExclamationTriangleIcon,
-  KeyIcon, ServerStackIcon, ArrowUturnLeftIcon,
+  KeyIcon, ServerStackIcon, ArrowUturnLeftIcon, SignalIcon,
 } from '@heroicons/react/24/outline'
 import { useObserveStore, WINDOW_KEYS, isWindowKey } from '@/store/useObserveStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -19,6 +19,7 @@ const NAV = [
   { href: '/observe/activity', label: 'Activity', icon: PresentationChartLineIcon },
   { href: '/observe/users', label: 'Users', icon: UsersIcon },
   { href: '/observe/features', label: 'Features', icon: RectangleStackIcon },
+  { href: '/observe/scanner', label: 'Scanner', icon: SignalIcon },
   { href: '/observe/errors', label: 'Errors', icon: ExclamationTriangleIcon },
   { href: '/observe/logins', label: 'Logins', icon: KeyIcon },
   { href: '/observe/infra', label: 'Infra', icon: ServerStackIcon },

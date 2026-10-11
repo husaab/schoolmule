@@ -15,9 +15,11 @@ interface Props<T> {
   dense?: boolean
   /** Caps the table's height; the body scrolls under a sticky header. */
   maxHeight?: number | string
+  /** Extra classes for a row, e.g. to mark the selected one. */
+  rowClassName?: (row: T) => string
 }
 
-export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initialSort, empty = 'Nothing here', dense, maxHeight }: Props<T>) {
+export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initialSort, empty = 'Nothing here', dense, maxHeight, rowClassName }: Props<T>) {
   const [sort, setSort] = useState(initialSort ?? null)
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -60,7 +62,7 @@ export default function DataTable<T>({ columns, rows, rowKey, onRowClick, initia
             <tr><td colSpan={columns.length} className="px-5 py-8 text-center text-xs text-slate-500">{empty}</td></tr>
           )}
           {sorted.map((r) => (
-            <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined} className={`border-t border-white/[0.04] ${onRowClick ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}>
+            <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined} className={`border-t border-white/[0.04] ${onRowClick ? 'cursor-pointer hover:bg-white/[0.03]' : ''} ${rowClassName ? rowClassName(r) : ''}`}>
               {columns.map((c) => (
                 <td key={c.key} className={`${pad} first:pl-5 last:pr-5 align-middle ${c.align === 'right' ? 'text-right' : ''}`}>{c.render(r)}</td>
               ))}

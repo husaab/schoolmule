@@ -94,6 +94,30 @@ export interface InfraData {
   deployments?: { id: string; status: string; createdAt: string; commitMessage: string | null; commitAuthor: string | null; branch: string | null }[]
 }
 
+export type CadencePattern = 'timer' | 'duplicate' | 'burst' | null
+export interface ScannerCadence {
+  /** Median seconds between consecutive requests from the same user; null with fewer than two. */
+  medianGapS: number | null
+  /** Share of same-user gaps under the burst threshold (duplicate fetches). */
+  burstShare: number
+  gaps: number
+  pattern: CadencePattern
+}
+export interface ScannerRoute extends ScannerCadence {
+  method: string; route: string; requests: number; users: number; status304Share: number; p95Ms: number
+}
+export interface ScannerSuspect extends ScannerCadence {
+  user: ObserveUserRef | null; method: string; route: string; requests: number; status304Share: number
+}
+export interface ScannerData {
+  window: ObserveWindow
+  thresholds: { burstGapS: number; suspectMinRequests: number; suspectMaxMedianGapS: number }
+  totals: { requests: number; users: number; routes: number }
+  routes: ScannerRoute[]
+  suspects: ScannerSuspect[]
+}
+export interface ScannerSeriesData { window: ObserveWindow; bucket: string; series: { ts: string; requests: number }[] }
+
 export interface HealthData { ok: boolean; uptime_s: number; db: 'ok' | 'down'; buffer: { pending: number; dropped: number; flushes: number; failures: number } }
 
 export interface ObserveResponse<T> { status: 'success'; data: T }

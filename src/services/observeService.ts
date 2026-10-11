@@ -2,7 +2,7 @@
 import apiClient from './apiClient'
 import type {
   ActivityData, ErrorGroupData, ErrorRangeData, ErrorsData, FeaturesData, HealthData, InfraData, LoginsData,
-  ObserveResponse, OverviewData, UserDetailData, UsersData, WindowKey,
+  ObserveResponse, OverviewData, ScannerData, ScannerSeriesData, UserDetailData, UsersData, WindowKey,
 } from './types/observe'
 
 const unwrap = async <T>(p: Promise<ObserveResponse<T>>): Promise<T> => (await p).data
@@ -19,4 +19,9 @@ export const getErrorsRange = (from: string, to: string) =>
 export const getErrorGroup = (fingerprint: string, window: WindowKey) => unwrap(apiClient<ObserveResponse<ErrorGroupData>>(`/observe/errors/${encodeURIComponent(fingerprint)}${w(window)}`))
 export const getLogins = (window: WindowKey) => unwrap(apiClient<ObserveResponse<LoginsData>>(`/observe/logins${w(window)}`))
 export const getInfra = (window: WindowKey) => unwrap(apiClient<ObserveResponse<InfraData>>(`/observe/infra${w(window)}`))
+const userParam = (userId: string | null) => (userId ? `&user=${encodeURIComponent(userId)}` : '')
+export const getScanner = (window: WindowKey, userId: string | null = null) =>
+  unwrap(apiClient<ObserveResponse<ScannerData>>(`/observe/scanner${w(window)}${userParam(userId)}`))
+export const getScannerSeries = (window: WindowKey, userId: string | null, method: string, route: string) =>
+  unwrap(apiClient<ObserveResponse<ScannerSeriesData>>(`/observe/scanner/series${w(window)}${userParam(userId)}&method=${encodeURIComponent(method)}&route=${encodeURIComponent(route)}`))
 export const getHealth = () => apiClient<HealthData>('/health')

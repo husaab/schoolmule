@@ -17,6 +17,21 @@ export const fmtMs = (ms: number | null | undefined): string => {
   return v >= 1000 ? `${(v / 1000).toFixed(2)} s` : `${Math.round(v)} ms`
 }
 
+// Seconds between requests: "120 ms", "30.0 s", "4.5 min", "2.0 h"; null when there was no gap.
+export const fmtGap = (s: number | null | undefined): string => {
+  if (s === null || s === undefined) return '—'
+  if (s < 1) return `${Math.round(s * 1000)} ms`
+  if (s < 60) return `${s.toFixed(1)} s`
+  if (s < 3600) return `${(s / 60).toFixed(1)} min`
+  return `${(s / 3600).toFixed(1)} h`
+}
+
+// Hours spanned by an API window, from its own bounds so per-hour rates match the counts.
+export const windowHours = (from: string, to: string): number =>
+  Math.max(1 / 60, (new Date(to).getTime() - new Date(from).getTime()) / 3_600_000)
+
+export const perHour = (count: number, hours: number): string => fmtNum(Math.round(count / hours))
+
 export const fmtGb = (gb: number | null | undefined): string => {
   const v = gb ?? 0
   return v < 1 ? `${Math.round(v * 1024)} MB` : `${v.toFixed(2)} GB`
