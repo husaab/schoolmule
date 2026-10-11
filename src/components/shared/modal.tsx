@@ -75,7 +75,9 @@ const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalPr
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close"
               className="p-2 -mr-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <XMarkIcon className="w-5 h-5" />
@@ -83,11 +85,14 @@ const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalPr
           </div>
         )}
 
-        {/* Close button (when no title) */}
+        {/* Close button (when no title). z-20 keeps it above a sticky
+            ModalHeader (z-10), which otherwise paints over it. */}
         {!title && (
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer z-10"
+            aria-label="Close"
+            className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer z-20"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
