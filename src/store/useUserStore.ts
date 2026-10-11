@@ -1,5 +1,6 @@
 import { create, StateCreator } from 'zustand';
 import { createJSONStorage, persist, PersistOptions } from 'zustand/middleware';
+import { clearFilterMemory, getFilterMemoryStorage } from '@/lib/filterMemory';
 
 export type User = {
     id: string | null;
@@ -53,6 +54,8 @@ export const useUserStore = create<UserStore>(
             clearUser: () => {
                 // Badges belong to the session that just ended.
                 import('@/store/useMessagingStore').then((m) => m.useMessagingStore.getState().clear()).catch(() => {})
+                // So do the remembered page filters (every sign-out path ends here).
+                clearFilterMemory(getFilterMemoryStorage())
                 set({
                     user: {
                         id: null,

@@ -23,7 +23,7 @@ import {
   SparklesIcon,
   DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline'
-import { useFilterParams } from '@/hooks/useFilterParams'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 
 type Tab = 'dashboard' | 'mine' | 'shared' | 'system'
 
@@ -31,11 +31,12 @@ function StudentViewsDashboardContent() {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
-  const { get, setParams } = useFilterParams()
+  const filters = useFilterParams()
+  const { get, setParams } = filters
   const [views, setViews] = useState<StudentViewPayload[]>([])
   const [loading, setLoading] = useState(true)
   // Search seeded from URL; tab is URL source of truth.
-  const [query, setQuery] = useState(() => get('q'))
+  const [query, setQuery] = useDebouncedParam(filters, 'q')
   const tab = (get('tab', 'dashboard')) as Tab
 
   const load = async () => {
@@ -182,7 +183,7 @@ function StudentViewsDashboardContent() {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => { setQuery(e.target.value); setParams({ q: e.target.value }); }}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search views by name or description"
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none"
               />

@@ -14,24 +14,26 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { useFilterParams } from '@/hooks/useFilterParams';
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 
 function GenerateReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
-  const { get, setParams } = useFilterParams();
+  const filters = useFilterParams();
+  const { get, setParams } = filters;
   const [students, setStudents] = useState<StudentPayload[]>([]);
   // Grade filter lives in the URL; search is local (seeded from URL) for snappy
   // typing, mirrored to the URL on change. `term` keeps its own init effect.
   const selectedGrade = get('grade');
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState<string>(() => get('q'));
+  const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q');
   const showNotification = useNotificationStore(state => state.showNotification);
 
   const [terms, setTerms] = useState<TermPayload[]>([]);
   const [loadingTerms, setLoadingTerms] = useState(false);
-  const [term, setTerm] = useState<string>('');
+  // Term round-trips through the URL (and filter memory) like the grade.
+  const [term, setTerm] = useState<string>(() => get('term'));
   const [isLoading, setIsLoading] = useState(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -80,19 +82,12 @@ function GenerateReportCardsPageContent() {
         if (termsRes.status === 'success') {
           setTerms(termsRes.data);
           
-          // Set default term to active term
-          if (user.activeTerm) {
-            setTerm(user.activeTerm);
-          } else {
-            // Find active term from the list
-            const activeTerm = termsRes.data.find(t => t.isActive);
-            if (activeTerm) {
-              setTerm(activeTerm.name);
-            } else if (termsRes.data.length > 0) {
-              // Fallback to first term if no active term
-              setTerm(termsRes.data[0].name);
-            }
-          }
+          // Default to the active term unless the URL already chose one.
+          const fallbackTerm = user.activeTerm
+            || termsRes.data.find(t => t.isActive)?.name
+            || termsRes.data[0]?.name
+            || '';
+          setTerm((current) => current || fallbackTerm);
         } else {
           showNotification('Failed to load terms', 'error');
         }
@@ -282,7 +277,7 @@ function GenerateReportCardsPageContent() {
                     type="text"
                     placeholder="Search by name..."
                     value={searchTerm}
-                    onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }); }}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black disabled:bg-gray-100"
                   />
                 </div>
@@ -315,7 +310,6 @@ function GenerateReportCardsPageContent() {
                 {(selectedGrade || searchTerm || selectedStudents.size > 0) && (
                   <button
                     onClick={() => {
-                      setSearchTerm('');
                       setParams({ grade: null, q: null });
                       setSelectedStudents(new Set());
                     }}
@@ -426,7 +420,7 @@ function GenerateReportCardsPageContent() {
                 </p>
                 {searchTerm && (
                   <button
-                    onClick={() => { setSearchTerm(''); setParams({ q: null }); }}
+                    onClick={() => { setParams({ q: null }); }}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
                   >
                     Clear search

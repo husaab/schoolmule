@@ -18,16 +18,17 @@ import { useRouter } from 'next/navigation';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
 import Spinner from '@/components/Spinner';
 import { getGradeOptions, getGradeNumericValue, getGradeDisplayName } from '@/lib/schoolUtils';
-import { useFilterParams } from '@/hooks/useFilterParams';
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 
 const StudentsContent = () => {
 
-    const { get, setParams } = useFilterParams();
+    const filters = useFilterParams();
+  const { get, setParams } = filters;
     const [students, setStudents] = useState<StudentPayload[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     // Free-text search keeps local state for snappy typing, seeded from URL.
-    const [searchTerm, setSearchTerm] = useState(() => get('q'));
+    const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q');
     const user = useUserStore((state) => state.user);
     const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
     // Filters live in the URL so Back/refresh/share restore them.
@@ -156,7 +157,7 @@ const StudentsContent = () => {
                                             type="text"
                                             placeholder="Search by name..."
                                             value={searchTerm}
-                                            onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                                         />
                                     </div>
@@ -184,7 +185,6 @@ const StudentsContent = () => {
                                         </span>
                                         <button
                                             onClick={() => {
-                                                setSearchTerm('')
                                                 setParams({ q: null, grade: null })
                                             }}
                                             className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"

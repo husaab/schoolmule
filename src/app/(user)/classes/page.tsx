@@ -19,13 +19,14 @@ import { TermPayload } from '@/services/types/term'
 import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { getGradeOptions, getGradeDisplayName, isJK, isSK } from '@/lib/schoolUtils'
-import { useFilterParams } from '@/hooks/useFilterParams'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 
 const ClassesPageContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
-  const { get, setParams } = useFilterParams()
+  const filters = useFilterParams()
+  const { get, setParams } = filters
 
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
@@ -33,7 +34,7 @@ const ClassesPageContent = () => {
   const [error, setError] = useState<string | null>(null)
   // Grade/term filters live in the URL; search stays local (seeded from URL)
   // for snappy typing, mirrored to the URL on change.
-  const [searchTerm, setSearchTerm] = useState(() => get('q'))
+  const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q')
   const gradeFilter = get('grade')
   const termFilter = get('term', 'active')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
@@ -161,7 +162,7 @@ const ClassesPageContent = () => {
                       type="text"
                       placeholder="Search by subject or teacher..."
                       value={searchTerm}
-                      onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                     />
                   </div>
@@ -209,7 +210,6 @@ const ClassesPageContent = () => {
                     </span>
                     <button
                       onClick={() => {
-                        setSearchTerm('')
                         setParams({ q: null, grade: null, term: null })
                       }}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"

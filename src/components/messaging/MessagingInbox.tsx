@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChatBubbleLeftRightIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
 import { listConversations } from '@/services/messagingService'
 import type { ConversationItem, ListFilters, SenderRole, Thread } from '@/services/types/messaging'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -46,29 +46,24 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
   emptyHint,
 }) => {
   const t = toneClasses(tone)
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const bump = useMessagingStore((s) => s.bump)
 
-  const threadId = searchParams.get('thread')
-  const urlClassId = searchParams.get('classId') || undefined
+  // View, search and the open thread all live in the URL (via the shared
+  // filter hook) so Back, refresh and a sidebar re-click restore the inbox.
+  // The thread is transient: coming back later shows the list, not the thread.
+  const urlFilters = useFilterParams()
+  const { get, setParams } = urlFilters
+  const threadId = get('thread') || null
+  const urlClassId = get('classId') || undefined
+  const rawView = get('view')
+  const view: ListView = rawView === 'needsReply' || rawView === 'resolved' ? rawView : 'open'
+  const setView = useCallback((next: ListView) => setParams({ view: next === 'open' ? null : next }), [setParams])
+  const [query, setQuery] = useDebouncedParam(urlFilters, 'q')
+  const debouncedQuery = get('q').trim()
   const [items, setItems] = useState<ConversationItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<ListView>('open')
-  const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [newOpen, setNewOpen] = useState(false)
-  const debounced = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [debouncedQuery, setDebouncedQuery] = useState('')
-
-  useEffect(() => {
-    if (debounced.current) clearTimeout(debounced.current)
-    debounced.current = setTimeout(() => setDebouncedQuery(query.trim()), 250)
-    return () => {
-      if (debounced.current) clearTimeout(debounced.current)
-    }
-  }, [query])
 
   const filters = useMemo<ListFilters>(
     () => ({
@@ -109,16 +104,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
     return clientFilter ? base.filter(clientFilter) : base
   }, [items, view, clientFilter])
 
-  const setThread = useCallback(
-    (id: string | null) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (id) params.set('thread', id)
-      else params.delete('thread')
-      const qs = params.toString()
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    },
-    [router, pathname, searchParams],
-  )
+  const setThread = useCallback((id: string | null) => setParams({ thread: id }), [setParams])
 
   const onChanged = useCallback(() => {
     void load(true)

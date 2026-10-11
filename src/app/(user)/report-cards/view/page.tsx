@@ -47,7 +47,9 @@ function ViewReportCardsPageContent() {
   const [autoPreviewStudentId, setAutoPreviewStudentId] = useState<string | null>(null);
   const [terms, setTerms] = useState<TermPayload[]>([]);
   const [loadingTerms, setLoadingTerms] = useState(false);
-  const [term, setTerm] = useState<string>('');
+  // Term round-trips through the URL (and filter memory); ?preview= is a one-shot deep link.
+  const [term, setTerm] = useState<string>(() => get('term'));
+  const previewParam = get('preview');
   const [viewingUrl, setViewingUrl] = useState<string | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -74,25 +76,12 @@ function ViewReportCardsPageContent() {
 
           // A deep link (?term=...&preview=...) wins over the default term so
           // the requested report card's term is the one that loads.
-          const params = new URLSearchParams(window.location.search);
-          const queryTerm = params.get('term');
-          const previewStudentId = params.get('preview');
-          if (previewStudentId) setAutoPreviewStudentId(previewStudentId);
-
-          if (queryTerm) {
-            setTerm(queryTerm);
-          } else if (user.activeTerm) {
-            setTerm(user.activeTerm);
-          } else {
-            // Find active term from the list
-            const activeTerm = res.data.find(t => t.isActive);
-            if (activeTerm) {
-              setTerm(activeTerm.name);
-            } else if (res.data.length > 0) {
-              // Fallback to first term if no active term
-              setTerm(res.data[0].name);
-            }
-          }
+          if (previewParam) setAutoPreviewStudentId(previewParam);
+          const fallbackTerm = user.activeTerm
+            || res.data.find(t => t.isActive)?.name
+            || res.data[0]?.name
+            || '';
+          setTerm((current) => current || fallbackTerm);
         } else {
           showNotification('Failed to load terms', 'error');
         }
@@ -103,7 +92,7 @@ function ViewReportCardsPageContent() {
         setLoadingTerms(false);
       });
     }
-  }, [user.school, user.activeTerm, showNotification, selectedYearId]); // refetch when the selected school year changes
+  }, [user.school, user.activeTerm, previewParam, showNotification, selectedYearId]); // refetch when the selected school year changes
 
   // Fetch report cards when term is selected
   useEffect(() => {

@@ -1,11 +1,13 @@
 // All analytics drill-down + filter state lives in the URL so views are
-// shareable and the browser back button walks the drill path.
+// shareable and refresh-safe. Built on the shared useFilterParams hook, so
+// the drill path is also remembered per tab: coming back to Analytics from
+// the sidebar lands on the same term, grade and class the user left.
 
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { AnalyticsViewLevel } from '@/services/types/analytics'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 export interface AnalyticsParams {
   view: AnalyticsViewLevel
@@ -26,40 +28,38 @@ export interface UseAnalyticsParams extends AnalyticsParams {
 
 const VIEWS: AnalyticsViewLevel[] = ['school', 'grade', 'subject', 'class', 'student']
 
-export function useAnalyticsParams(): UseAnalyticsParams {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+// A legacy `engine` param (from an old bookmark) is simply ignored: there is
+// one grade engine now and the API no longer reads it either. Marking it
+// transient keeps it out of memory; every write also deletes it from the URL.
+const LEGACY_TRANSIENT = ['engine']
 
-  // A legacy `engine` param (from an old bookmark) is simply ignored: there is
-  // one grade engine now and the API no longer reads it either.
+export function useAnalyticsParams(): UseAnalyticsParams {
+  const { get, setParams: setRaw } = useFilterParams({ transient: LEGACY_TRANSIENT })
+
   const params = useMemo<AnalyticsParams>(() => {
-    const rawView = searchParams.get('view')
-    const view = VIEWS.includes(rawView as AnalyticsViewLevel)
-      ? (rawView as AnalyticsViewLevel)
-      : 'school'
+    const rawView = get('view')
+    const view = VIEWS.includes(rawView as AnalyticsViewLevel) ? (rawView as AnalyticsViewLevel) : 'school'
+    const opt = (key: string) => get(key) || null
     return {
       view,
-      termId: searchParams.get('termId'),
-      compareTerm: searchParams.get('compareTerm'),
-      grade: searchParams.get('grade'),
-      subject: searchParams.get('subject'),
-      classId: searchParams.get('classId'),
-      studentId: searchParams.get('studentId'),
+      termId: opt('termId'),
+      compareTerm: opt('compareTerm'),
+      grade: opt('grade'),
+      subject: opt('subject'),
+      classId: opt('classId'),
+      studentId: opt('studentId'),
     }
-  }, [searchParams])
+  }, [get])
 
   const setParams = useCallback(
     (patch: Partial<AnalyticsParams>) => {
-      const next = new URLSearchParams(searchParams.toString())
-      next.delete('engine')
+      const next: Record<string, string | null> = { engine: null }
       for (const [key, value] of Object.entries(patch)) {
-        if (value == null || value === '') next.delete(key)
-        else next.set(key, String(value))
+        next[key] = value == null || value === '' ? null : String(value)
       }
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+      setRaw(next)
     },
-    [router, pathname, searchParams]
+    [setRaw],
   )
 
   const drillTo = useCallback(
@@ -82,7 +82,7 @@ export function useAnalyticsParams(): UseAnalyticsParams {
       }
       setParams(cleared)
     },
-    [setParams]
+    [setParams],
   )
 
   return { ...params, setParams, drillTo }

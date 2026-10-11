@@ -22,7 +22,7 @@ import BulkDownloadProgressReportModal from '@/components/progress-report/downlo
 import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
 import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
 import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
-import { useFilterParams } from '@/hooks/useFilterParams'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 
 interface ProgressReportRecord {
   student_id?: string
@@ -46,7 +46,8 @@ const ProgressReportsContent = () => {
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
-  const { get, setParams } = useFilterParams()
+  const filters = useFilterParams()
+  const { get, setParams } = filters
 
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [students, setStudents] = useState<StudentPayload[]>([])
@@ -56,10 +57,10 @@ const ProgressReportsContent = () => {
   const [generatedReports, setGeneratedReports] = useState<ProgressReportRecord[]>([])
 
   // Filter states — search inputs seeded from URL; grade selects are URL source of truth.
-  const [studentSearchTerm, setStudentSearchTerm] = useState(() => get('sq'))
+  const [studentSearchTerm, setStudentSearchTerm] = useDebouncedParam(filters, 'sq')
   // Grades the user has deselected (excluded) from the generate list; empty = all grades shown.
   const excludedGrades = get('xgrades') ? get('xgrades').split(',') : []
-  const [reportSearchTerm, setReportSearchTerm] = useState(() => get('rq'))
+  const [reportSearchTerm, setReportSearchTerm] = useDebouncedParam(filters, 'rq')
   const reportGradeFilter = get('rgrade')
   
   const [loading, setLoading] = useState(true)
@@ -448,7 +449,7 @@ const ProgressReportsContent = () => {
                       type="text"
                       placeholder="Search by name..."
                       value={studentSearchTerm}
-                      onChange={(e) => { setStudentSearchTerm(e.target.value); setParams({ sq: e.target.value }); }}
+                      onChange={(e) => setStudentSearchTerm(e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
@@ -499,7 +500,6 @@ const ProgressReportsContent = () => {
                       </span>
                       <button
                         onClick={() => {
-                          setStudentSearchTerm('')
                           setParams({ sq: null, xgrades: null })
                         }}
                         className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
@@ -589,7 +589,7 @@ const ProgressReportsContent = () => {
                         type="text"
                         placeholder="Search by student name..."
                         value={reportSearchTerm}
-                        onChange={(e) => { setReportSearchTerm(e.target.value); setParams({ rq: e.target.value }); setSelectedReportPaths([]); }}
+                        onChange={(e) => { setReportSearchTerm(e.target.value); setSelectedReportPaths([]); }}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -634,7 +634,6 @@ const ProgressReportsContent = () => {
                       </span>
                       <button
                         onClick={() => {
-                          setReportSearchTerm('')
                           setParams({ rq: null, rgrade: null })
                           setSelectedReportPaths([])
                         }}

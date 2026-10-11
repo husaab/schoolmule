@@ -19,11 +19,16 @@ import { useMessagingStore } from '@/store/useMessagingStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
 import type { SenderRole } from '@/services/types/messaging'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }> = ({ classes, role }) => {
   const summary = useMessagingStore((s) => s.summary)
   const [tab, setTab] = useMessagesTab('conversations')
-  const [classId, setClassId] = useState('')
+  // The class scope lives in the URL (?classId=), shared with the gradebook's
+  // "Messages" deep link, so it survives Back and a sidebar re-click.
+  const { get, setParams } = useFilterParams()
+  const classId = get('classId')
+  const setClassId = (next: string) => setParams({ classId: next || null })
 
   return (
     <>

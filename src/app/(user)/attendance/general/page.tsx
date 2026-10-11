@@ -16,12 +16,13 @@ import {
 import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
 import { ClipboardDocumentCheckIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
-import { useFilterParams } from '@/hooks/useFilterParams';
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
 function GeneralAttendanceContent() {
-  const { get, setParams } = useFilterParams();
+  const filters = useFilterParams();
+  const { get, setParams } = filters;
   const [students, setStudents] = useState<StudentPayload[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus | null>>({});
   const user = useUserStore((state) => state.user);
@@ -29,7 +30,7 @@ function GeneralAttendanceContent() {
   const showNotification = useNotificationStore(state => state.showNotification)
 
   // Free-text search keeps local state for snappy typing, seeded from URL.
-  const [searchTerm, setSearchTerm] = useState(() => get('q'));
+  const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q');
   // Filters live in the URL so Back/refresh/share restore them.
   const gradeFilter = get('grade');
 
@@ -248,7 +249,7 @@ function GeneralAttendanceContent() {
                       type="text"
                       placeholder="Search by name..."
                       value={searchTerm}
-                      onChange={(e) => { setSearchTerm(e.target.value); setParams({ q: e.target.value }) }}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 placeholder:text-slate-400"
                     />
                   </div>
@@ -278,7 +279,6 @@ function GeneralAttendanceContent() {
                     </span>
                     <button
                       onClick={() => {
-                        setSearchTerm('')
                         setParams({ q: null, grade: null })
                       }}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"

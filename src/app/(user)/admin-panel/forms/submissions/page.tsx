@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { useFilterParams } from '@/hooks/useFilterParams';
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 import { useGoogleOAuthOutcome } from '@/components/googleSheets/useGoogleOAuthOutcome';
 import * as registrationService from '@/services/registrationService';
 import type { RegistrationForm, FormStatus } from '@/services/types/registration';
@@ -31,11 +31,12 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 function SubmissionsContent() {
   const router = useRouter();
   const showNotification = useNotificationStore((s) => s.showNotification);
-  const { get, setParams } = useFilterParams();
+  const filters = useFilterParams();
+  const { get, setParams } = filters;
   const [forms, setForms] = useState<RegistrationForm[]>([]);
   const [loading, setLoading] = useState(true);
   // Search seeded from URL; status filter is URL source of truth.
-  const [search, setSearch] = useState(() => get('q'));
+  const [search, setSearch] = useDebouncedParam(filters, 'q');
   const statusFilter = get('status', 'all') as FormStatus | 'all';
 
   const fetchForms = useCallback(async () => {
@@ -132,7 +133,7 @@ function SubmissionsContent() {
                   <input
                     type="text"
                     value={search}
-                    onChange={(e) => { setSearch(e.target.value); setParams({ q: e.target.value }); }}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search forms..."
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-white placeholder:text-slate-400 transition-colors"
                   />
@@ -238,7 +239,7 @@ function SubmissionsContent() {
                     <MagnifyingGlassIcon className="w-10 h-10 mx-auto mb-3 text-slate-300" />
                     <p className="text-sm">No forms match your search or filters</p>
                     <button
-                      onClick={() => { setSearch(''); setParams({ q: null, status: null }); }}
+                      onClick={() => { setParams({ q: null, status: null }); }}
                       className="text-xs text-cyan-600 hover:text-cyan-700 font-medium mt-2"
                     >
                       Clear filters
