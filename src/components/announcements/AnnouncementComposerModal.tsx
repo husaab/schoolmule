@@ -1,16 +1,18 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircleIcon, EnvelopeIcon, ExclamationTriangleIcon, LockClosedIcon, MegaphoneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, Field, FieldRow, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useUserStore } from '@/store/useUserStore'
-import { createAnnouncement, getAnnouncementTargets, previewAudience, sendAnnouncementPreviewEmail, updateAnnouncement } from '@/services/announcementService'
-import type { AnnouncementDetail, AnnouncementScope, AnnouncementTargets, AudiencePreview } from '@/services/types/announcement'
+import { createAnnouncement, getAnnouncementTargets, getPickableStudents, previewAudience, sendAnnouncementPreviewEmail, updateAnnouncement } from '@/services/announcementService'
+import type { AnnouncementDetail, AnnouncementScope, AnnouncementSender, AnnouncementTargets, AudiencePreview, PickableStudent } from '@/services/types/announcement'
 import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
 import type { Tone } from '@/components/messaging/tones'
+import StudentPicker from './StudentPicker'
 import { useAnnouncementFiles } from './useAnnouncementFiles'
 
 const MAX_TITLE = 120
@@ -35,11 +37,22 @@ const SCOPE_CARDS: { value: AnnouncementScope; label: string; hint: string; lock
   { value: 'class', label: 'A class', hint: 'Classes you lead or co-teach this year.', locked: 'No classes this year' },
   { value: 'grade', label: 'A grade', hint: 'Every student in the grade.', locked: 'Admins and homeroom teachers only' },
   { value: 'school', label: 'Whole school', hint: 'Every family in the school.', locked: 'Admins only' },
+  { value: 'custom', label: 'Custom', hint: 'Pick the families yourself.', locked: 'No students to pick' },
 ]
+
+/** "Replies go to you, Majida, Fatima and info@…" */
+const replyToLine = (sender: AnnouncementSender) => {
+  const names = sender.replyTo.map((r) => r.name || r.email)
+  const all = sender.includesAuthor ? ['you', ...names] : names
+  if (all.length === 0) return 'Replies are not forwarded anywhere yet.'
+  if (all.length === 1) return `Replies go to ${all[0]}.`
+  return `Replies go to ${all.slice(0, -1).join(', ')} and ${all[all.length - 1]}.`
+}
 
 /**
  * New announcement / Edit announcement. Audience is chosen once (create) and
- * frozen afterwards; title, body, pin date and attachments stay editable.
+ * frozen afterwards, except a custom post whose picked students may change;
+ * title, body, pin date, acknowledgement flag and attachments stay editable.
  * The recipient summary comes from /preview so a teacher sees, before
  * posting, who will be emailed and who has no account.
  */
@@ -54,6 +67,10 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
   const [body, setBody] = useState('')
   const [pinnedUntil, setPinnedUntil] = useState('')
   const [keepAttachments, setKeepAttachments] = useState<string[]>([])
+  const [studentIds, setStudentIds] = useState<string[]>([])
+  const [roster, setRoster] = useState<PickableStudent[] | null>(null)
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [ackRequested, setAckRequested] = useState(false)
   const [preview, setPreview] = useState<AudiencePreview | null>(null)
   const [saving, setSaving] = useState(false)
   const [previewing, setPreviewing] = useState(false)
@@ -74,6 +91,8 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
       setBody(existing.body)
       setPinnedUntil(existing.pinnedUntil ?? '')
       setKeepAttachments(existing.attachments.map((a) => a.attachmentId))
+      setStudentIds((existing.students ?? []).map((s) => s.studentId))
+      setAckRequested(existing.ackRequested)
     } else {
       setScope('class')
       setClassId(presetClassId ?? '')
@@ -82,6 +101,8 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
       setBody('')
       setPinnedUntil('')
       setKeepAttachments([])
+      setStudentIds([])
+      setAckRequested(false)
     }
     resetFiles()
     setPreview(null)
@@ -89,18 +110,19 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     setPreviewTo(myEmail)
   }, [isOpen, mode, existing, presetClassId, resetFiles, myEmail])
 
-  // Create: what may I post to?
+  // What may I post to, and where do replies land? (Both modes: the sender line shows on edit too.)
   useEffect(() => {
-    if (!isOpen || mode !== 'create') return
+    if (!isOpen) return
     let cancelled = false
     getAnnouncementTargets()
       .then((res) => {
         if (cancelled) return
         const t = res.data ?? { classes: [], grades: [], canSchool: false, canCustom: false, sender: null }
         setTargets(t)
+        if (mode !== 'create') return
         setClassId((cur) => (t.classes.some((c) => c.classId === cur) ? cur : t.classes[0]?.classId ?? ''))
         setGrade((cur) => (t.grades.some((g) => g.grade === cur) ? cur : t.grades[0]?.grade ?? ''))
-        setScope((cur) => (cur === 'class' && t.classes.length === 0 ? (t.grades.length ? 'grade' : t.canSchool ? 'school' : 'class') : cur))
+        setScope((cur) => (cur === 'class' && t.classes.length === 0 ? (t.grades.length ? 'grade' : t.canSchool ? 'school' : t.canCustom ? 'custom' : 'class') : cur))
       })
       .catch(() => showNotification('Could not load your classes', 'error'))
     return () => {
@@ -108,19 +130,53 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     }
   }, [isOpen, mode, showNotification])
 
-  // Create: recipient summary for the chosen audience.
+  // Custom: the roster the picker draws from, loaded once per open.
   useEffect(() => {
-    if (!isOpen || mode !== 'create') return
-    if (scope === 'class' && !classId) return
-    if (scope === 'grade' && !grade) return
+    if (!isOpen) {
+      setRoster(null)
+      return
+    }
+    if (scope !== 'custom' || roster !== null) return
     let cancelled = false
-    previewAudience({ scope, classId: scope === 'class' ? classId : undefined, grade: scope === 'grade' ? grade : undefined })
-      .then((res) => !cancelled && setPreview(res.data ?? null))
-      .catch(() => !cancelled && setPreview(null))
+    setRosterLoading(true)
+    getPickableStudents()
+      .then((res) => !cancelled && setRoster(res.data ?? []))
+      .catch(() => {
+        if (cancelled) return
+        setRoster([])
+        showNotification('Could not load students', 'error')
+      })
+      .finally(() => !cancelled && setRosterLoading(false))
     return () => {
       cancelled = true
     }
-  }, [isOpen, mode, scope, classId, grade])
+  }, [isOpen, scope, roster, showNotification])
+
+  // Recipient summary for the chosen audience: on create, and on edit for a custom
+  // post whose selection may change. Debounced so ticking boxes does not spam /preview.
+  const customKey = studentIds.join(',')
+  useEffect(() => {
+    if (!isOpen) return
+    if (mode === 'edit' && scope !== 'custom') return
+    if (scope === 'class' && !classId) return
+    if (scope === 'grade' && !grade) return
+    if (scope === 'custom' && studentIds.length === 0) {
+      setPreview(null)
+      return
+    }
+    let cancelled = false
+    const run = () =>
+      previewAudience({ scope, classId: scope === 'class' ? classId : undefined, grade: scope === 'grade' ? grade : undefined, studentIds: scope === 'custom' ? studentIds : undefined })
+        .then((res) => !cancelled && setPreview(res.data ?? null))
+        .catch(() => !cancelled && setPreview(null))
+    const timer = setTimeout(run, scope === 'custom' ? 300 : 0)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+    // studentIds is compared by value through customKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mode, scope, classId, grade, customKey])
 
   const unlocked = useMemo(
     () => ({
@@ -137,7 +193,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     title.length <= MAX_TITLE &&
     body.trim().length > 0 &&
     body.length <= MAX_BODY &&
-    (mode === 'edit' || scope === 'school' || (scope === 'class' ? Boolean(classId) : Boolean(grade)))
+    (scope === 'custom' ? studentIds.length > 0 : mode === 'edit' || scope === 'school' || (scope === 'class' ? Boolean(classId) : Boolean(grade)))
 
   const previewRecipients = parseRecipients(previewTo)
   const previewTooMany = previewRecipients.length > MAX_PREVIEW_RECIPIENTS
@@ -152,6 +208,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
         scope: audience.scope,
         classId: audience.scope === 'class' ? audience.classId ?? undefined : undefined,
         grade: audience.scope === 'grade' ? audience.grade ?? undefined : undefined,
+        studentIds: audience.scope === 'custom' ? studentIds : undefined,
         title: title.trim(),
         body: body.trim(),
         attachmentCount: files.files.length + keepAttachments.length,
@@ -178,6 +235,8 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
               title: title.trim(),
               body: body.trim(),
               pinnedUntil: pin,
+              ackRequested,
+              studentIds: existing.scope === 'custom' ? studentIds : undefined,
               removeAttachmentIds: existing.attachments.map((a) => a.attachmentId).filter((id) => !keepAttachments.includes(id)),
               files: files.files,
             })
@@ -185,6 +244,8 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
               scope,
               classId: scope === 'class' ? classId : undefined,
               grade: scope === 'grade' ? grade : undefined,
+              studentIds: scope === 'custom' ? studentIds : undefined,
+              ackRequested,
               title: title.trim(),
               body: body.trim(),
               pinnedUntil: pin,
@@ -203,6 +264,8 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
 
   const existingKept = (existing?.attachments ?? []).filter((a) => keepAttachments.includes(a.attachmentId))
   const noEmail = preview?.studentsWithoutEmail ?? []
+  const sender = targets?.sender ?? null
+  const showPicker = scope === 'custom' && (mode === 'create' || existing?.scope === 'custom')
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
@@ -216,7 +279,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
         {mode === 'create' ? (
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Audience</p>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-4">
               {SCOPE_CARDS.map((c) => {
                 const locked = !unlocked[c.value]
                 const active = scope === c.value
@@ -247,10 +310,15 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
         ) : (
           existing && (
             <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              Audience: <strong className="font-medium">{existing.scopeLabel}</strong> (cannot be changed).
+              Audience: <strong className="font-medium">{existing.scopeLabel}</strong>
+              {existing.scope === 'custom'
+                ? '. Adding families emails only them; removing families cancels their pending emails.'
+                : ' (cannot be changed).'}
             </p>
           )
         )}
+
+        {showPicker && <StudentPicker students={roster ?? []} value={studentIds} onChange={setStudentIds} loading={rosterLoading} />}
 
         <FieldRow>
           {mode === 'create' && scope === 'class' && (
@@ -334,7 +402,15 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
           </div>
         </Field>
 
-        {mode === 'create' && preview && (
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <input type="checkbox" checked={ackRequested} onChange={(e) => setAckRequested(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+          <span className="text-xs text-slate-700">
+            Ask families to confirm they&apos;ve read this
+            <span className="text-slate-400"> · adds a &ldquo;Got it&rdquo; button; you see who has acknowledged</span>
+          </span>
+        </label>
+
+        {preview && (
           <div className="space-y-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs text-slate-700">
             <p className="flex items-start gap-2">
               <CheckCircleIcon className="mt-px h-4 w-4 flex-shrink-0 text-emerald-500" />
@@ -357,6 +433,19 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
               Emails go out 2 minutes after posting; edit or delete before then and the email follows.
             </p>
           </div>
+        )}
+        {sender && (
+          <p className="flex items-start gap-2 text-xs text-slate-500">
+            <EnvelopeIcon className="mt-px h-4 w-4 flex-shrink-0 text-slate-400" />
+            <span>
+              Emails come from <strong className="font-medium text-slate-700">{sender.from}</strong>. {replyToLine(sender)}{' '}
+              {sender.canEdit && (
+                <Link href="/admin-panel/school-settings" className="font-medium text-cyan-700 hover:text-cyan-900">
+                  Change the office inboxes
+                </Link>
+              )}
+            </span>
+          </p>
         )}
         {previewOpen && (
           <div className="space-y-2 rounded-xl border border-cyan-100 bg-cyan-50/50 px-3.5 py-3">
