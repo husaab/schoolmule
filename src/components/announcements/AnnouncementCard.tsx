@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef } from 'react'
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
+import { ChatBubbleLeftRightIcon, CheckIcon } from '@heroicons/react/24/outline'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
 import type { AnnouncementAttachment, AnnouncementItem } from '@/services/types/announcement'
@@ -14,12 +14,15 @@ interface Props {
   onToggle: () => void
   onAsk: (item: AnnouncementItem) => void
   onRead: (id: string) => void
+  /** "Got it" and its undo (only rendered when the author asked for it). */
+  onAck: (id: string) => void
+  onUnack: (id: string) => void
 }
 
 const PREVIEW_CHARS = 220
 
 /** One announcement in the parent feed: full body when unread or expanded, clipped otherwise. */
-const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, onToggle, onAsk, onRead }) => {
+const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, onToggle, onAsk, onRead, onAck, onUnack }) => {
   const ref = useRef<HTMLElement>(null)
   const unread = !item.read
   const long = item.body.length > PREVIEW_CHARS
@@ -43,7 +46,7 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
   }, [unread, item.announcementId, onRead])
 
   const child = item.children?.[0] ?? null
-  const askLabel = item.authorRole === 'ADMIN' ? 'Ask about this' : `Ask ${item.authorName} about this`
+  const askLabel = item.authorRole === 'ADMIN' ? 'Reply privately' : `Reply privately to ${item.authorName}`
 
   return (
     <article ref={ref} className={`relative rounded-2xl border bg-white p-4 shadow-sm sm:p-5 ${item.isPinned ? 'border-amber-200' : 'border-stone-200/70'}`}>
@@ -78,16 +81,40 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
             {item.attachmentCount} attachment{item.attachmentCount === 1 ? '' : 's'} · show
           </button>
         )}
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            onClick={() => onAsk(item)}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium cursor-pointer ${
-              unread || item.isPinned ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-stone-200 bg-white text-slate-700 hover:bg-stone-50'
-            }`}
-          >
-            <ChatBubbleLeftRightIcon className="h-4 w-4" /> {askLabel}
-          </button>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {item.ackRequested &&
+            (item.acked ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">
+                  <CheckIcon className="h-3.5 w-3.5" /> You acknowledged this{item.ackedAt ? ` · ${formatDayLabel(item.ackedAt)} ${formatTime(item.ackedAt)}` : ''}
+                </span>
+                <button type="button" onClick={() => onUnack(item.announcementId)} className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer">
+                  Undo
+                </button>
+              </>
+            ) : (
+              <span className="text-xs text-slate-500">{item.authorName} asked families to confirm they&apos;ve read this.</span>
+            ))}
+          <span className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onAsk(item)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium cursor-pointer ${
+                (unread || item.isPinned) && !item.ackRequested ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100' : 'border-stone-200 bg-white text-slate-700 hover:bg-stone-50'
+              }`}
+            >
+              <ChatBubbleLeftRightIcon className="h-4 w-4" /> {askLabel}
+            </button>
+            {item.ackRequested && !item.acked && (
+              <button
+                type="button"
+                onClick={() => onAck(item.announcementId)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-1.5 text-xs font-semibold text-amber-900 hover:from-amber-100 hover:to-orange-100 cursor-pointer"
+              >
+                <CheckIcon className="h-4 w-4" /> Got it
+              </button>
+            )}
+          </span>
         </div>
       </div>
     </article>

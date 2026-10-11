@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { BuildingLibraryIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import { BuildingLibraryIcon, MapPinIcon, UsersIcon } from '@heroicons/react/24/outline'
 import type { AnnouncementChild, AnnouncementItem } from '@/services/types/announcement'
 import { childColor, childInitial } from '@/components/parent/childColors'
 import type { Tone } from '@/components/messaging/tones'
@@ -13,7 +13,7 @@ interface Props {
   child?: AnnouncementChild | null
 }
 
-/** "Amina · Gr 6 Math" / "Grade 6" / "Whole school", plus the pin marker. */
+/** "Amina · Gr 6 Math" / "Grade 6" / "Whole school" / "Selected families", plus the pin marker. */
 const AnnouncementScopeChip: React.FC<Props> = ({ item, tone, child }) => {
   const staff = tone === 'staff'
   const accent = staff ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-amber-200 bg-amber-50 text-amber-800'
@@ -27,6 +27,7 @@ const AnnouncementScopeChip: React.FC<Props> = ({ item, tone, child }) => {
         }`}
       >
         {item.scope === 'school' && <BuildingLibraryIcon className="h-3 w-3" />}
+        {item.scope === 'custom' && !color && <UsersIcon className="h-3 w-3" />}
         {color && child && (
           <span className={`flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br ${color.solid} text-[9px] font-semibold text-white`}>
             {childInitial(child.name)}

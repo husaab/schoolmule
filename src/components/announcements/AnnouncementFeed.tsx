@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { MegaphoneIcon } from '@heroicons/react/24/outline'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
-import { getAnnouncement, listAnnouncements, markAnnouncementRead } from '@/services/announcementService'
+import { acknowledgeAnnouncement, getAnnouncement, listAnnouncements, markAnnouncementRead, unacknowledgeAnnouncement } from '@/services/announcementService'
 import { isApiError } from '@/services/apiClient'
 import type { AnnouncementAttachment, AnnouncementItem } from '@/services/types/announcement'
 import type { Thread } from '@/services/types/messaging'
 import { useMessagingStore } from '@/store/useMessagingStore'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import AnnouncementCard from './AnnouncementCard'
 
@@ -21,7 +22,10 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
   const searchParams = useSearchParams()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const bump = useMessagingStore((s) => s.bump)
+  const showNotification = useNotificationStore((s) => s.showNotification)
   const deepLink = searchParams.get('announcement')
+  // From the email's "Got it" button: acknowledge the deep-linked post once it is on screen.
+  const ackOnArrival = searchParams.get('ack') === '1'
   const [items, setItems] = useState<AnnouncementItem[] | null>(null)
   const [attachments, setAttachments] = useState<Record<string, AnnouncementAttachment[]>>({})
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -81,6 +85,52 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
     },
     [bump],
   )
+
+  const setAck = useCallback((id: string, acked: boolean, ackedAt: string | null) => {
+    setItems((cur) => cur?.map((i) => (i.announcementId === id ? { ...i, acked, ackedAt, read: acked ? true : i.read } : i)) ?? cur)
+  }, [])
+
+  const onAck = useCallback(
+    async (id: string) => {
+      setAck(id, true, new Date().toISOString())
+      try {
+        const res = await acknowledgeAnnouncement(id)
+        setAck(id, true, res.data?.ackedAt ?? new Date().toISOString())
+        void bump()
+      } catch (err) {
+        setAck(id, false, null)
+        showNotification(err instanceof Error ? err.message : 'Could not record that', 'error')
+      }
+    },
+    [bump, setAck, showNotification],
+  )
+
+  const onUnack = useCallback(
+    async (id: string) => {
+      const before = items?.find((i) => i.announcementId === id)?.ackedAt ?? null
+      setAck(id, false, null)
+      try {
+        await unacknowledgeAnnouncement(id)
+      } catch (err) {
+        setAck(id, true, before)
+        showNotification(err instanceof Error ? err.message : 'Could not undo that', 'error')
+      }
+    },
+    [items, setAck, showNotification],
+  )
+
+  // ?ack=1 (from the email): acknowledge once the list holds the post, then drop the flag from the URL.
+  useEffect(() => {
+    if (!ackOnArrival || !deepLink || !items) return
+    const item = items.find((i) => i.announcementId === deepLink)
+    if (!item) return
+    if (item.ackRequested && !item.acked) void onAck(deepLink)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('ack')
+    router.replace(`/parent/messages?${params.toString()}`, { scroll: false })
+    // Runs once the item is present; onAck is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ackOnArrival, deepLink, items])
 
   const toggle = async (item: AnnouncementItem) => {
     setExpanded((cur) => {
@@ -146,6 +196,8 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
               onToggle={() => void toggle(item)}
               onAsk={setAsking}
               onRead={onRead}
+              onAck={onAck}
+              onUnack={onUnack}
             />
           </div>
         ))
