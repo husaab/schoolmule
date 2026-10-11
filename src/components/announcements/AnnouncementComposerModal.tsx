@@ -96,7 +96,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
     getAnnouncementTargets()
       .then((res) => {
         if (cancelled) return
-        const t = res.data ?? { classes: [], grades: [], canSchool: false }
+        const t = res.data ?? { classes: [], grades: [], canSchool: false, canCustom: false, sender: null }
         setTargets(t)
         setClassId((cur) => (t.classes.some((c) => c.classId === cur) ? cur : t.classes[0]?.classId ?? ''))
         setGrade((cur) => (t.grades.some((g) => g.grade === cur) ? cur : t.grades[0]?.grade ?? ''))
@@ -127,6 +127,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
       class: (targets?.classes.length ?? 0) > 0,
       grade: (targets?.grades.length ?? 0) > 0,
       school: Boolean(targets?.canSchool),
+      custom: Boolean(targets?.canCustom),
     }),
     [targets],
   )

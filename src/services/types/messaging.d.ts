@@ -205,11 +205,14 @@ export interface StaffTargets {
   currentTerm: CurrentTerm | null;
   /** Class-scoped picker: false when the class belongs to a past term (teachers cannot start threads about it; admins can). */
   inCurrentTerm?: boolean;
-  students: { studentId: string; name: string; guardians: StaffTargetGuardian[] }[];
+  /** Class-scoped picker: the class itself, so the picker can name it. */
+  class?: { classId: string; subject: string | null; grade: string | null; termName: string | null };
+  /** Roster mode adds grade + the ids of the roster classes the student is in. */
+  students: { studentId: string; name: string; grade?: string | null; classIds?: string[]; guardians: StaffTargetGuardian[] }[];
   /** Class-scoped picker (gradebook): the assessments of that one class. */
-  assessments: StaffTargetAssessment[];
-  /** Student-scoped picker (Students page): the classes the caller teaches the student in. */
-  classes?: { classId: string; subject: string; assessments: StaffTargetAssessment[] }[];
+  assessments?: StaffTargetAssessment[];
+  /** Student-scoped picker (Students page) or roster mode: classes the caller teaches (current term only in roster mode). */
+  classes?: { classId: string; subject: string; grade?: string | null; teacherName?: string | null; assessments?: StaffTargetAssessment[] }[];
 }
 
 export interface ListFilters {

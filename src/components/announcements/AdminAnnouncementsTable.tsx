@@ -18,7 +18,7 @@ import { formatListStamp } from '@/components/messaging/formatters'
 import AnnouncementComposerModal from './AnnouncementComposerModal'
 import DeleteAnnouncementModal from './DeleteAnnouncementModal'
 
-const SCOPE_LABEL: Record<AnnouncementScope, string> = { class: 'Class', grade: 'Grade', school: 'Whole school' }
+const SCOPE_LABEL: Record<AnnouncementScope, string> = { class: 'Class', grade: 'Grade', school: 'Whole school', custom: 'Custom' }
 
 interface Props {
   /** Bumped by the page after a "New announcement" save so the table refetches. */

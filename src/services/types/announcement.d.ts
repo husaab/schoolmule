@@ -7,12 +7,34 @@ export interface AnnouncementResponse<T> {
   code?: string;
 }
 
-export type AnnouncementScope = 'class' | 'grade' | 'school';
+export type AnnouncementScope = 'class' | 'grade' | 'school' | 'custom';
 export type AnnouncementAuthorRole = 'TEACHER' | 'ADMIN';
 
 export interface AnnouncementChild {
   studentId: string;
   name: string;
+  grade?: string | null;
+}
+
+/** One row of the custom-audience picker (GET /announcements/students). */
+export interface PickableStudent {
+  studentId: string;
+  name: string;
+  grade: string | null;
+  classes: { classId: string; subject: string }[];
+  guardianNames: string[];
+  /** At least one guardian address on file (link row or student record). */
+  hasEmail: boolean;
+}
+
+/** Where announcement emails come from and where replies land (GET /announcements/targets). */
+export interface AnnouncementSender {
+  from: string;
+  replyTo: { email: string; name: string | null }[];
+  /** Teachers: their own address is prepended for their posts. */
+  includesAuthor: boolean;
+  /** Admins may change the office list on the school settings page. */
+  canEdit: boolean;
 }
 
 export interface AnnouncementItem {
@@ -22,7 +44,7 @@ export interface AnnouncementItem {
   classSubject: string | null;
   classGrade: string | null;
   grade: string | null;
-  /** "Gr 6 Math" | "Grade 6" | "Whole school" */
+  /** "Gr 6 Math" | "Grade 6" | "Whole school" | "Selected families" */
   scopeLabel: string;
   title: string;
   body: string;
@@ -40,9 +62,18 @@ export interface AnnouncementItem {
   read: boolean;
   /** Author or admin. */
   canEdit: boolean;
+  /** The author asked families to press "Got it". */
+  ackRequested: boolean;
+  /** The caller has acknowledged it. */
+  acked: boolean;
+  ackedAt: string | null;
   /** Staff lists only. */
   seenCount?: number;
   audienceCount?: number;
+  ackCount?: number;
+  /** Custom scope, staff lists: how many students were picked and the first three as "Amina R.". */
+  studentCount?: number;
+  studentNamesPreview?: string[];
   /** Admin lists only: an email for this post failed after retries. */
   emailFailed?: boolean;
   /** Parent lists only: the caller's children in the audience. */
@@ -67,6 +98,7 @@ export interface Receipt {
   relation: string | null;
   studentNames: string[];
   readAt: string | null;
+  ackedAt: string | null;
   state: ReceiptState;
 }
 
@@ -83,12 +115,16 @@ export interface AnnouncementDetail extends AnnouncementItem {
   /** Staff only. */
   receipts?: { seen: Receipt[]; notYet: Receipt[] };
   emails?: AnnouncementEmails;
+  /** Staff only, custom scope: the picked students (for the editor and the "To …" line). */
+  students?: AnnouncementChild[];
 }
 
 export interface AnnouncementTargets {
   classes: { classId: string; subject: string; grade: string | null; studentCount: number }[];
   grades: { grade: string; studentCount: number }[];
   canSchool: boolean;
+  canCustom: boolean;
+  sender: AnnouncementSender | null;
 }
 
 export interface AudiencePreview {
@@ -116,6 +152,9 @@ export interface NewAnnouncementInput {
   scope: AnnouncementScope;
   classId?: string;
   grade?: string;
+  /** Custom scope: the picked students (1–500). */
+  studentIds?: string[];
+  ackRequested?: boolean;
   title: string;
   body: string;
   pinnedUntil?: string | null;
@@ -127,6 +166,7 @@ export interface AnnouncementPreviewEmailInput {
   scope: AnnouncementScope;
   classId?: string;
   grade?: string;
+  studentIds?: string[];
   title: string;
   body: string;
   attachmentCount?: number;
@@ -138,6 +178,9 @@ export type AnnouncementPreviewEmailResponse = AnnouncementResponse<{ sentTo: st
 export interface EditAnnouncementInput {
   title?: string;
   body?: string;
+  /** Custom scope only: the full new selection. */
+  studentIds?: string[];
+  ackRequested?: boolean;
   /** null clears the pin. */
   pinnedUntil?: string | null;
   removeAttachmentIds?: string[];
@@ -151,4 +194,6 @@ export type AudiencePreviewResponse = AnnouncementResponse<AudiencePreview>;
 export type DeleteAnnouncementResponse = AnnouncementResponse<{ announcementId: string; deletedAt: string | null }>;
 export type MarkAnnouncementReadResponse = AnnouncementResponse<{ readAt: string | null }>;
 export type RetryAnnouncementEmailsResponse = AnnouncementResponse<{ requeued: number }>;
+export type PickableStudentsResponse = AnnouncementResponse<PickableStudent[]>;
+export type AcknowledgeAnnouncementResponse = AnnouncementResponse<{ ackedAt: string | null }>;
 export type AnnouncementAttachmentUrlResponse = AnnouncementResponse<{ url: string; fileName: string; mimeType: string }>;

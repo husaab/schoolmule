@@ -20,6 +20,8 @@ import type {
   EditAnnouncementInput,
   MarkAnnouncementReadResponse,
   NewAnnouncementInput,
+  PickableStudentsResponse,
+  AcknowledgeAnnouncementResponse,
   RetryAnnouncementEmailsResponse,
 } from './types/announcement';
 
@@ -66,14 +68,23 @@ export const getAnnouncementTargets = async (): Promise<AnnouncementTargetsRespo
 
 /**
  * Recipient summary for the composer.
- * GET /announcements/preview?scope=&classId=&grade=
+ * GET /announcements/preview?scope=&classId=&grade=   |   POST /announcements/preview { scope: 'custom', studentIds } (ids do not fit a URL)
  */
-export const previewAudience = async (scope: { scope: AnnouncementScope; classId?: string; grade?: string }): Promise<AudiencePreviewResponse> => {
+export const previewAudience = async (scope: { scope: AnnouncementScope; classId?: string; grade?: string; studentIds?: string[] }): Promise<AudiencePreviewResponse> => {
+  if (scope.scope === 'custom') {
+    return apiClient<AudiencePreviewResponse, { scope: 'custom'; studentIds: string[] }>(`${base}/preview`, { method: 'POST', body: { scope: 'custom', studentIds: scope.studentIds ?? [] } });
+  }
   const params = new URLSearchParams({ scope: scope.scope });
   if (scope.classId) params.set('classId', scope.classId);
   if (scope.grade) params.set('grade', scope.grade);
   return apiClient<AudiencePreviewResponse>(`${base}/preview?${params.toString()}`);
 };
+
+/**
+ * The students the caller may hand-pick for a custom audience.
+ * GET /announcements/students
+ */
+export const getPickableStudents = async (): Promise<PickableStudentsResponse> => apiClient<PickableStudentsResponse>(`${base}/students`);
 
 /**
  * Email the author one copy exactly as a guardian will get it. Nothing is posted.
@@ -91,6 +102,8 @@ export const createAnnouncement = async (input: NewAnnouncementInput): Promise<A
   form.set('scope', input.scope);
   if (input.classId) form.set('classId', input.classId);
   if (input.grade) form.set('grade', input.grade);
+  (input.studentIds ?? []).forEach((id) => form.append('studentIds', id));
+  form.set('ackRequested', input.ackRequested ? '1' : '0');
   form.set('title', input.title);
   form.set('body', input.body);
   if (input.pinnedUntil) form.set('pinnedUntil', input.pinnedUntil);
@@ -106,6 +119,8 @@ export const updateAnnouncement = async (id: string, input: EditAnnouncementInpu
   if (input.title !== undefined) form.set('title', input.title);
   if (input.body !== undefined) form.set('body', input.body);
   if (input.pinnedUntil !== undefined) form.set('pinnedUntil', input.pinnedUntil === null ? 'null' : input.pinnedUntil);
+  if (input.ackRequested !== undefined) form.set('ackRequested', input.ackRequested ? '1' : '0');
+  (input.studentIds ?? []).forEach((id) => form.append('studentIds', id));
   (input.removeAttachmentIds ?? []).forEach((a) => form.append('removeAttachmentIds', a));
   return apiUpload<AnnouncementDetailResponse>(one(id), withFiles(form, input.files), { method: 'PATCH' });
 };
@@ -123,6 +138,20 @@ export const deleteAnnouncement = async (id: string): Promise<DeleteAnnouncement
  */
 export const markAnnouncementRead = async (id: string): Promise<MarkAnnouncementReadResponse> =>
   apiClient<MarkAnnouncementReadResponse>(`${one(id)}/read`, { method: 'POST' });
+
+/**
+ * "Got it": the caller (a guardian) acknowledges the announcement; also marks it read.
+ * POST /announcements/:id/ack
+ */
+export const acknowledgeAnnouncement = async (id: string): Promise<AcknowledgeAnnouncementResponse> =>
+  apiClient<AcknowledgeAnnouncementResponse>(`${one(id)}/ack`, { method: 'POST' });
+
+/**
+ * Undo "Got it".
+ * DELETE /announcements/:id/ack
+ */
+export const unacknowledgeAnnouncement = async (id: string): Promise<AcknowledgeAnnouncementResponse> =>
+  apiClient<AcknowledgeAnnouncementResponse>(`${one(id)}/ack`, { method: 'DELETE' });
 
 /**
  * Admin: queue failed emails again.

@@ -77,6 +77,12 @@ export const getStaffTargets = async (classId: string): Promise<StaffTargetsResp
   apiClient<StaffTargetsResponse>(`${base}/targets?classId=${encodeURIComponent(classId)}`);
 
 /**
+ * Staff "New message" with nothing in hand: the caller's current-term classes and the students they may write about.
+ * GET /messaging/conversations/targets
+ */
+export const getStaffRoster = async (): Promise<StaffTargetsResponse> => apiClient<StaffTargetsResponse>(`${base}/targets`);
+
+/**
  * One student's guardians for the picker when no class is in hand (Students page).
  * GET /messaging/conversations/targets?studentId=
  */
