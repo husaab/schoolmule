@@ -19,6 +19,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import { listConversations } from '@/services/messagingService'
 import type { ConversationItem } from '@/services/types/messaging'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { formatListStamp } from '@/components/messaging/formatters'
 
 type StatusFilter = 'open' | 'waiting' | 'resolved'
@@ -26,15 +27,23 @@ const WAITING_HOURS = 48
 
 const hoursSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 3_600_000
 
+const STATUS_FILTERS: StatusFilter[] = ['open', 'waiting', 'resolved']
+const isStatusFilter = (value: string): value is StatusFilter => (STATUS_FILTERS as string[]).includes(value)
+
 const ConversationsOversight: React.FC = () => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  // Filters live in the URL (and the page's filter memory) next to ?tab=.
+  // The announcements table uses a-prefixed keys so the two never collide.
+  const filters = useFilterParams()
+  const { get, setParams } = filters
   // Loading is derived: the result carries the key it was fetched for, so a
   // filter change shows the skeleton without a setState inside the effect.
   const [result, setResult] = useState<{ key: string; items: ConversationItem[] } | null>(null)
-  const [status, setStatus] = useState<StatusFilter>('open')
-  const [teacher, setTeacher] = useState('')
-  const [subject, setSubject] = useState('')
-  const [q, setQ] = useState('')
+  const urlStatus = get('status', 'open')
+  const status: StatusFilter = isStatusFilter(urlStatus) ? urlStatus : 'open'
+  const teacher = get('teacher')
+  const subject = get('subject')
+  const [q, setQ] = useDebouncedParam(filters, 'q')
 
   const fetchKey = `${status}|${selectedYearId ?? ''}`
   useEffect(() => {
@@ -88,11 +97,11 @@ const ConversationsOversight: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(['open', 'waiting', 'resolved'] as StatusFilter[]).map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <button
             key={s}
             type="button"
-            onClick={() => setStatus(s)}
+            onClick={() => setParams({ status: s === 'open' ? null : s })}
             className={`rounded-full border px-3 py-1.5 text-xs transition-colors cursor-pointer ${
               status === s ? 'bg-cyan-50 border-cyan-200 text-cyan-800 font-medium' : 'border-slate-200 text-slate-500 hover:bg-white'
             }`}
@@ -100,7 +109,7 @@ const ConversationsOversight: React.FC = () => {
             {s === 'open' ? 'Open' : s === 'waiting' ? `Waiting > ${WAITING_HOURS}h` : 'Resolved'}
           </button>
         ))}
-        <select value={teacher} onChange={(e) => setTeacher(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
+        <select value={teacher} onChange={(e) => setParams({ teacher: e.target.value })} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
           <option value="">All teachers</option>
           {teachers.map((t) => (
             <option key={t} value={t}>
@@ -108,7 +117,7 @@ const ConversationsOversight: React.FC = () => {
             </option>
           ))}
         </select>
-        <select value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
+        <select value={subject} onChange={(e) => setParams({ subject: e.target.value })} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
           <option value="">All subjects</option>
           {subjects.map((s) => (
             <option key={s} value={s}>

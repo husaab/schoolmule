@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { Suspense, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useFilterParams } from '@/hooks/useFilterParams'
 import { getPlannerConfig, listSchedules } from '@/services/schedulePlannerService'
 import { getSchoolByCode } from '@/services/schoolService'
 import type { PlannerConfig, ScheduleSummary } from '@/services/types/schedulePlanner'
@@ -27,13 +28,19 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key']
 
-const SchedulePlannerPage = () => {
+const isTabKey = (value: string): value is TabKey => TABS.some((tab) => tab.key === value)
+
+const SchedulePlannerContent = () => {
   const router = useRouter()
   const user = useUserStore((state) => state.user)
   const hasHydrated = useUserStore((state) => state.hasHydrated)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
-  const [activeTab, setActiveTab] = useState<TabKey>('schedules')
+  // The active tab lives in the URL (and the page's filter memory); the
+  // Schedules tab is the default and is omitted.
+  const { get, setParams } = useFilterParams()
+  const urlTab = get('tab', 'schedules')
+  const activeTab: TabKey = isTabKey(urlTab) ? urlTab : 'schedules'
   const [config, setConfig] = useState<PlannerConfig | null>(null)
   const [schedules, setSchedules] = useState<ScheduleSummary[]>([])
   const [schoolSlug, setSchoolSlug] = useState<string | null>(null)
@@ -97,7 +104,7 @@ const SchedulePlannerPage = () => {
                 {TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => setParams({ tab: tab.key === 'schedules' ? null : tab.key })}
                     className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition cursor-pointer ${
                       activeTab === tab.key
                         ? 'text-cyan-700 border-b-2 border-cyan-600'
@@ -151,5 +158,11 @@ const SchedulePlannerPage = () => {
     </>
   )
 }
+
+const SchedulePlannerPage = () => (
+  <Suspense fallback={<main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen" />}>
+    <SchedulePlannerContent />
+  </Suspense>
+)
 
 export default SchedulePlannerPage

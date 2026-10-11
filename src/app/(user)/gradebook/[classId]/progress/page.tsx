@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { Suspense, useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -18,6 +18,7 @@ import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import { gradeBand, readStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades'
 import { formatCoverage } from '@/lib/gradeEngine'
+import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams'
 
 import {
   UserGroupIcon,
@@ -59,17 +60,22 @@ interface EditedProgress {
   comment?: string
 }
 
-const BulkProgressPage = () => {
+const BulkProgressPageContent = () => {
   const { classId } = useParams() as { classId: string }
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  // Back returns to the gradebook list exactly as the teacher left it.
+  const gradebookHref = useRememberedHref('/gradebook')
+  // The term lives in the URL (?term=) so Back and refresh keep it; it is
+  // anchored to the class's own term once the class loads (see below).
+  const { get, setParams } = useFilterParams()
+  const selectedTerm = get('term')
 
   // Data state
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
-  const [selectedTerm, setSelectedTerm] = useState<string>('')
 
   // Progress feedback state: Map of studentId -> feedback data
   const [existingFeedback, setExistingFeedback] = useState<Map<string, ClassProgressReportFeedbackEntry>>(new Map())
@@ -137,9 +143,6 @@ const BulkProgressPage = () => {
         }
         setStudents(stuRes.data)
 
-        // A class belongs to exactly one term — progress feedback is always
-        // entered for that term, never a teacher-selected one.
-        setSelectedTerm(classRes.data.termName)
       })
       .catch((err) => {
         console.error(err)
@@ -149,6 +152,13 @@ const BulkProgressPage = () => {
         setLoading(false)
       })
   }, [classId, user?.school, selectedYearId]) // refetch when the selected school year changes
+
+  // A class belongs to exactly one term — feedback is always entered for
+  // that term, never a teacher-selected one. Anchor the URL to the class's term.
+  const classTerm = classData?.termName ?? ''
+  useEffect(() => {
+    if (classTerm && selectedTerm !== classTerm) setParams({ term: classTerm })
+  }, [classTerm, selectedTerm, setParams])
 
   // Load feedback when term changes
   useEffect(() => {
@@ -426,7 +436,7 @@ const BulkProgressPage = () => {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Page</h3>
               <p className="text-red-600 mb-6">{error}</p>
               <button
-                onClick={() => router.push('/gradebook')}
+                onClick={() => router.push(gradebookHref)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
@@ -866,5 +876,13 @@ const BulkProgressPage = () => {
     </>
   )
 }
+
+// useFilterParams reads the search params, so the page body needs a Suspense
+// boundary for the static prerender.
+const BulkProgressPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <BulkProgressPageContent />
+  </Suspense>
+)
 
 export default BulkProgressPage

@@ -13,6 +13,7 @@ import { getAnnouncement, listAnnouncements, retryAnnouncementEmails } from '@/s
 import type { AnnouncementDetail, AnnouncementItem, AnnouncementScope } from '@/services/types/announcement'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { formatListStamp } from '@/components/messaging/formatters'
 import AnnouncementComposerModal from './AnnouncementComposerModal'
 import DeleteAnnouncementModal from './DeleteAnnouncementModal'
@@ -24,17 +25,26 @@ interface Props {
   refreshKey?: number
 }
 
+const SCOPES = Object.keys(SCOPE_LABEL) as AnnouncementScope[]
+const isScope = (value: string): value is AnnouncementScope => (SCOPES as string[]).includes(value)
+
 const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  // Filters live in the URL (and the page's filter memory). Keys are
+  // a-prefixed because this table shares /admin-panel/messages?tab= with
+  // the conversations table and must never collide with its keys.
+  const filters = useFilterParams()
+  const { get, setParams } = filters
   const showNotification = useNotificationStore((s) => s.showNotification)
   // Loading is derived: the result carries the key it was fetched for.
   const [result, setResult] = useState<{ key: string; items: AnnouncementItem[] } | null>(null)
   const [reload, setReload] = useState(0)
-  const [author, setAuthor] = useState('')
-  const [scope, setScope] = useState<'' | AnnouncementScope>('')
-  const [grade, setGrade] = useState('')
-  const [failedOnly, setFailedOnly] = useState(false)
-  const [q, setQ] = useState('')
+  const author = get('aauthor')
+  const urlScope = get('ascope')
+  const scope: '' | AnnouncementScope = isScope(urlScope) ? urlScope : ''
+  const grade = get('agrade')
+  const failedOnly = get('afailed') === '1'
+  const [q, setQ] = useDebouncedParam(filters, 'aq')
   const [editing, setEditing] = useState<AnnouncementDetail | null>(null)
   const [deleting, setDeleting] = useState<AnnouncementItem | null>(null)
 
@@ -103,7 +113,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
       <div className="flex flex-wrap items-center gap-2">
         <label className="block">
           <span className="sr-only">Author</span>
-          <select value={author} onChange={(e) => setAuthor(e.target.value)} className={select}>
+          <select value={author} onChange={(e) => setParams({ aauthor: e.target.value })} className={select}>
             <option value="">All authors</option>
             {authors.map((a) => (
               <option key={a} value={a}>
@@ -114,9 +124,9 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
         </label>
         <label className="block">
           <span className="sr-only">Scope</span>
-          <select value={scope} onChange={(e) => setScope(e.target.value as '' | AnnouncementScope)} className={select}>
+          <select value={scope} onChange={(e) => setParams({ ascope: e.target.value })} className={select}>
             <option value="">All scopes</option>
-            {(Object.keys(SCOPE_LABEL) as AnnouncementScope[]).map((s) => (
+            {SCOPES.map((s) => (
               <option key={s} value={s}>
                 {SCOPE_LABEL[s]}
               </option>
@@ -125,7 +135,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
         </label>
         <label className="block">
           <span className="sr-only">Grade</span>
-          <select value={grade} onChange={(e) => setGrade(e.target.value)} className={select}>
+          <select value={grade} onChange={(e) => setParams({ agrade: e.target.value })} className={select}>
             <option value="">All grades</option>
             {grades.map((g) => (
               <option key={g} value={g}>
@@ -136,7 +146,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
         </label>
         <button
           type="button"
-          onClick={() => setFailedOnly((v) => !v)}
+          onClick={() => setParams({ afailed: failedOnly ? null : '1' })}
           className={`rounded-full border px-3 py-1.5 text-xs transition-colors cursor-pointer ${failedOnly ? 'border-rose-200 bg-rose-50 text-rose-700 font-medium' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
         >
           Email failed

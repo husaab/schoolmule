@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react'
+import React, { Suspense, useState, useEffect, useCallback, useRef, ChangeEvent } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -61,12 +61,15 @@ import {
 } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 import MenuButton from '@/components/shared/MenuButton';
+import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams';
 
 
-const GradebookClass = () => {
+const GradebookClassContent = () => {
   const { classId } = useParams() as { classId: string }
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
+  // Back returns to the gradebook list exactly as the teacher left it.
+  const gradebookHref = useRememberedHref('/gradebook')
 
   const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
@@ -112,8 +115,12 @@ const GradebookClass = () => {
   const [publishTargets, setPublishTargets] = useState<AssessmentPayload[]>([])
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
 
-  // In-page view switch: grade entry vs. assessment management
-  const [activeView, setActiveView] = useState<'grades' | 'assessments'>('grades')
+  // In-page view switch: grade entry vs. assessment management. Lives in the
+  // URL (?view=assessments; the default is omitted) so Back and refresh keep it.
+  const { get, setParams } = useFilterParams()
+  const activeView: 'grades' | 'assessments' = get('view') === 'assessments' ? 'assessments' : 'grades'
+  const setActiveView = (view: 'grades' | 'assessments') =>
+    setParams({ view: view === 'grades' ? null : view })
   const assessmentsChangedRef = useRef(false)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -338,7 +345,7 @@ const GradebookClass = () => {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Gradebook</h3>
               <p className="text-red-600 mb-6">{error}</p>
               <button
-                onClick={() => router.push('/gradebook')}
+                onClick={() => router.push(gradebookHref)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
@@ -682,10 +689,10 @@ const GradebookClass = () => {
                       if (hasUnsavedChanges) {
                         const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?')
                         if (confirmLeave) {
-                          router.push('/gradebook')
+                          router.push(gradebookHref)
                         }
                       } else {
-                        router.push('/gradebook')
+                        router.push(gradebookHref)
                       }
                     }}
                     className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -1224,5 +1231,13 @@ const GradebookClass = () => {
     </>
   )
 }
+
+// useFilterParams reads the search params, so the page body needs a Suspense
+// boundary for the static prerender.
+const GradebookClass = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <GradebookClassContent />
+  </Suspense>
+)
 
 export default GradebookClass

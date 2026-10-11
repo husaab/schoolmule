@@ -4,10 +4,11 @@ import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Spinner from '@/components/Spinner';
 import { useUserStore } from '@/store/useUserStore';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { getAllParentStudents } from '@/services/parentStudentService';
 import { ParentStudentPayload } from '@/services/types/parentStudent';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 import AddRelationModal, { PresetStudent } from '@/components/relation/add/page';
 import DeleteRelationModal from '@/components/relation/delete/page';
 import EditRelationModal from '@/components/relation/edit/page';
@@ -28,13 +29,16 @@ interface FamilyGroup {
   relations: ParentStudentPayload[];
 }
 
-const ParentStudentRelationsPage = () => {
+const ParentStudentRelationsContent = () => {
   const user = useUserStore((state) => state.user);
+  // Search and grade live in the URL (and the page's filter memory).
+  const filters = useFilterParams();
+  const { get, setParams } = filters;
   const notify = useNotificationStore((s) => s.showNotification);
   const [relations, setRelations] = useState<ParentStudentPayload[]>([]);
   const [loading, setLoading] = useState(true);
-  const [gradeFilter, setGradeFilter] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const gradeFilter = get('grade');
+  const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addPresetStudent, setAddPresetStudent] = useState<PresetStudent | null>(null);
   const [deletingRelation, setDeletingRelation] = useState<ParentStudentPayload | null>(null);
@@ -169,7 +173,7 @@ const ParentStudentRelationsPage = () => {
             </div>
             <select
               value={gradeFilter}
-              onChange={e => setGradeFilter(e.target.value)}
+              onChange={e => setParams({ grade: e.target.value })}
               className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer"
             >
               <option value="">All Grades</option>
@@ -326,5 +330,11 @@ const ParentStudentRelationsPage = () => {
     </>
   );
 };
+
+const ParentStudentRelationsPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <ParentStudentRelationsContent />
+  </Suspense>
+);
 
 export default ParentStudentRelationsPage;

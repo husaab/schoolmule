@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChatBubbleLeftRightIcon,
   DocumentArrowDownIcon,
@@ -24,6 +24,7 @@ import ChildJumpNav from '@/components/parent/ChildJumpNav'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 const Chip: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-stone-50 border border-stone-200 text-slate-600">
@@ -70,18 +71,21 @@ const ChildFeedbackSection: React.FC<ChildFeedbackSectionProps> = ({
   onSubjectsLoaded,
 }) => {
   const [feedback, setFeedback] = useState<ChildFeedback | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
+  // Loading is derived: the feedback on screen belongs to `loadedFor`, so any
+  // other child/year combination is still in flight.
+  const fetchKey = `${child.studentId}|${selectedYearId ?? ''}`
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const loading = loadedFor !== fetchKey
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
     getChildFeedback(child.studentId)
       .then((res) => {
         const data = res.data || null
         setFeedback(data)
+        setError(null)
         const subjects = [
           ...(data?.progressFeedback.map((f) => f.subject) ?? []),
           ...(data?.reportCardFeedback.map((f) => f.subject) ?? []),
@@ -92,8 +96,8 @@ const ChildFeedbackSection: React.FC<ChildFeedbackSectionProps> = ({
         console.error(err)
         setError('Failed to load feedback.')
       })
-      .finally(() => setLoading(false))
-  }, [child.studentId, selectedYearId, onSubjectsLoaded])
+      .finally(() => setLoadedFor(fetchKey))
+  }, [child.studentId, selectedYearId, fetchKey, onSubjectsLoaded])
 
   const openProgressReport = async (filePath: string | null) => {
     if (!filePath) return
@@ -267,18 +271,24 @@ const TermNameFilter: React.FC<{
   )
 }
 
-const ParentFeedbackPage: React.FC = () => {
-  const [termFilter, setTermFilter] = useState('')
-  const [subjectFilter, setSubjectFilter] = useState('')
+const ParentFeedbackContent: React.FC = () => {
+  // Filters live in the URL (?term=&subject=) so Back, refresh and the
+  // sidebar's filter memory all restore them.
+  const { get, setParams } = useFilterParams()
+  const termFilter = get('term')
+  const subjectFilter = get('subject')
   const [subjectsByChild, setSubjectsByChild] = useState<Record<string, string[]>>({})
   const visibleChildren = useVisibleChildren()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
-  // Filter values from one year may not exist in another — reset on year change.
+  // Filter values from one year may not exist in another — reset on year
+  // change (not on the first render, where the URL may carry valid values).
+  const seenYearRef = useRef(selectedYearId)
   useEffect(() => {
-    setTermFilter('')
-    setSubjectFilter('')
-  }, [selectedYearId])
+    if (seenYearRef.current === selectedYearId) return
+    seenYearRef.current = selectedYearId
+    setParams({ term: null, subject: null })
+  }, [selectedYearId, setParams])
 
   const onSubjectsLoaded = useCallback((studentId: string, subjects: string[]) => {
     setSubjectsByChild((prev) =>
@@ -293,22 +303,20 @@ const ParentFeedbackPage: React.FC = () => {
     return [...new Set(all)].sort((a, b) => a.localeCompare(b))
   }, [visibleChildren, subjectsByChild])
 
+  // Drop a stale subject filter only once the subject list has loaded, so a
+  // deep link (or the remembered filter) survives the first render.
   useEffect(() => {
     if (subjectFilter && subjects.length > 0 && !subjects.includes(subjectFilter)) {
-      setSubjectFilter('')
+      setParams({ subject: null })
     }
-  }, [subjects, subjectFilter])
+  }, [subjects, subjectFilter, setParams])
 
   return (
-    <ParentPageShell
-      title="Teacher Feedback"
-      subtitle="Work habits, behavior and comments from your children's teachers."
-      badge={{ icon: ChatBubbleLeftRightIcon, label: 'Feedback' }}
-    >
+    <>
       <ParentFilterBar>
         <select
           value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
+          onChange={(e) => setParams({ subject: e.target.value || null })}
           className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
         >
           <option value="">All classes</option>
@@ -318,7 +326,7 @@ const ParentFeedbackPage: React.FC = () => {
             </option>
           ))}
         </select>
-        <TermNameFilter value={termFilter} onChange={setTermFilter} />
+        <TermNameFilter value={termFilter} onChange={(name) => setParams({ term: name || null })} />
       </ParentFilterBar>
 
       <ChildSections
@@ -332,8 +340,20 @@ const ParentFeedbackPage: React.FC = () => {
         )}
       />
       <ChildJumpNav />
-    </ParentPageShell>
+    </>
   )
 }
+
+const ParentFeedbackPage: React.FC = () => (
+  <ParentPageShell
+    title="Teacher Feedback"
+    subtitle="Work habits, behavior and comments from your children's teachers."
+    badge={{ icon: ChatBubbleLeftRightIcon, label: 'Feedback' }}
+  >
+    <Suspense fallback={<div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />}>
+      <ParentFeedbackContent />
+    </Suspense>
+  </ParentPageShell>
+)
 
 export default ParentFeedbackPage

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -15,6 +15,7 @@ import ParentPageShell from '@/components/parent/ParentPageShell'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
 import { childColor, childInitial } from '@/components/parent/childColors'
+import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams'
 import {
   EyeIcon,
   ArrowDownTrayIcon,
@@ -31,29 +32,38 @@ type ReportCardRow = {
   grade: string
 }
 
-const ParentStudentReportCardsPage: React.FC = () => {
+const ParentStudentReportCardsContent: React.FC = () => {
   const router = useRouter()
   const { studentId } = useParams() as { studentId: string }
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore(state => state.showNotification)
+  // The term lives in the URL (?term=) so Back, refresh and the list's filter
+  // memory all restore it; Back returns to the list as the parent left it.
+  const { get, setParams } = useFilterParams()
+  const term = get('term')
+  const backHref = useRememberedHref('/parent/report-cards')
 
   const [student, setStudent] = useState<ParentStudentPayload | null>(null)
   const [reportCards, setReportCards] = useState<ReportCardRow[]>([])
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [loadingTerms, setLoadingTerms] = useState(false)
-  const [loadingReports, setLoadingReports] = useState(false)
-  const [term, setTerm] = useState<string>('')
   const [viewingUrl, setViewingUrl] = useState<string | null>(null)
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
+  // Loading flags are derived: what is on screen belongs to the key it was
+  // loaded for, so any other parent/child/year (or term) is still in flight.
+  const studentKey = `${user.id}|${user.school ?? ''}|${studentId}|${selectedYearId ?? ''}`
+  const [studentLoadedFor, setStudentLoadedFor] = useState<string | null>(null)
+  const loading = studentLoadedFor !== studentKey
+  const reportsKey = `${studentId}|${term}`
+  const [reportsLoadedFor, setReportsLoadedFor] = useState<string | null>(null)
+  const loadingReports = !!student && !!term && reportsLoadedFor !== reportsKey
 
   // Verify the student belongs to this parent and fetch initial data
   useEffect(() => {
     if (!user.id || !studentId) return
 
-    setLoading(true)
     getStudentsByParentId(user.id)
       .then((res) => {
         const childData = res.data?.find(child => child.studentId === studentId)
@@ -61,6 +71,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
           setError('Student not found or access denied.')
           return
         }
+        setError(null)
         setStudent(childData)
 
         // Fetch terms for the school
@@ -70,23 +81,6 @@ const ParentStudentReportCardsPage: React.FC = () => {
       .then((termsRes) => {
         if (termsRes?.status === 'success') {
           setTerms(termsRes.data)
-
-          // Default term: the JWT's active term only if it exists in this
-          // (year-scoped) list, else the list's active term, else the first —
-          // a past year has no active term and may not contain activeTerm's name.
-          const names = termsRes.data.map(t => t.name)
-          if (user.activeTerm && names.includes(user.activeTerm)) {
-            setTerm(user.activeTerm)
-          } else {
-            const activeTerm = termsRes.data.find(t => t.isActive)
-            if (activeTerm) {
-              setTerm(activeTerm.name)
-            } else if (termsRes.data.length > 0) {
-              setTerm(termsRes.data[0].name)
-            } else {
-              setTerm('')
-            }
-          }
         } else {
           showNotification('Failed to load terms', 'error')
         }
@@ -96,16 +90,30 @@ const ParentStudentReportCardsPage: React.FC = () => {
         setError('Failed to load student data.')
       })
       .finally(() => {
-        setLoading(false)
+        setStudentLoadedFor(studentKey)
         setLoadingTerms(false)
       })
-  }, [user.id, user.school, user.activeTerm, studentId, showNotification, selectedYearId])
+  }, [user.id, user.school, studentId, studentKey, showNotification, selectedYearId])
+
+  // Default term once the (year-scoped) list is in, unless the URL already
+  // names one of its terms: the JWT's active term if it exists in this list,
+  // else the list's active term, else the first — a past year has no active
+  // term and may not contain activeTerm's name.
+  useEffect(() => {
+    if (terms.length === 0) return
+    const names = terms.map(t => t.name)
+    if (term && names.includes(term)) return
+    const fallback =
+      user.activeTerm && names.includes(user.activeTerm)
+        ? user.activeTerm
+        : (terms.find(t => t.isActive) ?? terms[0]).name
+    setParams({ term: fallback })
+  }, [terms, term, user.activeTerm, setParams])
 
   // Fetch report cards when term is selected
   useEffect(() => {
     if (!student || !term) return
 
-    setLoadingReports(true)
     getGeneratedReportCardsByStudentId(studentId, term)
       .then((res) => {
         if (res.status === 'success') {
@@ -117,9 +125,9 @@ const ParentStudentReportCardsPage: React.FC = () => {
         showNotification('Error loading report cards', 'error')
       })
       .finally(() => {
-        setLoadingReports(false)
+        setReportsLoadedFor(reportsKey)
       })
-  }, [student, term, studentId, showNotification])
+  }, [student, term, studentId, reportsKey, showNotification])
 
   const handlePreview = async (filePath: string) => {
     if (signedUrls[filePath]) {
@@ -176,7 +184,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
       badge={{ icon: DocumentChartBarIcon, label: 'Report Cards' }}
     >
       <button
-        onClick={() => router.push('/parent/report-cards')}
+        onClick={() => router.push(backHref)}
         className="flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 mb-6 cursor-pointer"
       >
         <ArrowLeftIcon className="h-4 w-4" />
@@ -215,7 +223,7 @@ const ParentStudentReportCardsPage: React.FC = () => {
               ) : (
                 <select
                   value={term}
-                  onChange={(e) => setTerm(e.target.value)}
+                  onChange={(e) => setParams({ term: e.target.value || null })}
                   className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
                   required
                 >
@@ -300,5 +308,21 @@ const ParentStudentReportCardsPage: React.FC = () => {
     </ParentPageShell>
   )
 }
+
+const ParentStudentReportCardsPage: React.FC = () => (
+  <Suspense
+    fallback={
+      <ParentPageShell
+        title="Report Cards"
+        subtitle="View and download report cards."
+        badge={{ icon: DocumentChartBarIcon, label: 'Report Cards' }}
+      >
+        <div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />
+      </ParentPageShell>
+    }
+  >
+    <ParentStudentReportCardsContent />
+  </Suspense>
+)
 
 export default ParentStudentReportCardsPage

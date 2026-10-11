@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { Suspense, useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -32,7 +32,8 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
-import Link from 'next/link'
+import BackLink from '@/components/shared/BackLink'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -56,7 +57,7 @@ const SK_REPORT_CARD_RATINGS = [
 
 type TabType = 'progress_report' | 'report_card'
 
-const SKGradebook = () => {
+const SKGradebookContent = () => {
   const { classId } = useParams() as { classId: string }
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -69,9 +70,13 @@ const SKGradebook = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Selection state
-  const [activeTab, setActiveTab] = useState<TabType>('progress_report')
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
+  // Selection state lives in the URL (?tab=report_card&student=; the default
+  // tab is omitted) so Back, refresh and the filter memory restore it.
+  const { get, setParams } = useFilterParams()
+  const activeTab: TabType = get('tab') === 'report_card' ? 'report_card' : 'progress_report'
+  const selectedStudentId = get('student') || null
+  const setActiveTab = (tab: TabType) => setParams({ tab: tab === 'progress_report' ? null : tab })
+  const setSelectedStudentId = (studentId: string) => setParams({ student: studentId })
 
   // Rating state: standardId -> rating
   const [ratings, setRatings] = useState<Record<string, string>>({})
@@ -99,16 +104,18 @@ const SKGradebook = () => {
     Promise.all([getClassById(classId), getStudentsInClass(classId)])
       .then(([classRes, stuRes]) => {
         if (classRes.status === 'success') setClassData(classRes.data)
-        if (stuRes.status === 'success') {
-          setStudents(stuRes.data)
-          if (stuRes.data.length > 0) {
-            setSelectedStudentId(stuRes.data[0].studentId)
-          }
-        }
+        if (stuRes.status === 'success') setStudents(stuRes.data)
       })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [classId])
+
+  // Start on the first student unless the URL already names one in this class.
+  useEffect(() => {
+    if (students.length === 0) return
+    if (selectedStudentId && students.some((s) => s.studentId === selectedStudentId)) return
+    setParams({ student: students[0].studentId })
+  }, [students, selectedStudentId, setParams])
 
   // Load subjects when tab changes
   useEffect(() => {
@@ -419,13 +426,13 @@ const SKGradebook = () => {
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <Link
-              href="/gradebook"
+            <BackLink
+              to="/gradebook"
               className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3"
             >
               <ArrowLeftIcon className="w-4 h-4" />
               Back to Gradebook
-            </Link>
+            </BackLink>
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">
@@ -762,5 +769,13 @@ const SKGradebook = () => {
     </>
   )
 }
+
+// useFilterParams reads the search params, so the page body needs a Suspense
+// boundary for the static prerender.
+const SKGradebook = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <SKGradebookContent />
+  </Suspense>
+)
 
 export default SKGradebook

@@ -6,7 +6,7 @@
 // Signups who haven't verified their email sit in their own section below the
 // queue: they can't be approved yet, but the admin can resend or vouch.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -23,6 +23,7 @@ import { changeSignupRole, getApprovals, resendVerification } from '@/services/a
 import { isApiError } from '@/services/apiClient'
 import { ApprovalUser, SignupRole } from '@/services/types/adminApproval'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import {
   ArchiveBoxXMarkIcon,
   ArrowUturnLeftIcon,
@@ -69,15 +70,18 @@ const MatchedChildren = ({ students }: { students: ApprovalUser['matchedChildren
   )
 }
 
-const ApprovalsPage = () => {
+const ApprovalsContent = () => {
   const notify = useNotificationStore((s) => s.showNotification)
+  // Tab, role and search live in the URL (and the page's filter memory).
+  const filters = useFilterParams()
+  const { get, setParams } = filters
   const [users, setUsers] = useState<ApprovalUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [tab, setTab] = useState<Tab>('pending')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
-  const [search, setSearch] = useState('')
+  const tab = get('tab', 'pending') as Tab
+  const roleFilter = get('role', 'ALL') as RoleFilter
+  const [search, setSearch] = useDebouncedParam(filters, 'q')
 
   const [reviewing, setReviewing] = useState<ApprovalUser | null>(null)
   const [declining, setDeclining] = useState<ApprovalUser | null>(null)
@@ -244,7 +248,7 @@ const ApprovalsPage = () => {
                   <button
                     role="tab"
                     aria-selected={tab === 'pending'}
-                    onClick={() => setTab('pending')}
+                    onClick={() => setParams({ tab: null })}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                       tab === 'pending' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                     }`}
@@ -255,7 +259,7 @@ const ApprovalsPage = () => {
                   <button
                     role="tab"
                     aria-selected={tab === 'declined'}
-                    onClick={() => setTab('declined')}
+                    onClick={() => setParams({ tab: 'declined' })}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                       tab === 'declined' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                     }`}
@@ -274,7 +278,7 @@ const ApprovalsPage = () => {
                         key={t.value}
                         role="tab"
                         aria-selected={active}
-                        onClick={() => setRoleFilter(t.value)}
+                        onClick={() => setParams({ role: t.value === 'ALL' ? null : t.value })}
                         className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                           active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                         }`}
@@ -325,10 +329,7 @@ const ApprovalsPage = () => {
                 action={
                   hasFilters ? (
                     <button
-                      onClick={() => {
-                        setSearch('')
-                        setRoleFilter('ALL')
-                      }}
+                      onClick={() => setParams({ q: null, role: null })}
                       className="text-sm font-medium text-cyan-600 hover:text-cyan-700 cursor-pointer"
                     >
                       Clear filters
@@ -564,5 +565,11 @@ const ApprovalsPage = () => {
     </>
   )
 }
+
+const ApprovalsPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <ApprovalsContent />
+  </Suspense>
+)
 
 export default ApprovalsPage

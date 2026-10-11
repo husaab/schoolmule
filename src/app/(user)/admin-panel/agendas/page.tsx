@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useUserStore } from '@/store/useUserStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import {
   getAgendasBySchool,
   createAgenda,
@@ -34,7 +35,7 @@ const buildYearOptions = (): string[] => {
   return [0, 1, 2].map((offset) => `${baseYear + offset}-${baseYear + offset + 1}`);
 };
 
-const AgendasPage = () => {
+const AgendasContent = () => {
   const user = useUserStore((state) => state.user);
   const showNotification = useNotificationStore((state) => state.showNotification);
 
@@ -42,7 +43,14 @@ const AgendasPage = () => {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [cloneSource, setCloneSource] = useState<AgendaPayload | null>(null);
-  const [selectedYear, setSelectedYear] = useState(buildYearOptions()[0]);
+  // The year picker lives in the URL (and the page's filter memory); the
+  // first option is the default and is omitted from the URL.
+  const { get, setParams } = useFilterParams();
+  const yearOptions = useMemo(buildYearOptions, []);
+  const defaultYear = yearOptions[0];
+  const urlYear = get('year', defaultYear);
+  const selectedYear = yearOptions.includes(urlYear) ? urlYear : defaultYear;
+  const setSelectedYear = (year: string) => setParams({ year: year === defaultYear ? null : year });
   const [busy, setBusy] = useState(false);
 
   const fetchAgendas = useCallback(async () => {
@@ -207,7 +215,7 @@ const AgendasPage = () => {
                 onChange={(e) => setSelectedYear(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                {buildYearOptions().map((y) => (
+                {yearOptions.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
@@ -233,5 +241,11 @@ const AgendasPage = () => {
     </>
   );
 };
+
+const AgendasPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <AgendasContent />
+  </Suspense>
+);
 
 export default AgendasPage;

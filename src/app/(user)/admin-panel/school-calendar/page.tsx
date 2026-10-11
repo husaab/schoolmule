@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid';
@@ -8,6 +8,7 @@ import EventFormModal from '@/components/calendar/EventFormModal';
 import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore, useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import { getEventsByAcademicYear } from '@/services/calendarEventService';
 import type { CalendarEventPayload } from '@/services/types/calendarEvent';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
@@ -28,7 +29,7 @@ const buildAcademicYearOptions = (): string[] => {
   return [-1, 0, 1, 2].map((offset) => `${baseYear + offset}-${baseYear + offset + 1}`);
 };
 
-const SchoolCalendarPage = () => {
+const SchoolCalendarContent = () => {
   const user = useUserStore((state) => state.user);
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const selectedYear = useSelectedYear();
@@ -36,8 +37,19 @@ const SchoolCalendarPage = () => {
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const yearOptions = useMemo(buildAcademicYearOptions, []);
-  const [academicYear, setAcademicYear] = useState(yearOptions[1]);
-  const [monthIndex, setMonthIndex] = useState(0); // index into ACADEMIC_MONTHS
+  // Year and month live in the URL (and the page's filter memory). The
+  // current academic year and September are the defaults and are omitted.
+  const { get, setParams } = useFilterParams();
+  const defaultYear = yearOptions[1];
+  const urlYear = get('year', defaultYear);
+  const academicYear = yearOptions.includes(urlYear) ? urlYear : defaultYear;
+  const setAcademicYear = useCallback(
+    (year: string) => setParams({ year: year === defaultYear ? null : year }),
+    [setParams, defaultYear]
+  );
+  // index into ACADEMIC_MONTHS, clamped so a stale/bad URL still renders
+  const monthIndex = Math.min(ACADEMIC_MONTHS.length - 1, Math.max(0, Number(get('month', '0')) || 0));
+  const setMonthIndex = (next: number) => setParams({ month: next === 0 ? null : String(next) });
   const [events, setEvents] = useState<CalendarEventPayload[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -97,7 +109,7 @@ const SchoolCalendarPage = () => {
     if (selectedYear?.label && yearOptions.includes(selectedYear.label)) {
       setAcademicYear(selectedYear.label);
     }
-  }, [hasHydrated, selectedYearId, selectedYear, yearOptions]);
+  }, [hasHydrated, selectedYearId, selectedYear, yearOptions, setAcademicYear]);
 
   const monthEvents = useMemo(() => {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -159,7 +171,7 @@ const SchoolCalendarPage = () => {
 
             <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 px-1 py-1">
               <button
-                onClick={() => setMonthIndex((i) => Math.max(0, i - 1))}
+                onClick={() => setMonthIndex(Math.max(0, monthIndex - 1))}
                 disabled={monthIndex === 0}
                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
               >
@@ -169,7 +181,7 @@ const SchoolCalendarPage = () => {
                 {MONTH_NAMES[month - 1]} {year}
               </span>
               <button
-                onClick={() => setMonthIndex((i) => Math.min(ACADEMIC_MONTHS.length - 1, i + 1))}
+                onClick={() => setMonthIndex(Math.min(ACADEMIC_MONTHS.length - 1, monthIndex + 1))}
                 disabled={monthIndex === ACADEMIC_MONTHS.length - 1}
                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
               >
@@ -243,5 +255,11 @@ const SchoolCalendarPage = () => {
     </>
   );
 };
+
+const SchoolCalendarPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <SchoolCalendarContent />
+  </Suspense>
+);
 
 export default SchoolCalendarPage;

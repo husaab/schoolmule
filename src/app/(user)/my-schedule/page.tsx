@@ -3,7 +3,7 @@
 // A teacher's own published timetable: today as a proportional day column, or
 // the whole week. Read-only — the admin owns the schedule in the planner.
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
@@ -13,6 +13,7 @@ import ScheduleDownloadMenu from '@/components/schedulePlanner/ScheduleDownloadM
 import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useFilterParams } from '@/hooks/useFilterParams'
 import { dayLabel, formatMin } from '@/components/schedulePlanner/timeUtils'
 import {
   SCHOOL_SCHEDULE_PATH,
@@ -29,12 +30,16 @@ import {
 import { CalendarDaysIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 
-const MySchedulePage: React.FC = () => {
+const MyScheduleContent: React.FC = () => {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const router = useRouter()
   const { data, loading, loaded, error, load } = useMyScheduleStore()
-  const [tab, setTab] = useState<'today' | 'week'>('today')
+  // The tab lives in the URL (?tab=week; the default is omitted) so Back,
+  // refresh and the filter memory restore it.
+  const { get, setParams } = useFilterParams()
+  const tab: 'today' | 'week' = get('tab') === 'week' ? 'week' : 'today'
+  const setTab = (next: 'today' | 'week') => setParams({ tab: next === 'today' ? null : next })
 
   useEffect(() => {
     if (!user?.id) return
@@ -214,5 +219,13 @@ const MySchedulePage: React.FC = () => {
     </>
   )
 }
+
+// useFilterParams reads the search params, so the page body needs a Suspense
+// boundary for the static prerender.
+const MySchedulePage: React.FC = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-32 lg:pt-28 min-h-screen bg-slate-50" />}>
+    <MyScheduleContent />
+  </Suspense>
+)
 
 export default MySchedulePage

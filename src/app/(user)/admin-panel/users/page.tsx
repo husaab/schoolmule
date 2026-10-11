@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -26,6 +26,7 @@ import { getSchoolUsers } from '@/services/adminUserService'
 import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
 import type { PreviewView } from '@/lib/previewViews'
 import { useUserStore } from '@/store/useUserStore'
+import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import {
   ArchiveBoxArrowDownIcon,
   ArchiveBoxIcon,
@@ -48,16 +49,20 @@ const ROLE_TABS: { value: RoleFilter; label: string }[] = [
   { value: 'PARENT', label: 'Parents' },
 ]
 
-const UsersPage = () => {
+const UsersContent = () => {
   const currentUserId = useUserStore((s) => s.user.id)
+  // Filters live in the URL (and the page's filter memory) so Back, refresh
+  // and sidebar re-clicks restore them. Modal/selection state stays local.
+  const filters = useFilterParams()
+  const { get, setParams } = filters
   const [users, setUsers] = useState<SchoolUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [showArchived, setShowArchived] = useState(false)
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
+  const [search, setSearch] = useDebouncedParam(filters, 'q')
+  const showArchived = get('archived') === '1'
+  const roleFilter = get('role', 'ALL') as RoleFilter
+  const statusFilter = get('status', 'ALL') as StatusFilter
 
   const [viewing, setViewing] = useState<SchoolUser | null>(null)
   const [editing, setEditing] = useState<SchoolUser | null>(null)
@@ -173,7 +178,7 @@ const UsersPage = () => {
                   <button
                     role="tab"
                     aria-selected={!showArchived}
-                    onClick={() => setShowArchived(false)}
+                    onClick={() => setParams({ archived: null })}
                     className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                       !showArchived ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                     }`}
@@ -183,7 +188,7 @@ const UsersPage = () => {
                   <button
                     role="tab"
                     aria-selected={showArchived}
-                    onClick={() => setShowArchived(true)}
+                    onClick={() => setParams({ archived: '1' })}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                       showArchived ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                     }`}
@@ -202,7 +207,7 @@ const UsersPage = () => {
                         key={tab.value}
                         role="tab"
                         aria-selected={active}
-                        onClick={() => setRoleFilter(tab.value)}
+                        onClick={() => setParams({ role: tab.value === 'ALL' ? null : tab.value })}
                         className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
                           active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                         }`}
@@ -219,7 +224,7 @@ const UsersPage = () => {
                 {!showArchived && (
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                    onChange={(e) => setParams({ status: e.target.value === 'ALL' ? null : e.target.value })}
                     aria-label="Filter by status"
                     className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
                   >
@@ -281,11 +286,7 @@ const UsersPage = () => {
                 action={
                   hasFilters ? (
                     <button
-                      onClick={() => {
-                        setSearch('')
-                        setRoleFilter('ALL')
-                        setStatusFilter('ALL')
-                      }}
+                      onClick={() => setParams({ q: null, role: null, status: null })}
                       className="text-sm font-medium text-cyan-600 hover:text-cyan-700 cursor-pointer"
                     >
                       Clear filters
@@ -477,5 +478,11 @@ const UsersPage = () => {
     </>
   )
 }
+
+const UsersPage = () => (
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+    <UsersContent />
+  </Suspense>
+)
 
 export default UsersPage

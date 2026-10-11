@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ClipboardDocumentCheckIcon,
   ChevronLeftIcon,
@@ -18,6 +18,7 @@ import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import AttendanceMonthGrid from '@/components/parent/AttendanceMonthGrid'
 import TermPicker from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 type Month = { year: number; month: number } // month 1-12
 
@@ -53,19 +54,22 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite; termId: string }> = (
   termId,
 }) => {
   const [attendance, setAttendance] = useState<ChildAttendance | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMonth, setViewMonth] = useState<Month | null>(null)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
+  // Loading is derived: the attendance on screen belongs to `loadedFor`, so
+  // any other child/term/year combination is still in flight.
+  const fetchKey = `${child.studentId}|${termId}|${selectedYearId ?? ''}`
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const loading = loadedFor !== fetchKey
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
     // One fetch for the whole term; month paging slices client-side.
     getChildAttendance(child.studentId, termId ? { termId } : undefined)
       .then((res) => {
         const data = res.data || null
         setAttendance(data)
+        setError(null)
         if (data) {
           const today = new Date().toISOString().slice(0, 10)
           const from = data.from ? String(data.from).slice(0, 10) : today
@@ -79,8 +83,8 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite; termId: string }> = (
         console.error(err)
         setError('Failed to load attendance.')
       })
-      .finally(() => setLoading(false))
-  }, [child.studentId, termId, selectedYearId])
+      .finally(() => setLoadedFor(fetchKey))
+  }, [child.studentId, termId, selectedYearId, fetchKey])
 
   const range = useMemo(() => {
     if (!attendance?.from || !attendance?.to) return null
@@ -166,33 +170,52 @@ const ChildAttendanceSection: React.FC<{ child: ChildLite; termId: string }> = (
   )
 }
 
-const ParentAttendancePage: React.FC = () => {
-  const [termId, setTermId] = useState('')
+const ParentAttendanceContent: React.FC = () => {
+  // The term lives in the URL (?termId=) so Back, refresh and the sidebar's
+  // filter memory all restore it.
+  const { get, setParams } = useFilterParams()
+  const termId = get('termId')
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   // A term from one year is meaningless in another — snap back to the
-  // year's default term whenever the selected school year changes.
+  // year's default term whenever the selected school year changes (not on
+  // the first render, where the URL may already carry this year's term).
+  const seenYearRef = useRef(selectedYearId)
   useEffect(() => {
-    setTermId('')
-  }, [selectedYearId])
+    if (seenYearRef.current === selectedYearId) return
+    seenYearRef.current = selectedYearId
+    setParams({ termId: null })
+  }, [selectedYearId, setParams])
 
   return (
-    <ParentPageShell
-      title="Attendance"
-      subtitle="Day-by-day attendance, term by term."
-      badge={{ icon: ClipboardDocumentCheckIcon, label: 'Attendance' }}
-    >
+    <>
       <ParentFilterBar>
         {/* Attendance is a per-term day grid — no "all terms" view */}
-        <TermPicker value={termId} onChange={setTermId} includeAll={false} />
+        <TermPicker
+          value={termId}
+          onChange={(next) => setParams({ termId: next || null })}
+          includeAll={false}
+        />
       </ParentFilterBar>
 
       <ChildSections
         renderChild={(child) => <ChildAttendanceSection child={child} termId={termId} />}
       />
       <ChildJumpNav />
-    </ParentPageShell>
+    </>
   )
 }
+
+const ParentAttendancePage: React.FC = () => (
+  <ParentPageShell
+    title="Attendance"
+    subtitle="Day-by-day attendance, term by term."
+    badge={{ icon: ClipboardDocumentCheckIcon, label: 'Attendance' }}
+  >
+    <Suspense fallback={<div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />}>
+      <ParentAttendanceContent />
+    </Suspense>
+  </ParentPageShell>
+)
 
 export default ParentAttendancePage

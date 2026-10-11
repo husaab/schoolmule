@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpenIcon,
   ChevronDownIcon,
@@ -27,6 +27,7 @@ import TermPicker from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
 import TrendLineChart from '@/app/(user)/analytics/_components/charts/TrendLineChart'
 import { gradeTextColor } from '@/components/parent/childColors'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 const ClassCard: React.FC<{
   cls: ChildClassGrades
@@ -197,10 +198,14 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   onSubjectsLoaded,
 }) => {
   const [grades, setGrades] = useState<ChildGrades | null>(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [threadStubs, setThreadStubs] = useState<Record<string, ThreadStub>>({})
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId) // refetch when the selected school year changes
+  // Loading is derived: the grades on screen belong to `loadedFor`, so any
+  // other child/term/year combination is still in flight.
+  const fetchKey = `${child.studentId}|${termId}|${selectedYearId ?? ''}`
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const loading = loadedFor !== fetchKey
 
   // Existing conversations drive the chips on each row. Informational: a
   // failure here must never hide the grades.
@@ -224,13 +229,12 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
     // change — two quick TermPicker clicks can otherwise resolve out of order
     // and leave the previous term's grades on screen.
     let cancelled = false
-    setLoading(true)
-    setError(null)
     getChildGrades(child.studentId, termId || undefined)
       .then((res) => {
         if (cancelled) return
         const data = res.data || null
         setGrades(data)
+        setError(null)
         onSubjectsLoaded(child.studentId, data?.classes.map((c) => c.subject) ?? [])
       })
       .catch((err) => {
@@ -239,12 +243,12 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
         setError('Failed to load grades.')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoadedFor(fetchKey)
       })
     return () => {
       cancelled = true
     }
-  }, [child.studentId, termId, selectedYearId, onSubjectsLoaded])
+  }, [child.studentId, termId, selectedYearId, fetchKey, onSubjectsLoaded])
 
   if (loading) {
     return (
@@ -359,19 +363,26 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
   )
 }
 
-const ParentGradesPage: React.FC = () => {
-  const [termId, setTermId] = useState('')
+const ParentGradesContent: React.FC = () => {
+  // Filters live in the URL (?termId=&subject=) so Back, refresh and the
+  // sidebar's filter memory all restore them.
+  const { get, setParams } = useFilterParams()
+  const termId = get('termId')
+  const subjectFilter = get('subject')
   const [activeTermId, setActiveTermId] = useState<string | null>(null)
-  const [subjectFilter, setSubjectFilter] = useState('')
   const [subjectsByChild, setSubjectsByChild] = useState<Record<string, string[]>>({})
   const visibleChildren = useVisibleChildren()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
   // A term from one year is meaningless in another — snap back to the
-  // year's default term whenever the selected school year changes.
+  // year's default term whenever the selected school year changes (not on
+  // the first render, where the URL may already carry this year's term).
+  const seenYearRef = useRef(selectedYearId)
   useEffect(() => {
-    setTermId('')
-  }, [selectedYearId])
+    if (seenYearRef.current === selectedYearId) return
+    seenYearRef.current = selectedYearId
+    setParams({ termId: null })
+  }, [selectedYearId, setParams])
 
   const onSubjectsLoaded = useCallback((studentId: string, subjects: string[]) => {
     setSubjectsByChild((prev) =>
@@ -386,23 +397,20 @@ const ParentGradesPage: React.FC = () => {
     return [...new Set(all)].sort((a, b) => a.localeCompare(b))
   }, [visibleChildren, subjectsByChild])
 
-  // Drop a stale subject filter when it no longer exists (term/year/child change).
+  // Drop a stale subject filter when it no longer exists (term/year/child
+  // change) — only once the subject list has loaded, so a deep link survives.
   useEffect(() => {
     if (subjectFilter && subjects.length > 0 && !subjects.includes(subjectFilter)) {
-      setSubjectFilter('')
+      setParams({ subject: null })
     }
-  }, [subjects, subjectFilter])
+  }, [subjects, subjectFilter, setParams])
 
   return (
-    <ParentPageShell
-      title="Grades"
-      subtitle="Every assessment, average and trend — the same numbers your child's teacher sees in the gradebook."
-      badge={{ icon: BookOpenIcon, label: 'Grades' }}
-    >
+    <>
       <ParentFilterBar>
         <select
           value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
+          onChange={(e) => setParams({ subject: e.target.value || null })}
           className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
         >
           <option value="">All classes</option>
@@ -412,7 +420,11 @@ const ParentGradesPage: React.FC = () => {
             </option>
           ))}
         </select>
-        <TermPicker value={termId} onChange={setTermId} onTermsLoaded={(terms) => setActiveTermId(terms.find((t) => t.isActive)?.termId ?? null)} />
+        <TermPicker
+          value={termId}
+          onChange={(next) => setParams({ termId: next || null })}
+          onTermsLoaded={(terms) => setActiveTermId(terms.find((t) => t.isActive)?.termId ?? null)}
+        />
       </ParentFilterBar>
 
       <ChildSections
@@ -427,8 +439,20 @@ const ParentGradesPage: React.FC = () => {
         )}
       />
       <ChildJumpNav />
-    </ParentPageShell>
+    </>
   )
 }
+
+const ParentGradesPage: React.FC = () => (
+  <ParentPageShell
+    title="Grades"
+    subtitle="Every assessment, average and trend — the same numbers your child's teacher sees in the gradebook."
+    badge={{ icon: BookOpenIcon, label: 'Grades' }}
+  >
+    <Suspense fallback={<div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />}>
+      <ParentGradesContent />
+    </Suspense>
+  </ParentPageShell>
+)
 
 export default ParentGradesPage

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getStudentsInClass, getClassById } from '@/services/classService';
@@ -10,16 +10,20 @@ import { StudentPayload } from '@/services/types/student';
 import { format } from 'date-fns-tz';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useUserStore } from '@/store/useUserStore';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
-export default function ClassAttendancePage() {
+function ClassAttendanceContent() {
   const { classId } = useParams() as { classId: string };
   const [students, setStudents] = useState<StudentPayload[]>([]);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus | null>>({});
-  const [selectedDate, setSelectedDate] = useState(() =>
-    format(new Date(), 'yyyy-MM-dd')
-  );
+  // The date lives in the URL (?date=yyyy-MM-dd; today is omitted) so Back,
+  // refresh and the filter memory restore it.
+  const { get, setParams } = useFilterParams();
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const selectedDate = get('date', today);
+  const setSelectedDate = (date: string) => setParams({ date: date && date !== today ? date : null });
   const [className, setClassName] = useState<string>('');
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -164,5 +168,15 @@ export default function ClassAttendancePage() {
         </div>
       </main>
     </>
+  );
+}
+
+// useFilterParams reads the search params, so the page body needs a Suspense
+// boundary for the static prerender.
+export default function ClassAttendancePage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-64 pt-36 lg:pt-44 bg-gray-50 min-h-screen" />}>
+      <ClassAttendanceContent />
+    </Suspense>
   );
 }

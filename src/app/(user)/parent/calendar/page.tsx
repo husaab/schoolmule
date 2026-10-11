@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import {
   CalendarDaysIcon,
   ChevronLeftIcon,
@@ -13,6 +13,7 @@ import ParentPageShell from '@/components/parent/ParentPageShell'
 import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid'
 import Modal from '@/components/shared/modal'
 import Spinner from '@/components/Spinner'
+import { useFilterParams } from '@/hooks/useFilterParams'
 
 const CATEGORY_LABELS: Record<CalendarEventCategory, string> = {
   event: 'Event',
@@ -40,10 +41,23 @@ const formatDate = (iso: string) =>
     year: 'numeric',
   })
 
-const ParentCalendarPage: React.FC = () => {
+/** A whole number from the query string, or the fallback when absent or malformed. */
+const intParam = (raw: string, fallback: number, min: number, max: number): number => {
+  const n = parseInt(raw, 10)
+  return Number.isInteger(n) && n >= min && n <= max ? n : fallback
+}
+
+const ParentCalendarContent: React.FC = () => {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1) // 1-12
+  const todayYear = now.getFullYear()
+  const todayMonth = now.getMonth() + 1 // 1-12
+  // The month on screen lives in the URL (?year=&month=), omitted when it is
+  // today's, so Back, refresh and the sidebar's filter memory all restore it.
+  const { get, setParams } = useFilterParams()
+  const year = intParam(get('year'), todayYear, 1970, 9999)
+  const month = intParam(get('month'), todayMonth, 1, 12)
+  const showMonth = (y: number, m: number) =>
+    setParams({ year: y === todayYear ? null : String(y), month: m === todayMonth ? null : String(m) })
   const [events, setEvents] = useState<CalendarEventPayload[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventPayload | null>(null)
@@ -63,8 +77,7 @@ const ParentCalendarPage: React.FC = () => {
 
   const changeMonth = (delta: number) => {
     const k = year * 12 + (month - 1) + delta
-    setYear(Math.floor(k / 12))
-    setMonth((k % 12) + 1)
+    showMonth(Math.floor(k / 12), (k % 12) + 1)
   }
 
   const monthLabel = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-CA', {
@@ -74,11 +87,7 @@ const ParentCalendarPage: React.FC = () => {
   })
 
   return (
-    <ParentPageShell
-      title="School Calendar"
-      subtitle="Holidays, PA days, exams and events — school-wide, for all your children."
-      badge={{ icon: CalendarDaysIcon, label: 'Calendar' }}
-    >
+    <>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900">{monthLabel}</h2>
         <div className="flex items-center gap-1">
@@ -90,10 +99,7 @@ const ParentCalendarPage: React.FC = () => {
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
           <button
-            onClick={() => {
-              setYear(now.getFullYear())
-              setMonth(now.getMonth() + 1)
-            }}
+            onClick={() => showMonth(todayYear, todayMonth)}
             className="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-stone-100 cursor-pointer transition-colors"
           >
             Today
@@ -164,8 +170,20 @@ const ParentCalendarPage: React.FC = () => {
           </div>
         )}
       </Modal>
-    </ParentPageShell>
+    </>
   )
 }
+
+const ParentCalendarPage: React.FC = () => (
+  <ParentPageShell
+    title="School Calendar"
+    subtitle="Holidays, PA days, exams and events — school-wide, for all your children."
+    badge={{ icon: CalendarDaysIcon, label: 'Calendar' }}
+  >
+    <Suspense fallback={<div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />}>
+      <ParentCalendarContent />
+    </Suspense>
+  </ParentPageShell>
+)
 
 export default ParentCalendarPage

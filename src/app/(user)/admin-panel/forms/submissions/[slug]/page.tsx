@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import BackLink from '@/components/shared/BackLink';
+import { useFilterParams, type FilterPatch } from '@/hooks/useFilterParams';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import SubmissionFiltersComponent from '@/components/registration/Submissions/SubmissionFilters';
@@ -30,6 +32,8 @@ import type {
   SubmissionPagination,
   SortSpec,
   FieldFilter,
+  SubmissionStatus,
+  ImportState,
 } from '@/services/types/registration';
 import type { ImportScope } from '@/services/types/registrationImport';
 import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
@@ -48,8 +52,20 @@ import {
   TagIcon,
 } from '@heroicons/react/24/outline';
 
-// ─── URL (de)serialization for sort + field filters ──────────────────
-// sort=fieldId:dir,fieldId:dir   ·   fieldFilters=<JSON array of { fieldId, values }>
+// ─── URL (de)serialization ───────────────────────────────────────────
+// Every list control lives in the query string (useFilterParams), so refresh,
+// shared links, Back and the page's filter memory all restore the same view:
+//   page=<n> (1 omitted) · limit=<n> (25 omitted) · status · importState ('all' omitted)
+//   dateFrom · dateTo · sort=fieldId:dir,fieldId:dir · fieldFilters=<JSON [{ fieldId, values }]>
+// Legacy single-sort links (sortFieldId / sortDir) are still read, never written.
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 25;
+
+const parsePositiveInt = (raw: string, fallback: number): number => {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
 const parseSortsFromUrl = (sortRaw: string | null, legacyFieldId: string | null, legacyDir: string | null): SortSpec[] => {
   if (sortRaw) {
     return sortRaw
@@ -78,10 +94,27 @@ const parseFieldFiltersFromUrl = (raw: string | null): FieldFilter[] => {
   }
 };
 
-export default function FormSubmissionsPage() {
+// The full query patch for a filter object. Every key is written (null clears
+// it) so one setParams call replaces the whole view, and defaults stay out of
+// the URL. Legacy sort keys are dropped the first time the view is rewritten.
+const filtersToPatch = (f: FiltersType): FilterPatch => ({
+  page: f.page && f.page !== DEFAULT_PAGE ? String(f.page) : null,
+  limit: f.limit && f.limit !== DEFAULT_LIMIT ? String(f.limit) : null,
+  sort: f.sorts && f.sorts.length > 0 ? f.sorts.map((s) => `${s.fieldId}:${s.dir}`).join(',') : null,
+  sortFieldId: null,
+  sortDir: null,
+  // Keep rows the user added but has not picked a value for yet, otherwise
+  // they would vanish from the UI the moment they were added.
+  fieldFilters: f.fieldFilters && f.fieldFilters.length > 0 ? JSON.stringify(f.fieldFilters) : null,
+  status: f.status || null,
+  importState: f.importState && f.importState !== 'all' ? f.importState : null,
+  dateFrom: f.dateFrom || null,
+  dateTo: f.dateTo || null,
+});
+
+function FormSubmissionsContent() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const showNotification = useNotificationStore((s) => s.showNotification);
   const slug = params.slug as string;
 
@@ -98,17 +131,37 @@ export default function FormSubmissionsPage() {
   const [fields, setFields] = useState<FormField[]>([]);
   const [pagination, setPagination] = useState<SubmissionPagination>({ total: 0, page: 1, limit: 25 });
 
-  // Initialize filters from URL params (so refresh / shareable links retain sort + filters)
-  const [filters, setFilters] = useState<FiltersType>(() => ({
-    page: 1,
-    limit: 25,
-    sorts: parseSortsFromUrl(
-      searchParams.get('sort'),
-      searchParams.get('sortFieldId'),
-      searchParams.get('sortDir'),
-    ),
-    fieldFilters: parseFieldFiltersFromUrl(searchParams.get('fieldFilters')),
-  }));
+  // Filters are derived from the URL (source of truth) rather than held in state.
+  const { get, setParams } = useFilterParams();
+  const pageRaw = get('page');
+  const limitRaw = get('limit');
+  const sortRaw = get('sort');
+  const legacySortFieldId = get('sortFieldId');
+  const legacySortDir = get('sortDir');
+  const fieldFiltersRaw = get('fieldFilters');
+  const statusRaw = get('status');
+  const importStateRaw = get('importState');
+  const dateFromRaw = get('dateFrom');
+  const dateToRaw = get('dateTo');
+
+  const filters = useMemo<FiltersType>(() => ({
+    page: parsePositiveInt(pageRaw, DEFAULT_PAGE),
+    limit: parsePositiveInt(limitRaw, DEFAULT_LIMIT),
+    sorts: parseSortsFromUrl(sortRaw || null, legacySortFieldId || null, legacySortDir || null),
+    fieldFilters: parseFieldFiltersFromUrl(fieldFiltersRaw || null),
+    status: (statusRaw || undefined) as SubmissionStatus | undefined,
+    importState: importStateRaw && importStateRaw !== 'all' ? (importStateRaw as ImportState) : undefined,
+    dateFrom: dateFromRaw || undefined,
+    dateTo: dateToRaw || undefined,
+  }), [pageRaw, limitRaw, sortRaw, legacySortFieldId, legacySortDir, fieldFiltersRaw, statusRaw, importStateRaw, dateFromRaw, dateToRaw]);
+
+  // Replace the whole view in one URL write (the child controls hand back a
+  // full filter object, already reset to page 1 where that applies).
+  const updateFilters = useCallback(
+    (next: FiltersType) => setParams(filtersToPatch(next)),
+    [setParams],
+  );
+
   const [loading, setLoading] = useState(false);
 
   // Map fieldId → its sort level (1-based) + direction, for table header indicators.
@@ -133,23 +186,6 @@ export default function FormSubmissionsPage() {
     );
     return [...baseColumns, ...extras];
   }, [fields, filters.sorts, filters.fieldFilters]);
-
-  // Sync filters to URL whenever sort/field filters change (preserves them across navigation)
-  useEffect(() => {
-    const sp = new URLSearchParams();
-    if (filters.sorts && filters.sorts.length > 0) {
-      sp.set('sort', filters.sorts.map((s) => `${s.fieldId}:${s.dir}`).join(','));
-    }
-    const activeFilters = (filters.fieldFilters || []).filter((f) => f.values.length > 0);
-    if (activeFilters.length > 0) {
-      sp.set('fieldFilters', JSON.stringify(activeFilters));
-    }
-    const qs = sp.toString();
-    const newUrl = qs ? `?${qs}` : '';
-    if (window.location.search !== newUrl) {
-      window.history.replaceState(null, '', `${window.location.pathname}${newUrl}`);
-    }
-  }, [filters.sorts, filters.fieldFilters]);
 
   // ─── Import ────────────────────────────────────────────────────────
   // Row selection drives the "bulk" entry point; the batch entry point sends
@@ -437,13 +473,13 @@ export default function FormSubmissionsPage() {
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
         <div className="p-6 lg:p-8 max-w-6xl mx-auto">
           {/* Back link */}
-          <Link
-            href="/admin-panel/forms/submissions"
+          <BackLink
+            to="/admin-panel/forms/submissions"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-cyan-600 mb-6 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Back to submission forms
-          </Link>
+          </BackLink>
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -455,7 +491,7 @@ export default function FormSubmissionsPage() {
                   fieldFilters={filters.fieldFilters || []}
                   fields={fields}
                   total={pagination.total}
-                  onClear={() => setFilters({ ...filters, fieldFilters: [], page: 1 })}
+                  onClear={() => updateFilters({ ...filters, fieldFilters: [], page: 1 })}
                 />
               </div>
             </div>
@@ -496,21 +532,21 @@ export default function FormSubmissionsPage() {
 
           {/* Filters + Sort */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col gap-4">
-            <SubmissionFiltersComponent filters={filters} onChange={setFilters} statuses={statuses} />
+            <SubmissionFiltersComponent filters={filters} onChange={updateFilters} statuses={statuses} />
 
             <div className="flex flex-col lg:flex-row lg:items-start gap-6 border-t border-slate-100 pt-4">
               <div className="lg:w-1/2">
                 <SortControls
                   fields={fields}
                   sorts={filters.sorts || []}
-                  onChange={(sorts) => setFilters({ ...filters, sorts, page: 1 })}
+                  onChange={(sorts) => updateFilters({ ...filters, sorts, page: 1 })}
                 />
               </div>
               <div className="lg:w-1/2 lg:border-l lg:border-slate-100 lg:pl-6">
                 <FieldValueFilters
                   fields={fields}
                   fieldFilters={filters.fieldFilters || []}
-                  onChange={(fieldFilters) => setFilters({ ...filters, fieldFilters, page: 1 })}
+                  onChange={(fieldFilters) => updateFilters({ ...filters, fieldFilters, page: 1 })}
                 />
               </div>
             </div>
@@ -701,7 +737,7 @@ export default function FormSubmissionsPage() {
                   <span>Show</span>
                   <select
                     value={filters.limit || 25}
-                    onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value, 10), page: 1 })}
+                    onChange={(e) => updateFilters({ ...filters, limit: parseInt(e.target.value, 10), page: 1 })}
                     className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
                   >
                     <option value={25}>25</option>
@@ -722,7 +758,7 @@ export default function FormSubmissionsPage() {
                 {totalPages > 1 && (
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
+                      onClick={() => updateFilters({ ...filters, page: (filters.page || 1) - 1 })}
                       disabled={(filters.page || 1) <= 1}
                       className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
                     >
@@ -732,7 +768,7 @@ export default function FormSubmissionsPage() {
                       Page {filters.page || 1} of {totalPages}
                     </span>
                     <button
-                      onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
+                      onClick={() => updateFilters({ ...filters, page: (filters.page || 1) + 1 })}
                       disabled={(filters.page || 1) >= totalPages}
                       className="flex items-center gap-1 text-sm text-slate-600 hover:text-cyan-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
                     >
@@ -880,5 +916,13 @@ export default function FormSubmissionsPage() {
         )}
       </Modal>
     </>
+  );
+}
+
+export default function FormSubmissionsPage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+      <FormSubmissionsContent />
+    </Suspense>
   );
 }
