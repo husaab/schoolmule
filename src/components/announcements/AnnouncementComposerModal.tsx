@@ -415,22 +415,25 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
             <p className="flex items-start gap-2">
               <CheckCircleIcon className="mt-px h-4 w-4 flex-shrink-0 text-emerald-500" />
               <span>
-                <strong className="font-medium">{preview.guardiansWithAccount} guardians</strong> of {preview.students} students will see this in SchoolMule and get an email.
+                <strong className="font-medium">{preview.guardiansWithAccount} guardians</strong> of {preview.students} students{' '}
+                {mode === 'edit' ? 'are in the audience and see this in SchoolMule.' : 'will see this in SchoolMule and get an email.'}
               </span>
             </p>
             {preview.guardiansEmailOnly + preview.guardiansInvitePending > 0 && (
               <p className="flex items-start gap-2 text-amber-900">
                 <ExclamationTriangleIcon className="mt-px h-4 w-4 flex-shrink-0 text-amber-500" />
                 <span>
-                  <strong className="font-medium">{preview.guardiansEmailOnly + preview.guardiansInvitePending} guardians</strong> have an email on file but no account yet: they get the same
-                  email with a sign-up link.
+                  <strong className="font-medium">{preview.guardiansEmailOnly + preview.guardiansInvitePending} guardians</strong> have an email on file but no account yet
+                  {mode === 'edit' ? ' and are reached by email only.' : ': they get the same email with a sign-up link.'}
                 </span>
               </p>
             )}
             <p className="pl-6 text-slate-500">
               {noEmail.length > 0 &&
                 `${noEmail.length} student${noEmail.length === 1 ? ' has' : 's have'} no guardian email on file (${noEmail.map((s) => s.name).join(', ')}). `}
-              Emails go out 2 minutes after posting; edit or delete before then and the email follows.
+              {mode === 'edit'
+                ? 'Only families added now are emailed; families removed lose their pending email.'
+                : 'Emails go out 2 minutes after posting; edit or delete before then and the email follows.'}
             </p>
           </div>
         )}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MegaphoneIcon } from '@heroicons/react/24/outline'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
@@ -119,16 +119,24 @@ const AnnouncementFeed: React.FC<{ studentId?: string }> = ({ studentId }) => {
     [items, setAck, showNotification],
   )
 
-  // ?ack=1 (from the email): acknowledge once the list holds the post, then drop the flag from the URL.
+  // ?ack=1 (from the email's "Got it"): acknowledge once the list has loaded, then drop
+  // the flag from the URL. Runs once per deep link. If the post is not in the list (the
+  // parent has another child selected), the ack still goes straight to the API, which
+  // checks audience and the flag itself; a 409 just means nothing to record.
+  const ackHandled = useRef<string | null>(null)
   useEffect(() => {
-    if (!ackOnArrival || !deepLink || !items) return
+    if (!ackOnArrival || !deepLink || !items || ackHandled.current === deepLink) return
+    ackHandled.current = deepLink
     const item = items.find((i) => i.announcementId === deepLink)
-    if (!item) return
-    if (item.ackRequested && !item.acked) void onAck(deepLink)
+    if (item) {
+      if (item.ackRequested && !item.acked) void onAck(deepLink)
+    } else {
+      acknowledgeAnnouncement(deepLink).then(() => bump()).catch(() => {})
+    }
     const params = new URLSearchParams(searchParams.toString())
     params.delete('ack')
     router.replace(`/parent/messages?${params.toString()}`, { scroll: false })
-    // Runs once the item is present; onAck is stable.
+    // Guarded by ackHandled; onAck/bump are stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ackOnArrival, deepLink, items])
 
