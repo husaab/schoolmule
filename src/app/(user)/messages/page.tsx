@@ -49,7 +49,7 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }>
           tone="staff"
           role={role}
           fixedFilters={classId ? { classId } : undefined}
-          newMessageClassId={classId || classes[0]?.classId}
+          newMessageClassId={classId || undefined}
           emptyHint={
             classes.length === 0
               ? 'You are not assigned to any class this year.'

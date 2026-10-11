@@ -8,7 +8,7 @@ import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { createConversation, getParentTargets, getStaffTargets, getStaffTargetsForStudent } from '@/services/messagingService'
+import { createConversation, getParentTargets, getStaffRoster, getStaffTargets, getStaffTargetsForStudent } from '@/services/messagingService'
 import type { ParentTargets, SenderRole, StaffTargetGuardian, StaffTargets, Thread } from '@/services/types/messaging'
 import Composer from './Composer'
 import { toneClasses, type Tone } from './tones'
@@ -78,7 +78,12 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const [includePreview, setIncludePreview] = useState(true)
   const [parentTargets, setParentTargets] = useState<ParentTargets | null>(null)
   const [staffTargets, setStaffTargets] = useState<StaffTargets | null>(null)
+  // Staff with nothing in hand (the Messages page): every student they may write
+  // about and their current-term classes. The class is then optional (General)
+  // or required (assessment), never a silent default.
+  const [roster, setRoster] = useState<StaffTargets | null>(null)
   const [loading, setLoading] = useState(false)
+  const rosterMode = !isParent && !classId && !preset?.studentId
 
   // Reset on open, honouring presets.
   useEffect(() => {
@@ -144,14 +149,54 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     }
   }, [isOpen, isParent, classId, preset?.studentId, showNotification])
 
+  // Staff roster (Messages page): who may I write about, and which current-term classes do I teach?
+  useEffect(() => {
+    if (!isOpen || !rosterMode) return
+    let cancelled = false
+    setLoading(true)
+    setStaffTargets(null)
+    getStaffRoster()
+      .then((res) => {
+        if (!cancelled) setRoster(res.data ?? null)
+      })
+      .catch(() => showNotification('Could not load your students', 'error'))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, rosterMode, showNotification])
+
+  // Roster mode, assessment: the chosen class's assessments.
+  useEffect(() => {
+    if (!isOpen || !rosterMode || !staffClassId || mode !== 'assessment') return
+    let cancelled = false
+    getStaffTargets(staffClassId)
+      .then((res) => {
+        if (!cancelled) setStaffTargets(res.data ?? null)
+      })
+      .catch(() => showNotification('Could not load assessments', 'error'))
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, rosterMode, staffClassId, mode, showNotification])
+
   const parentClass = parentTargets?.classes.find((c) => c.classId === pickedClassId) ?? null
-  // Staff classes: the one the picker was opened for, or the student's classes the caller teaches.
+  const className = (c: { subject: string | null; grade?: string | null }) => [c.grade ? `Gr ${c.grade}` : null, c.subject].filter(Boolean).join(' ') || 'Class'
+  const rosterStudent = rosterMode ? roster?.students.find((s) => s.studentId === studentId) : undefined
+  // Staff classes: the one the picker was opened for (named from the targets), the
+  // student's classes the caller teaches (Students page), or in roster mode the
+  // current-term classes the chosen student is in.
   const staffClasses = classId
-    ? [{ classId, subject: 'This class', assessments: staffTargets?.assessments ?? [] }]
-    : staffTargets?.classes ?? []
+    ? [{ classId, subject: staffTargets?.class ? className(staffTargets.class) : 'This class', assessments: staffTargets?.assessments ?? [] }]
+    : rosterMode
+      ? (roster?.classes ?? [])
+          .filter((c) => rosterStudent?.classIds?.includes(c.classId))
+          .map((c) => ({ classId: c.classId, subject: className(c), assessments: staffTargets?.class?.classId === c.classId ? staffTargets.assessments ?? [] : [] }))
+      : (staffTargets?.classes ?? []).map((c) => ({ ...c, assessments: c.assessments ?? [] }))
   const staffClass = staffClasses.find((c) => c.classId === staffClassId) ?? null
   const assessments = isParent ? parentClass?.assessments ?? [] : staffClass?.assessments ?? []
-  const staffStudent = !isParent ? staffTargets?.students.find((s) => s.studentId === studentId) : undefined
+  const staffStudents = rosterMode ? roster?.students ?? [] : staffTargets?.students ?? []
+  const staffStudent = !isParent ? staffStudents.find((s) => s.studentId === studentId) : undefined
   const guardians: StaffTargetGuardian[] = staffStudent?.guardians ?? []
   const unlinked = guardians.filter((g) => !g.hasAccount && !g.invitePending && g.email)
   const pending = guardians.filter((g) => g.invitePending)
@@ -165,7 +210,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   // Threads may only be started about current-term classes. The backend
   // enforces this; here it shapes the hints and, for a teacher opening the
   // picker from a past-term gradebook, blocks sending up front.
-  const currentTerm = (isParent ? parentTargets?.currentTerm : staffTargets?.currentTerm) ?? null
+  const currentTerm = (isParent ? parentTargets?.currentTerm : rosterMode ? roster?.currentTerm : staffTargets?.currentTerm) ?? null
   const pastTermClass = !isParent && Boolean(classId) && staffTargets?.inCurrentTerm === false
   const blockedByTerm = pastTermClass && role === 'TEACHER'
 
@@ -266,14 +311,16 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
               onChange={(e) => {
                 setStudentId(e.target.value)
                 setAssessmentId('')
+                // A different student has different classes.
+                if (rosterMode) setStaffClassId('')
               }}
               className={selectClass}
-              disabled={!isParent && Boolean(preset?.studentId)}
+              disabled={(!isParent && Boolean(preset?.studentId)) || (rosterMode && loading)}
             >
-              <option value="">Select…</option>
+              <option value="">{rosterMode && loading ? 'Loading…' : 'Select…'}</option>
               {(isParent
                 ? children.filter((c) => !preset?.childIds?.length || preset.childIds.includes(c.studentId)).map((c) => ({ id: c.studentId, name: c.name }))
-                : (staffTargets?.students ?? []).map((s) => ({ id: s.studentId, name: s.name }))
+                : staffStudents.map((s) => ({ id: s.studentId, name: s.grade ? `${s.name} · Gr ${s.grade}` : s.name }))
               ).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -386,7 +433,13 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
                 label="Class"
                 htmlFor="nc-staff-class"
                 required={mode === 'assessment'}
-                hint={mode === 'general' ? 'Optional: the subject this is about. Leave blank for a homeroom-style note.' : undefined}
+                hint={
+                  mode === 'general'
+                    ? 'Optional: the subject this is about. Leave blank for a homeroom-style note.'
+                    : rosterMode && currentTerm
+                      ? `${currentTerm.name} classes you teach this student in`
+                      : undefined
+                }
               >
                 <select
                   id="nc-staff-class"
@@ -398,7 +451,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
                   className={selectClass}
                   disabled={Boolean(classId) || loading || !studentId || staffClasses.length === 0}
                 >
-                  <option value="">{mode === 'general' ? 'No specific class' : 'Select…'}</option>
+                  <option value="">{mode === 'general' ? 'No specific class' : staffClasses.length === 0 && studentId ? 'No current-term class with this student' : 'Select…'}</option>
                   {staffClasses.map((c) => (
                     <option key={c.classId} value={c.classId}>
                       {c.subject}
