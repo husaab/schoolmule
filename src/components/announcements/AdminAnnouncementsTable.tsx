@@ -44,6 +44,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
   const scope: '' | AnnouncementScope = isScope(urlScope) ? urlScope : ''
   const grade = get('agrade')
   const failedOnly = get('afailed') === '1'
+  const ackOnly = get('aack') === '1'
   const [q, setQ] = useDebouncedParam(filters, 'aq')
   const [editing, setEditing] = useState<AnnouncementDetail | null>(null)
   const [deleting, setDeleting] = useState<AnnouncementItem | null>(null)
@@ -73,10 +74,19 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
       .filter((i) => (scope ? i.scope === scope : true))
       .filter((i) => (grade ? (i.grade ?? i.classGrade) === grade : true))
       .filter((i) => (failedOnly ? i.emailFailed : true))
-      .filter((i) => (needle ? `${i.title} ${i.body} ${i.scopeLabel}`.toLowerCase().includes(needle) : true))
-  }, [items, author, scope, grade, failedOnly, q])
+      .filter((i) => (ackOnly ? i.ackRequested : true))
+      .filter((i) => (needle ? `${i.title} ${i.body} ${i.scopeLabel} ${(i.studentNamesPreview ?? []).join(' ')}`.toLowerCase().includes(needle) : true))
+  }, [items, author, scope, grade, failedOnly, ackOnly, q])
 
   const seenPct = (i: AnnouncementItem) => ((i.audienceCount ?? 0) > 0 ? Math.round(((i.seenCount ?? 0) / (i.audienceCount ?? 1)) * 100) : 0)
+  const ackPct = (i: AnnouncementItem) => ((i.audienceCount ?? 0) > 0 ? Math.round(((i.ackCount ?? 0) / (i.audienceCount ?? 1)) * 100) : 0)
+  // "Custom · Amina R., Bilal H., Hana S. + 9 more"
+  const subtitle = (i: AnnouncementItem) => {
+    if (i.scope !== 'custom') return i.scopeLabel
+    const names = i.studentNamesPreview ?? []
+    const more = (i.studentCount ?? 0) - names.length
+    return `Custom · ${names.length ? names.join(', ') : `${i.studentCount ?? 0} students`}${more > 0 ? ` + ${more} more` : ''}`
+  }
   const avgSeen = items.length ? Math.round(items.reduce((n, i) => n + seenPct(i), 0) / items.length) : 0
   const failedCount = items.filter((i) => i.emailFailed).length
   const pinnedCount = items.filter((i) => i.isPinned).length
@@ -146,6 +156,13 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
         </label>
         <button
           type="button"
+          onClick={() => setParams({ aack: ackOnly ? null : '1' })}
+          className={`rounded-full border px-3 py-1.5 text-xs transition-colors cursor-pointer ${ackOnly ? 'border-emerald-200 bg-emerald-50 text-emerald-700 font-medium' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+        >
+          Acknowledgement requested
+        </button>
+        <button
+          type="button"
           onClick={() => setParams({ afailed: failedOnly ? null : '1' })}
           className={`rounded-full border px-3 py-1.5 text-xs transition-colors cursor-pointer ${failedOnly ? 'border-rose-200 bg-rose-50 text-rose-700 font-medium' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
         >
@@ -178,6 +195,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
                 <th className="px-4 py-2.5 font-medium">Author</th>
                 <th className="px-4 py-2.5 font-medium">Posted</th>
                 <th className="px-4 py-2.5 font-medium">Seen</th>
+                <th className="px-4 py-2.5 font-medium">Acknowledged</th>
                 <th className="px-4 py-2.5 font-medium">Emails</th>
                 <th className="px-4 py-2.5" />
               </tr>
@@ -190,7 +208,7 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
                       {i.isPinned && <MapPinIcon className="h-3.5 w-3.5 text-amber-600" aria-label="Pinned" />}
                       {i.title}
                     </p>
-                    <p className="text-xs text-slate-400">{i.scopeLabel}</p>
+                    <p className="text-xs text-slate-400">{subtitle(i)}</p>
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     {i.authorName}
@@ -204,6 +222,18 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
                         <span className="block h-full bg-cyan-600" style={{ width: `${seenPct(i)}%` }} />
                       </span>
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {i.ackRequested ? (
+                      <span className="inline-flex items-center gap-2 text-slate-700">
+                        {i.ackCount ?? 0} / {i.audienceCount ?? 0}
+                        <span className="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+                          <span className="block h-full bg-emerald-600" style={{ width: `${ackPct(i)}%` }} />
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-300" title="The author did not ask for acknowledgements">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {i.emailFailed ? (

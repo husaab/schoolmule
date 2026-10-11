@@ -165,7 +165,8 @@ const AnnouncementsPanel: React.FC<Props> = ({ tone, classes, presetClassId }) =
                     <span className={`block truncate text-sm ${unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-800'}`}>{item.title}</span>
                     <span className="block truncate text-xs text-slate-500">{item.body}</span>
                     <span className={`mt-1 block text-[11px] ${t.accentText}`}>
-                      Seen by {item.seenCount ?? 0} of {item.audienceCount ?? 0} guardians · {item.authorName}
+                      Seen by {item.seenCount ?? 0} of {item.audienceCount ?? 0} guardians
+                      {item.ackRequested ? ` · ${item.ackCount ?? 0} acknowledged` : ''} · {item.authorName}
                     </span>
                   </button>
                 )

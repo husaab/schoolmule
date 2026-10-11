@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowPathIcon, CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
 import { toneClasses, type Tone } from '@/components/messaging/tones'
@@ -13,6 +13,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import AnnouncementScopeChip from './AnnouncementScopeChip'
 import ReadReceipts from './ReadReceipts'
+import { shortName } from './StudentPicker'
 
 interface Props {
   announcementId: string
@@ -113,14 +114,34 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="mb-1.5">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
             <AnnouncementScopeChip item={detail} tone={tone} child={child} />
+            {detail.scope === 'custom' && isStaff && <span className="text-[11px] text-slate-400">{detail.studentCount ?? detail.students?.length ?? 0} students</span>}
+            {detail.ackRequested && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-px text-[11px] font-medium text-emerald-700">
+                <CheckIcon className="h-3 w-3" /> Acknowledgement requested
+              </span>
+            )}
           </div>
           <h2 className="text-lg font-semibold text-slate-900">{detail.title}</h2>
           <p className="mt-0.5 text-xs text-slate-500">
             {detail.authorId === user.id ? 'You' : detail.authorName} · {formatDayLabel(detail.publishedAt)}, {formatTime(detail.publishedAt)}
             {detail.editedAt && ` · edited ${formatDayLabel(detail.editedAt)}`}
           </p>
+          {isStaff && detail.scope === 'custom' && detail.students && (
+            <p className="mt-1 text-xs text-slate-500">
+              To {detail.students.slice(0, 5).map((s) => shortName(s.name)).join(', ')}
+              {detail.students.length > 5 ? ` + ${detail.students.length - 5} more` : ''}
+              {detail.canEdit && (
+                <>
+                  {' · '}
+                  <button type="button" onClick={() => onEdit(detail)} className={`${t.accentText} cursor-pointer`}>
+                    edit the list
+                  </button>
+                </>
+              )}
+            </p>
+          )}
         </div>
         {detail.canEdit && (
           <div className="flex flex-shrink-0 gap-1.5">
@@ -150,6 +171,8 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
           <ReadReceipts
             seenCount={detail.seenCount ?? 0}
             audienceCount={detail.audienceCount ?? 0}
+            ackRequested={detail.ackRequested}
+            ackCount={detail.ackCount ?? 0}
             receipts={detail.receipts}
             emails={detail.emails}
             canRetry={user.role === 'ADMIN'}
