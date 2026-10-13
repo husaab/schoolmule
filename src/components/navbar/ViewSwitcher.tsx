@@ -9,13 +9,13 @@
 //   variant="card"   a one-line action under the user card in the sidebar
 //                    footer, which is also the mobile drawer.
 //
-// Hidden during an admin "view as" preview: that session belongs to the
-// previewed user and the violet bar owns the state.
+// Shown during an admin "view as" preview too, exactly as the previewed
+// teacher sees it: switching there re-mints the preview in the other portal
+// (services/viewSwitch.ts) and the violet bar keeps showing who is viewed.
 
 import React, { useEffect, useRef, useState } from 'react'
 import { CheckIcon, ChevronDownIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 import { useUserStore } from '@/store/useUserStore'
-import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { switchView, takeViewSwitchFlash, isView } from '@/services/viewSwitch'
 import { getStudentsByParentId } from '@/services/parentStudentService'
@@ -60,9 +60,8 @@ const useSwitch = () => {
 
 const ViewSwitcher: React.FC<{ variant: 'label' | 'card' }> = ({ variant }) => {
   const user = useUserStore((s) => s.user)
-  const previewing = useImpersonationStore((s) => Boolean(s.session))
   const notify = useNotificationStore((s) => s.showNotification)
-  const dual = canSwitchViews(user) && !previewing
+  const dual = canSwitchViews(user)
 
   // Say which view we landed in, once, right after the reload that completed
   // a switch. The navbar is on every page, so the label variant owns this.

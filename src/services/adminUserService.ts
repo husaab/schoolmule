@@ -62,9 +62,14 @@ export const deleteSchoolUser = (userId: string) =>
  * token for a teacher or parent; see services/impersonation.ts for how it is
  * swapped in. `view` opens a dual-role teacher in their parent portal instead
  * of the teacher portal; omitted, the preview starts in their database role.
+ *
+ * `adminToken` sends the call as the admin while a preview is already running:
+ * the stored session token is then the read-only preview token, which the
+ * server refuses on every POST, so the parked admin token has to be used instead.
  */
-export const impersonateSchoolUser = (userId: string, view?: PreviewView) =>
+export const impersonateSchoolUser = (userId: string, view?: PreviewView, adminToken?: string) =>
   apiClient<AdminUserResponse<ImpersonationStart>, { view?: PreviewView }>(`/admin/users/${userId}/impersonate`, {
     method: 'POST',
     body: view ? { view } : {},
+    ...(adminToken && { headers: { Authorization: `Bearer ${adminToken}` } }),
   });

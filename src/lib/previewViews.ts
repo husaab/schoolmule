@@ -1,8 +1,8 @@
 // src/lib/previewViews.ts
 // Which portals an admin can open a "view as" preview in. A teacher who is
 // also a parent (linked to a current-year student) can be previewed in
-// either; everyone else only in their own. The view switcher is hidden inside
-// a preview, so the choice has to be made before it starts.
+// either; everyone else only in their own. Once inside, the regular view
+// switcher moves between the two portals (services/viewSwitch.ts).
 
 export type PreviewView = 'TEACHER' | 'PARENT'
 

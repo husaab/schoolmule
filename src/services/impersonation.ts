@@ -32,15 +32,25 @@ const clearIdentityStores = () => {
 /**
  * Swap the admin's session for the preview token the backend just issued and
  * land on the previewed user's home page.
+ *
+ * `startedAt` and `keepSelectedYear` are for a running preview re-minted in
+ * the other portal (see services/viewSwitch.ts): it is still the same preview,
+ * just viewed from the other side, so the original start and the school year
+ * the admin had picked both carry over. A fresh preview opens on the active year.
  */
-export const startImpersonation = (adminToken: string, preview: ImpersonationStart) => {
+export const startImpersonation = (
+  adminToken: string,
+  preview: ImpersonationStart,
+  { startedAt = new Date().toISOString(), keepSelectedYear = false }: { startedAt?: string; keepSelectedYear?: boolean } = {},
+) => {
+  const keptYearId = keepSelectedYear ? useSchoolYearStore.getState().selectedYearId : null;
   clearIdentityStores();
 
   useImpersonationStore.getState().setSession({
     adminToken,
     admin: { userId: preview.impersonator.userId, fullName: preview.impersonator.fullName },
     target: { userId: preview.userId, fullName: preview.fullName, role: preview.role, baseRole: preview.baseRole ?? preview.role },
-    startedAt: new Date().toISOString(),
+    startedAt,
   });
 
   setToken(preview.token);
@@ -57,8 +67,13 @@ export const startImpersonation = (adminToken: string, preview: ImpersonationSta
     isVerifiedSchool: preview.isVerifiedSchool,
     activeTerm: preview.activeTerm || null,
   });
-  useSchoolYearStore.getState().setYears(preview.schoolYears ?? []);
-  useSchoolYearStore.getState().selectYear(preview.activeSchoolYear?.schoolYearId ?? null);
+  const years = preview.schoolYears ?? [];
+  useSchoolYearStore.getState().setYears(years);
+  useSchoolYearStore
+    .getState()
+    .selectYear(
+      years.some((y) => y.schoolYearId === keptYearId) ? keptYearId : (preview.activeSchoolYear?.schoolYearId ?? null),
+    );
 
   window.location.href = landingPathFor(preview.role);
 };
