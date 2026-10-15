@@ -28,7 +28,7 @@ const CLOSE_DELAY = 150
 export function chipAmount(cell: Cell): string {
   switch (cell.status) {
     case 'none':
-      return '—'
+      return cell.manualCredit?.pending ? formatMoney(cell.manualCredit.amount) : '—'
     case 'paid':
       return formatMoney(cell.invoiced)
     case 'partial':
@@ -46,9 +46,9 @@ function chipDescription(cell: Cell): string {
   const amount = chipAmount(cell)
   switch (cell.status) {
     case 'none':
-      return 'no invoice'
+      return cell.manualCredit?.pending ? `no invoice yet, ${amount} prepaid` : 'no invoice'
     case 'paid':
-      return `${amount} paid`
+      return cell.manualCredit && cell.manualCredit.applied > 0 ? `${amount} paid, includes a prepaid credit` : `${amount} paid`
     case 'partial':
       return `${amount} owed, partially paid`
     case 'unpaid':
@@ -67,7 +67,15 @@ export const MonthChip = ({ cell }: { cell: Cell }) => (
     className={`flex w-full min-w-[84px] flex-col items-center rounded-lg px-2 py-1 leading-tight ${STATUS_CHIP[cell.status]}`}
   >
     <span className="text-[13px] font-semibold tabular-nums">{chipAmount(cell)}</span>
-    {cell.status !== 'none' && <span className="text-[10px] font-medium opacity-90">{statusText(cell)}</span>}
+    {cell.status !== 'none' && (
+      <span className="text-[10px] font-medium opacity-90">
+        {statusText(cell)}
+        {cell.manualCredit && cell.manualCredit.applied > 0 ? ' · prepaid' : ''}
+      </span>
+    )}
+    {cell.status === 'none' && cell.manualCredit?.pending && (
+      <span className="text-[10px] font-medium text-cyan-700">Prepaid</span>
+    )}
   </span>
 )
 

@@ -26,6 +26,7 @@ import {
   UsersIcon,
   ClockIcon,
   ChatBubbleBottomCenterTextIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
@@ -39,7 +40,7 @@ import ConfirmActionModal, { type ConfirmRequest } from './ConfirmActionModal'
 import CustomerPicker from './CustomerPicker'
 import FamilyFormModal from './FamilyFormModal'
 import MenuButton from '@/components/shared/MenuButton'
-import { ContactsTab, NotesTab, StudentsTab } from './FamilyDrawerTabs'
+import { ContactsTab, NotesTab, PrepaidTab, StudentsTab } from './FamilyDrawerTabs'
 import { DEFAULT_LINK_MODE, LinkModeFields, linkOptions, type LinkModeValue } from './familyUi'
 import { errorMessage, financeErrorText, formatDate, formatDateTime, formatMoney, kindLabel, monthLong } from './format'
 
@@ -57,10 +58,11 @@ interface FamilyDrawerProps {
   onDeleted: (familyId: string) => void
 }
 
-type Tab = 'invoices' | 'students' | 'contacts' | 'notes' | 'history'
+type Tab = 'invoices' | 'prepaid' | 'students' | 'contacts' | 'notes' | 'history'
 
 const TABS: { key: Tab; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }[] = [
   { key: 'invoices', label: 'Invoices', icon: DocumentTextIcon },
+  { key: 'prepaid', label: 'Prepaid', icon: BanknotesIcon },
   { key: 'students', label: 'Students', icon: UserGroupIcon },
   { key: 'contacts', label: 'Contacts', icon: UsersIcon },
   { key: 'notes', label: 'Notes', icon: ChatBubbleBottomCenterTextIcon },
@@ -601,6 +603,8 @@ function DrawerBody({
         ) : detail ? (
           tab === 'invoices' ? (
             <InvoicesTab detail={detail} grantName={grantName} onKindChange={changeKind} />
+          ) : tab === 'prepaid' ? (
+            <PrepaidTab detail={detail} onChanged={onChanged} confirm={confirm} />
           ) : tab === 'students' ? (
             <StudentsTab detail={detail} onChanged={onChanged} confirm={confirm} />
           ) : tab === 'contacts' ? (

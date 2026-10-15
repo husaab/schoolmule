@@ -200,6 +200,14 @@ export function warningText(w: LedgerWarning): string {
     }
     case 'OTHER_KIND_INVOICE':
       return `${when}an invoice that isn't tuition or subsidy`
+    case 'MANUAL_CREDIT_SUPERSEDED':
+      return `${when}prepaid credit already applied in QuickBooks — remove the manual entry`
+    case 'MANUAL_CREDIT_EXCEEDS': {
+      const excess = num(w.excess)
+      return `${when}prepaid credit is ${excess !== null ? formatMoney(excess) + ' ' : ''}more than the month owes — move the rest to another month`
+    }
+    case 'MANUAL_CREDIT_OUT_OF_YEAR':
+      return `${when}prepaid credit is outside this school year`
     default:
       return `${when}${String((w as { code: string }).code).toLowerCase().replace(/_/g, ' ')}`
   }

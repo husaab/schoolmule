@@ -97,7 +97,7 @@ const CellPopover: React.FC<CellPopoverProps> = ({
       </div>
 
       {invoices.length === 0 ? (
-        <p className="mt-2 text-xs text-slate-500">No invoice this month.</p>
+        <p className="mt-2 text-xs text-slate-500">No invoice this month{cell.manualCredit?.pending ? ' yet' : ''}.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {invoices.map((inv) => (
@@ -148,6 +148,29 @@ const CellPopover: React.FC<CellPopoverProps> = ({
             </div>
           ))}
         </dl>
+      )}
+
+      {cell.manualCredit && (
+        <div className="mt-3 rounded-lg border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-cyan-800">Prepaid credit (manual)</span>
+            <span className="tabular-nums font-semibold text-cyan-800">{formatMoney(cell.manualCredit.amount)}</span>
+          </div>
+          <p className="mt-0.5 text-cyan-700">
+            {cell.manualCredit.pending
+              ? 'Waiting for this month’s invoice.'
+              : cell.manualCredit.applied > 0
+                ? `${formatMoney(cell.manualCredit.applied)} counted here. Apply the credit in QuickBooks, then remove this entry.`
+                : 'Already applied in QuickBooks — remove this entry.'}
+          </p>
+          {(cell.manualCredit.note || cell.manualCredit.qboDepositId) && (
+            <p className="mt-0.5 text-slate-500">
+              {cell.manualCredit.qboDepositId ? `Deposit ${cell.manualCredit.qboDepositId}` : ''}
+              {cell.manualCredit.qboDepositId && cell.manualCredit.note ? ' · ' : ''}
+              {cell.manualCredit.note ?? ''}
+            </p>
+          )}
+        </div>
       )}
 
       {payments.length > 0 && (
