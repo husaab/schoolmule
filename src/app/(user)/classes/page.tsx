@@ -18,6 +18,7 @@ import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
 import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { getGradeOptions, getGradeDisplayName, isJK, isSK } from '@/lib/schoolUtils'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 
@@ -37,6 +38,7 @@ const ClassesPageContent = () => {
   const [searchTerm, setSearchTerm] = useDebouncedParam(filters, 'q')
   const gradeFilter = get('grade')
   const termFilter = get('term', 'active')
+  const subjectFilter = get('subject')
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
   const [viewClass, setViewClass] = useState<ClassPayload | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -100,6 +102,7 @@ const ClassesPageContent = () => {
     const matchesText =
       c.subject.toLowerCase().includes(lower) ||
       c.teacherName.toLowerCase().includes(lower)
+    const matchesSubject = subjectFilter === '' || c.subject === subjectFilter
     const matchesGrade =
       gradeFilter === '' || String(c.grade) === gradeFilter
     
@@ -112,8 +115,13 @@ const ClassesPageContent = () => {
       matchesTerm = c.termName === termFilter;
     }
     
-    return matchesText && matchesGrade && matchesTerm
+    return matchesText && matchesGrade && matchesTerm && matchesSubject
   })
+
+  // Subjects offered among the loaded classes, for the searchable Subject filter.
+  const subjectOptions = Array.from(new Set(classes.map((c) => c.subject).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b))
+    .map((s) => ({ value: s, label: s }))
 
   const toggleGrade = (grade: string) => {
     setCollapsedGrades((prev) => {
@@ -153,7 +161,19 @@ const ClassesPageContent = () => {
             <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
               <div className="p-6">
                 {/* Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Subject
+                    </label>
+                    <SearchableSelect
+                      options={subjectOptions}
+                      value={subjectFilter}
+                      onChange={(v) => setParams({ subject: v })}
+                      allLabel="All Subjects"
+                      searchPlaceholder="Find a subject"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Search Classes
@@ -203,14 +223,14 @@ const ClassesPageContent = () => {
                   </div>
                 </div>
 
-                {(searchTerm || gradeFilter || termFilter !== 'active') && (
+                {(searchTerm || gradeFilter || subjectFilter || termFilter !== 'active') && (
                   <div className="mt-4 flex items-center gap-3">
                     <span className="text-sm text-slate-500">
                       Showing {filteredClasses.length} of {classes.length} classes
                     </span>
                     <button
                       onClick={() => {
-                        setParams({ q: null, grade: null, term: null })
+                        setParams({ q: null, grade: null, term: null, subject: null })
                       }}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
