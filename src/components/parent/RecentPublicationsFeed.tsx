@@ -88,7 +88,13 @@ const RecentPublicationsFeed: React.FC<{ limit?: number }> = ({ limit = 8 }) => 
         setItems(res.data?.items ?? [])
         setNewCount(res.data?.newCount ?? 0)
 
-        if (markedSeenFor.current !== fetchKey) {
+        // The seen mark is one timestamp per parent, not per year: browsing a
+        // past year must not clear this year's NEW badges (and the server
+        // refuses writes against a past year for non-admins anyway).
+        const { years, selectedYearId: yearId } = useSchoolYearStore.getState()
+        const viewingPastYear = years.some((y) => y.schoolYearId === yearId && !y.isActive)
+
+        if (!viewingPastYear && markedSeenFor.current !== fetchKey) {
           markedSeenFor.current = fetchKey
           // Cosmetic — a failure here just means the badges show again.
           markPublicationsSeen().catch(() => {})
