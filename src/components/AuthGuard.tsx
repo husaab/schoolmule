@@ -147,6 +147,11 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (loopTrail) return <RedirectLoopNotice />
 
+  // A page the user is about to be sent away from must not mount: its fetches
+  // fire before router.replace lands and come back 403 (e.g. browser Back
+  // into a staff page after switching to Parent view).
+  if (resolveRedirect(path, { hasToken: Boolean(getToken()), user })) return null
+
   // The Observe console has its own chrome; product announcements belong
   // to the app, not the owner's ops view.
   const onObserve = path.startsWith('/observe')
