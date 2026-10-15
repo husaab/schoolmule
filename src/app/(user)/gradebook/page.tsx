@@ -11,10 +11,11 @@ import { getTermsBySchool } from '@/services/termService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TermPayload } from '@/services/types/term'
 import Link from 'next/link'
-import { getGradeOptions, isJK, isSK, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
+import { isJK, isSK, isJKSK, getGradeDisplayName } from '@/lib/schoolUtils'
 import { BookOpenIcon, AcademicCapIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
-import SearchableSelect from '@/components/ui/SearchableSelect'
+import ClassListFilters from '@/components/classes/ClassListFilters'
+import { filterClasses, gradeOptions, knownOrAll, subjectOptions, teacherOptions } from '@/lib/classListFilters'
 import { useFilterParams } from '@/hooks/useFilterParams'
 
 const GradebookDashboardContent: React.FC = () => {
@@ -30,6 +31,8 @@ const GradebookDashboardContent: React.FC = () => {
   const gradeFilter = get('grade')
   const termFilter = get('term', 'active')
   const subjectFilter = get('subject')
+  const teacherFilter = get('teacher')
+  const isAdmin = user.role === 'ADMIN'
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
 
   // 1) Fetch all classes taught by this teacher
@@ -81,33 +84,21 @@ const GradebookDashboardContent: React.FC = () => {
     }
   }, [user?.id, user?.school, user.role, selectedYearId]) // refetch when the selected school year changes
 
-  // Build the unique list of grades for the classes this teacher teaches
-  const availableGrades = getGradeOptions()
-
-  // Get active term for default filtering
+  // Options come from the loaded classes, so teachers only see what they teach.
+  const availableGrades = gradeOptions(classes)
   const activeTerm = terms.find(t => t.isActive);
-  
-  // Filter by grade and term
-  const filteredClasses = classes.filter((c) => {
-    const matchesSubject = subjectFilter === '' || c.subject === subjectFilter
-    const matchesGrade = gradeFilter === '' || String(c.grade) === gradeFilter
-    
-    let matchesTerm = true;
-    if (termFilter === 'active') {
-      matchesTerm = activeTerm ? c.termName === activeTerm.name : true;
-    } else if (termFilter === 'all') {
-      matchesTerm = true;
-    } else {
-      matchesTerm = c.termName === termFilter;
-    }
-    
-    return matchesGrade && matchesTerm && matchesSubject
-  })
-
-  // Subjects offered among the loaded classes, for the searchable Subject filter.
-  const subjectOptions = Array.from(new Set(classes.map((c) => c.subject).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b))
-    .map((s) => ({ value: s, label: s }))
+  const subjects = subjectOptions(classes)
+  const teachers = teacherOptions(classes)
+  // A stale URL/remembered value that matches no option would silently empty
+  // the list while the control reads "All", so drop it.
+  const filterValues = {
+    subject: knownOrAll(subjectFilter, subjects.map((o) => o.value)),
+    teacher: isAdmin ? knownOrAll(teacherFilter, teachers.map((o) => o.value)) : '',
+    grade: knownOrAll(gradeFilter, availableGrades.map((g) => String(g.value))),
+    term: termFilter,
+  }
+  const filteredClasses = filterClasses(classes, filterValues, { isAdmin, activeTermName: activeTerm?.name })
+  const hasActiveFilters = !!(filterValues.subject || filterValues.teacher || filterValues.grade || termFilter !== 'active')
 
   const toggleGrade = (grade: string) => {
     setCollapsedGrades((prev) => {
@@ -144,63 +135,24 @@ const GradebookDashboardContent: React.FC = () => {
             <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
               <div className="p-6">
                 {/* Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Filter by Subject
-                    </label>
-                    <SearchableSelect
-                      options={subjectOptions}
-                      value={subjectFilter}
-                      onChange={(v) => setParams({ subject: v })}
-                      allLabel="All Subjects"
-                      searchPlaceholder="Find a subject"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Filter by Term
-                    </label>
-                    <select
-                      value={termFilter}
-                      onChange={(e) => setParams({ term: e.target.value === 'active' ? null : e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
-                    >
-                      <option value="active">Active Term ({activeTerm?.name})</option>
-                      <option value="all">All Terms</option>
-                      {terms.map((term) => (
-                        <option key={term.termId} value={term.name}>
-                          {term.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Filter by Grade
-                    </label>
-                    <select
-                      value={gradeFilter}
-                      onChange={(e) => setParams({ grade: e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
-                    >
-                      <option value="">All Grades</option>
-                      {availableGrades.map((gradeOption) => (
-                        <option key={gradeOption.value} value={String(gradeOption.value)}>
-                          {getGradeDisplayName(gradeOption.value)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <ClassListFilters
+                  values={filterValues}
+                  setParams={setParams}
+                  subjects={subjects}
+                  teachers={teachers}
+                  grades={availableGrades}
+                  terms={terms}
+                  activeTerm={activeTerm}
+                  showTeacher={isAdmin}
+                />
 
-                {(gradeFilter || subjectFilter || termFilter !== 'active') && (
+                {hasActiveFilters && (
                   <div className="mt-4 flex items-center gap-3">
                     <span className="text-sm text-slate-500">
                       Showing {filteredClasses.length} of {classes.length} classes
                     </span>
                     <button
-                      onClick={() => setParams({ grade: null, term: null, subject: null })}
+                      onClick={() => setParams({ q: null, grade: null, term: null, subject: null, teacher: null })}
                       className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
                     >
                       Clear filters

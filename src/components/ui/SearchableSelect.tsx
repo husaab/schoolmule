@@ -36,6 +36,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [cursor, setCursor] = useState(0)
   const rootRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   const selected = options.find((o) => o.value === value) ?? null
 
@@ -45,12 +46,18 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     return q ? matches : [{ value: '', label: allLabel }, ...matches]
   }, [options, query, allLabel])
 
+  // Reset the search on close so the next open starts on the current choice.
+  const close = (refocus: boolean) => {
+    setOpen(false)
+    setQuery('')
+    if (refocus) triggerRef.current?.focus()
+  }
+
   useEffect(() => {
     if (!open) return
-    setQuery('')
     setCursor(Math.max(0, visible.findIndex((o) => o.value === value)))
     const onDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) close(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
@@ -69,7 +76,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
   const choose = (next: string) => {
     onChange(next)
-    setOpen(false)
+    close(true)
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -81,7 +88,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       return
     }
     if (e.key === 'Escape') {
-      setOpen(false)
+      close(true)
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
       setCursor((c) => Math.min(visible.length - 1, c + 1))
@@ -97,8 +104,9 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div ref={rootRef} className={`relative ${className}`} onKeyDown={onKeyDown}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close(false) : setOpen(true))}
         aria-haspopup="listbox"
         aria-expanded={open}
         className="flex w-full items-center gap-2 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
