@@ -14,6 +14,9 @@ import MessagingInbox from '@/components/messaging/MessagingInbox'
 import MessagesTabs, { useMessagesTab } from '@/components/messaging/MessagesTabs'
 import AnnouncementsPanel from '@/components/announcements/AnnouncementsPanel'
 import { getAllClasses } from '@/services/classService'
+import { getTermsBySchool } from '@/services/termService'
+import SearchableSelect from '@/components/ui/SearchableSelect'
+import { classPickerOptions, currentTermClasses } from '@/lib/classListFilters'
 import type { ClassPayload } from '@/services/types/class'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -21,7 +24,7 @@ import { useUserStore } from '@/store/useUserStore'
 import type { SenderRole } from '@/services/types/messaging'
 import { useFilterParams } from '@/hooks/useFilterParams'
 
-const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }> = ({ classes, role }) => {
+const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; activeTermName?: string; role: SenderRole }> = ({ classes, activeTermName, role }) => {
   const summary = useMessagingStore((s) => s.summary)
   const [tab, setTab] = useMessagesTab('conversations')
   // The class scope lives in the URL (?classId=), shared with the gradebook's
@@ -29,6 +32,9 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }>
   const { get, setParams } = useFilterParams()
   const classId = get('classId')
   const setClassId = (next: string) => setParams({ classId: next || null })
+  // Only the active term's classes (each class exists once per term); a
+  // deep-linked class from another term stays selectable, labelled by term.
+  const classOptions = classPickerOptions(currentTermClasses(classes, activeTermName, classId), activeTermName)
 
   return (
     <>
@@ -41,7 +47,7 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }>
       {tab === 'announcements' ? (
         <AnnouncementsPanel
           tone="staff"
-          classes={classes.map((c) => ({ classId: c.classId, subject: c.subject, grade: c.grade == null ? null : String(c.grade) }))}
+          classes={classOptions}
           presetClassId={classId || undefined}
         />
       ) : (
@@ -57,21 +63,14 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; role: SenderRole }>
           }
           listHeaderSlot={
             classes.length > 0 ? (
-              <label className="block">
-                <span className="sr-only">Class</span>
-                <select
-                  value={classId}
-                  onChange={(e) => setClassId(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-200 cursor-pointer"
-                >
-                  <option value="">All classes</option>
-                  {classes.map((c) => (
-                    <option key={c.classId} value={c.classId}>
-                      {c.subject} · Gr {c.grade}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SearchableSelect
+                size="sm"
+                options={classOptions}
+                value={classId}
+                onChange={setClassId}
+                allLabel="All classes"
+                searchPlaceholder="Find a class"
+              />
             ) : null
           }
         />
@@ -86,6 +85,7 @@ const StaffMessagesPage: React.FC = () => {
   const loaded = useMessagingStore((s) => s.loaded)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [classes, setClasses] = useState<ClassPayload[]>([])
+  const [activeTermName, setActiveTermName] = useState<string | undefined>()
 
   useEffect(() => {
     if (!user.id || !user.school) return
@@ -99,6 +99,13 @@ const StaffMessagesPage: React.FC = () => {
         setClasses(mine)
       })
       .catch(() => setClasses([]))
+    getTermsBySchool(user.school)
+      .then((res) => {
+        if (!cancelled) setActiveTermName(res.data?.find((t) => t.isActive)?.name)
+      })
+      .catch(() => {
+        if (!cancelled) setActiveTermName(undefined)
+      })
     return () => {
       cancelled = true
     }
@@ -132,7 +139,7 @@ const StaffMessagesPage: React.FC = () => {
           </div>
 
           <Suspense fallback={<div className="h-[520px] rounded-2xl border border-slate-200/70 bg-white" />}>
-            <StaffMessagesBody classes={classes} role={role} />
+            <StaffMessagesBody classes={classes} activeTermName={activeTermName} role={role} />
           </Suspense>
         </div>
       </main>

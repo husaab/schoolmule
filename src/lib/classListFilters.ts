@@ -58,3 +58,35 @@ export const filterClasses = (
     if (f.term !== 'all') return c.termName === f.term
     return true
   })
+
+/**
+ * The classes a picker should offer: the active term's (a class exists once
+ * per term, so listing every term repeats each subject). With no active term,
+ * every class. `keepClassId` (a deep link to another term's class) stays in.
+ */
+export const currentTermClasses = (
+  classes: ClassPayload[],
+  activeTermName: string | undefined,
+  keepClassId?: string,
+): ClassPayload[] =>
+  activeTermName
+    ? classes.filter((c) => c.termName === activeTermName || c.classId === keepClassId)
+    : classes
+
+/**
+ * Picker options labelled "Subject · Gr N". Another term's class gets its
+ * term name; two sections that would still read the same get the teacher.
+ */
+export const classPickerOptions = (classes: ClassPayload[], activeTermName?: string): SearchableOption[] => {
+  const base = (c: ClassPayload) =>
+    `${c.subject}${c.grade != null ? ` · Gr ${c.grade}` : ''}` +
+    (activeTermName && c.termName !== activeTermName && c.termName ? ` · ${c.termName}` : '')
+  const counts = new Map<string, number>()
+  for (const c of classes) counts.set(base(c), (counts.get(base(c)) ?? 0) + 1)
+  return classes
+    .map((c) => ({
+      value: c.classId,
+      label: (counts.get(base(c)) ?? 0) > 1 && c.teacherName ? `${base(c)} · ${c.teacherName}` : base(c),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+}

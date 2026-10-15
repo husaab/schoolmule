@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ClassPayload } from '@/services/types/class'
-import { filterClasses, gradeOptions, knownOrAll, subjectOptions, teacherOptions } from './classListFilters'
+import { classPickerOptions, currentTermClasses, filterClasses, gradeOptions, knownOrAll, subjectOptions, teacherOptions } from './classListFilters'
 
 const cls = (over: Partial<ClassPayload>): ClassPayload => ({
   classId: Math.random().toString(36),
@@ -56,5 +56,27 @@ describe('knownOrAll', () => {
   it('drops values that match no option', () => {
     expect(knownOrAll('Math', ['Math', 'Art'])).toBe('Math')
     expect(knownOrAll('Gym', ['Math'])).toBe('')
+  })
+})
+
+describe('class picker scoping', () => {
+  const pick = [
+    cls({ classId: 'a1', subject: 'Arabic', grade: 1, termName: 'Term 1' }),
+    cls({ classId: 'a2', subject: 'Arabic', grade: 1, termName: 'Term 2' }),
+    cls({ classId: 'q1', subject: 'Quran', grade: 1, termName: 'Term 1', teacherName: 'Teacher A' }),
+    cls({ classId: 'q2', subject: 'Quran', grade: 1, termName: 'Term 1', teacherName: 'Teacher B' }),
+  ]
+  it('keeps only the active term, plus a deep-linked class', () => {
+    expect(currentTermClasses(pick, 'Term 1').map((c) => c.classId)).toEqual(['a1', 'q1', 'q2'])
+    expect(currentTermClasses(pick, 'Term 1', 'a2')).toHaveLength(4)
+    expect(currentTermClasses(pick, undefined)).toHaveLength(4)
+  })
+  it('labels other-term classes by term and same-term twins by teacher', () => {
+    expect(classPickerOptions(pick, 'Term 1').map((o) => o.label)).toEqual([
+      'Arabic · Gr 1',
+      'Arabic · Gr 1 · Term 2',
+      'Quran · Gr 1 · Teacher A',
+      'Quran · Gr 1 · Teacher B',
+    ])
   })
 })

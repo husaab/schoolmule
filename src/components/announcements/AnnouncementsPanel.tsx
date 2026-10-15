@@ -12,10 +12,12 @@ import AnnouncementComposerModal from './AnnouncementComposerModal'
 import AnnouncementDetail from './AnnouncementDetail'
 import AnnouncementScopeChip from './AnnouncementScopeChip'
 import DeleteAnnouncementModal from './DeleteAnnouncementModal'
+import SearchableSelect, { type SearchableOption } from '@/components/ui/SearchableSelect'
 
 interface Props {
   tone: Tone
-  classes: { classId: string; subject: string; grade: string | null }[]
+  /** Class picker options (value = classId), already scoped to the current term. */
+  classes: SearchableOption[]
   presetClassId?: string
 }
 
@@ -106,22 +108,16 @@ const AnnouncementsPanel: React.FC<Props> = ({ tone, classes, presetClassId }) =
           </div>
           <div className={`flex flex-wrap gap-2 border-b p-3 ${t.divider}`}>
             {classes.length > 0 && (
-              <label className="min-w-0 flex-1 basis-40">
-                <span className="sr-only">Class</span>
-                <select
+              <div className="min-w-0 flex-1 basis-40">
+                <SearchableSelect
+                  size="sm"
+                  options={classes}
                   value={classId}
-                  onChange={(e) => setClassId(e.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-200 cursor-pointer"
-                >
-                  <option value="">All my classes</option>
-                  {classes.map((c) => (
-                    <option key={c.classId} value={c.classId}>
-                      {c.subject}
-                      {c.grade ? ` · Gr ${c.grade}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setClassId}
+                  allLabel="All my classes"
+                  searchPlaceholder="Find a class"
+                />
+              </div>
             )}
             <button type="button" onClick={() => setMine(true)} className={`rounded-full border px-2.5 py-1 text-xs cursor-pointer ${mine ? t.chipActive : t.chipIdle}`}>
               Posted by me

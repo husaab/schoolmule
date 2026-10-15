@@ -20,7 +20,14 @@ interface SearchableSelectProps {
   onChange: (value: string) => void
   allLabel: string
   searchPlaceholder?: string
+  /** 'sm' matches the compact h-9 controls used in panels (messages, announcements). */
+  size?: 'md' | 'sm'
   className?: string
+}
+
+const TRIGGER = {
+  md: 'border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 bg-slate-50 focus:ring-cyan-500',
+  sm: 'h-9 border border-slate-200 rounded-lg px-2.5 text-slate-700 bg-white focus:ring-cyan-200',
 }
 
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -29,6 +36,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   onChange,
   allLabel,
   searchPlaceholder = 'Search…',
+  size = 'md',
   className = '',
 }) => {
   const [open, setOpen] = useState(false)
@@ -109,7 +117,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         onClick={() => (open ? close(false) : setOpen(true))}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-full items-center gap-2 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+        className={`flex w-full items-center gap-2 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:border-transparent ${TRIGGER[size]}`}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selected ? selected.label : allLabel}</span>
         <ChevronDownIcon className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
