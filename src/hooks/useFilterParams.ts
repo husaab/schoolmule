@@ -92,15 +92,24 @@ export function useFilterParams(options: FilterParamsOptions = {}): FilterParams
     pendingQsRef.current = null
   }, [urlQs])
 
+  // React to the URL (or the memory slot) actually moving, never to a memory
+  // write alone. setParams writes memory first and the URL catches up a
+  // render later; reacting in between would copy the stale URL back over the
+  // new memory (a deleted search or "Clear filters" then came straight back).
+  const syncedRef = useRef<string | null>(null)
   useEffect(() => {
     if (!storage || !memoryKey) return
+    const marker = `${memoryKey}?${urlQs}`
+    if (syncedRef.current === marker) return
+    syncedRef.current = marker
     if (urlQs === '') {
-      if (remembered) router.replace(`${pathname}?${remembered}`, { scroll: false })
+      const saved = recallQuery(storage, memoryKey)
+      if (saved) router.replace(`${pathname}?${saved}`, { scroll: false })
     } else if (hasFilterParams(urlQs, transient)) {
       // Deep links update the memory too, so a later bare visit shows them.
       rememberQuery(storage, memoryKey, urlQs, transient)
     }
-  }, [storage, memoryKey, urlQs, remembered, pathname, router, transient])
+  }, [storage, memoryKey, urlQs, pathname, router, transient])
 
   const get = useCallback((key: string, fallback = '') => params.get(key) ?? fallback, [params])
 
