@@ -10,6 +10,7 @@ import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../_hooks/useAnalyticsParams'
 import StudentPicker, { PickerStudent } from './StudentPicker'
 import FilterDropdown from './FilterDropdown'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 interface ControlBarProps {
   params: UseAnalyticsParams
@@ -21,8 +22,8 @@ interface ControlBarProps {
   onOpenReport: () => void
 }
 
-const selectCls =
-  'px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer max-w-[180px]'
+const triggerCls =
+  'px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:ring-cyan-500'
 
 const ControlBar: React.FC<ControlBarProps> = ({
   params,
@@ -39,19 +40,18 @@ const ControlBar: React.FC<ControlBarProps> = ({
         {/* Term — single term or every term combined */}
         {/* Term. "All terms (combined)" is the single way to compare terms —
             pick it, then a grade + subject to see the Term 1 vs Term 2 view. */}
-        <select
-          aria-label="Term"
+        <SearchableSelect
+          ariaLabel="Term"
+          options={[
+            ...terms.map((t) => ({ value: t.termId, label: `${t.name} ${t.academicYear}` })),
+            ...(terms.length > 1 ? [{ value: 'all', label: 'All terms (combined)' }] : []),
+          ]}
           value={params.termId ?? ''}
-          onChange={(e) => params.setParams({ termId: e.target.value, compareTerm: null })}
-          className={selectCls}
-        >
-          {terms.map((t) => (
-            <option key={t.termId} value={t.termId}>
-              {t.name} {t.academicYear}
-            </option>
-          ))}
-          {terms.length > 1 && <option value="all">All terms (combined)</option>}
-        </select>
+          onChange={(v) => params.setParams({ termId: v, compareTerm: null })}
+          placeholder="Term"
+          className="max-w-[180px]"
+          triggerClassName={triggerCls}
+        />
 
         {params.termId === 'all' && (
           <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-cyan-50 text-cyan-700 border border-cyan-100 rounded-full">
@@ -61,25 +61,21 @@ const ControlBar: React.FC<ControlBarProps> = ({
 
         {/* Grade filter. Stacks with subject: if a subject is active, narrowing
             the grade keeps the subject (stays in the combined subject view). */}
-        <select
-          aria-label="Grade level"
+        {/* clearing a grade while a subject is active drops to school-wide subject */}
+        <SearchableSelect
+          ariaLabel="Grade level"
+          options={grades.map((g) => ({ value: g, label: `Grade ${g}` }))}
           value={params.grade ?? ''}
-          onChange={(e) => {
-            const grade = e.target.value || null
+          onChange={(v) => {
+            const grade = v || null
             if (params.subject) params.drillTo('subject', { grade })
             else if (grade) params.drillTo('grade', { grade })
             else params.drillTo('school')
           }}
-          className={selectCls}
-        >
-          <option value="">All grades</option>
-          {/* clearing a grade while a subject is active drops to school-wide subject */}
-          {grades.map((g) => (
-            <option key={g} value={g}>
-              Grade {g}
-            </option>
-          ))}
-        </select>
+          allLabel="All grades"
+          className="max-w-[180px]"
+          triggerClassName={triggerCls}
+        />
 
         {/* Subject filter. Stacks with grade: selecting a subject keeps the
             active grade, producing e.g. "Grade 3 — Math". */}

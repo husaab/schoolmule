@@ -10,6 +10,7 @@ import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createConversation, getParentTargets, getStaffRoster, getStaffTargets, getStaffTargetsForStudent } from '@/services/messagingService'
 import type { ParentTargets, SenderRole, StaffTargetGuardian, StaffTargets, Thread } from '@/services/types/messaging'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import Composer from './Composer'
 import { toneClasses, type Tone } from './tones'
 
@@ -304,29 +305,23 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={isParent ? 'Child' : 'Student'} htmlFor="nc-student" required>
-            <select
-              id="nc-student"
+          <Field label={isParent ? 'Child' : 'Student'} required>
+            <SearchableSelect
+              options={(isParent
+                ? children.filter((c) => !preset?.childIds?.length || preset.childIds.includes(c.studentId)).map((c) => ({ value: c.studentId, label: c.name }))
+                : staffStudents.map((s) => ({ value: s.studentId, label: s.grade ? `${s.name} · Gr ${s.grade}` : s.name })))}
               value={studentId}
-              onChange={(e) => {
-                setStudentId(e.target.value)
+              onChange={(v) => {
+                setStudentId(v)
                 setAssessmentId('')
                 // A different student has different classes.
                 if (rosterMode) setStaffClassId('')
               }}
-              className={selectClass}
+              placeholder={rosterMode && loading ? 'Loading…' : 'Select…'}
+              ariaLabel={isParent ? 'Child' : 'Student'}
+              searchPlaceholder={isParent ? 'Find a child' : 'Find a student'}
               disabled={(!isParent && Boolean(preset?.studentId)) || (rosterMode && loading)}
-            >
-              <option value="">{rosterMode && loading ? 'Loading…' : 'Select…'}</option>
-              {(isParent
-                ? children.filter((c) => !preset?.childIds?.length || preset.childIds.includes(c.studentId)).map((c) => ({ id: c.studentId, name: c.name }))
-                : staffStudents.map((s) => ({ id: s.studentId, name: s.grade ? `${s.name} · Gr ${s.grade}` : s.name }))
-              ).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            />
           </Field>
 
           {isParent && mode === 'assessment' && (
@@ -431,7 +426,6 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
             <div className="sm:col-span-2">
               <Field
                 label="Class"
-                htmlFor="nc-staff-class"
                 required={mode === 'assessment'}
                 hint={
                   mode === 'general'
@@ -441,23 +435,19 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
                       : undefined
                 }
               >
-                <select
-                  id="nc-staff-class"
+                <SearchableSelect
+                  options={staffClasses.map((c) => ({ value: c.classId, label: c.subject }))}
                   value={staffClassId}
-                  onChange={(e) => {
-                    setStaffClassId(e.target.value)
+                  onChange={(v) => {
+                    setStaffClassId(v)
                     setAssessmentId('')
                   }}
-                  className={selectClass}
+                  allLabel={mode === 'general' ? 'No specific class' : undefined}
+                  placeholder={staffClasses.length === 0 && studentId ? 'No current-term class with this student' : 'Select…'}
+                  ariaLabel="Class"
+                  searchPlaceholder="Find a class"
                   disabled={Boolean(classId) || loading || !studentId || staffClasses.length === 0}
-                >
-                  <option value="">{mode === 'general' ? 'No specific class' : staffClasses.length === 0 && studentId ? 'No current-term class with this student' : 'Select…'}</option>
-                  {staffClasses.map((c) => (
-                    <option key={c.classId} value={c.classId}>
-                      {c.subject}
-                    </option>
-                  ))}
-                </select>
+                />
               </Field>
             </div>
           )}

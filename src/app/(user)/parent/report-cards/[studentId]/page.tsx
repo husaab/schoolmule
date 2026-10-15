@@ -14,6 +14,7 @@ import ReportCardViewerModal from '@/components/report-cards/view/reportCardView
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { childColor, childInitial } from '@/components/parent/childColors'
 import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams'
 import {
@@ -221,20 +222,18 @@ const ParentStudentReportCardsContent: React.FC = () => {
               {loadingTerms ? (
                 <p className="text-sm text-slate-500">Loading terms...</p>
               ) : (
-                <select
+                <SearchableSelect
                   value={term}
-                  onChange={(e) => setParams({ term: e.target.value || null })}
-                  className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>Select term</option>
-                  {terms.map((t) => (
-                    <option key={t.termId} value={t.name}>
-                      {t.name} ({t.academicYear})
-                      {t.isActive && ' - Active'}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setParams({ term: v || null })}
+                  options={terms.map((t) => ({
+                    value: t.name,
+                    label: `${t.name} (${t.academicYear})${t.isActive ? ' - Active' : ''}`,
+                  }))}
+                  placeholder="Select term"
+                  ariaLabel="Term"
+                  className="w-full"
+                  triggerClassName="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-slate-700 shadow-sm focus:ring-amber-200"
+                />
               )}
             </div>
           </div>

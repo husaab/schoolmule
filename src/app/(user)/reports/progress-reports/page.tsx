@@ -23,6 +23,7 @@ import SentEmailProgressReportModal from '@/components/progress-report/email/sen
 import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
 import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 interface ProgressReportRecord {
   student_id?: string
@@ -400,19 +401,18 @@ const ProgressReportsContent = () => {
               <CalendarIcon className="h-4 w-4 inline mr-1" />
               Select Term
             </label>
-            <select
+            <SearchableSelect
+              options={terms.map((term) => ({
+                value: term.name,
+                label: `${term.name} (${term.academicYear})${term.isActive ? ' - Active' : ''}`,
+              }))}
               value={selectedTerm}
-              onChange={(e) => { setParams({ term: e.target.value }); setSelectedReportPaths([]); }}
-              className="w-full lg:max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Select a term</option>
-              {terms.map((term) => (
-                <option key={term.termId} value={term.name}>
-                  {term.name} ({term.academicYear})
-                  {term.isActive && ' - Active'}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => { setParams({ term: v }); setSelectedReportPaths([]); }}
+              placeholder="Select a term"
+              ariaLabel="Select term"
+              className="lg:max-w-md"
+              triggerClassName="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-indigo-500"
+            />
             <p className="text-gray-500 text-xs mt-2">
               Generating for and viewing reports for this term.
             </p>
@@ -598,18 +598,17 @@ const ProgressReportsContent = () => {
                         <FunnelIcon className="h-4 w-4 inline mr-1" />
                         Filter by Grade
                       </label>
-                      <select
+                      <SearchableSelect
+                        options={grades.map((gradeOption) => ({
+                          value: String(gradeOption.value),
+                          label: `Grade ${gradeOption.label}`,
+                        }))}
                         value={reportGradeFilter}
-                        onChange={(e) => { setParams({ rgrade: e.target.value }); setSelectedReportPaths([]); }}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      >
-                        <option value="">All Grades</option>
-                        {grades.map(gradeOption => (
-                          <option key={gradeOption.value} value={String(gradeOption.value)}>
-                            Grade {gradeOption.label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => { setParams({ rgrade: v }); setSelectedReportPaths([]); }}
+                        allLabel="All Grades"
+                        ariaLabel="Filter by grade"
+                        triggerClassName="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-indigo-500"
+                      />
                     </div>
                     <div>
                       <button

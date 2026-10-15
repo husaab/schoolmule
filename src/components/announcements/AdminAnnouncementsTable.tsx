@@ -9,6 +9,7 @@ import { MagnifyingGlassIcon, MapPinIcon, MegaphoneIcon } from '@heroicons/react
 import Spinner from '@/components/Spinner'
 import StatTile from '@/components/ui/StatTile'
 import EmptyState from '@/components/ui/EmptyState'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { getAnnouncement, listAnnouncements, retryAnnouncementEmails } from '@/services/announcementService'
 import type { AnnouncementDetail, AnnouncementItem, AnnouncementScope } from '@/services/types/announcement'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -109,8 +110,6 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
     }
   }
 
-  const select = 'h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-200 cursor-pointer'
-
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -121,39 +120,32 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="block">
-          <span className="sr-only">Author</span>
-          <select value={author} onChange={(e) => setParams({ aauthor: e.target.value })} className={select}>
-            <option value="">All authors</option>
-            {authors.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="sr-only">Scope</span>
-          <select value={scope} onChange={(e) => setParams({ ascope: e.target.value })} className={select}>
-            <option value="">All scopes</option>
-            {SCOPES.map((s) => (
-              <option key={s} value={s}>
-                {SCOPE_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="sr-only">Grade</span>
-          <select value={grade} onChange={(e) => setParams({ agrade: e.target.value })} className={select}>
-            <option value="">All grades</option>
-            {grades.map((g) => (
-              <option key={g} value={g}>
-                Grade {g}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SearchableSelect
+          size="sm"
+          options={authors.map((a) => ({ value: a, label: a }))}
+          value={author}
+          onChange={(v) => setParams({ aauthor: v })}
+          allLabel="All authors"
+          ariaLabel="Author"
+          searchPlaceholder="Find an author"
+        />
+        <SearchableSelect
+          size="sm"
+          options={SCOPES.map((s) => ({ value: s, label: SCOPE_LABEL[s] }))}
+          value={scope}
+          onChange={(v) => setParams({ ascope: v })}
+          allLabel="All scopes"
+          ariaLabel="Scope"
+        />
+        <SearchableSelect
+          size="sm"
+          options={grades.map((g) => ({ value: g, label: `Grade ${g}` }))}
+          value={grade}
+          onChange={(v) => setParams({ agrade: v })}
+          allLabel="All grades"
+          ariaLabel="Grade"
+          searchPlaceholder="Find a grade"
+        />
         <button
           type="button"
           onClick={() => setParams({ aack: ackOnly ? null : '1' })}

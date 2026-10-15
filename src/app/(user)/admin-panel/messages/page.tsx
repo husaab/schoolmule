@@ -16,6 +16,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import StatTile from '@/components/ui/StatTile'
 import EmptyState from '@/components/ui/EmptyState'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { listConversations } from '@/services/messagingService'
 import type { ConversationItem } from '@/services/types/messaging'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -109,22 +110,24 @@ const ConversationsOversight: React.FC = () => {
             {s === 'open' ? 'Open' : s === 'waiting' ? `Waiting > ${WAITING_HOURS}h` : 'Resolved'}
           </button>
         ))}
-        <select value={teacher} onChange={(e) => setParams({ teacher: e.target.value })} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
-          <option value="">All teachers</option>
-          {teachers.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <select value={subject} onChange={(e) => setParams({ subject: e.target.value })} className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 cursor-pointer">
-          <option value="">All subjects</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <SearchableSelect
+          size="sm"
+          value={teacher}
+          onChange={(v) => setParams({ teacher: v })}
+          options={teachers.map((t) => ({ value: t, label: t }))}
+          allLabel="All teachers"
+          ariaLabel="Filter by teacher"
+          searchPlaceholder="Search teachers…"
+        />
+        <SearchableSelect
+          size="sm"
+          value={subject}
+          onChange={(v) => setParams({ subject: v })}
+          options={subjects.map((s) => ({ value: s, label: s }))}
+          allLabel="All subjects"
+          ariaLabel="Filter by subject"
+          searchPlaceholder="Search subjects…"
+        />
         <label className="relative ml-auto block w-full sm:w-72">
           <span className="sr-only">Search</span>
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

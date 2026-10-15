@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircleIcon, EnvelopeIcon, ExclamationTriangleIcon, LockClosedIcon, MegaphoneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
-import { Button, Field, FieldRow, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
+import { Button, Field, FieldRow, ModalBody, ModalFooter, ModalHeader, inputClass, textareaClass } from '@/components/shared/modalKit'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -12,6 +12,7 @@ import { createAnnouncement, getAnnouncementTargets, getPickableStudents, previe
 import type { AnnouncementDetail, AnnouncementScope, AnnouncementSender, AnnouncementTargets, AudiencePreview, PickableStudent } from '@/services/types/announcement'
 import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
 import type { Tone } from '@/components/messaging/tones'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import StudentPicker from './StudentPicker'
 import { useAnnouncementFiles } from './useAnnouncementFiles'
 
@@ -322,26 +323,28 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
 
         <FieldRow>
           {mode === 'create' && scope === 'class' && (
-            <Field label="Class" htmlFor="an-class" required>
-              <select id="an-class" value={classId} onChange={(e) => setClassId(e.target.value)} className={selectClass}>
-                {(targets?.classes ?? []).map((c) => (
-                  <option key={c.classId} value={c.classId}>
-                    {c.grade ? `Gr ${c.grade} ` : ''}
-                    {c.subject} · {c.studentCount} students
-                  </option>
-                ))}
-              </select>
+            <Field label="Class" required>
+              <SearchableSelect
+                options={(targets?.classes ?? []).map((c) => ({
+                  value: c.classId,
+                  label: `${c.grade ? `Gr ${c.grade} ` : ''}${c.subject} · ${c.studentCount} students`,
+                }))}
+                value={classId}
+                onChange={setClassId}
+                ariaLabel="Class"
+                searchPlaceholder="Find a class"
+              />
             </Field>
           )}
           {mode === 'create' && scope === 'grade' && (
-            <Field label="Grade" htmlFor="an-grade" required>
-              <select id="an-grade" value={grade} onChange={(e) => setGrade(e.target.value)} className={selectClass}>
-                {(targets?.grades ?? []).map((g) => (
-                  <option key={g.grade} value={g.grade}>
-                    Grade {g.grade} · {g.studentCount} students
-                  </option>
-                ))}
-              </select>
+            <Field label="Grade" required>
+              <SearchableSelect
+                options={(targets?.grades ?? []).map((g) => ({ value: g.grade, label: `Grade ${g.grade} · ${g.studentCount} students` }))}
+                value={grade}
+                onChange={setGrade}
+                ariaLabel="Grade"
+                searchPlaceholder="Find a grade"
+              />
             </Field>
           )}
           <Field label="Pin to top until" htmlFor="an-pin" hint="Optional. Stays first in every feed until this date.">

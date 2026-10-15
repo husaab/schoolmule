@@ -23,8 +23,9 @@ import ParentAssessmentTable from '@/components/parent/ParentAssessmentTable'
 import Link from 'next/link'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import ClassGradesBarChart from '@/components/parent/ClassGradesBarChart'
-import TermPicker from '@/components/parent/TermPicker'
+import TermPicker, { PARENT_SELECT_TRIGGER } from '@/components/parent/TermPicker'
 import Spinner from '@/components/Spinner'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import TrendLineChart from '@/app/(user)/analytics/_components/charts/TrendLineChart'
 import { gradeTextColor } from '@/components/parent/childColors'
 import { useFilterParams } from '@/hooks/useFilterParams'
@@ -408,18 +409,14 @@ const ParentGradesContent: React.FC = () => {
   return (
     <>
       <ParentFilterBar>
-        <select
+        <SearchableSelect
           value={subjectFilter}
-          onChange={(e) => setParams({ subject: e.target.value || null })}
-          className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
-        >
-          <option value="">All classes</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setParams({ subject: v || null })}
+          options={subjects.map((s) => ({ value: s, label: s }))}
+          allLabel="All classes"
+          ariaLabel="Class"
+          triggerClassName={PARENT_SELECT_TRIGGER}
+        />
         <TermPicker
           value={termId}
           onChange={(next) => setParams({ termId: next || null })}

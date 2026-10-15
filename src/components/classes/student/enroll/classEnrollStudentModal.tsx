@@ -13,9 +13,9 @@ import {
   ModalFooter,
   ModalHeader,
   inputClass,
-  selectClass,
 } from '../../../shared/modalKit'
 import { MagnifyingGlassIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 
 interface ClassEnrollStudentModalProps {
   /** Whether the modal is open */
@@ -214,20 +214,15 @@ const ClassEnrollStudentModal: React.FC<ClassEnrollStudentModalProps> = ({
               </div>
 
               <div className="w-40">
-                <Field label="Grade" htmlFor="enroll-grade-filter">
-                  <select
-                    id="enroll-grade-filter"
+                <Field label="Grade">
+                  <SearchableSelect
+                    options={getGradeOptions().map((g) => ({ value: g.value.toString(), label: getGradeDisplayName(g.value) }))}
                     value={filterGradeValue}
-                    onChange={(e) => setFilterGradeValue(e.target.value)}
-                    className={selectClass}
-                  >
-                    <option value="">All grades</option>
-                    {getGradeOptions().map((gradeOption) => (
-                      <option key={gradeOption.value} value={gradeOption.value.toString()}>
-                        {getGradeDisplayName(gradeOption.value)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setFilterGradeValue}
+                    allLabel="All grades"
+                    ariaLabel="Grade"
+                    searchPlaceholder="Find a grade"
+                  />
                 </Field>
               </div>
             </div>

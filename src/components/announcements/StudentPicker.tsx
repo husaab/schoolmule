@@ -7,7 +7,7 @@
 import React, { useMemo, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import SearchInput from '@/components/teacherAttendance/SearchInput'
-import { selectClass } from '@/components/shared/modalKit'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import type { PickableStudent } from '@/services/types/announcement'
 
 interface Props {
@@ -65,32 +65,27 @@ const StudentPicker: React.FC<Props> = ({ students, value, onChange, loading = f
       : 'shown'
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="rounded-xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-2">
         <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a student or guardian" className="min-w-[180px] flex-1" />
-        <label className="block">
-          <span className="sr-only">Grade</span>
-          <select value={grade} onChange={(e) => setGrade(e.target.value)} className={`${selectClass} !h-9 !w-auto !py-0 text-xs`}>
-            <option value="">All grades</option>
-            {grades.map((g) => (
-              <option key={g} value={g}>
-                Grade {g}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="sr-only">Class</span>
-          <select value={classId} onChange={(e) => setClassId(e.target.value)} className={`${selectClass} !h-9 !w-auto !py-0 text-xs`}>
-            <option value="">All classes</option>
-            {classes.map((c) => (
-              <option key={c.classId} value={c.classId}>
-                {c.grade ? `Gr ${c.grade} ` : ''}
-                {c.subject}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SearchableSelect
+          size="sm"
+          options={grades.map((g) => ({ value: g, label: `Grade ${g}` }))}
+          value={grade}
+          onChange={setGrade}
+          allLabel="All grades"
+          ariaLabel="Grade"
+          searchPlaceholder="Find a grade"
+        />
+        <SearchableSelect
+          size="sm"
+          options={classes.map((c) => ({ value: c.classId, label: `${c.grade ? `Gr ${c.grade} ` : ''}${c.subject}` }))}
+          value={classId}
+          onChange={setClassId}
+          allLabel="All classes"
+          ariaLabel="Class"
+          searchPlaceholder="Find a class"
+        />
         <button
           type="button"
           onClick={selectVisible}
@@ -119,7 +114,7 @@ const StudentPicker: React.FC<Props> = ({ students, value, onChange, loading = f
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 bg-slate-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-b-xl border-t border-slate-100 bg-slate-50 px-3 py-2">
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Selected · {value.length}</span>
         {chips.map((id) => {
           const name = byId.get(id)?.name ?? 'Student'

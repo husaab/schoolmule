@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import StatTile from '@/components/ui/StatTile'
 import EmptyState from '@/components/ui/EmptyState'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import UserViewModal from '@/components/adminUsers/UserViewModal'
 import UserFormModal from '@/components/adminUsers/UserFormModal'
 import UserDeleteModal from '@/components/adminUsers/UserDeleteModal'
@@ -222,19 +223,17 @@ const UsersContent = () => {
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 {!showArchived && (
-                  <select
+                  <SearchableSelect
                     value={statusFilter}
-                    onChange={(e) => setParams({ status: e.target.value === 'ALL' ? null : e.target.value })}
-                    aria-label="Filter by status"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
-                  >
-                    <option value="ALL">Any status</option>
-                    {activeStatuses.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_META[s].label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setParams({ status: v === 'ALL' ? null : v })}
+                    options={[
+                      { value: 'ALL', label: 'Any status' },
+                      ...activeStatuses.map((s) => ({ value: s, label: STATUS_META[s].label })),
+                    ]}
+                    ariaLabel="Filter by status"
+                    className="sm:w-44"
+                    triggerClassName="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 focus:ring-cyan-500"
+                  />
                 )}
                 <div className="relative sm:w-64">
                   <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

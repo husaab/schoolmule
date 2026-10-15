@@ -17,6 +17,7 @@ import SentEmailReportCardModal from '@/components/report-cards/email/sent/sentE
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams } from '@/hooks/useFilterParams';
 
 type ReportCardRow = {
@@ -270,41 +271,33 @@ function ViewReportCardsPageContent() {
                   {loadingTerms ? (
                     <p className="text-gray-600">Loading terms...</p>
                   ) : (
-                    <select
+                    <SearchableSelect
+                      options={terms.map((t) => ({ value: t.name, label: `${t.name} (${t.academicYear})${t.isActive ? ' - Active' : ''}` }))}
                       value={term}
-                      onChange={(e) => { setTerm(e.target.value); setParams({ term: e.target.value }); }}
-                      className="w-full border border-gray-300 text-black rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="" disabled>Select term</option>
-                      {terms.map((t) => (
-                        <option key={t.termId} value={t.name}>
-                          {t.name} ({t.academicYear})
-                          {t.isActive && ' - Active'}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => { setTerm(v); setParams({ term: v }); }}
+                      placeholder="Select term"
+                      ariaLabel="Select term"
+                      triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                    />
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
-                  <select
+                  <SearchableSelect
+                    options={Object.keys(groupedByGrade)
+                      .sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
+                      .map((grade) => ({ value: grade, label: grade }))}
                     value={selectedGrade}
-                    onChange={(e) => {
-                      setParams({ grade: e.target.value });
+                    onChange={(v) => {
+                      setParams({ grade: v });
                       // Hidden rows shouldn't stay silently selected for deletion
                       setSelectedFilePaths([]);
                     }}
-                    className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">-- All Grades --</option>
-                    {Object.keys(groupedByGrade)
-                      .sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
-                      .map((grade) => (
-                        <option key={grade} value={grade}>{grade}</option>
-                      ))}
-                  </select>
+                    allLabel="All Grades"
+                    ariaLabel="Filter by grade"
+                    triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                  />
                 </div>
               </div>
 

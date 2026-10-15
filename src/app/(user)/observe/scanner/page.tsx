@@ -16,6 +16,7 @@ import StateBlock from '@/components/observe/StateBlock'
 import UserChip from '@/components/observe/UserChip'
 import { MethodTag, PatternPill } from '@/components/observe/pills'
 import { C } from '@/components/observe/chartTheme'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { fmtGap, fmtMs, fmtNum, fmtPct, perHour, windowHours } from '@/components/observe/format'
 
 interface Selection { method: string; route: string; userId: string | null }
@@ -119,16 +120,19 @@ function ScannerPage() {
         </p>
         <div className="flex items-center gap-2">
           {userId && <button onClick={() => chooseUser(null)} className="text-xs text-slate-400 hover:text-white underline underline-offset-4">clear</button>}
-          <select
+          <SearchableSelect
             value={userId ?? ''}
-            onChange={(e) => chooseUser(e.target.value || null)}
-            aria-label="Filter by user"
-            className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-slate-200 focus:outline-none focus:border-cyan-400/40 max-w-[280px]"
-          >
-            <option value="">All users</option>
-            {userId && !filteredUser && <option value={userId}>{userId}</option>}
-            {users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.role.toLowerCase()}</option>)}
-          </select>
+            onChange={(v) => chooseUser(v || null)}
+            options={[
+              ...(userId && !filteredUser ? [{ value: userId, label: userId }] : []),
+              ...users.map((u) => ({ value: u.id, label: `${u.name} · ${u.role.toLowerCase()}` })),
+            ]}
+            allLabel="All users"
+            ariaLabel="Filter by user"
+            searchPlaceholder="Search users…"
+            className="max-w-[280px]"
+            triggerClassName="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-slate-200 focus:ring-cyan-400/40"
+          />
         </div>
       </div>
 

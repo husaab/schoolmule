@@ -24,6 +24,8 @@ import ChildJumpNav from '@/components/parent/ChildJumpNav'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
+import SearchableSelect from '@/components/ui/SearchableSelect'
+import { PARENT_SELECT_TRIGGER } from '@/components/parent/TermPicker'
 import { useFilterParams } from '@/hooks/useFilterParams'
 
 const Chip: React.FC<{ label: string; value: string }> = ({ label, value }) => (
@@ -256,18 +258,14 @@ const TermNameFilter: React.FC<{
   }, [user?.school, selectedYearId])
 
   return (
-    <select
+    <SearchableSelect
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
-    >
-      <option value="">All terms</option>
-      {names.map((name) => (
-        <option key={name} value={name}>
-          {name}
-        </option>
-      ))}
-    </select>
+      onChange={onChange}
+      options={names.map((name) => ({ value: name, label: name }))}
+      allLabel="All terms"
+      ariaLabel="Term"
+      triggerClassName={PARENT_SELECT_TRIGGER}
+    />
   )
 }
 
@@ -314,18 +312,14 @@ const ParentFeedbackContent: React.FC = () => {
   return (
     <>
       <ParentFilterBar>
-        <select
+        <SearchableSelect
           value={subjectFilter}
-          onChange={(e) => setParams({ subject: e.target.value || null })}
-          className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
-        >
-          <option value="">All classes</option>
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setParams({ subject: v || null })}
+          options={subjects.map((s) => ({ value: s, label: s }))}
+          allLabel="All classes"
+          ariaLabel="Class"
+          triggerClassName={PARENT_SELECT_TRIGGER}
+        />
         <TermNameFilter value={termFilter} onChange={(name) => setParams({ term: name || null })} />
       </ParentFilterBar>
 

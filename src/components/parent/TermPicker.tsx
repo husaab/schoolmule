@@ -5,6 +5,11 @@ import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
 import { getTermsBySchool } from '@/services/termService'
 import { TermPayload } from '@/services/types/term'
+import SearchableSelect from '@/components/ui/SearchableSelect'
+
+/** Trigger styling shared by the parent portal's filter dropdowns (stone/amber). */
+export const PARENT_SELECT_TRIGGER =
+  'px-3 py-2 rounded-xl border border-stone-200 bg-white text-slate-700 shadow-sm focus:ring-amber-200'
 
 interface TermPickerProps {
   /** '' = current (active) term — the backend default; 'all' = all terms */
@@ -36,21 +41,17 @@ const TermPicker: React.FC<TermPickerProps> = ({ value, onChange, includeAll = t
   }, [user?.school, selectedYearId])
 
   return (
-    <select
+    <SearchableSelect
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-200 cursor-pointer"
-    >
-      <option value="">
-        {selectedYear && !selectedYear.isActive ? 'Default term' : 'Current term'}
-      </option>
-      {terms.map((t) => (
-        <option key={t.termId} value={t.termId}>
-          {t.name}
-        </option>
-      ))}
-      {includeAll && <option value="all">All terms</option>}
-    </select>
+      onChange={onChange}
+      options={[
+        ...terms.map((t) => ({ value: t.termId, label: t.name })),
+        ...(includeAll ? [{ value: 'all', label: 'All terms' }] : []),
+      ]}
+      allLabel={selectedYear && !selectedYear.isActive ? 'Default term' : 'Current term'}
+      ariaLabel="Term"
+      triggerClassName={PARENT_SELECT_TRIGGER}
+    />
   )
 }
 

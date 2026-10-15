@@ -17,6 +17,7 @@ import {
   selectClass,
   textareaClass,
 } from '@/components/shared/modalKit';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import {
   SparklesIcon,
   InformationCircleIcon,
@@ -266,19 +267,16 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                   {loadingTerms ? (
                     <div className="h-10 w-full animate-pulse rounded-xl bg-slate-100" />
                   ) : (
-                    <select
+                    <SearchableSelect
+                      options={terms.map((t) => ({
+                        value: t.name,
+                        label: `${t.name} (${t.academicYear})${t.isActive ? ' - Active' : ''}`,
+                      }))}
                       value={term}
-                      onChange={(e) => setTerm(e.target.value)}
-                      className={selectClass}
-                      required
-                    >
-                      <option value="" disabled>Select term</option>
-                      {terms.map((t) => (
-                        <option key={t.termId} value={t.name}>
-                          {t.name} ({t.academicYear}){t.isActive ? ' - Active' : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setTerm}
+                      placeholder="Select term"
+                      ariaLabel="Select term"
+                    />
                   )}
                 </div>
               )}

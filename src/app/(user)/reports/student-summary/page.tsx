@@ -17,6 +17,8 @@ import Link from 'next/link'
 import StudentSummaryReportModal from '@/components/studentreport/studentsummary/StudentSummaryReportModal'
 import { generateStudentSummaryReport } from '@/services/reportService'
 import { useFilterParams } from '@/hooks/useFilterParams'
+import SearchableSelect from '@/components/ui/SearchableSelect'
+import { currentTermClasses, classPickerOptions } from '@/lib/classListFilters'
 
 const StudentSummaryContent = () => {
   const user = useUserStore((state) => state.user)
@@ -158,6 +160,11 @@ const StudentSummaryContent = () => {
   const selectedStudentData = students.find(s => s.studentId === selectedStudent)
   const selectedClassData = classes.find(c => c.classId === selectedClass)
 
+  // A class exists once per term, so offer only the chosen term's classes
+  // (the active term by default); a deep-linked class from another term stays.
+  const viewTermName = selectedTerm === 'active' ? activeTerm?.name : selectedTerm
+  const classOptions = classPickerOptions(currentTermClasses(classes, viewTermName, selectedClass), viewTermName)
+
   if (loading) {
     return (
       <>
@@ -207,21 +214,17 @@ const StudentSummaryContent = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Class
                 </label>
-                <select
+                <SearchableSelect
+                  options={classOptions}
                   value={selectedClass}
-                  onChange={(e) => {
+                  onChange={(v) => {
                     // Reset student when class changes
-                    setParams({ class: e.target.value, student: null })
+                    setParams({ class: v, student: null })
                   }}
-                  className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Choose a class...</option>
-                  {classes.map((cls) => (
-                    <option key={cls.classId} value={cls.classId}>
-                      {cls.subject} - Grade {cls.grade}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Choose a class..."
+                  ariaLabel="Select class"
+                  triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                />
               </div>
 
               {/* Student Selection */}
@@ -229,19 +232,18 @@ const StudentSummaryContent = () => {
                 <label className="text-black block text-sm font-medium text-gray-700 mb-2">
                   Select Student
                 </label>
-                <select
+                <SearchableSelect
+                  options={filteredStudents.map((student) => ({
+                    value: student.studentId,
+                    label: `${student.name} - Grade ${student.grade}`,
+                  }))}
                   value={selectedStudent}
-                  onChange={(e) => setParams({ student: e.target.value })}
+                  onChange={(v) => setParams({ student: v })}
                   disabled={!selectedClass}
-                  className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Choose a student...</option>
-                  {filteredStudents.map((student) => (
-                    <option key={student.studentId} value={student.studentId}>
-                      {student.name} - Grade {student.grade}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Choose a student..."
+                  ariaLabel="Select student"
+                  triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500 disabled:bg-gray-100"
+                />
                 <p className="mt-1 text-xs text-gray-500">
                   {selectedClass 
                     ? `Students from ${selectedClassData?.subject} class` 
@@ -255,18 +257,19 @@ const StudentSummaryContent = () => {
                 <label className="text-black block text-sm font-medium text-gray-700 mb-2">
                   Term
                 </label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'active', label: `Active Term (${activeTerm?.name})` },
+                    // The active term is already the first row.
+                    ...terms
+                      .filter((term) => term.termId !== activeTerm?.termId)
+                      .map((term) => ({ value: term.name, label: term.name })),
+                  ]}
                   value={selectedTerm}
-                  onChange={(e) => setParams({ term: e.target.value === 'active' ? null : e.target.value })}
-                  className="text-black w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="active">Active Term ({activeTerm?.name})</option>
-                  {terms.map((term) => (
-                    <option key={term.termId} value={term.name}>
-                      {term.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setParams({ term: v === 'active' ? null : v })}
+                  ariaLabel="Term"
+                  triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                />
                 <p className="mt-1 text-xs text-gray-500">
                   Active term is selected by default
                 </p>

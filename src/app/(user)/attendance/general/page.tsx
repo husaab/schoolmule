@@ -16,6 +16,7 @@ import {
 import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils';
 import { ClipboardDocumentCheckIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
@@ -257,18 +258,14 @@ function GeneralAttendanceContent() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Filter by Grade
                     </label>
-                    <select
+                    <SearchableSelect
                       value={gradeFilter}
-                      onChange={(e) => setParams({ grade: e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
-                    >
-                      <option value="">All Grades</option>
-                      {grades.map((gradeOption) => (
-                        <option key={gradeOption.value} value={String(gradeOption.value)}>
-                          Grade {gradeOption.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => setParams({ grade: v })}
+                      options={grades.map((g) => ({ value: String(g.value), label: `Grade ${g.label}` }))}
+                      allLabel="All Grades"
+                      ariaLabel="Filter by Grade"
+                      searchPlaceholder="Search grades…"
+                    />
                   </div>
                 </div>
 

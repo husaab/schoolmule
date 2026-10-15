@@ -3,6 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Spinner from '@/components/Spinner';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useUserStore } from '@/store/useUserStore';
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import { getAllParentStudents } from '@/services/parentStudentService';
@@ -171,18 +172,15 @@ const ParentStudentRelationsContent = () => {
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
               />
             </div>
-            <select
+            <SearchableSelect
               value={gradeFilter}
-              onChange={e => setParams({ grade: e.target.value })}
-              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer"
-            >
-              <option value="">All Grades</option>
-              {grades.map(g => (
-                <option key={g} value={g}>
-                  {getGradeDisplayName(g)}
-                </option>
-              ))}
-            </select>
+              onChange={v => setParams({ grade: v })}
+              options={grades.map(g => ({ value: String(g), label: getGradeDisplayName(g) }))}
+              allLabel="All Grades"
+              ariaLabel="Filter by grade"
+              searchPlaceholder="Search grades…"
+              className="sm:w-48"
+            />
           </div>
 
           {/* Family cards */}

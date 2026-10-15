@@ -8,6 +8,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import SearchInput from '@/components/teacherAttendance/SearchInput'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { gradeShort } from './format'
 import {
   FLAG_CHIPS,
@@ -31,6 +32,8 @@ interface TuitionFiltersProps {
 
 const control =
   'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer'
+/** SearchableSelect trigger in the same look as `control`. */
+const trigger = 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:ring-cyan-500'
 
 /** Local draft of a URL value, committed after a pause in typing. Follows the
  *  URL when it changes from elsewhere (e.g. Back), cancelling any pending
@@ -206,32 +209,23 @@ const TuitionFilters: React.FC<TuitionFiltersProps> = ({ filters, periodLabel, g
           days
         </label>
 
-        <select
+        <SearchableSelect
+          options={grades.map((g) => ({ value: g, label: /^\d+$/.test(g.trim()) ? `Grade ${g}` : gradeShort(g) }))}
           value={filters.grade}
-          onChange={(e) => onChange({ grade: e.target.value || null })}
-          aria-label="Grade"
-          className={control}
-        >
-          <option value="">All grades</option>
-          {grades.map((g) => (
-            <option key={g} value={g}>
-              {/^\d+$/.test(g.trim()) ? `Grade ${g}` : gradeShort(g)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onChange({ grade: v || null })}
+          allLabel="All grades"
+          ariaLabel="Grade"
+          searchPlaceholder="Find a grade"
+          triggerClassName={trigger}
+        />
 
-        <select
+        <SearchableSelect
+          options={SORT_OPTIONS.map((o) => ({ value: o.key, label: `Sort: ${o.label}` }))}
           value={filters.sort}
-          onChange={(e) => onChange({ sort: e.target.value === 'name' ? null : e.target.value })}
-          aria-label="Sort"
-          className={control}
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.key} value={o.key}>
-              Sort: {o.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onChange({ sort: v === 'name' ? null : v })}
+          ariaLabel="Sort"
+          triggerClassName={trigger}
+        />
 
         {isFiltered && (
           <button

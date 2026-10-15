@@ -12,6 +12,10 @@ import { getGradeOptions } from '@/lib/schoolUtils';
 import { AcademicCapIcon, ClipboardDocumentCheckIcon, ChevronDownIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import Spinner from '@/components/Spinner';
 import { useFilterParams } from '@/hooks/useFilterParams';
+import { getTermsBySchool } from '@/services/termService';
+import { TermPayload } from '@/services/types/term';
+import { currentTermClasses } from '@/lib/classListFilters';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const ClassAttendanceDashboardContent = () => {
   const user = useUserStore((state) => state.user);
@@ -20,6 +24,8 @@ const ClassAttendanceDashboardContent = () => {
   const { get, setParams } = useFilterParams();
   const [classes, setClasses] = useState<ClassPayload[]>([]);
   const [loading, setLoading] = useState(true);
+  const [terms, setTerms] = useState<TermPayload[]>([]);
+  const [termsLoaded, setTermsLoaded] = useState(false);
   // Filter lives in the URL so Back/refresh/share restore it.
   const gradeFilter = get('grade');
   const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set());
@@ -48,9 +54,21 @@ const ClassAttendanceDashboardContent = () => {
     }
   }, [user?.id, user.role, user.school, selectedYearId]); // refetch when the selected school year changes
 
+  // A class exists once per term; only the active term's belong on this page.
+  useEffect(() => {
+    if (!user?.school) return;
+    getTermsBySchool(user.school)
+      .then((res) => setTerms(res.data || []))
+      .catch(() => setTerms([]))
+      .finally(() => setTermsLoaded(true));
+  }, [user?.school, selectedYearId]); // term list is year-scoped server-side
+
+  const activeTerm = terms.find((t) => t.isActive);
+  const termClasses = currentTermClasses(classes, activeTerm?.name);
+
   const availableGrades = getGradeOptions();
 
-  const filteredClasses = classes.filter((c) => {
+  const filteredClasses = termClasses.filter((c) => {
     return gradeFilter === '' || String(c.grade) === gradeFilter;
   });
 
@@ -93,18 +111,15 @@ const ClassAttendanceDashboardContent = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Filter by Grade
                     </label>
-                    <select
+                    <SearchableSelect
                       value={gradeFilter}
-                      onChange={(e) => setParams({ grade: e.target.value })}
-                      className="w-48 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-slate-900 bg-slate-50 cursor-pointer"
-                    >
-                      <option value="">All Grades</option>
-                      {availableGrades.map((gradeOption) => (
-                        <option key={gradeOption.value} value={String(gradeOption.value)}>
-                          Grade {gradeOption.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => setParams({ grade: v })}
+                      options={availableGrades.map((g) => ({ value: String(g.value), label: `Grade ${g.label}` }))}
+                      allLabel="All Grades"
+                      ariaLabel="Filter by Grade"
+                      searchPlaceholder="Search grades…"
+                      className="w-48"
+                    />
                   </div>
                   {gradeFilter && (
                     <button
@@ -120,7 +135,7 @@ const ClassAttendanceDashboardContent = () => {
 
             {/* Classes Content */}
             <div className="p-6">
-              {loading ? (
+              {loading || !termsLoaded ? (
                 <div className="flex justify-center py-12">
                   <Spinner size="lg" />
                 </div>
@@ -131,7 +146,7 @@ const ClassAttendanceDashboardContent = () => {
                   </div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">No Classes Found</h3>
                   <p className="text-sm text-slate-500">
-                    {classes.length === 0
+                    {termClasses.length === 0
                       ? "You haven't been assigned any classes yet."
                       : 'Try adjusting your filter.'}
                   </p>

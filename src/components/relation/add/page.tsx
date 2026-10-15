@@ -12,6 +12,7 @@ import { createParentStudent } from '@/services/parentStudentService';
 import type { ParentStudentPayload, CreateParentStudentRequest } from '@/services/types/parentStudent';
 import type { StudentPayload } from '@/services/types/student';
 import type { ParentPayload } from '@/services/types/parent';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { getGradeDisplayName, getGradeNumericValue, GradeValue } from '@/lib/schoolUtils';
 
 export interface PresetStudent {
@@ -175,18 +176,15 @@ const AddRelationModal: React.FC<AddRelationModalProps> = ({
               />
             </div>
             {!selectedStudent && (
-              <select
+              <SearchableSelect
+                options={grades.map(g => ({ value: String(g), label: getGradeDisplayName(g) }))}
                 value={filterGrade}
-                onChange={e => setFilterGrade(e.target.value)}
-                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer flex-shrink-0"
-              >
-                <option value="">All Grades</option>
-                {grades.map(g => (
-                  <option key={g} value={g}>
-                    {getGradeDisplayName(g)}
-                  </option>
-                ))}
-              </select>
+                onChange={setFilterGrade}
+                allLabel="All Grades"
+                ariaLabel="Filter by grade"
+                searchPlaceholder="Find a grade"
+                className="w-40 flex-shrink-0"
+              />
             )}
           </div>
         </div>

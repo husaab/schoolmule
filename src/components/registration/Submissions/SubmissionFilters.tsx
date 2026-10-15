@@ -2,6 +2,15 @@
 
 import type { SubmissionStatus, SubmissionFilters as FiltersType, ImportState } from '@/services/types/registration';
 import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
+import SearchableSelect, { type SearchableOption } from '@/components/ui/SearchableSelect';
+
+const trigger = 'px-3 py-2 border border-slate-300 rounded-lg focus:ring-cyan-500 bg-white';
+
+const IMPORT_STATE_OPTIONS: SearchableOption[] = [
+  { value: 'all', label: 'All Submissions' },
+  { value: 'not_imported', label: 'Not yet imported' },
+  { value: 'imported', label: 'Imported' },
+];
 
 interface Props {
   filters: FiltersType;
@@ -14,27 +23,24 @@ export default function SubmissionFilters({ filters, onChange, statuses }: Props
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Status filter */}
-      <select
+      <SearchableSelect
+        options={statuses.map((s) => ({ value: s.key, label: s.label }))}
         value={filters.status || ''}
-        onChange={(e) => onChange({ ...filters, status: (e.target.value || undefined) as SubmissionStatus | undefined, page: 1 })}
-        className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
-      >
-        <option value="">All Statuses</option>
-        {statuses.map((s) => (
-          <option key={s.statusId} value={s.key}>{s.label}</option>
-        ))}
-      </select>
+        onChange={(v) => onChange({ ...filters, status: (v || undefined) as SubmissionStatus | undefined, page: 1 })}
+        allLabel="All Statuses"
+        ariaLabel="Status"
+        searchPlaceholder="Find a status"
+        triggerClassName={trigger}
+      />
 
       {/* Import state — which submissions have already become students */}
-      <select
+      <SearchableSelect
+        options={IMPORT_STATE_OPTIONS}
         value={filters.importState || 'all'}
-        onChange={(e) => onChange({ ...filters, importState: e.target.value as ImportState, page: 1 })}
-        className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white"
-      >
-        <option value="all">All Submissions</option>
-        <option value="not_imported">Not yet imported</option>
-        <option value="imported">Imported</option>
-      </select>
+        onChange={(v) => onChange({ ...filters, importState: v as ImportState, page: 1 })}
+        ariaLabel="Import state"
+        triggerClassName={trigger}
+      />
 
       {/* Date from */}
       <div className="flex items-center gap-1.5">

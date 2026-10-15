@@ -14,6 +14,7 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import { getTermsBySchool } from '@/services/termService';
 import { TermPayload } from '@/services/types/term';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
 
 function GenerateReportCardsPageContent() {
@@ -236,39 +237,29 @@ function GenerateReportCardsPageContent() {
                   {loadingTerms ? (
                     <p className="text-gray-600">Loading terms...</p>
                   ) : (
-                    <select
+                    <SearchableSelect
+                      options={terms.map((t) => ({ value: t.name, label: `${t.name} (${t.academicYear})${t.isActive ? ' - Active' : ''}` }))}
                       value={term}
-                      onChange={(e) => { setTerm(e.target.value); setParams({ term: e.target.value }); }}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-black text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="" disabled>Select term</option>
-                      {terms.map((t) => (
-                        <option key={t.termId} value={t.name}>
-                          {t.name} ({t.academicYear})
-                          {t.isActive && ' - Active'}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => { setTerm(v); setParams({ term: v }); }}
+                      placeholder="Select term"
+                      ariaLabel="Select term"
+                      triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                    />
                   )}
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Filter by grade:</label>
-                  <select
-                    value={selectedGrade}
-                    onChange={(e) => setParams({ grade: e.target.value })}
-                    className="w-full text-black border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                  >
-                    <option value="">-- All Grades --</option>
-                    {Object.keys(groupedByGrade)
+                  <SearchableSelect
+                    options={Object.keys(groupedByGrade)
                       .sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
-                      .map((grade) => (
-                        <option key={grade} value={grade}>
-                          {grade}
-                        </option>
-                      ))}
-                  </select>
+                      .map((grade) => ({ value: grade, label: grade }))}
+                    value={selectedGrade}
+                    onChange={(v) => setParams({ grade: v })}
+                    allLabel="All Grades"
+                    ariaLabel="Filter by grade"
+                    triggerClassName="border border-gray-300 text-black rounded-md px-3 py-2 bg-white focus:ring-blue-500"
+                  />
                 </div>
 
                 <div>

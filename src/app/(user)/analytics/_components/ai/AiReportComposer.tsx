@@ -20,6 +20,10 @@ import { markdownToHtml } from '@/lib/analyticsUtils'
 import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import StudentPicker, { PickerStudent } from '../StudentPicker'
+import SearchableSelect from '@/components/ui/SearchableSelect'
+
+const scopeTriggerCls =
+  'px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:ring-cyan-500'
 
 interface AiReportComposerProps {
   isOpen: boolean
@@ -161,64 +165,52 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
           <div>
             <p className="text-sm font-medium text-slate-700 mb-2">Report scope</p>
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label="Report term"
+              <SearchableSelect
+                ariaLabel="Report term"
+                options={[
+                  ...terms.map((t) => ({ value: t.termId, label: `${t.name} ${t.academicYear}` })),
+                  ...(terms.length > 1 ? [{ value: 'all', label: 'All terms (combined)' }] : []),
+                ]}
                 value={params.termId ?? ''}
-                onChange={(e) =>
+                onChange={(v) =>
                   params.setParams({
-                    termId: e.target.value,
-                    ...(e.target.value === 'all' ? { compareTerm: null } : {}),
+                    termId: v,
+                    ...(v === 'all' ? { compareTerm: null } : {}),
                   })
                 }
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer"
-              >
-                {terms.map((t) => (
-                  <option key={t.termId} value={t.termId}>
-                    {t.name} {t.academicYear}
-                  </option>
-                ))}
-                {terms.length > 1 && <option value="all">All terms (combined)</option>}
-              </select>
+                placeholder="Term"
+                triggerClassName={scopeTriggerCls}
+              />
 
-              <select
-                aria-label="Report grade"
+              <SearchableSelect
+                ariaLabel="Report grade"
+                options={grades.map((g) => ({ value: g, label: `Grade ${g}` }))}
                 value={params.view === 'student' || params.view === 'class' ? '' : (params.grade ?? '')}
                 disabled={params.view === 'student' || params.view === 'class'}
-                onChange={(e) => {
-                  const grade = e.target.value || null
+                onChange={(v) => {
+                  const grade = v || null
                   if (params.subject) params.drillTo('subject', { grade })
                   else if (grade) params.drillTo('grade', { grade })
                   else params.drillTo('school')
                 }}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer disabled:opacity-50"
-              >
-                <option value="">Whole school</option>
-                {grades.map((g) => (
-                  <option key={g} value={g}>
-                    Grade {g}
-                  </option>
-                ))}
-              </select>
+                allLabel="Whole school"
+                triggerClassName={scopeTriggerCls}
+              />
 
-              <select
-                aria-label="Report subject"
+              <SearchableSelect
+                ariaLabel="Report subject"
+                options={subjects.map((s) => ({ value: s, label: s }))}
                 value={params.view === 'student' || params.view === 'class' ? '' : (params.subject ?? '')}
                 disabled={params.view === 'student' || params.view === 'class'}
-                onChange={(e) => {
-                  const subject = e.target.value || null
+                onChange={(v) => {
+                  const subject = v || null
                   if (subject) params.drillTo('subject', { subject })
                   else if (params.grade) params.drillTo('grade', { grade: params.grade, subject: null })
                   else params.drillTo('school')
                 }}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer disabled:opacity-50"
-              >
-                <option value="">All subjects</option>
-                {subjects.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                allLabel="All subjects"
+                triggerClassName={scopeTriggerCls}
+              />
 
               <StudentPicker
                 students={students}
