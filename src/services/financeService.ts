@@ -14,6 +14,8 @@ import type {
   ImportResult,
   InvoiceKind,
   InvoiceKindResult,
+  ManualCredit,
+  ManualCreditInput,
   QboCustomerOption,
   TuitionAnomalies,
   UpdateFamilyInput,
@@ -170,6 +172,19 @@ export const setInvoiceKind = (qboId: string, kind: InvoiceKind | null) =>
   apiClient<ApiEnvelope<InvoiceKindResult>, { kind: InvoiceKind | null }>(
     `${BASE}/invoices/${encodeURIComponent(qboId)}/kind`,
     { method: "PATCH", body: { kind } }
+  );
+
+/** Upsert the family's prepaid credit for one month ('YYYY-MM'). */
+export const setManualCredit = (familyId: string, month: string, body: ManualCreditInput) =>
+  apiClient<ApiEnvelope<ManualCredit>, ManualCreditInput>(
+    `${BASE}/families/${encodeURIComponent(familyId)}/manual-credits/${encodeURIComponent(month)}`,
+    { method: "PUT", body }
+  );
+
+export const deleteManualCredit = (familyId: string, month: string) =>
+  apiClient<ApiEnvelope<{ month: string; removed: boolean }>>(
+    `${BASE}/families/${encodeURIComponent(familyId)}/manual-credits/${encodeURIComponent(month)}`,
+    { method: "DELETE" }
   );
 
 export const getTuitionAnomalies = () =>

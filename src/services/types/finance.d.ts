@@ -114,6 +114,18 @@ export interface PaymentEntry {
   familyId?: string;
 }
 
+/** A SchoolMule-only prepaid credit for a family-month (applied in QBO by hand later). */
+export interface CellManualCredit {
+  creditId: string;
+  amount: number;
+  /** How much of it reduced this month's parent balance (0 when pending or superseded). */
+  applied: number;
+  /** No invoice for the month yet: the credit is waiting for it. */
+  pending: boolean;
+  note: string | null;
+  qboDepositId: string | null;
+}
+
 export interface Cell {
   status: CellStatus;
   invoiced: number;
@@ -122,6 +134,7 @@ export interface Cell {
   daysOverdue: number;
   invoices: InvoiceEntry[];
   payments: PaymentEntry[];
+  manualCredit?: CellManualCredit;
 }
 
 export interface LedgerTotals {
@@ -143,7 +156,10 @@ export type WarningCode =
   | "UNEXPLAINED_PAID"
   | "TWO_PARENT_INVOICES_IN_MONTH"
   | "AMOUNT_DIFFERS"
-  | "OTHER_KIND_INVOICE";
+  | "OTHER_KIND_INVOICE"
+  | "MANUAL_CREDIT_SUPERSEDED"
+  | "MANUAL_CREDIT_EXCEEDS"
+  | "MANUAL_CREDIT_OUT_OF_YEAR";
 
 export interface LedgerWarning {
   code: WarningCode;
@@ -411,6 +427,25 @@ export interface FamilyDetail {
   invoices: FamilyInvoice[];
   payments: FamilyPayment[];
   audit: FamilyAuditEntry[];
+  manualCredits: ManualCredit[];
+}
+
+export interface ManualCredit {
+  creditId: string;
+  /** 'YYYY-MM' */
+  month: string;
+  amount: number;
+  note: string | null;
+  qboDepositId: string | null;
+  createdByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualCreditInput {
+  amount: number;
+  note?: string | null;
+  qboDepositId?: string | null;
 }
 
 // ── Families (Phase 2: linking & editing) ────────────────────────────────

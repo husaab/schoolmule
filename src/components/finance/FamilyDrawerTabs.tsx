@@ -1,11 +1,12 @@
 'use client'
 
-// The editable tabs of the family drawer: Students, Contacts and Notes.
+// The editable tabs of the family drawer: Students, Contacts, Notes and Prepaid.
 // Each change goes straight to the server; the drawer reloads the family
 // (and the page reloads the grid) through the `onChanged` callback.
 
 import React, { useId, useMemo, useState } from 'react'
 import {
+  BanknotesIcon,
   EnvelopeIcon,
   PencilSquareIcon,
   PhoneIcon,
@@ -24,16 +25,18 @@ import {
   addFamilyContact,
   addFamilyStudent,
   deleteFamilyContact,
+  deleteManualCredit,
   getFamilySuggestions,
   removeFamilyStudent,
+  setManualCredit,
   updateFamily,
   updateFamilyContact,
 } from '@/services/financeService'
-import type { ContactInput, FamilyContact, FamilyDetail } from '@/services/types/finance'
+import type { ContactInput, FamilyContact, FamilyDetail, ManualCredit } from '@/services/types/finance'
 import type { ConfirmRequest } from './ConfirmActionModal'
 import MenuButton from '@/components/shared/MenuButton'
 import { RELATION_OPTIONS, amountText, looksLikeEmail, outlineButton, parseAmount, relationLabel } from './familyUi'
-import { compareGrades, errorMessage, financeErrorText, formatDate, gradeShort } from './format'
+import { compareGrades, errorMessage, financeErrorText, formatDate, formatMoney, gradeShort, monthLong } from './format'
 
 interface TabProps {
   detail: FamilyDetail
@@ -501,5 +504,172 @@ export function NotesTab({ detail, onChanged }: Omit<TabProps, 'confirm'>) {
         </Button>
       </div>
     </form>
+  )
+}
+
+
+// ── Prepaid credits ──────────────────────────────────────────────────────
+//
+// SchoolMule-only: money the family already paid that the bookkeeper will
+// apply in QuickBooks by hand (auto-apply could put it on the subsidy
+// invoice). It counts toward the month's PARENT balance only, never more than
+// the month owes, and stops counting once the credit is applied in QuickBooks.
+
+function creditState(detail: FamilyDetail, c: ManualCredit): { text: string; tone: string } {
+  const mc = detail.ledger?.parent.cells[c.month]?.manualCredit
+  if (!mc) return { text: 'Outside this school year', tone: 'text-rose-600' }
+  if (mc.pending) return { text: 'Waiting for the invoice', tone: 'text-cyan-700' }
+  if (mc.applied <= 0) return { text: 'Applied in QuickBooks — remove', tone: 'text-amber-700' }
+  if (mc.applied < mc.amount) return { text: `${formatMoney(mc.applied)} counted (more than the month owes)`, tone: 'text-amber-700' }
+  return { text: 'Counted as paid', tone: 'text-emerald-700' }
+}
+
+export function PrepaidTab({ detail, onChanged, confirm }: TabProps) {
+  const showNotification = useNotificationStore((s) => s.showNotification)
+  const id = useId()
+  const familyId = detail.family.familyId
+  const credits = detail.manualCredits ?? []
+  const firstFree = detail.months.find((m) => !credits.some((c) => c.month === m)) ?? detail.months[0] ?? ''
+  const [month, setMonth] = useState(firstFree)
+  const [amount, setAmount] = useState('')
+  const [deposit, setDeposit] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const existing = credits.find((c) => c.month === month)
+
+  const edit = (c: ManualCredit) => {
+    setMonth(c.month)
+    setAmount(amountText(c.amount))
+    setDeposit(c.qboDepositId ?? '')
+    setNote(c.note ?? '')
+    setError(null)
+  }
+
+  const reset = () => {
+    setAmount('')
+    setDeposit('')
+    setNote('')
+    setError(null)
+  }
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const value = parseAmount(amount)
+    if (value === null || Number.isNaN(value) || value <= 0) {
+      setError('Enter the prepaid amount for this month.')
+      return
+    }
+    const dep = deposit.trim()
+    if (dep && !/^\d+$/.test(dep)) {
+      setError('The QuickBooks deposit number is digits only (e.g. 21624).')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await setManualCredit(familyId, month, { amount: value, note: note.trim() || null, qboDepositId: dep || null })
+      showNotification(`Prepaid ${formatMoney(value)} saved for ${monthLong(month)}`, 'success')
+      reset()
+      onChanged()
+    } catch (err) {
+      setError(financeErrorText(err, 'Could not save the prepaid credit'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = (c: ManualCredit) =>
+    confirm({
+      title: `Remove the ${monthLong(c.month)} prepaid credit?`,
+      subtitle: detail.family.name,
+      icon: TrashIcon,
+      message: `The ${formatMoney(c.amount)} credit stops counting toward ${monthLong(c.month)}. Nothing changes in QuickBooks.`,
+      confirmLabel: 'Remove credit',
+      onConfirm: async () => {
+        await deleteManualCredit(familyId, c.month)
+        showNotification(`${monthLong(c.month)} prepaid credit removed`, 'success')
+        onChanged()
+      },
+    })
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-xs text-cyan-800">
+        Record money this family already paid for a month while you apply the credit in QuickBooks by hand.
+        It only reduces the parent invoice, never the subsidy invoice, and stops counting once the invoice is paid in QuickBooks.
+      </p>
+
+      {credits.length === 0 ? (
+        <EmptyState icon={BanknotesIcon} title="No prepaid credits" description="Add one below when a parent pays ahead." />
+      ) : (
+        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white">
+          {credits.map((c) => {
+            const state = creditState(detail, c)
+            return (
+              <li key={c.creditId} className="flex items-start justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">
+                    {monthLong(c.month)} · <span className="tabular-nums">{formatMoney(c.amount)}</span>
+                  </p>
+                  <p className={`text-xs ${state.tone}`}>{state.text}</p>
+                  {(c.qboDepositId || c.note) && (
+                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                      {c.qboDepositId ? `Deposit ${c.qboDepositId}` : ''}
+                      {c.qboDepositId && c.note ? ' · ' : ''}
+                      {c.note ?? ''}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button type="button" className={outlineButton} onClick={() => edit(c)}>
+                    <PencilSquareIcon className="h-4 w-4" aria-hidden />
+                    <span className="sr-only">Edit {monthLong(c.month)}</span>
+                  </button>
+                  <button type="button" className={outlineButton} onClick={() => remove(c)}>
+                    <TrashIcon className="h-4 w-4" aria-hidden />
+                    <span className="sr-only">Remove {monthLong(c.month)}</span>
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <form onSubmit={save} className="space-y-4 rounded-xl border border-slate-100 bg-white p-4">
+        <p className="text-sm font-semibold text-slate-800">{existing ? `Edit ${monthLong(month)}` : 'Add a prepaid credit'}</p>
+        <FieldRow>
+          <Field label="Month" htmlFor={`${id}-month`}>
+            <select id={`${id}-month`} className={selectClass} value={month} onChange={(e) => setMonth(e.target.value)}>
+              {detail.months.map((m) => (
+                <option key={m} value={m}>
+                  {monthLong(m)}
+                  {credits.some((c) => c.month === m) ? ' (has a credit)' : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Amount for this month" htmlFor={`${id}-amount`}>
+            <input id={`${id}-amount`} className={inputClass} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="$575" />
+          </Field>
+        </FieldRow>
+        <Field label="QuickBooks deposit # (optional)" htmlFor={`${id}-deposit`}>
+          <input id={`${id}-deposit`} className={inputClass} inputMode="numeric" value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="21624" />
+        </Field>
+        <Field label="Note (optional)" htmlFor={`${id}-note`}>
+          <textarea id={`${id}-note`} className={textareaClass} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="$1,750 e-transfer in Sept covering Sept–Nov" />
+        </Field>
+        {error && <p className={errorBox}>{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" disabled={busy} onClick={reset}>
+            Clear
+          </Button>
+          <Button type="submit" loading={busy}>
+            {existing ? 'Update credit' : 'Save credit'}
+          </Button>
+        </div>
+      </form>
+    </div>
   )
 }
