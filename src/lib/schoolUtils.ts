@@ -1,10 +1,12 @@
 // src/lib/schoolUtils.ts
 
 export const schoolDisplayNames: Record<string, string> = {
-  PLAYGROUND:       'Playground School',
-  ALHAADIACADEMY:   'Al Haadi Academy',
-  ALRASOOLACADEMY:  'Al Rasool Academy',
-  JCC:              'Jaafari Community Centre',
+  PLAYGROUND:             'Playground School',
+  ALHAADIACADEMY:         'Al Haadi Academy',
+  JCC:                    'Jaffari Community Centre',
+  ALZAHRAINSTITUTE:       'Al-Zahra Institute',
+  PETERBOROUGHMONTESSORI: 'Peterborough Montessori',
+  BLISSCARMANPS:          'Bliss Carman Public School',
   // add more enum→name mappings here as needed
 };
 
@@ -14,7 +16,12 @@ export const schoolDisplayNames: Record<string, string> = {
  * asset — distinct from the dynamic Supabase-bucket assets used on report cards.
  */
 export const schoolLogos: Record<string, string> = {
-  ALHAADIACADEMY: '/schools/alhaadiacademy/AlHaadiAcademyLogo.avif',
+  ALHAADIACADEMY:         '/schools/alhaadiacademy/AlHaadiAcademyLogo.avif',
+  JCC:                    '/schools/jcc/JaffariCommunityCentreLogo.webp',
+  ALZAHRAINSTITUTE:       '/schools/alzahrainstitute/AlZahraInstituteLogo.webp',
+  PETERBOROUGHMONTESSORI: '/schools/peterboroughmontessori/PeterboroughMontessoriLogo.webp',
+  // Wordmark is landscape; the square mark (bird + sun) reads better at avatar size.
+  BLISSCARMANPS:          '/schools/blisscarmanps/BlissCarmanMark.webp',
   // add more enum→logo-path mappings here as needed
 };
 
@@ -59,9 +66,11 @@ export interface SignupSchool {
  * Test/demo tenants (e.g. PLAYGROUND) are intentionally excluded.
  */
 export const SIGNUP_SCHOOLS: SignupSchool[] = [
-  { schoolCode: 'ALHAADIACADEMY',  name: 'Al Haadi Academy' },
-  { schoolCode: 'ALRASOOLACADEMY', name: 'Al Rasool Academy' },
-  { schoolCode: 'JCC',             name: 'Jaafari Community Centre (JCC)' },
+  { schoolCode: 'ALHAADIACADEMY',         name: 'Al Haadi Academy' },
+  { schoolCode: 'JCC',                    name: 'Jaffari Community Centre (JCC)' },
+  { schoolCode: 'ALZAHRAINSTITUTE',       name: 'Al-Zahra Institute' },
+  { schoolCode: 'PETERBOROUGHMONTESSORI', name: 'Peterborough Montessori' },
+  { schoolCode: 'BLISSCARMANPS',          name: 'Bliss Carman Public School' },
 ];
 
 /**
