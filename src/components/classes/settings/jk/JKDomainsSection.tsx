@@ -1,4 +1,4 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/jk/JKDomainsSection.tsx
+// File: src/components/classes/settings/jk/JKDomainsSection.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -19,9 +19,11 @@ import {
 interface JKDomainsSectionProps {
   school: string
   grade: GradeValue
+  /** Hide add, edit and delete (a past school year, for teachers). */
+  readOnly?: boolean
 }
 
-const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade }) => {
+const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade, readOnly = false }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -128,13 +130,15 @@ const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade }) =>
                     Progress Report Domains
                     <span className="text-xs font-normal normal-case text-slate-400">(D / B / I / N)</span>
                   </h3>
-                  <button
-                    onClick={() => setAddDomainType('progress_report')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 cursor-pointer transition-colors"
-                  >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                    Add Domain
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setAddDomainType('progress_report')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 cursor-pointer transition-colors"
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" />
+                      Add Domain
+                    </button>
+                  )}
                 </div>
                 {jkProgressDomains.length > 0 ? (
                   <div className="space-y-3">
@@ -144,25 +148,29 @@ const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade }) =>
                           <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-slate-500">{domain.skills.length} skills</span>
-                            <button
-                              onClick={() => setEditingDomain(domain)}
-                              className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDomain(domain.domainId)}
-                              disabled={deletingDomainId === domain.domainId}
-                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {deletingDomainId === domain.domainId ? (
-                                <Spinner size="sm" />
-                              ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              )}
-                            </button>
+                            {!readOnly && (
+                              <>
+                                <button
+                                  onClick={() => setEditingDomain(domain)}
+                                  className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteDomain(domain.domainId)}
+                                  disabled={deletingDomainId === domain.domainId}
+                                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                >
+                                  {deletingDomainId === domain.domainId ? (
+                                    <Spinner size="sm" />
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="divide-y divide-slate-50">
@@ -193,13 +201,15 @@ const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade }) =>
                     Report Card Domains
                     <span className="text-xs font-normal normal-case text-slate-400">(BG / DV / NI)</span>
                   </h3>
-                  <button
-                    onClick={() => setAddDomainType('report_card')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 cursor-pointer transition-colors"
-                  >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                    Add Domain
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setAddDomainType('report_card')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 cursor-pointer transition-colors"
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" />
+                      Add Domain
+                    </button>
+                  )}
                 </div>
                 {jkReportCardDomains.length > 0 ? (
                   <div className="space-y-3">
@@ -209,25 +219,29 @@ const JKDomainsSection: React.FC<JKDomainsSectionProps> = ({ school, grade }) =>
                           <span className="font-medium text-slate-800 text-sm">{domain.name}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-slate-500">{domain.skills.length} skills</span>
-                            <button
-                              onClick={() => setEditingDomain(domain)}
-                              className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDomain(domain.domainId)}
-                              disabled={deletingDomainId === domain.domainId}
-                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {deletingDomainId === domain.domainId ? (
-                                <Spinner size="sm" />
-                              ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              )}
-                            </button>
+                            {!readOnly && (
+                              <>
+                                <button
+                                  onClick={() => setEditingDomain(domain)}
+                                  className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteDomain(domain.domainId)}
+                                  disabled={deletingDomainId === domain.domainId}
+                                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                >
+                                  {deletingDomainId === domain.domainId ? (
+                                    <Spinner size="sm" />
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="divide-y divide-slate-50">

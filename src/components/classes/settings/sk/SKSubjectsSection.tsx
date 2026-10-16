@@ -1,4 +1,4 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/sk/SKSubjectsSection.tsx
+// File: src/components/classes/settings/sk/SKSubjectsSection.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -19,9 +19,11 @@ import {
 interface SKSubjectsSectionProps {
   school: string
   grade: GradeValue
+  /** Hide add, edit and delete (a past school year, for teachers). */
+  readOnly?: boolean
 }
 
-const SKSubjectsSection: React.FC<SKSubjectsSectionProps> = ({ school, grade }) => {
+const SKSubjectsSection: React.FC<SKSubjectsSectionProps> = ({ school, grade, readOnly = false }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -91,25 +93,29 @@ const SKSubjectsSection: React.FC<SKSubjectsSectionProps> = ({ school, grade }) 
               <span className="font-medium text-slate-800 text-sm">{subject.name}</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500">{subject.standards.length} standards</span>
-                <button
-                  onClick={() => setEditingSubject(subject)}
-                  className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteSubject(subject.subjectId)}
-                  disabled={deletingSubjectId === subject.subjectId}
-                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
-                >
-                  {deletingSubjectId === subject.subjectId ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  )}
-                </button>
+                {!readOnly && (
+                  <>
+                    <button
+                      onClick={() => setEditingSubject(subject)}
+                      className="px-2.5 py-1 bg-white text-cyan-600 border border-cyan-200 rounded-lg text-xs font-medium hover:bg-cyan-50 cursor-pointer transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSubject(subject.subjectId)}
+                      disabled={deletingSubjectId === subject.subjectId}
+                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                    >
+                      {deletingSubjectId === subject.subjectId ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <div className="divide-y divide-slate-50">
@@ -179,13 +185,15 @@ const SKSubjectsSection: React.FC<SKSubjectsSectionProps> = ({ school, grade }) 
                     Progress Report Subjects
                     <span className="text-xs font-normal normal-case text-slate-400">(E / G / S / NI / NA)</span>
                   </h3>
-                  <button
-                    onClick={() => setAddSubjectType('progress_report')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 text-white rounded-lg text-xs font-medium hover:bg-teal-600 cursor-pointer transition-colors"
-                  >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                    Add Subject
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setAddSubjectType('progress_report')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 text-white rounded-lg text-xs font-medium hover:bg-teal-600 cursor-pointer transition-colors"
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" />
+                      Add Subject
+                    </button>
+                  )}
                 </div>
                 {renderSubjectGroup(skProgressSubjects, 'bg-teal-50', 'No progress report subjects yet')}
               </div>
@@ -198,13 +206,15 @@ const SKSubjectsSection: React.FC<SKSubjectsSectionProps> = ({ school, grade }) 
                     Report Card Subjects
                     <span className="text-xs font-normal normal-case text-slate-400">(E / P / DV / EM / NI / NA)</span>
                   </h3>
-                  <button
-                    onClick={() => setAddSubjectType('report_card')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 cursor-pointer transition-colors"
-                  >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                    Add Subject
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setAddSubjectType('report_card')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 cursor-pointer transition-colors"
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" />
+                      Add Subject
+                    </button>
+                  )}
                 </div>
                 {renderSubjectGroup(skReportCardSubjects, 'bg-indigo-50', 'No report card subjects yet')}
               </div>

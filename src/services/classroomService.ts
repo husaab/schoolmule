@@ -7,15 +7,28 @@ import apiUpload from './apiUpload'
 import type { AvatarSpec } from './types/profile'
 import type {
   ClassArchiveResult,
+  ClassCardsData,
   ClassIdentityPatch,
   ClassIdentityResult,
   ClassOptions,
   ClassOptionsResult,
+  ClassPageData,
   ClassroomEnvelope,
   StudentAvatarResult,
 } from './types/classroom'
 
 const classPath = (classId: string) => `/classroom/classes/${encodeURIComponent(classId)}`
+
+/**
+ * GET classes: the caller's class cards for the selected year (a teacher's
+ * own classes, every class for an admin) with To review, Coming up and Drafts
+ * & scheduled. Archived classes are left out unless `archived` is true.
+ */
+export const getClassCards = ({ archived = false }: { archived?: boolean } = {}) =>
+  apiClient<ClassroomEnvelope<ClassCardsData>>(`/classroom/classes${archived ? '?archived=1' : ''}`)
+
+/** GET one class: the header card with options, teachers, permissions and school settings. Archived classes open too. */
+export const getClassPage = (classId: string) => apiClient<ClassroomEnvelope<ClassPageData>>(classPath(classId))
 
 /**
  * PATCH identity: a field left out is untouched, a field set to null goes

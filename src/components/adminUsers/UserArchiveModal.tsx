@@ -18,6 +18,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
 import { ArchiveBoxArrowDownIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import { formatDate, roleLabel } from './userDisplay'
+import { classHref } from '@/lib/classroomRoutes'
 
 interface UserArchiveModalProps {
   isOpen: boolean
@@ -109,7 +110,7 @@ const UserArchiveModal: React.FC<UserArchiveModalProps> = ({ isOpen, onClose, us
               {blockers.classes.map((c) => (
                 <li key={c.classId}>
                   <Link
-                    href={`/classes/${c.classId}/edit`}
+                    href={classHref(c.classId, 'settings')}
                     className="inline-flex items-center gap-1 text-sm font-medium text-rose-800 underline-offset-2 hover:underline"
                   >
                     {getGradeDisplayName(c.grade)} · {c.subject}

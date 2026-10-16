@@ -64,3 +64,115 @@ export interface StudentAvatarResult {
   studentId: string
   avatar: import('./profile').AvatarSpec | null
 }
+
+// ---------------------------------------------------------------------------
+// The Classes home and the class page (GET /api/classroom/classes[/:classId]).
+
+export type ItemKind = 'assessment' | 'assignment' | 'quiz' | 'material'
+
+export interface ClassCardTeacher {
+  userId: string
+  name: string
+  role: 'lead' | 'co'
+  avatar: import('./profile').AvatarSpec | null
+}
+
+/** What a class card shows next: the next dated assessment until classwork items exist (T14). */
+export interface ClassCardNext {
+  itemId: string | null
+  assessmentId: string | null
+  title: string
+  kind: ItemKind
+  /** ISO time of a turn-in item's due date. */
+  dueAt: string | null
+  /** 'YYYY-MM-DD' (Toronto) of an in-class assessment. */
+  date: string | null
+}
+
+export interface ClassCard {
+  classId: string
+  subject: string
+  grade: import('./studentAccount').GradeCode
+  termId: string | null
+  termName: string | null
+  teacherId: string | null
+  teacherName: string | null
+  /** Lead first, then co-teachers. */
+  teachers: ClassCardTeacher[]
+  studentCount: number
+  identity: ClassIdentity
+  /** ISO time, or null for an active class. */
+  archivedAt: string | null
+  /** Turned-in work waiting for a grade (0 until T16). */
+  toReviewCount: number
+  next: ClassCardNext | null
+}
+
+export interface ComingUpRow {
+  itemId: string | null
+  assessmentId: string | null
+  classId: string
+  /** "Grade 5 Science", "JK Science". */
+  classLabel: string
+  title: string
+  kind: ItemKind
+  /** 'YYYY-MM-DD' (Toronto). */
+  date: string
+  dueAt: string | null
+  inClass: boolean
+  /** Students who still have to turn it in (turn-in items only). */
+  stillToTurnIn: number | null
+}
+
+/** A To review row (T16 fills these). */
+export interface ToReviewRow {
+  itemId: string
+  classId: string
+  classLabel: string
+  iconUrl: string
+  title: string
+  turnedInCount: number
+}
+
+/** A Drafts & scheduled row (T14 fills these). */
+export interface DraftOrScheduledRow {
+  itemId: string
+  classId: string
+  classLabel: string
+  title: string
+  status: 'draft' | 'scheduled'
+  /** ISO time a scheduled item posts. */
+  publishAt: string | null
+}
+
+export interface ClassCardsData {
+  classes: ClassCard[]
+  toReview: ToReviewRow[]
+  comingUp: ComingUpRow[]
+  draftsAndScheduled: DraftOrScheduledRow[]
+}
+
+export interface ClassPageTeacher {
+  userId: string
+  name: string
+  role: 'lead' | 'co'
+  avatar: import('./profile').AvatarSpec | null
+  photoUrl: string | null
+  /** The grade this teacher is homeroom teacher of, if any. */
+  homeroomGrade: string | null
+}
+
+export interface ClassPagePermissions {
+  /** False for a teacher viewing a past school year's class (read-only). */
+  canEdit: boolean
+  canDelete: boolean
+  isAdmin: boolean
+}
+
+/** GET /classroom/classes/:classId: the class header and Settings data. */
+export interface ClassPageData {
+  class: ClassCard & { options: ClassOptions }
+  teachers: ClassPageTeacher[]
+  permissions: ClassPagePermissions
+  settings: { parentsReadPrivateComments: boolean; studentPhotos: boolean; enabled: boolean }
+}

@@ -20,6 +20,8 @@ interface ClassListFiltersProps {
   terms: TermPayload[]
   activeTerm?: TermPayload
   showTeacher: boolean
+  /** False when the page has its own term picker (the Classes home header). */
+  showTerm?: boolean
 }
 
 const labelClass = 'block text-sm font-medium text-slate-700 mb-2'
@@ -33,8 +35,13 @@ const ClassListFilters: React.FC<ClassListFiltersProps> = ({
   terms,
   activeTerm,
   showTeacher,
+  showTerm = true,
 }) => (
-  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${showTeacher ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+  <div
+    className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+      showTeacher && showTerm ? 'lg:grid-cols-4' : showTeacher || showTerm ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+    }`}
+  >
     <div>
       <label className={labelClass}>Filter by Subject</label>
       <SearchableSelect
@@ -68,20 +75,22 @@ const ClassListFilters: React.FC<ClassListFiltersProps> = ({
         searchPlaceholder="Find a grade"
       />
     </div>
-    <div>
-      <label className={labelClass}>Filter by Term</label>
-      <SearchableSelect
-        options={[
-          { value: 'active', label: `Active Term (${activeTerm?.name ?? ''})` },
-          { value: 'all', label: 'All Terms' },
-          ...terms.map((term) => ({ value: term.name, label: term.name })),
-        ]}
-        value={values.term}
-        onChange={(v) => setParams({ term: v === 'active' ? null : v })}
-        ariaLabel="Filter by Term"
-        searchPlaceholder="Find a term"
-      />
-    </div>
+    {showTerm && (
+      <div>
+        <label className={labelClass}>Filter by Term</label>
+        <SearchableSelect
+          options={[
+            { value: 'active', label: `Active Term (${activeTerm?.name ?? ''})` },
+            { value: 'all', label: 'All Terms' },
+            ...terms.map((term) => ({ value: term.name, label: term.name })),
+          ]}
+          value={values.term}
+          onChange={(v) => setParams({ term: v === 'active' ? null : v })}
+          ariaLabel="Filter by Term"
+          searchPlaceholder="Find a term"
+        />
+      </div>
+    )}
   </div>
 )
 

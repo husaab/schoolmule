@@ -1,4 +1,4 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/SectionNav.tsx
+// File: src/components/classes/settings/SectionNav.tsx
 'use client'
 
 import React from 'react'

@@ -1,4 +1,4 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/TeachersCard.tsx
+// File: src/components/classes/settings/TeachersCard.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -15,6 +15,8 @@ interface TeachersCardProps {
   teachers: TeacherPayload[]
   loadingTeachers: boolean
   onClassRefetch: () => Promise<void>
+  /** Hide add and remove (a past school year, for teachers). */
+  readOnly?: boolean
 }
 
 const TeachersCard: React.FC<TeachersCardProps> = ({
@@ -22,6 +24,7 @@ const TeachersCard: React.FC<TeachersCardProps> = ({
   teachers,
   loadingTeachers,
   onClassRefetch,
+  readOnly = false,
 }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -104,18 +107,20 @@ const TeachersCard: React.FC<TeachersCardProps> = ({
                   <p className="text-sm font-medium text-slate-900">{t.fullName}</p>
                   <p className="text-xs text-slate-500">{t.email}</p>
                 </div>
-                <button
-                  onClick={() => handleRemoveAdditionalTeacher(t.teacherId)}
-                  disabled={removingTeacherId === t.teacherId}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                  title={`Remove ${t.fullName}`}
-                >
-                  {removingTeacherId === t.teacherId ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <XMarkIcon className="w-4 h-4" />
-                  )}
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => handleRemoveAdditionalTeacher(t.teacherId)}
+                    disabled={removingTeacherId === t.teacherId}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Remove ${t.fullName}`}
+                  >
+                    {removingTeacherId === t.teacherId ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <XMarkIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -126,36 +131,38 @@ const TeachersCard: React.FC<TeachersCardProps> = ({
         )}
 
         {/* Add teacher dropdown */}
-        <div className="flex items-center gap-2">
-          {loadingTeachers ? (
-            <p className="text-sm text-slate-500">Loading teachers...</p>
-          ) : (
-            <>
-              <SearchableSelect
-                className="flex-1"
-                options={availableTeachersToAdd.map((t) => ({ value: t.userId, label: t.fullName }))}
-                value={addTeacherId}
-                onChange={setAddTeacherId}
-                placeholder="Select a teacher to add..."
-                ariaLabel="Teacher to add"
-                searchPlaceholder="Find a teacher"
-                triggerClassName="border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-violet-500 transition-all"
-              />
-              <button
-                onClick={handleAddAdditionalTeacher}
-                disabled={!addTeacherId || addingTeacher}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:from-violet-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
-                {addingTeacher ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <PlusIcon className="w-4 h-4" />
-                )}
-                Add
-              </button>
-            </>
-          )}
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {loadingTeachers ? (
+              <p className="text-sm text-slate-500">Loading teachers...</p>
+            ) : (
+              <>
+                <SearchableSelect
+                  className="flex-1"
+                  options={availableTeachersToAdd.map((t) => ({ value: t.userId, label: t.fullName }))}
+                  value={addTeacherId}
+                  onChange={setAddTeacherId}
+                  placeholder="Select a teacher to add..."
+                  ariaLabel="Teacher to add"
+                  searchPlaceholder="Find a teacher"
+                  triggerClassName="border border-slate-200 rounded-xl px-4 py-2.5 text-black bg-slate-50 focus:ring-violet-500 transition-all"
+                />
+                <button
+                  onClick={handleAddAdditionalTeacher}
+                  disabled={!addTeacherId || addingTeacher}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:from-violet-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  {addingTeacher ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <PlusIcon className="w-4 h-4" />
+                  )}
+                  Add
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

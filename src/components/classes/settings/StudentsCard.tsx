@@ -1,4 +1,4 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/StudentsCard.tsx
+// File: src/components/classes/settings/StudentsCard.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -17,9 +17,11 @@ import { ChevronDownIcon, PlusIcon, UserGroupIcon } from '@heroicons/react/24/ou
 interface StudentsCardProps {
   classId: string
   classGrade: GradeValue
+  /** Hide enrol and unenrol (a past school year, for teachers). */
+  readOnly?: boolean
 }
 
-const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade }) => {
+const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade, readOnly = false }) => {
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
 
@@ -127,12 +129,14 @@ const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade }) => {
                       <p className="font-medium text-slate-900">{stu.name}</p>
                       <p className="text-sm text-slate-500">{getGradeDisplayName(stu.grade)}</p>
                     </div>
-                    <button
-                      onClick={() => setStudentToUnenroll(stu)}
-                      className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors cursor-pointer text-sm font-medium"
-                    >
-                      Unenroll
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => setStudentToUnenroll(stu)}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors cursor-pointer text-sm font-medium"
+                      >
+                        Unenroll
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -140,22 +144,24 @@ const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
-            <button
-              onClick={() => setShowEnrollModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Enroll Students
-            </button>
+          {!readOnly && (
+            <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowEnrollModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm"
+              >
+                <PlusIcon className="h-4 w-4" />
+                Enroll Students
+              </button>
 
-            <button
-              onClick={() => setShowUnenrollAllModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer text-sm"
-            >
-              Unenroll All
-            </button>
-          </div>
+              <button
+                onClick={() => setShowUnenrollAllModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer text-sm"
+              >
+                Unenroll All
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,119 +1,229 @@
 // File: src/app/(user)/classes/page.tsx
+// The Classes home (the Teacher-Home board): the caller's classes as cards
+// (or the dense grade-grouped List), with To review, Coming up and Drafts &
+// scheduled beside them. A whole card opens the class; its ⋮ menu changes the
+// banner, opens Settings, copies the class to the next term, messages the
+// parents or archives it. Filters live in the URL: view, term, archived and,
+// for admins, subject, grade and teacher.
 'use client'
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
-import Navbar from '../../../components/navbar/Navbar'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { AcademicCapIcon } from '@heroicons/react/24/outline'
+import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
-import ClassViewModal from '@/components/classes/view/classViewModal'
 import ClassAddModal from '@/components/classes/add/classAddModal'
 import ClassDeleteModal from '@/components/classes/delete/classDeleteModal'
 import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useUserStore } from '@/store/useUserStore'
-import { useSchoolYearStore } from '@/store/useSchoolYearStore'
-import { ClassPayload } from '@/services/types/class'
-import { getAllClasses, getClassesByTeacherId } from '@/services/classService'
-import { getTermsBySchool } from '@/services/termService'
-import { TermPayload } from '@/services/types/term'
-import { PlusIcon, AcademicCapIcon, EyeIcon, PencilSquareIcon, TrashIcon, ChevronDownIcon, DocumentDuplicateIcon, BookOpenIcon } from '@heroicons/react/24/outline'
-import Spinner from '@/components/Spinner'
 import ClassListFilters from '@/components/classes/ClassListFilters'
-import { filterClasses, gradeOptions, knownOrAll, subjectOptions, teacherOptions } from '@/lib/classListFilters'
-import { getGradeDisplayName, isJK, isSK } from '@/lib/schoolUtils'
+import ClassIdentityModal from '@/components/classes/identity/ClassIdentityModal'
+import ArchiveClassModal from '@/components/classes/home/ArchiveClassModal'
+import ClassCardGrid from '@/components/classes/home/ClassCardGrid'
+import ClassListView from '@/components/classes/home/ClassListView'
+import ClassesHomeHeader, { type ClassesView } from '@/components/classes/home/ClassesHomeHeader'
+import ComingUpPanel from '@/components/classes/home/ComingUpPanel'
+import DraftsPanel from '@/components/classes/home/DraftsPanel'
+import ToReviewPanel from '@/components/classes/home/ToReviewPanel'
 import { useFilterParams } from '@/hooks/useFilterParams'
+import { gradeOptions, knownOrAll, subjectOptions, teacherOptions } from '@/lib/classListFilters'
+import { cardAsClassPayload, classTitle, filterCards, gradeShort, homeSummary, termLabel } from '@/lib/classesHome'
+import { getClassCards, unarchiveClass } from '@/services/classroomService'
+import { getTermsBySchool } from '@/services/termService'
+import type { ClassPayload } from '@/services/types/class'
+import type { ClassCard, ClassCardsData } from '@/services/types/classroom'
+import type { TermPayload } from '@/services/types/term'
+import { useNotificationStore } from '@/store/useNotificationStore'
+import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
+import { useUserStore } from '@/store/useUserStore'
 
-const ClassesPageContent = () => {
-  const router = useRouter()
-  const user = useUserStore((state) => state.user)
-  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
-  const filters = useFilterParams()
-  const { get, setParams } = filters
+interface LoadResult {
+  /** Which year and archived setting the answer is for. */
+  key: string
+  data: ClassCardsData | null
+  error: string | null
+}
 
-  const [classes, setClasses] = useState<ClassPayload[]>([])
-  const [terms, setTerms] = useState<TermPayload[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  // Filters live in the URL so Back/refresh/share restore them.
-  const gradeFilter = get('grade')
-  const termFilter = get('term', 'active')
-  const subjectFilter = get('subject')
-  const teacherFilter = get('teacher')
+const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback)
+
+const CardSkeleton = () => (
+  <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]" aria-hidden="true">
+    {[0, 1, 2, 3].map((i) => (
+      <div key={i} className="h-[236px] animate-pulse rounded-2xl border border-slate-200/70 bg-white">
+        <div className="h-28 rounded-t-2xl bg-slate-100" />
+      </div>
+    ))}
+  </div>
+)
+
+function ClassesHomeContent() {
+  const user = useUserStore((s) => s.user)
+  const school = user.school ?? ''
   const isAdmin = user.role === 'ADMIN'
-  const [collapsedGrades, setCollapsedGrades] = useState<Set<string>>(new Set())
-  const [viewClass, setViewClass] = useState<ClassPayload | null>(null)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
-  const [duplicateTarget, setDuplicateTarget] = useState<ClassPayload | null>(null)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const selectedYear = useSelectedYear()
+  // A past school year is read-only for teachers.
+  const canWrite = isAdmin || selectedYear?.isActive !== false
+  const showNotification = useNotificationStore((s) => s.showNotification)
 
-  const loadClasses = useCallback(async () => {
-    if (!user.school || !user.id) return;
+  const { get, setParams } = useFilterParams()
+  const view: ClassesView = get('view') === 'list' ? 'list' : 'cards'
+  const term = get('term', 'active')
+  const showArchived = view === 'list' && get('archived') === '1'
 
-    setLoading(true);
-    setError(null);
-
+  // ───── Classes ─────
+  const fetchKey = `${selectedYearId ?? ''}|${showArchived ? 'archived' : 'active'}`
+  const [result, setResult] = useState<LoadResult | null>(null)
+  const seq = useRef(0)
+  const load = useCallback(async () => {
+    const ticket = ++seq.current
     try {
-      let response;
-      if (user.role === 'ADMIN') {
-        response = await getAllClasses(user.school);
-      } else {
-        response = await getClassesByTeacherId(user.id);
-      }
-
-      if (response.status === 'success') {
-        setClasses(response.data);
-      } else {
-        setError(response.message || 'Failed to load classes');
-      }
+      const res = await getClassCards({ archived: showArchived })
+      if (ticket === seq.current) setResult({ key: fetchKey, data: res.data, error: null })
     } catch (err) {
-      console.error('Error loading classes:', err);
-      setError('Error loading classes');
-    } finally {
-      setLoading(false);
+      if (ticket !== seq.current) return
+      const error = errorText(err, 'Error loading classes')
+      setResult((prev) => ({ key: fetchKey, data: prev?.key === fetchKey ? prev.data : null, error }))
     }
-  }, [user.id, user.role, user.school, selectedYearId]); // refetch when the selected school year changes
-
-  const loadTerms = useCallback(async () => {
-    if (!user.school) return;
-
-    try {
-      const response = await getTermsBySchool(user.school);
-      if (response.status === 'success') {
-        setTerms(response.data);
-      }
-    } catch (err) {
-      console.error('Error loading terms:', err);
-    }
-  }, [user.school, selectedYearId]); // refetch when the selected school year changes
-
+  }, [fetchKey, showArchived])
   useEffect(() => {
-    loadClasses();
-    loadTerms();
-  }, [user.school, user.id, user.role, loadClasses, loadTerms])
+    if (!user.id) return
+    void load()
+  }, [load, user.id])
+  const current = result?.key === fetchKey ? result : null
+  const data = current?.data ?? null
 
-  // Options come from the loaded classes, so teachers only see what they teach.
-  const availableGrades = gradeOptions(classes)
-  const activeTerm = terms.find(t => t.isActive);
-  const subjects = subjectOptions(classes)
-  const teachers = teacherOptions(classes)
-  // A stale URL/remembered value that matches no option would silently empty
-  // the list while the control reads "All", so drop it.
+  const patchCard = (classId: string, patch: Partial<ClassCard>) =>
+    setResult((prev) =>
+      prev?.data
+        ? {
+            ...prev,
+            data: {
+              ...prev.data,
+              classes: prev.data.classes.map((c) => (c.classId === classId ? { ...c, ...patch } : c)),
+            },
+          }
+        : prev,
+    )
+
+  // ───── Terms ─────
+  const [terms, setTerms] = useState<TermPayload[]>([])
+  useEffect(() => {
+    if (!school) return
+    let live = true
+    const loadTerms = async () => {
+      try {
+        const res = await getTermsBySchool(school)
+        if (live && res.status === 'success') setTerms(res.data)
+      } catch (err) {
+        console.error('Error loading terms:', err)
+      }
+    }
+    void loadTerms()
+    return () => {
+      live = false
+    }
+  }, [school, selectedYearId]) // refetch when the selected school year changes
+  const activeTerm = terms.find((t) => t.isActive)
+
+  // ───── Filters ─────
+  const allCards = data?.classes ?? []
+  const activeCards = allCards.filter((c) => !c.archivedAt)
+  const pool = showArchived ? allCards : activeCards
+  // Options come from the loaded classes, so they only offer what exists.
+  const payloads = pool.map((c) => cardAsClassPayload(c, school))
+  const subjects = subjectOptions(payloads)
+  const teachers = teacherOptions(payloads)
+  const grades = gradeOptions(payloads)
+  // Subject, grade and teacher are admin filters; a stale value that matches
+  // no option would silently empty the page while its control reads "All".
   const filterValues = {
-    subject: knownOrAll(subjectFilter, subjects.map((o) => o.value)),
-    teacher: isAdmin ? knownOrAll(teacherFilter, teachers.map((o) => o.value)) : '',
-    grade: knownOrAll(gradeFilter, availableGrades.map((g) => String(g.value))),
-    term: termFilter,
+    subject: isAdmin ? knownOrAll(get('subject'), subjects.map((o) => o.value)) : '',
+    teacher: isAdmin ? knownOrAll(get('teacher'), teachers.map((o) => o.value)) : '',
+    grade: isAdmin ? knownOrAll(get('grade'), grades.map((g) => String(g.value))) : '',
+    term,
   }
-  const filteredClasses = filterClasses(classes, filterValues, { isAdmin, activeTermName: activeTerm?.name })
-  const hasActiveFilters = !!(filterValues.subject || filterValues.teacher || filterValues.grade || termFilter !== 'active')
+  const filterOpts = { isAdmin, activeTermName: activeTerm?.name }
+  const shownActive = filterCards(activeCards, filterValues, filterOpts)
+  const shownList = view === 'list' ? filterCards(pool, filterValues, filterOpts) : shownActive
+  const hasAdminFilters = isAdmin && !!(filterValues.subject || filterValues.teacher || filterValues.grade)
+  const classSizes = new Map(allCards.map((c) => [c.classId, c.studentCount]))
 
-  const toggleGrade = (grade: string) => {
-    setCollapsedGrades((prev) => {
-      const next = new Set(prev)
-      if (next.has(grade)) next.delete(grade)
-      else next.add(grade)
-      return next
-    })
+  // ───── Card and row actions ─────
+  const [showAdd, setShowAdd] = useState(false)
+  const [identityCard, setIdentityCard] = useState<ClassCard | null>(null)
+  const [archiveCard, setArchiveCard] = useState<ClassCard | null>(null)
+  // The modals read the class payload; it is built once when a modal opens.
+  const [duplicateTarget, setDuplicateTarget] = useState<ClassPayload | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ClassPayload | null>(null)
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null)
+
+  const unarchive = async (card: ClassCard) => {
+    setUnarchivingId(card.classId)
+    try {
+      const res = await unarchiveClass(card.classId)
+      patchCard(card.classId, { archivedAt: res.data.archivedAt })
+      showNotification(`${classTitle(card.grade, card.subject)} is back on class cards`, 'success')
+    } catch (err) {
+      showNotification(errorText(err, "The class couldn't be unarchived. Try again."), 'error')
+    } finally {
+      setUnarchivingId(null)
+    }
+  }
+
+  const cardActions = {
+    canWrite,
+    onChangeBanner: (card: ClassCard) => setIdentityCard(card),
+    onCopy: (card: ClassCard) => setDuplicateTarget(cardAsClassPayload(card, school)),
+    onArchive: (card: ClassCard) => setArchiveCard(card),
+  }
+
+  // ───── Body ─────
+  let body: React.ReactNode
+  if (!current) {
+    body = <CardSkeleton />
+  } else if (!data) {
+    body = (
+      <div className="rounded-2xl border border-rose-100 bg-white px-6 py-12 text-center">
+        <p className="text-rose-600">{current.error}</p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="mt-4 cursor-pointer rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  } else if ((view === 'cards' ? shownActive : shownList).length === 0) {
+    const none = pool.length === 0
+    body = (
+      <div className="rounded-2xl border border-slate-200/70 bg-white px-6 py-12 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+          <AcademicCapIcon className="h-8 w-8 text-slate-400" />
+        </div>
+        <h2 className="mb-2 text-lg font-semibold text-slate-900">{none ? 'No classes yet' : 'No matching classes'}</h2>
+        <p className="text-sm text-slate-500">
+          {none
+            ? isAdmin
+              ? 'Add your first class to get started.'
+              : 'Classes you teach will show up here.'
+            : 'Try another term or clear the filters.'}
+        </p>
+      </div>
+    )
+  } else if (view === 'cards') {
+    body = <ClassCardGrid cards={shownActive} grouped={isAdmin} {...cardActions} />
+  } else {
+    body = (
+      <ClassListView
+        cards={shownList}
+        isAdmin={isAdmin}
+        canWrite={canWrite}
+        unarchivingId={unarchivingId}
+        onDuplicate={(card) => setDuplicateTarget(cardAsClassPayload(card, school))}
+        onDelete={(card) => setDeleteTarget(cardAsClassPayload(card, school))}
+        onUnarchive={(card) => void unarchive(card)}
+      />
+    )
   }
 
   return (
@@ -121,272 +231,127 @@ const ClassesPageContent = () => {
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Classes</h1>
-                <p className="text-slate-500 mt-1">Manage class schedules and assignments</p>
-              </div>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl font-medium cursor-pointer"
-              >
-                <PlusIcon className="h-5 w-5" />
-                Add Class
-              </button>
-            </div>
-          </div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 lg:p-8">
+          <ClassesHomeHeader
+            summary={homeSummary(termLabel(term, activeTerm?.name), shownActive)}
+            term={term}
+            terms={terms}
+            activeTerm={activeTerm}
+            onTermChange={(v) => setParams({ term: v === 'active' ? null : v })}
+            view={view}
+            onViewChange={(v) => setParams({ view: v === 'cards' ? null : v })}
+            onAdd={isAdmin ? () => setShowAdd(true) : undefined}
+          />
 
-          {/* Main Content Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-            {/* Sticky Header */}
-            <div className="sticky top-20 z-10 bg-white rounded-t-2xl border-b border-slate-100">
-              <div className="p-6">
-                {/* Filters */}
-                <ClassListFilters
-                  values={filterValues}
-                  setParams={setParams}
-                  subjects={subjects}
-                  teachers={teachers}
-                  grades={availableGrades}
-                  terms={terms}
-                  activeTerm={activeTerm}
-                  showTeacher={isAdmin}
-                />
-
-                {hasActiveFilters && (
-                  <div className="mt-4 flex items-center gap-3">
-                    <span className="text-sm text-slate-500">
-                      Showing {filteredClasses.length} of {classes.length} classes
-                    </span>
-                    <button
-                      onClick={() => {
-                        setParams({ q: null, grade: null, term: null, subject: null, teacher: null })
-                      }}
-                      className="text-sm text-cyan-600 hover:text-cyan-700 font-medium cursor-pointer"
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Classes Content */}
-            <div className="p-6">
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <Spinner size="lg" />
-                </div>
-              ) : error ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-                    <AcademicCapIcon className="h-8 w-8 text-red-400" />
-                  </div>
-                  <p className="text-red-600">{error}</p>
-                </div>
-              ) : filteredClasses.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                    <AcademicCapIcon className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    {classes.length === 0 ? 'No Classes Yet' : 'No Matching Classes'}
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    {classes.length === 0
-                      ? 'Add your first class to get started.'
-                      : 'Try adjusting your filters.'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Collapsible grade sections */}
-                  {availableGrades.map((gradeOption) => {
-                    const classesForGrade = filteredClasses.filter(
-                      (c) => String(c.grade) === String(gradeOption.value)
-                    )
-                    if (classesForGrade.length === 0) return null
-
-                    const isCollapsed = collapsedGrades.has(String(gradeOption.value))
-
-                    return (
-                      <div key={gradeOption.value} className="space-y-2">
-                        {/* Grade header */}
-                        <button
-                          onClick={() => toggleGrade(String(gradeOption.value))}
-                          className="w-full flex items-center justify-between px-5 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl cursor-pointer select-none hover:from-cyan-600 hover:to-teal-600 transition-all shadow-sm"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                              <AcademicCapIcon className="w-5 h-5" />
-                            </div>
-                            <span className="font-semibold text-lg">{getGradeDisplayName(gradeOption.value)}</span>
-                            <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
-                              {classesForGrade.length} {classesForGrade.length === 1 ? 'class' : 'classes'}
-                            </span>
-                          </div>
-                          <ChevronDownIcon
-                            className={`w-5 h-5 transform transition-transform duration-200 ${
-                              isCollapsed ? '-rotate-90' : 'rotate-0'
-                            }`}
-                          />
-                        </button>
-
-                        {/* Class cards */}
-                        {!isCollapsed && (
-                          <div className="space-y-2 pl-2">
-                            {classesForGrade.map((cls) => (
-                              <div
-                                key={cls.classId}
-                                onClick={() => router.push(`/classes/${cls.classId}/edit`)}
-                                className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 hover:border-slate-200 transition-all group cursor-pointer"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                    <AcademicCapIcon className="w-5 h-5 text-cyan-600" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium text-slate-900">
-                                      {cls.subject}
-                                    </p>
-                                    <p className="text-slate-500 text-sm">
-                                      {cls.teacherName || 'No teacher assigned'}
-                                    </p>
-                                    {(cls.additionalTeachers ?? []).length > 0 && (
-                                      <p className="text-slate-400 text-xs mt-0.5">
-                                        Also: {cls.additionalTeachers.map((t) => t.fullName).join(', ')}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <span className="hidden sm:inline-flex px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium">
-                                    {cls.termName || 'No term'}
-                                  </span>
-                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                    <Link
-                                      href={isJK(cls.grade) ? `/gradebook/jk/${cls.classId}` : isSK(cls.grade) ? `/gradebook/sk/${cls.classId}` : `/gradebook/${cls.classId}`}
-                                      className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                                      title="Open Gradebook"
-                                    >
-                                      <BookOpenIcon className="h-5 w-5" />
-                                    </Link>
-                                    <button
-                                      onClick={() => setViewClass(cls)}
-                                      className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
-                                      title="View Class"
-                                    >
-                                      <EyeIcon className="h-5 w-5" />
-                                    </button>
-                                    <Link
-                                      href={`/classes/${cls.classId}/edit`}
-                                      className="p-2 rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                                      title="Edit Class"
-                                    >
-                                      <PencilSquareIcon className="h-5 w-5" />
-                                    </Link>
-                                    <button
-                                      onClick={() => setDuplicateTarget(cls)}
-                                      className="p-2 rounded-lg text-violet-500 hover:text-violet-700 hover:bg-violet-50 transition-colors cursor-pointer"
-                                      title="Duplicate Class"
-                                    >
-                                      <DocumentDuplicateIcon className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                      onClick={() => setDeleteTarget(cls)}
-                                      className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                                      title="Delete Class"
-                                    >
-                                      <TrashIcon className="h-5 w-5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+          {isAdmin && (
+            <div className="rounded-2xl border border-slate-200/70 bg-white p-5">
+              <ClassListFilters
+                values={filterValues}
+                setParams={setParams}
+                subjects={subjects}
+                teachers={teachers}
+                grades={grades}
+                terms={terms}
+                activeTerm={activeTerm}
+                showTeacher
+                showTerm={false}
+              />
+              {hasAdminFilters && (
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="text-sm text-slate-500">
+                    Showing {shownList.length} of {pool.length} classes
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setParams({ grade: null, subject: null, teacher: null })}
+                    className="cursor-pointer text-sm font-medium text-cyan-600 hover:text-cyan-700"
+                  >
+                    Clear filters
+                  </button>
                 </div>
               )}
             </div>
+          )}
+
+          <div className="flex flex-wrap items-start gap-6">
+            <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-4">
+              {view === 'list' && (
+                <label className="flex items-center gap-2 self-end text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(e) => setParams({ archived: e.target.checked ? '1' : null })}
+                    className="h-4 w-4 cursor-pointer accent-cyan-600"
+                  />
+                  Show archived
+                </label>
+              )}
+              {body}
+            </div>
+            {data && (
+              <aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
+                <ToReviewPanel rows={data.toReview} />
+                <ComingUpPanel rows={data.comingUp} classSizes={classSizes} />
+                <DraftsPanel rows={data.draftsAndScheduled} />
+              </aside>
+            )}
           </div>
         </div>
       </main>
 
-      {/* Custom scrollbar styling */}
-      <style jsx global>{`
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(0, 0, 0, 0.2);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(0, 0, 0, 0.4);
-        }
-      `}</style>
+      {showAdd && <ClassAddModal isOpen onClose={() => setShowAdd(false)} onAdd={() => void load()} />}
 
-      {/* Class View Modal */}
-      {viewClass && (
-        <ClassViewModal
-          isOpen={!!viewClass}
-          onClose={() => setViewClass(null)}
-          classData={viewClass}
-          onEdit={() => router.push(`/classes/${viewClass.classId}/edit`)}
+      {identityCard && (
+        <ClassIdentityModal
+          isOpen
+          classId={identityCard.classId}
+          subject={identityCard.subject}
+          gradeLabel={gradeShort(identityCard.grade)}
+          teacherName={identityCard.teacherName ?? ''}
+          identity={identityCard.identity}
+          onClose={() => setIdentityCard(null)}
+          onSaved={(identity) => patchCard(identityCard.classId, { identity })}
         />
       )}
 
-      {/* Class Add Modal */}
-      {showAddModal && (
-        <ClassAddModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onAdd={() => loadClasses()}
+      {archiveCard && (
+        <ArchiveClassModal
+          isOpen
+          onClose={() => setArchiveCard(null)}
+          classId={archiveCard.classId}
+          label={classTitle(archiveCard.grade, archiveCard.subject)}
+          onArchived={(archivedAt) => {
+            patchCard(archiveCard.classId, { archivedAt })
+            showNotification(`${classTitle(archiveCard.grade, archiveCard.subject)} is archived`, 'success')
+          }}
         />
       )}
 
-      {/* Class Delete Modal */}
-      {deleteTarget && (
-        <ClassDeleteModal
-          isOpen={!!deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          classData={deleteTarget}
-          onDeleted={() => loadClasses()}
-        />
-      )}
-
-      {/* Class Duplicate Modal */}
       {duplicateTarget && (
         <ClassDuplicateModal
-          isOpen={!!duplicateTarget}
+          isOpen
           onClose={() => setDuplicateTarget(null)}
           sourceClass={duplicateTarget}
-          onDuplicated={() => loadClasses()}
+          onDuplicated={() => void load()}
+        />
+      )}
+
+      {deleteTarget && isAdmin && (
+        <ClassDeleteModal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          classData={deleteTarget}
+          onDeleted={() => void load()}
         />
       )}
     </>
   )
 }
 
-const ClassesPage = () => (
-  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
-    <ClassesPageContent />
-  </Suspense>
-)
-
-export default ClassesPage
+export default function ClassesPage() {
+  return (
+    <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
+      <ClassesHomeContent />
+    </Suspense>
+  )
+}

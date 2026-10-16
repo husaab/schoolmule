@@ -1,7 +1,7 @@
-// File: src/app/(user)/classes/[classId]/edit/_components/ClassDetailsCard.tsx
+// File: src/components/classes/settings/ClassDetailsCard.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { updateClass } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TeacherPayload } from '@/services/types/teacher'
@@ -22,6 +22,8 @@ interface ClassDetailsCardProps {
   loadingTerms: boolean
   currentTermData: TermPayload | null
   onSaved: (updated: ClassPayload) => void
+  /** Hide Edit (a past school year, for teachers). */
+  readOnly?: boolean
 }
 
 const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
@@ -32,6 +34,7 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
   loadingTerms,
   currentTermData,
   onSaved,
+  readOnly = false,
 }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -43,14 +46,14 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
 
   const { subject, grade, teacherName, termName, school, createdAt, lastModifiedAt } = classData
 
-  useEffect(() => {
-    if (isEditing && classData) {
-      setEditSubject(classData.subject)
-      setEditGrade(classData.grade)
-      setEditTeacherId(classData.teacherId)
-      setEditTermId(classData.termId || '')
-    }
-  }, [isEditing, classData])
+  // The form starts from the class as saved each time Edit is pressed.
+  const startEditing = () => {
+    setEditSubject(classData.subject)
+    setEditGrade(classData.grade)
+    setEditTeacherId(classData.teacherId)
+    setEditTermId(classData.termId || '')
+    setIsEditing(true)
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,9 +125,9 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
           </div>
           <h2 className="text-lg font-semibold text-slate-900">Class Details</h2>
         </div>
-        {!isEditing ? (
+        {readOnly ? null : !isEditing ? (
           <button
-            onClick={() => setIsEditing(true)}
+            onClick={startEditing}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all font-medium cursor-pointer text-sm"
           >
             <PencilSquareIcon className="h-4 w-4" />
