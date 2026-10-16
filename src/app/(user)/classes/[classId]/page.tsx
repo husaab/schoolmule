@@ -1,8 +1,10 @@
 // File: src/app/(user)/classes/[classId]/page.tsx
 // One class (the Teacher-* class boards): the class header and banner, then
 // Stream · Classwork · Grades · People · Settings. The open tab is ?tab= in
-// the URL (Stream is the bare URL); an archived class still opens, with a
-// note and Unarchive for those who may edit it.
+// the URL and is not remembered: a bare /classes/{id} (a card, a row, a
+// Back link) always opens the Stream, so a link that needs another tab
+// passes it through classHref. An archived class still opens, with a note
+// and Unarchive for those who may edit it.
 'use client'
 
 import { Suspense, useState, type ComponentType } from 'react'
@@ -36,10 +38,6 @@ const TAB_BODIES: Record<ClassTab, ComponentType<ClassTabProps>> = {
   settings: SettingsTab,
 }
 
-// Query keys that open something for a moment (a composer, a form, a
-// highlighted column) and are never remembered as the class's tab state.
-const TRANSIENT = ['compose', 'add', 'focus']
-
 const Shell = ({ children }: { children: React.ReactNode }) => (
   <>
     <Navbar />
@@ -50,7 +48,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 
 function ClassPageContent() {
   const { classId } = useParams() as { classId: string }
-  const filters = useFilterParams({ transient: TRANSIENT })
+  const filters = useFilterParams({ remember: false })
   const tab = parseClassTab(filters.get('tab'))
   const { data, error, loading, reload, patchClass } = useClassPage(classId)
   const showNotification = useNotificationStore((s) => s.showNotification)

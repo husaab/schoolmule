@@ -1,6 +1,8 @@
 // src/components/classes/settings/DangerZoneCard.tsx
-// Settings → Duplicate, archive, delete. Delete is for admins only; a class
-// the viewer may not edit (a past school year, for teachers) shows no actions.
+// Settings → Duplicate, archive, delete. Delete follows the header's
+// permissions.canDelete (admins and the class's teachers in a current year);
+// a class the viewer may not edit (a past school year, for teachers) shows no
+// actions.
 'use client'
 
 interface DangerZoneCardProps {

@@ -60,7 +60,8 @@ function ClassesHomeContent() {
   const isAdmin = user.role === 'ADMIN'
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const selectedYear = useSelectedYear()
-  // A past school year is read-only for teachers.
+  // Every staff member adds, duplicates, archives and deletes classes, as
+  // before; a past school year is read-only for teachers.
   const canWrite = isAdmin || selectedYear?.isActive !== false
   const showNotification = useNotificationStore((s) => s.showNotification)
 
@@ -146,6 +147,10 @@ function ClassesHomeContent() {
   const shownList = view === 'list' ? filterCards(pool, filterValues, filterOpts) : shownActive
   const hasAdminFilters = isAdmin && !!(filterValues.subject || filterValues.teacher || filterValues.grade)
   const classSizes = new Map(allCards.map((c) => [c.classId, c.studentCount]))
+  // The server leaves archived classes out of the rails; a class archived
+  // here leaves them at once too.
+  const archivedIds = new Set(allCards.filter((c) => c.archivedAt).map((c) => c.classId))
+  const live = <T extends { classId: string }>(rows: T[]) => rows.filter((r) => !archivedIds.has(r.classId))
 
   // ───── Card and row actions ─────
   const [showAdd, setShowAdd] = useState(false)
@@ -162,6 +167,8 @@ function ClassesHomeContent() {
       const res = await unarchiveClass(card.classId)
       patchCard(card.classId, { archivedAt: res.data.archivedAt })
       showNotification(`${classTitle(card.grade, card.subject)} is back on class cards`, 'success')
+      // Its To review, Coming up and Drafts rows come back with a reload.
+      void load()
     } catch (err) {
       showNotification(errorText(err, "The class couldn't be unarchived. Try again."), 'error')
     } finally {
@@ -203,7 +210,7 @@ function ClassesHomeContent() {
         <h2 className="mb-2 text-lg font-semibold text-slate-900">{none ? 'No classes yet' : 'No matching classes'}</h2>
         <p className="text-sm text-slate-500">
           {none
-            ? isAdmin
+            ? canWrite
               ? 'Add your first class to get started.'
               : 'Classes you teach will show up here.'
             : 'Try another term or clear the filters.'}
@@ -216,7 +223,6 @@ function ClassesHomeContent() {
     body = (
       <ClassListView
         cards={shownList}
-        isAdmin={isAdmin}
         canWrite={canWrite}
         unarchivingId={unarchivingId}
         onDuplicate={(card) => setDuplicateTarget(cardAsClassPayload(card, school))}
@@ -240,7 +246,7 @@ function ClassesHomeContent() {
             onTermChange={(v) => setParams({ term: v === 'active' ? null : v })}
             view={view}
             onViewChange={(v) => setParams({ view: v === 'cards' ? null : v })}
-            onAdd={isAdmin ? () => setShowAdd(true) : undefined}
+            onAdd={canWrite ? () => setShowAdd(true) : undefined}
           />
 
           {isAdmin && (
@@ -290,9 +296,9 @@ function ClassesHomeContent() {
             </div>
             {data && (
               <aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
-                <ToReviewPanel rows={data.toReview} />
-                <ComingUpPanel rows={data.comingUp} classSizes={classSizes} />
-                <DraftsPanel rows={data.draftsAndScheduled} />
+                <ToReviewPanel rows={live(data.toReview)} />
+                <ComingUpPanel rows={live(data.comingUp)} classSizes={classSizes} />
+                <DraftsPanel rows={live(data.draftsAndScheduled)} />
               </aside>
             )}
           </div>
@@ -336,7 +342,7 @@ function ClassesHomeContent() {
         />
       )}
 
-      {deleteTarget && isAdmin && (
+      {deleteTarget && canWrite && (
         <ClassDeleteModal
           isOpen
           onClose={() => setDeleteTarget(null)}

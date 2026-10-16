@@ -103,7 +103,9 @@ export default function ClassCardMenu({
       e.preventDefault()
       items[items.length - 1]?.focus()
     } else if (e.key === 'Tab') {
-      close()
+      // The menu sits at the end of the page: hand focus back to the card's ⋮.
+      e.preventDefault()
+      close(true)
     }
   }
 

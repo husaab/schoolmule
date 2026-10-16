@@ -10,6 +10,7 @@ import { SchoolUser, SchoolUserDetails } from '@/services/types/adminUser'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
+import { classHref } from '@/lib/classroomRoutes'
 import { previewViewsFor, type PreviewView } from '@/lib/previewViews'
 import {
   AcademicCapIcon,
@@ -226,7 +227,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
                       {details.classes.map((c) => (
                         <li key={c.classId}>
                           <Link
-                            href={`/classes/${c.classId}`}
+                            href={classHref(c.classId)}
                             className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-slate-50"
                           >
                             <span className="flex min-w-0 items-center gap-2 text-sm text-slate-800">

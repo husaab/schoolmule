@@ -1,7 +1,7 @@
 // src/components/classes/home/ClassesHomeHeader.tsx
 // The Classes home heading (the Teacher-Home board): "Your classes" with the
 // term, class and student counts, then the term picker, the Cards | List
-// switch and, for admins, "Add class".
+// switch and "Add class" (for anyone who can change the year's classes).
 'use client'
 
 import { PlusIcon } from '@heroicons/react/24/outline'
@@ -20,7 +20,7 @@ interface ClassesHomeHeaderProps {
   onTermChange: (term: string) => void
   view: ClassesView
   onViewChange: (view: ClassesView) => void
-  /** Admins add classes. */
+  /** Omitted when the viewer may not add classes (a past school year, for teachers). */
   onAdd?: () => void
 }
 

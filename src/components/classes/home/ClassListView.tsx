@@ -2,7 +2,7 @@
 // The Classes home's List view: the dense grade-grouped list the Classes page
 // has always had, for schools with many classes. A row opens the class; its
 // actions go to Settings or Grades, duplicate, unarchive (archived rows, shown
-// with "Show archived") and delete (admins).
+// with "Show archived") and delete.
 'use client'
 
 import { useState } from 'react'
@@ -22,7 +22,6 @@ import GradeGroupHeader from './GradeGroupHeader'
 
 interface ClassListViewProps {
   cards: ClassCard[]
-  isAdmin: boolean
   /** False when the viewer may not change classes (a past school year, for teachers). */
   canWrite: boolean
   unarchivingId: string | null
@@ -36,7 +35,6 @@ const action =
 
 export default function ClassListView({
   cards,
-  isAdmin,
   canWrite,
   unarchivingId,
   onDuplicate,
@@ -145,7 +143,7 @@ export default function ClassListView({
                               <DocumentDuplicateIcon className="h-5 w-5" />
                             </button>
                           )}
-                          {isAdmin && (
+                          {canWrite && (
                             <button
                               type="button"
                               onClick={() => onDelete(card)}
