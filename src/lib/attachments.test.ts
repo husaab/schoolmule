@@ -5,6 +5,7 @@ import {
   attachmentMeta,
   attachmentName,
   checkNewFiles,
+  fileTitlePatch,
   normalizeLinkUrl,
   previewKind,
   youtubeEmbedUrl,
@@ -135,5 +136,25 @@ describe('checkNewFiles', () => {
     const { accepted, problems } = checkNewFiles([f('a.pdf'), f('b.pdf'), f('c.pdf')], 18)
     expect(accepted.map((x) => x.name)).toEqual(['a.pdf', 'b.pdf'])
     expect(problems).toEqual(['An item holds at most 20 attachments.'])
+  })
+})
+
+describe('fileTitlePatch (renaming a file)', () => {
+  it('sends the new display title, trimmed', () => {
+    expect(fileTitlePatch('  Cell parts checklist ', 'cell-parts-checklist.pdf')).toBe('Cell parts checklist')
+  })
+
+  it('goes back to the file name when blank or the same as the file name', () => {
+    expect(fileTitlePatch('   ', 'cell-parts-checklist.pdf')).toBeNull()
+    expect(fileTitlePatch('cell-parts-checklist.pdf', 'cell-parts-checklist.pdf')).toBeNull()
+  })
+
+  it('keeps to 200 characters', () => {
+    expect(fileTitlePatch('x'.repeat(250), 'a.pdf')).toHaveLength(200)
+  })
+
+  it('a renamed file reads its title; a cleared one its file name', () => {
+    expect(attachmentName(file({ title: 'Cell parts checklist' }))).toBe('Cell parts checklist')
+    expect(attachmentName(file({ title: null }))).toBe('cell-parts-checklist.pdf')
   })
 })

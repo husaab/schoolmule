@@ -34,6 +34,8 @@ export interface ScoreAutosave {
   /** What a cell shows: the newest local value, else the saved one. */
   displayValue: (key: string, saved: CellValue) => CellValue
   failedKeys: Set<string>
+  /** Whether anything failed to save, read now (not from the last render): after `await flush()`. */
+  hasFailures: () => boolean
   /** Every local value not yet confirmed by the server (failed < in flight < pending), for live totals. */
   pendingMap: () => Record<string, CellValue>
 }
@@ -72,6 +74,7 @@ export function useScoreAutosave({
   const drop = useCallback((key: string) => autosaver.drop(key), [autosaver])
   const displayValue = useCallback((key: string, saved: CellValue) => displayOf(state, key, saved), [state])
   const failedKeys = useMemo(() => new Set(Object.keys(state.failed)), [state.failed])
+  const hasFailures = useCallback(() => Object.keys(autosaver.getState().failed).length > 0, [autosaver])
   const pendingMap = useCallback(() => {
     const out: Record<string, CellValue> = {}
     for (const [k, f] of Object.entries(state.failed)) out[k] = f.value
@@ -88,6 +91,7 @@ export function useScoreAutosave({
     drop,
     displayValue,
     failedKeys,
+    hasFailures,
     pendingMap,
   }
 }

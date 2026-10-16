@@ -18,10 +18,12 @@
 // right after its first save.
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import Modal from '@/components/shared/modal'
+import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
 import DeleteItemModal from '@/components/classes/classwork/DeleteItemModal'
 import { KindTile } from '@/components/classes/classwork/ItemRow'
 import TopicFormModal from '@/components/classes/classwork/TopicFormModal'
@@ -30,6 +32,7 @@ import { dayLabel } from '@/lib/classStream'
 import { classHref, classItemHref } from '@/lib/classroomRoutes'
 import { KIND_LABELS } from '@/lib/classworkRows'
 import {
+  autosaveFailure,
   draftItemInput,
   emptyItemValues,
   hasErrors,
@@ -37,12 +40,14 @@ import {
   itemToFormValues,
   toItemInput,
   validateItemForm,
+  withSavedGradebook,
   type ItemFormContext,
   type ItemFormErrors,
   type ItemFormField,
   type ItemFormValues,
 } from '@/lib/itemForm'
 import { isJK, isSK } from '@/lib/schoolUtils'
+import { isApiError } from '@/services/apiClient'
 import { createItem, updateItem } from '@/services/classworkService'
 import type { ClassPageData } from '@/services/types/classroom'
 import type { ClassworkData, ColumnOption, Item, ItemKind, ItemStatus, Topic } from '@/services/types/classwork'
@@ -115,9 +120,13 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const [discardOpen, setDiscardOpen] = useState(false)
   const [autosave, setAutosave] = useState<AutosaveState>(item ? 'saved' : 'idle')
   const [autosaveError, setAutosaveError] = useState<string | null>(null)
+  // Edits not saved yet on a form that saves with a button (Cancel asks first).
+  const [edited, setEdited] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
 
   const attachments = useAttachmentRows(item?.attachments ?? [], itemId)
-  const status: ItemStatus | null = saved?.status ?? null
+  // A scheduled item whose time has come is live, even before the scheduler's next run.
+  const status: ItemStatus | null = saved ? (saved.effectiveStatus === 'posted' ? 'posted' : saved.status) : null
   const autosaves = (kind === 'assignment' || kind === 'quiz') && (status === null || status === 'draft')
 
   // The column the item fills keeps its place when it counts on its own.
@@ -130,9 +139,14 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     return [...own, ...classwork.linkableColumns.filter((c) => !own.some((o) => o.assessmentId === c.assessmentId))]
   }, [item, classwork.linkableColumns])
 
+  const savedGradebook = saved?.gradebook ?? null
+  const currentColumn = useMemo(
+    () => (savedGradebook ? { categoryId: savedGradebook.categoryId, maxScore: savedGradebook.maxScore } : null),
+    [savedGradebook],
+  )
   const ctx = useMemo<ItemFormContext>(
-    () => ({ categories: classwork.categories, linkableColumns: columns, topics, standaloneColumn: standalone }),
-    [classwork.categories, columns, topics, standalone],
+    () => ({ categories: classwork.categories, linkableColumns: columns, topics, standaloneColumn: standalone, currentColumn }),
+    [classwork.categories, columns, topics, standalone, currentColumn],
   )
   const errors = useMemo(() => validateItemForm(kind, values, ctx), [kind, values, ctx])
   const shownErrors: ItemFormErrors = showErrors ? errors : {}
@@ -147,6 +161,8 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const autosavesRef = useRef(autosaves)
   const attachmentsRef = useRef(attachments)
   const itemIdRef = useRef(itemId)
+  const savedRef = useRef(saved)
+  const savingRef = useRef(false)
   const dirtyRef = useRef(false)
   const timerRef = useRef<number | null>(null)
   const chainRef = useRef<Promise<boolean>>(Promise.resolve(true))
@@ -169,6 +185,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const created = useCallback(
     (result: Item, wasNew: boolean) => {
       itemIdRef.current = result.itemId
+      savedRef.current = result
       setItemId(result.itemId)
       setSaved(result)
       if (wasNew) adoptUrl(result.itemId)
@@ -182,14 +199,18 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       window.clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    const run = async (): Promise<boolean> => {
+    const run = async (retried = false): Promise<boolean> => {
+      // Assign, Post or Save is under way: it sends the form itself.
+      if (savingRef.current) return true
       if (!dirtyRef.current || !autosavesRef.current) return true
+      const id = itemIdRef.current
       const input = draftItemInput(kind, valuesRef.current, ctxRef.current)
       if (!input) return true // nothing to save without a title
+      // An autosave never changes the status: only Assign, Schedule and Save draft do.
+      if (id) delete input.status
       dirtyRef.current = false
       setAutosave('saving')
       try {
-        const id = itemIdRef.current
         const res = id ? await updateItem(id, input) : await createItem(classId, input)
         created(res.data, !id)
         if (!id) {
@@ -201,20 +222,40 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
         return true
       } catch (err) {
         dirtyRef.current = true
-        setAutosaveError(messageOf(err, "The draft didn't save."))
+        const failure = autosaveFailure(
+          isApiError(err) ? err : { message: messageOf(err, '') },
+          valuesRef.current,
+          savedRef.current,
+        )
+        if (failure.values && !retried) {
+          // The server refused the gradebook change: it goes back to the column
+          // as saved, the teacher is told why, and everything else saves again.
+          const revert = (v: ItemFormValues) => withSavedGradebook(v, savedRef.current)
+          valuesRef.current = revert(valuesRef.current)
+          setValues(revert)
+          setBanner(`${failure.message} The gradebook setting is back to what was saved; your other changes keep saving.`)
+          return run(true)
+        }
+        setAutosaveError(failure.message)
         setAutosave('error')
         return false
       }
     }
-    chainRef.current = chainRef.current.then(run, run)
+    const once = () => run()
+    chainRef.current = chainRef.current.then(once, once)
     return chainRef.current
   }, [classId, kind, created])
 
   const set = useCallback(
     (patch: Partial<ItemFormValues>) => {
       setValues((v) => ({ ...v, ...patch }))
-      if (!autosavesRef.current) return
+      if (!autosavesRef.current) {
+        setEdited(true)
+        return
+      }
       dirtyRef.current = true
+      // While Assign or Post is saving, a change waits; it is sent if that save fails.
+      if (savingRef.current) return
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
       timerRef.current = window.setTimeout(() => void saveDraftNow(), AUTOSAVE_DELAY)
     },
@@ -234,6 +275,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       if (!autosavesRef.current || !dirtyRef.current || !id) return
       const input = draftItemInput(kind, valuesRef.current, ctxRef.current)
       if (!input) return
+      delete input.status
       dirtyRef.current = false
       updateItem(id, input, { keepalive }).catch((err: unknown) => {
         if (keepalive && err instanceof TypeError) return updateItem(id, input).catch(() => undefined)
@@ -273,33 +315,49 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     }
     setSaving(true)
     setBanner(null)
-    // An autosave in flight may be creating the item: let it land first.
+    // An autosave in flight may be creating the item: let it land first, and
+    // hold any new one until this save is done.
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current)
       timerRef.current = null
     }
     await chainRef.current
+    savingRef.current = true
     dirtyRef.current = false
-    const input = toItemInput(kind, values, { status: intent.status, publishAt: intent.publishAt, standaloneColumn: standalone })
+    const input = toItemInput(kind, values, {
+      status: intent.status,
+      publishAt: intent.publishAt,
+      standaloneColumn: standalone,
+      currentColumn,
+    })
+    const finishFailed = () => {
+      savingRef.current = false
+      setSaving(false)
+      // A change typed while this save was running is sent now.
+      if (autosavesRef.current && dirtyRef.current) timerRef.current = window.setTimeout(() => void saveDraftNow(), AUTOSAVE_DELAY)
+    }
     try {
       const id = itemIdRef.current
       const res = id ? await updateItem(id, input) : await createItem(classId, input)
       created(res.data, !id)
+      // Posted or scheduled: nothing autosaves any more (not even on the way out).
+      if (res.data.status !== 'draft') autosavesRef.current = false
       const failed = await attachments.flush(res.data.itemId)
       if (failed > 0) {
         setBanner(
           `The ${kindWord} saved, but ${failed === 1 ? 'an attachment' : `${failed} attachments`} didn't upload. Retry below, or close and add them later.`,
         )
-        setSaving(false)
+        finishFailed()
         return
       }
+      setEdited(false)
       showNotification(intent.message(res.data), 'success')
       router.push(doneHref(res.data))
     } catch (err) {
       const message = messageOf(err, `The ${kindWord} couldn't be saved.`)
       setBanner(message)
       showNotification(message, 'error')
-      setSaving(false)
+      finishFailed()
     }
   }
 
@@ -314,7 +372,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const leave = async () => {
     if (autosaves) {
       if (!(await saveDraftNow())) {
-        showNotification("Your last changes didn't save. Try again, or discard the draft.", 'error')
+        showNotification("Your last changes didn't save. Retry, or discard the draft.", 'error')
         return
       }
       // A file picked while the draft was first being created is still waiting.
@@ -343,14 +401,20 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
 
   // ── Header actions by state ───────────────────────────────────────────────
   let actions: ReactNode
+  /** Close and Cancel: a draft sends what is waiting; a form with unsaved edits asks first. */
+  const onLeaveClick = (e: MouseEvent) => {
+    if (autosaves) {
+      e.preventDefault()
+      void leave()
+    } else if (edited || attachments.pendingCount > 0) {
+      e.preventDefault()
+      setConfirmLeave(true)
+    }
+  }
   const cancel = (
     <Link
       href={backHref}
-      onClick={(e) => {
-        if (!autosaves) return
-        e.preventDefault()
-        void leave()
-      }}
+      onClick={onLeaveClick}
       className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 transition-colors hover:bg-slate-100"
     >
       Cancel
@@ -412,7 +476,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     !autosaves || autosave === 'idle' ? null : autosave === 'saving' ? (
       <span className="text-[13px] text-slate-500">Saving…</span>
     ) : autosave === 'error' ? (
-      <span className="flex items-center gap-1.5 text-[13px] text-rose-700" title={autosaveError ?? undefined}>
+      <span className="flex items-center gap-1.5 text-[13px] text-rose-700">
         Couldn&apos;t save
         <button
           type="button"
@@ -459,11 +523,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           <Link
             href={backHref}
             aria-label="Close"
-            onClick={(e) => {
-              if (!autosaves) return
-              e.preventDefault()
-              void leave()
-            }}
+            onClick={onLeaveClick}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200"
           >
             <XMarkIcon className="h-5 w-5" strokeWidth={2} />
@@ -490,6 +550,22 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
             </button>
           </div>
         )}
+        {autosaves && autosave === 'error' && autosaveError && (
+          <div role="alert" className="flex basis-full flex-wrap items-center gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-rose-500" aria-hidden="true" />
+            <p className="flex-1">Your last changes didn&apos;t save: {autosaveError}</p>
+            <button
+              type="button"
+              onClick={() => {
+                dirtyRef.current = true
+                void saveDraftNow()
+              }}
+              className="cursor-pointer rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-[13px] font-medium text-rose-800 hover:bg-rose-100"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {kind === 'assessment' ? (
           <AssessmentFields {...fieldsProps} />
         ) : kind === 'material' ? (
@@ -510,6 +586,31 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           set({ topicId: topic.topicId })
         }}
       />
+      <Modal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} size="md">
+        <ModalHeader title="Discard changes?" subtitle={values.title.trim() || undefined} icon={ExclamationTriangleIcon} tone="warning" />
+        <ModalBody>
+          <ConfirmBody tone="warning">
+            {itemId
+              ? `Your changes to this ${kindWord} haven't been saved. Attachments you added, renamed, replaced or removed are already saved and stay that way.`
+              : `This ${kindWord} hasn't been saved yet, so nothing in it will be kept.`}
+          </ConfirmBody>
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={() => setConfirmLeave(false)}>
+            Keep editing
+          </Button>
+          <Button
+            type="button"
+            variant="warning"
+            onClick={() => {
+              setConfirmLeave(false)
+              router.push(backHref)
+            }}
+          >
+            Discard changes
+          </Button>
+        </ModalFooter>
+      </Modal>
       <DeleteItemModal
         item={discardOpen ? saved : null}
         draft={status === 'draft'}

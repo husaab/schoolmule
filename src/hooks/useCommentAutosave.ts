@@ -62,6 +62,8 @@ export interface CommentAutosave<F extends string> {
   /** The student's entry not yet confirmed by the server (pending, in flight or failed), else null. */
   entryFor: (studentId: string) => FeedbackEntry<F> | null
   failedKeys: Set<string>
+  /** Whether anything failed to save, read now (not from the last render): after `await flush()`. */
+  hasFailures: () => boolean
   /** Students whose comments are not saved yet. */
   unsavedCount: number
 }
@@ -114,7 +116,8 @@ export function useCommentAutosave<K extends CommentKind>({
     [state],
   )
   const failedKeys = useMemo(() => new Set(Object.keys(state.failed)), [state.failed])
+  const hasFailures = useCallback(() => Object.keys(autosaver.getState().failed).length > 0, [autosaver])
   const unsavedCount = new Set([...Object.keys(state.pending), ...Object.keys(state.inFlight), ...failedKeys]).size
 
-  return { status: statusOf(state), queue, flush, retry, discard, entryFor, failedKeys, unsavedCount }
+  return { status: statusOf(state), queue, flush, retry, discard, entryFor, failedKeys, hasFailures, unsavedCount }
 }

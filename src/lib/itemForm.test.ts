@@ -2,14 +2,17 @@ import { describe, it, expect } from 'vitest'
 import {
   D2_MESSAGE,
   STANDALONE_MESSAGE,
+  autosaveFailure,
   categoryOptionLabel,
   draftItemInput,
   emptyItemValues,
   isoToTorontoParts,
   itemToFormValues,
+  keepsUnsetMax,
   toItemInput,
   torontoToIso,
   validateItemForm,
+  withSavedGradebook,
   type ItemFormContext,
   type ItemFormValues,
 } from './itemForm'
@@ -412,5 +415,104 @@ describe('categoryOptionLabel', () => {
     expect(categoryOptionLabel({ assessmentId: CAT, name: 'Homework', weightPoints: 12.5, childCount: 0 })).toBe(
       'Homework (12.5 of 100)',
     )
+  })
+})
+
+describe('a column whose "Out of" was never set', () => {
+  const current = { categoryId: CAT, maxScore: null }
+
+  it('stays as it is when left blank in the same category', () => {
+    const v = values({ maxScore: '', date: '2026-10-23' })
+    expect(keepsUnsetMax('assessment', v, current)).toBe(true)
+    expect(validateItemForm('assessment', v, ctx({ currentColumn: current }))).toEqual({})
+    expect(toItemInput('assessment', v, { currentColumn: current })).not.toHaveProperty('gradebook')
+    expect(validateItemForm('assignment', v, ctx({ currentColumn: current }))).toEqual({})
+    expect(toItemInput('assignment', v, { currentColumn: current })).not.toHaveProperty('gradebook')
+  })
+
+  it('needs an "Out of" once the teacher types one, or moves it to another category', () => {
+    expect(validateItemForm('assessment', values({ maxScore: '0' }), ctx({ currentColumn: current })).maxScore).toBe(
+      'Out of must be more than 0',
+    )
+    const other = { categoryId: 'another-category', maxScore: null }
+    expect(keepsUnsetMax('assessment', values({ maxScore: '' }), other)).toBe(false)
+    expect(validateItemForm('assessment', values({ maxScore: '' }), ctx({ currentColumn: other })).maxScore).toBe(
+      'Out of must be more than 0',
+    )
+  })
+
+  it('is not a rule for a column that has an "Out of"', () => {
+    expect(keepsUnsetMax('assessment', values({ maxScore: '' }), { categoryId: CAT, maxScore: 10 })).toBe(false)
+    expect(keepsUnsetMax('assessment', values({ maxScore: '' }), null)).toBe(false)
+  })
+})
+
+describe('autosaveFailure', () => {
+  const saved = {
+    itemId: 'i1',
+    classId: 'c1',
+    kind: 'assignment',
+    title: 'Plant cell diagram',
+    topicId: null,
+    status: 'draft',
+    effectiveStatus: 'draft',
+    publishAt: null,
+    postedAt: null,
+    dueAt: null,
+    date: null,
+    submissionMode: 'file',
+    showEarly: false,
+    audience: 'all',
+    gradebook: { assessmentId: COL, categoryId: CAT, categoryName: 'Homework', maxScore: 10, weightPoints: 5, isPublished: false, scoreCount: 0 },
+    attachmentCount: 0,
+    counts: { turnedIn: 0, missing: 0, notYet: 0, toReview: 0, drafts: 0, published: 0 },
+    classAvgPct: null,
+    createdAt: '2026-10-13T12:00:00.000Z',
+    editedAt: null,
+    instructions: null,
+    emailStudents: true,
+    remindStudents: true,
+    studentIds: [],
+    attachments: [],
+  } as Item
+
+  it("a refused gradebook change (409) shows the server's reason and puts the column back, keeping every other edit", () => {
+    const typed = values({ title: 'Plant cell diagram, labelled', gradebookMode: 'none', maxScore: '', instructions: 'Label six parts.' })
+    const out = autosaveFailure(
+      { status: 409, message: "Students' work on this item is already graded. Clear those grades in the grading view before changing how it counts in the gradebook." },
+      typed,
+      saved,
+    )
+    expect(out.message).toMatch(/already graded/)
+    expect(out.values).toMatchObject({
+      title: 'Plant cell diagram, labelled',
+      instructions: 'Label six parts.',
+      gradebookMode: 'category',
+      categoryId: CAT,
+      maxScore: '10',
+    })
+    // The next save sends the column as saved, so it goes through.
+    expect(draftItemInput('assignment', out.values!, ctx())!.gradebook).toEqual({ mode: 'category', categoryId: CAT, maxScore: 10 })
+  })
+
+  it('an "Out of" below a grade (DRAFT_ABOVE_MAX) goes back to the saved "Out of"', () => {
+    const out = autosaveFailure({ status: 409, message: "Some grades on students' work are above 5. Change them in the grading view first." }, values({ maxScore: '5' }), saved)
+    expect(out.values!.maxScore).toBe('10')
+  })
+
+  it('a refused first save leaves the new draft ungraded', () => {
+    const out = autosaveFailure({ status: 409, message: 'Another item already fills that gradebook column. Choose another column.' }, values({ gradebookMode: 'existing', columnId: COL }), null)
+    expect(out.values!.gradebookMode).toBe('none')
+    expect(out.values!.title).toBe('Plant cell diagram')
+  })
+
+  it('any other failure keeps the form as typed and says why', () => {
+    expect(autosaveFailure({ status: 500, message: 'Error saving the item' }, values(), saved)).toEqual({ message: 'Error saving the item', values: null })
+    expect(autosaveFailure(null, values(), saved).message).toBe("The draft didn't save.")
+  })
+
+  it('withSavedGradebook copies only the gradebook fields', () => {
+    const v = withSavedGradebook(values({ title: 'New title', gradebookMode: 'existing', columnId: 'x', maxScore: '3' }), saved)
+    expect(v).toMatchObject({ title: 'New title', gradebookMode: 'category', categoryId: CAT, columnId: '', maxScore: '10' })
   })
 })

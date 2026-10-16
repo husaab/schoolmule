@@ -64,10 +64,11 @@ const dueText = (iso: string, now: Date): string => dayText(torontoDateKey(new D
  * The line under a row's title:
  * - draft: "Not posted yet"; scheduled: "Posts Mon, Oct 19 at 7:30 am · due Wed, Oct 21"
  * - assessment: "In class · Fri, Oct 23 · shows on students' calendars" / "… · class average 81%"
- * - assignment, quiz: "Due Fri, Oct 16 · 12 turned in · 2 missing · 8 not yet" (zeros left out, "… published" added)
+ * - assignment, quiz: "Due Fri, Oct 16 · 12 turned in · 2 missing · 8 not yet" (zeros left out, "… published" added;
+ *   "all 22 published" once everyone it reaches is published; `reach` = the students it is for, when known)
  * - material: "Posted Oct 9"
  */
-export function itemMeta(item: ItemSummary, now: Date = new Date()): string {
+export function itemMeta(item: ItemSummary, now: Date = new Date(), reach?: number): string {
   if (item.status === 'draft') return 'Not posted yet'
 
   if (item.effectiveStatus === 'scheduled' && item.publishAt) {
@@ -95,6 +96,10 @@ export function itemMeta(item: ItemSummary, now: Date = new Date()): string {
     return parts.join(' · ')
   }
   const { turnedIn, missing, notYet, published } = item.counts
+  if (reach && published >= reach && turnedIn + missing + notYet === 0) {
+    parts.push(`all ${reach} published`)
+    return parts.join(' · ')
+  }
   if (turnedIn + missing + notYet > 0) parts.push(`${turnedIn} turned in`)
   if (missing > 0) parts.push(`${missing} missing`)
   if (notYet > 0) parts.push(`${notYet} not yet`)
@@ -221,10 +226,15 @@ export function deleteTopicMessage(topic: Pick<Topic, 'name' | 'itemCount'>): st
  * Linked work takes its gradebook column and scores; anything else just
  * leaves Classwork (a draft was never seen by anyone).
  */
-export function deleteItemMessage(item: Pick<ItemSummary, 'title' | 'gradebook'> & { status?: ItemSummary['status'] }): string {
+export function deleteItemMessage(
+  item: Pick<ItemSummary, 'title' | 'gradebook'> & { status?: ItemSummary['status']; counts?: Pick<ItemSummary['counts'], 'drafts'> },
+): string {
   const gb = item.gradebook
   if (!gb && item.status === 'draft') return `Discard ${item.title}? It was never posted, so no one has seen it.`
   if (!gb) return `Delete ${item.title}? Students will no longer see it.`
   const column = gb.categoryName ? `the ${gb.categoryName} column` : 'the column'
-  return `Delete ${item.title}? This also removes ${column} "${item.title}" and its ${plural(gb.scoreCount, 'score', 'scores')} from Grades.`
+  const base = `Delete ${item.title}? This also removes ${column} "${item.title}" and its ${plural(gb.scoreCount, 'score', 'scores')} from Grades.`
+  // Grades still in the grading view (not published yet) live on the students' work, not in the column.
+  const drafts = item.counts?.drafts ?? 0
+  return drafts > 0 ? `${base} It also deletes ${plural(drafts, 'grade', 'grades')} on students' work that ${drafts === 1 ? "isn't" : "aren't"} published yet.` : base
 }

@@ -97,6 +97,16 @@ export function attachmentName(a: AttachmentLike): string {
   return short ? `${short.host}${short.path}` : a.url ?? 'Link'
 }
 
+/**
+ * The title to send when a file is renamed: trimmed, and null (back to the
+ * file's own name) when it is blank or just the file name again.
+ */
+export function fileTitlePatch(input: string, fileName: string | null): string | null {
+  const title = input.trim()
+  if (!title || title === (fileName ?? '').trim()) return null
+  return title.slice(0, LINK_TITLE_MAX)
+}
+
 /** "120 KB", "2.5 MB". */
 export const formatSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`

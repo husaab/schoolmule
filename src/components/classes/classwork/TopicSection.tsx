@@ -14,6 +14,8 @@ interface TopicSectionProps {
   section: ClassworkSection
   /** Show the heading (a class with no topics lists its items bare). */
   showHeading: boolean
+  /** Students in the class (an item for all of them reaches this many). */
+  studentCount: number
   canEdit: boolean
   isFirst: boolean
   isLast: boolean
@@ -28,6 +30,7 @@ interface TopicSectionProps {
 export default function TopicSection({
   section,
   showHeading,
+  studentCount,
   canEdit,
   isFirst,
   isLast,
@@ -57,7 +60,15 @@ export default function TopicSection({
       {items.length === 0 ? (
         <p className="px-1 py-2 text-sm text-slate-500">Nothing in this topic yet.</p>
       ) : (
-        items.map((item) => <ItemRow key={item.itemId} item={item} canEdit={canEdit} onDelete={onDeleteItem} />)
+        items.map((item) => (
+          <ItemRow
+            key={item.itemId}
+            item={item}
+            reach={item.audience === 'all' ? studentCount : undefined}
+            canEdit={canEdit}
+            onDelete={onDeleteItem}
+          />
+        ))
       )}
     </section>
   )

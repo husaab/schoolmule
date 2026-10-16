@@ -159,6 +159,7 @@ const ClassworkTab: FC<ClassTabProps> = ({ classId, data }) => {
             key={section.key}
             section={section}
             showHeading={classwork.topics.length > 0}
+            studentCount={data.class.studentCount}
             canEdit={canEdit}
             isFirst={topicOrder[0] === section.topic?.topicId}
             isLast={topicOrder[topicOrder.length - 1] === section.topic?.topicId}
@@ -201,6 +202,7 @@ const ClassworkTab: FC<ClassTabProps> = ({ classId, data }) => {
       />
       <DeleteItemModal
         item={deletingItem}
+        draft={deletingItem?.status === 'draft'}
         onClose={() => setDeletingItem(null)}
         onDeleted={(itemId) => {
           setDeletingItem(null)

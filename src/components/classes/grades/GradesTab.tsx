@@ -27,6 +27,7 @@ import { isJK, isSK } from '@/lib/schoolUtils'
 import { getClassById } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import type { ClassTabProps } from '@/components/classes/page/tabs'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 const SUB_LABELS: Record<GradesSub, string> = {
   scores: 'Scores',
@@ -47,6 +48,7 @@ interface LoadedClass {
 
 export default function GradesTab({ classId, data }: ClassTabProps) {
   const router = useRouter()
+  const showNotification = useNotificationStore((s) => s.showNotification)
   const filters = useFilterParams({ remember: false })
   const { setParams } = filters
   const sub = parseGradesSub(filters.get('sub'))
@@ -114,9 +116,15 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
     [flushAll, setParams],
   )
 
-  // The New assessment form, which comes back here (to the new column) when done.
-  const createAssessment = () => {
-    flushAll()
+  // The New assessment form, which comes back here (to the new column) when
+  // done. Whatever is typed is saved first; if any of it fails, Grades stays
+  // open with the pill's Retry.
+  const createAssessment = async () => {
+    await Promise.all([flushScores(), flushReport(), flushProgress()])
+    if (autosave.hasFailures() || reportComments.hasFailures() || progressComments.hasFailures()) {
+      showNotification("Some changes didn't save. Retry them, then create the assessment.", 'error')
+      return
+    }
     router.push(newItemHref(classId, 'assessment', { from: 'grades' }))
   }
   const clearAdd = useCallback(() => setParams({ add: null }), [setParams])
@@ -206,7 +214,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
           )}
           <button
             type="button"
-            onClick={createAssessment}
+            onClick={() => void createAssessment()}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-medium text-cyan-800 transition-colors hover:bg-cyan-100"
           >
             <PlusIcon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />

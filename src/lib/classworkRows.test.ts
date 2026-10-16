@@ -75,6 +75,12 @@ describe('itemMeta', () => {
     ).toBe('Due Oct 2 · 22 published')
   })
 
+  it('says "all {n} published" once everyone it reaches is published', () => {
+    const done = item({ dueAt: '2026-10-02T19:30:00.000Z', counts: { turnedIn: 0, missing: 0, notYet: 0, toReview: 0, drafts: 0, published: 22 } })
+    expect(itemMeta(done, NOW, 22)).toBe('Due Oct 2 · all 22 published')
+    expect(itemMeta(done, NOW, 24)).toBe('Due Oct 2 · 22 published')
+  })
+
   it('an assignment with no due date or nothing to turn in', () => {
     expect(itemMeta(item({ dueAt: null, counts: { ...item().counts } }), NOW)).toBe(
       'No due date · 12 turned in · 2 missing · 8 not yet',
@@ -222,6 +228,11 @@ describe('delete messages', () => {
       'Delete Plant cell diagram? This also removes the column "Plant cell diagram" and its 1 score from Grades.',
     )
     expect(deleteItemMessage(item({ gradebook: null }))).toBe('Delete Plant cell diagram? Students will no longer see it.')
+    expect(
+      deleteItemMessage(item({ gradebook: { ...item().gradebook!, scoreCount: 0 }, counts: { ...item().counts, drafts: 3 } })),
+    ).toBe(
+      'Delete Plant cell diagram? This also removes the Homework column "Plant cell diagram" and its 0 scores from Grades. It also deletes 3 grades on students\' work that aren\'t published yet.',
+    )
     expect(deleteItemMessage(item({ gradebook: null, status: 'draft' }))).toBe(
       'Discard Plant cell diagram? It was never posted, so no one has seen it.',
     )

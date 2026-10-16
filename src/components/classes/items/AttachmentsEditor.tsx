@@ -1,6 +1,7 @@
 // src/components/classes/items/AttachmentsEditor.tsx
 // The item form's attachments (the Teacher-Assign board): files and links
-// that preview in place, can be replaced (files), edited (links) or removed,
+// that preview in place, can be renamed and replaced (files), edited (links)
+// or removed,
 // plus "Upload" and "Link or YouTube". Once the item exists every change is
 // saved at once; before that (a new item not saved yet) files and links wait
 // in the form and go up right after the item's first save (`flush`).
@@ -9,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpTrayIcon, LinkIcon } from '@heroicons/react/24/outline'
 import AttachmentPreviewModal from '@/components/classroom/AttachmentPreviewModal'
-import { ATTACHMENT_ACCEPT, UPLOAD_BATCH, checkNewFiles, youtubeIdOf } from '@/lib/attachments'
+import { ATTACHMENT_ACCEPT, UPLOAD_BATCH, checkNewFiles, fileTitlePatch, youtubeIdOf } from '@/lib/attachments'
 import {
   addLink as apiAddLink,
   deleteAttachment,
@@ -82,6 +83,8 @@ export interface AttachmentsState {
   addFiles: (files: File[]) => void
   addLink: (title: string | null, url: string) => Promise<string | null>
   saveLink: (key: string, title: string | null, url: string) => Promise<string | null>
+  /** A file's display title (blank = its own name); a file still waiting keeps it until it uploads. */
+  renameFile: (key: string, title: string) => Promise<string | null>
   replace: (key: string, file: File) => void
   remove: (key: string) => void
   retry: (key: string) => void
@@ -131,6 +134,25 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
     )
   }, [])
 
+  /** A title given to a file before it uploaded goes to the server now that the file has an id. */
+  const sendLocalTitles = useCallback(async (chunk: AttachmentEditorRow[], saved: Attachment[]) => {
+    for (let i = 0; i < chunk.length; i++) {
+      const title = chunk[i].attachment.title
+      const attachment = saved[i]
+      if (!title || !attachment) continue
+      try {
+        const res = await updateAttachment(attachment.attachmentId, { title })
+        setRows((list) => list.map((r) => (r.key === attachment.attachmentId ? savedRow(res.data) : r)))
+      } catch (err) {
+        setRows((list) =>
+          list.map((r) =>
+            r.key === attachment.attachmentId ? { ...r, state: 'error', error: messageOf(err, "The file's name didn't save.") } : r,
+          ),
+        )
+      }
+    }
+  }, [])
+
   const uploadRows = useCallback(
     async (id: string, batch: AttachmentEditorRow[]): Promise<number> => {
       let failed = 0
@@ -142,6 +164,7 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
           const res = await uploadAttachments(id, chunk.map((r) => r.file!))
           // The server answers with the new attachments in upload order.
           settleUploaded(keys, res.data)
+          await sendLocalTitles(chunk, res.data)
         } catch (err) {
           failed += chunk.length
           const error = messageOf(err, "This file didn't upload.")
@@ -150,7 +173,7 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
       }
       return failed
     },
-    [settleUploaded],
+    [settleUploaded, sendLocalTitles],
   )
 
   const addFiles = useCallback(
@@ -201,6 +224,26 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
     [patchRow],
   )
 
+  const renameFile = useCallback(
+    async (key: string, input: string): Promise<string | null> => {
+      const row = rowsRef.current.find((r) => r.key === key)
+      if (!row || row.attachment.kind !== 'file') return null
+      const title = fileTitlePatch(input, row.attachment.fileName)
+      if (!row.saved) {
+        patchRow(key, (r) => ({ ...r, attachment: { ...r.attachment, title } }))
+        return null
+      }
+      try {
+        const res = await updateAttachment(row.attachment.attachmentId, { title })
+        patchRow(key, () => savedRow(res.data))
+        return null
+      } catch (err) {
+        return messageOf(err, "The name couldn't be saved.")
+      }
+    },
+    [patchRow],
+  )
+
   const replace = useCallback(
     (key: string, file: File) => {
       const row = rowsRef.current.find((r) => r.key === key)
@@ -211,7 +254,8 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
       if (!row.saved) {
         if (row.localUrl) URL.revokeObjectURL(row.localUrl)
         const fresh = pendingFileRow(file)
-        patchRow(key, () => ({ ...fresh, key, attachment: { ...fresh.attachment, attachmentId: key } }))
+        // A new file in place of one still waiting keeps the name given to it.
+        patchRow(key, () => ({ ...fresh, key, attachment: { ...fresh.attachment, attachmentId: key, title: row.attachment.title } }))
         return
       }
       patchRow(key, (r) => ({ ...r, state: 'working', error: undefined }))
@@ -290,6 +334,7 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
     addFiles,
     addLink,
     saveLink,
+    renameFile,
     replace,
     remove,
     retry,
@@ -324,12 +369,16 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
             editingKey === row.key ? (
               <LinkEditor
                 key={row.key}
-                mode="edit"
+                mode={row.attachment.kind === 'file' ? 'rename' : 'edit'}
                 initialTitle={row.attachment.title ?? ''}
                 initialUrl={row.attachment.url ?? ''}
+                fileName={row.attachment.fileName}
                 onCancel={() => setEditingKey(null)}
                 onSave={async (title, url) => {
-                  const problem = await state.saveLink(row.key, title, url)
+                  const problem =
+                    row.attachment.kind === 'file'
+                      ? await state.renameFile(row.key, title ?? '')
+                      : await state.saveLink(row.key, title, url)
                   if (!problem) setEditingKey(null)
                   return problem
                 }}

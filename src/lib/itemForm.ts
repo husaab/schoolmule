@@ -69,6 +69,25 @@ export interface ItemFormContext {
   publishAt?: string | null
   /** The item fills a column that counts on its own (no category): it keeps its place in Grades. */
   standaloneColumn?: boolean
+  /** The column the item fills now (an edit), to tell an unchanged column from a new choice. */
+  currentColumn?: CurrentColumn | null
+}
+
+/** The gradebook column an item fills as saved: its category (null = counts on its own) and "Out of". */
+export interface CurrentColumn {
+  categoryId: string | null
+  maxScore: number | null
+}
+
+/**
+ * A column whose "Out of" was never set (main allows it; the grade engine
+ * reads it as 100), left blank and in the same category: it stays exactly as
+ * it is, so the form neither asks for an "Out of" nor sends one.
+ */
+export function keepsUnsetMax(kind: ItemKind, values: ItemFormValues, current: CurrentColumn | null | undefined): boolean {
+  if (!current || current.maxScore != null || values.maxScore.trim() !== '') return false
+  if (kind !== 'assessment' && values.gradebookMode !== 'category') return false
+  return values.categoryId === (current.categoryId ?? '')
 }
 
 export type ItemFormField =
@@ -133,11 +152,13 @@ export function validateItemForm(kind: ItemKind, values: ItemFormValues, ctx: It
 
   const inCategories = (id: string) => ctx.categories.some((c) => c.assessmentId === id)
 
+  const unsetMaxKept = keepsUnsetMax(kind, values, ctx.currentColumn)
+
   if (kind === 'assessment') {
     if (!ctx.standaloneColumn) {
       if (ctx.categories.length === 0) errors.categoryId = D2_MESSAGE
       else if (!values.categoryId || !inCategories(values.categoryId)) errors.categoryId = 'Choose a category'
-      const max = maxScoreError(values.maxScore)
+      const max = unsetMaxKept ? null : maxScoreError(values.maxScore)
       if (max) errors.maxScore = max
     }
     if (values.date && !isCalendarDate(values.date)) errors.date = 'Pick a real date'
@@ -149,7 +170,7 @@ export function validateItemForm(kind: ItemKind, values: ItemFormValues, ctx: It
       else if (ctx.categories.length === 0) errors.categoryId = D2_MESSAGE
       else if (!values.categoryId || !inCategories(values.categoryId)) errors.categoryId = 'Choose a category'
       if (!ctx.standaloneColumn) {
-        const max = maxScoreError(values.maxScore)
+        const max = unsetMaxKept ? null : maxScoreError(values.maxScore)
         if (max) errors.maxScore = max
       }
     } else if (values.gradebookMode === 'existing') {
@@ -204,6 +225,8 @@ export interface ToInputOptions {
   publishAt?: string | null
   /** The column counts on its own: send no gradebook, so it keeps its place. */
   standaloneColumn?: boolean
+  /** The column the item fills now (see keepsUnsetMax). */
+  currentColumn?: CurrentColumn | null
 }
 
 function gradebookOf(kind: ItemKind, values: ItemFormValues): GradebookInput {
@@ -230,17 +253,19 @@ export function toItemInput(kind: ItemKind, values: ItemFormValues, opts: ToInpu
   }
   if (values.audience === 'some') input.studentIds = [...new Set(values.studentIds)]
 
+  // Leaving `gradebook` out keeps the column as it is.
+  const keepColumn = keepsUnsetMax(kind, values, opts.currentColumn)
   if (kind === 'assessment') {
     input.date = values.date || null
     input.showEarly = values.showEarly
-    if (!opts.standaloneColumn) input.gradebook = gradebookOf(kind, values)
+    if (!opts.standaloneColumn && !keepColumn) input.gradebook = gradebookOf(kind, values)
   } else if (isTurnIn(kind)) {
     input.dueAt = torontoToIso(values.dueDate, values.dueTime)
     input.remindStudents = values.remindStudents
     if (kind === 'assignment') input.submissionMode = values.submissionMode
     // An item that fills a column counting on its own keeps it unless the teacher picks another.
     const keepsStandalone = opts.standaloneColumn && values.gradebookMode === 'category'
-    if (!keepsStandalone) input.gradebook = gradebookOf(kind, values)
+    if (!keepsStandalone && !keepColumn) input.gradebook = gradebookOf(kind, values)
   }
 
   if (opts.status) input.status = opts.status
@@ -259,7 +284,7 @@ const GRADEBOOK_FIELDS: ItemFormField[] = ['gradebook', 'categoryId', 'columnId'
 export function draftItemInput(kind: ItemKind, values: ItemFormValues, ctx: ItemFormContext): ItemInput | null {
   const errors = validateItemForm(kind, values, { ...ctx, status: 'draft' })
   if (errors.title) return null
-  const input = toItemInput(kind, values, { status: 'draft', standaloneColumn: ctx.standaloneColumn })
+  const input = toItemInput(kind, values, { status: 'draft', standaloneColumn: ctx.standaloneColumn, currentColumn: ctx.currentColumn })
   if (errors.instructions) delete input.instructions
   if (errors.topicId) delete input.topicId
   if (errors.date) delete input.date
@@ -326,6 +351,37 @@ export function itemToFormValues(item: Item): ItemFormValues {
     remindStudents: item.remindStudents,
     showEarly: item.showEarly,
   }
+}
+
+/** The form with its gradebook choice put back to the column as saved (none when nothing is saved). */
+export function withSavedGradebook(values: ItemFormValues, saved: Item | null): ItemFormValues {
+  const from = saved
+    ? itemToFormValues(saved)
+    : { gradebookMode: 'none' as GradebookMode, categoryId: values.categoryId, columnId: '', maxScore: values.maxScore }
+  return { ...values, gradebookMode: from.gradebookMode, categoryId: from.categoryId, columnId: from.columnId, maxScore: from.maxScore }
+}
+
+export interface AutosaveFailure {
+  /** What the teacher reads: the server's own reason. */
+  message: string
+  /**
+   * The form to continue from. A refused gradebook change (409: graded work,
+   * an "Out of" below a grade, published grades, a column that counts on its
+   * own, a column already taken) goes back to the column as saved, so the
+   * rest of the draft keeps saving. Null: keep the form and retry as it is.
+   */
+  values: ItemFormValues | null
+}
+
+/** How an autosave failure is handled (see AutosaveFailure). */
+export function autosaveFailure(
+  error: { status?: number | null; message?: string | null } | null | undefined,
+  values: ItemFormValues,
+  saved: Item | null,
+): AutosaveFailure {
+  const message = error?.message?.trim() || "The draft didn't save."
+  if (error?.status === 409) return { message, values: withSavedGradebook(values, saved) }
+  return { message, values: null }
 }
 
 // ---------------------------------------------------------------------------

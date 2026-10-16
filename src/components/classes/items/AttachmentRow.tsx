@@ -1,8 +1,8 @@
 // src/components/classes/items/AttachmentRow.tsx
 // One attachment in the item form (the Teacher-Assign board): the type badge
-// or a thumbnail, the name and size, then Preview, Replace (files) or Edit
-// (links), and remove. A file still waiting to go up, or one that failed,
-// says so beside its name.
+// or a thumbnail, the name and size, then Preview, Rename and Replace (files)
+// or Edit (links), and remove. A file still waiting to go up, or one that
+// failed, says so beside its name.
 'use client'
 
 import { useRef } from 'react'
@@ -16,6 +16,7 @@ interface AttachmentRowProps {
   disabled?: boolean
   onPreview: () => void
   onReplace: (file: File) => void
+  /** Edit a link, or rename a file. */
   onEdit: () => void
   onRemove: () => void
   onRetry: () => void
@@ -66,6 +67,9 @@ export default function AttachmentRow({ row, disabled = false, onPreview, onRepl
         )}
         {a.kind === 'file' ? (
           <>
+            <button type="button" onClick={onEdit} disabled={disabled || working} className={BUTTON} aria-label={`Rename ${name}`}>
+              Rename
+            </button>
             <button
               type="button"
               onClick={() => fileInput.current?.click()}

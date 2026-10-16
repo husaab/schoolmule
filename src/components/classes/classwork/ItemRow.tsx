@@ -36,11 +36,13 @@ export function KindTile({ kind, shape = 'round', size = 40 }: { kind: ItemKind;
 
 interface ItemRowProps {
   item: ItemSummary
+  /** How many students the item is for, when known ("all 22 published"). */
+  reach?: number
   canEdit: boolean
   onDelete: (item: ItemSummary) => void
 }
 
-export default function ItemRow({ item, canEdit, onDelete }: ItemRowProps) {
+export default function ItemRow({ item, reach, canEdit, onDelete }: ItemRowProps) {
   const grade = itemGradeLine(item)
   const pill = itemPill(item)
   return (
@@ -48,7 +50,7 @@ export default function ItemRow({ item, canEdit, onDelete }: ItemRowProps) {
       <KindTile kind={item.kind} />
       <Link href={itemRowHref(item)} className="flex min-w-0 flex-[1_1_260px] flex-col gap-0.5 text-slate-900">
         <span className="truncate text-[15px] font-medium">{item.title}</span>
-        <span className="text-[13px] text-slate-500">{itemMeta(item)}</span>
+        <span className="text-[13px] text-slate-500">{itemMeta(item, new Date(), reach)}</span>
       </Link>
       <span className="flex flex-wrap items-center gap-2">
         {grade && <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{grade}</span>}
