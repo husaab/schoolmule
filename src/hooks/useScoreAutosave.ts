@@ -27,6 +27,8 @@ export interface ScoreAutosave {
   /** Save now (leaving a cell, switching sub-tab); resolves when everything typed so far has saved or failed. */
   flush: (opts?: SaveOptions) => Promise<void>
   retry: () => Promise<void>
+  /** Forget every value that didn't save (the pill's Discard). */
+  discard: () => void
   /** Forget a cell's unsent and failed value (it was flagged missing/excused, or its column is gone). */
   drop: (key: string) => void
   /** What a cell shows: the newest local value, else the saved one. */
@@ -66,6 +68,7 @@ export function useScoreAutosave({
   )
   const flush = useCallback((opts?: SaveOptions) => autosaver.flush(opts), [autosaver])
   const retry = useCallback(() => autosaver.retry(), [autosaver])
+  const discard = useCallback(() => autosaver.discard(), [autosaver])
   const drop = useCallback((key: string) => autosaver.drop(key), [autosaver])
   const displayValue = useCallback((key: string, saved: CellValue) => displayOf(state, key, saved), [state])
   const failedKeys = useMemo(() => new Set(Object.keys(state.failed)), [state.failed])
@@ -81,6 +84,7 @@ export function useScoreAutosave({
     queue,
     flush,
     retry,
+    discard,
     drop,
     displayValue,
     failedKeys,

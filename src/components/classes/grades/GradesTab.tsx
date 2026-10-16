@@ -93,6 +93,11 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
     void retryReport()
     void retryProgress()
   }
+  const discardAll = () => {
+    autosave.discard()
+    reportComments.discard()
+    progressComments.discard()
+  }
   const [classAverage, setClassAverage] = useState<number | null | undefined>(undefined)
 
   // JK and SK grading setup (skill domains, subjects) is in Settings: an old
@@ -188,7 +193,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <SavedPill status={pillStatus} failedCount={failedCount} onRetry={retryAll} />
+          <SavedPill status={pillStatus} failedCount={failedCount} onRetry={retryAll} onDiscard={discardAll} />
           {classAverage !== undefined && (
             <span className="flex flex-col items-end px-2">
               <span className="text-xs text-slate-500">Class average</span>

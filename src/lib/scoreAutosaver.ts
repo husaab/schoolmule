@@ -23,6 +23,7 @@
 
 import {
   ackBatch,
+  discardFailed,
   drop as dropKey,
   emptyQueue,
   enqueue,
@@ -67,6 +68,8 @@ export interface Autosaver<V, R> {
   retry(): Promise<void>
   /** Forget the unsent and failed value of one cell (it was just flagged missing/excused). */
   drop(key: string): void
+  /** Forget every value that failed to save (the pill's Discard). */
+  discard(): void
   /** Called with the server's answer and the batch it answered. */
   onSaved(handler: (res: R, batch: [string, V][]) => void): () => void
   onFailed(handler: (message: string) => void): () => void
@@ -260,6 +263,9 @@ export function createAutosaver<V, R>({
     },
     drop(key) {
       commit(dropKey(state, key))
+    },
+    discard() {
+      commit(discardFailed(state))
     },
     onSaved(handler) {
       savedHandlers.add(handler)

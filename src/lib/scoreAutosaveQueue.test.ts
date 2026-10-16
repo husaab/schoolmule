@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ackBatch,
   clampScoreInput,
+  discardFailed,
   displayValue,
   drop,
   emptyQueue,
@@ -87,6 +88,15 @@ describe('scoreAutosaveQueue', () => {
     s = drop(drop(s, K1), K2)
     expect(s.failed).toEqual({})
     expect(s.pending).toEqual({ 's3|a1': 2 })
+  })
+
+  it('discardFailed forgets every failed value (and nothing else)', () => {
+    let s = failBatch(takeBatch(enqueue(emptyQueue(), K1, 8)).state, 'Score must be between 0 and 10')
+    s = enqueue(s, K2, 3)
+    s = discardFailed(s)
+    expect(s.failed).toEqual({})
+    expect(s.pending).toEqual({ [K2]: 3 })
+    expect(statusOf(discardFailed(failBatch(takeBatch(enqueue(emptyQueue(), K1, 8)).state, 'x')))).toBe('saved')
   })
 
   it('drop leaves a value already in flight alone', () => {

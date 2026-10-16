@@ -101,11 +101,13 @@ export const getJKAssessments = async (
 };
 
 export const bulkUpsertJKAssessments = async (
-  entries: JKAssessmentEntry[]
+  entries: JKAssessmentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<JKBulkResponse> => {
   return apiClient<JKBulkResponse>('/jk/assessments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 
@@ -121,11 +123,13 @@ export const getJKLearningSkills = async (
 };
 
 export const bulkUpsertJKLearningSkills = async (
-  entries: JKLearningSkillEntry[]
+  entries: JKLearningSkillEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<JKBulkResponse> => {
   return apiClient<JKBulkResponse>('/jk/learning-skills/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 
@@ -141,11 +145,13 @@ export const getJKDomainComments = async (
 };
 
 export const bulkUpsertJKDomainComments = async (
-  entries: JKDomainCommentEntry[]
+  entries: JKDomainCommentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<JKBulkResponse> => {
   return apiClient<JKBulkResponse>('/jk/domain-comments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 
@@ -161,11 +167,13 @@ export const getJKTeacherAssistant = async (
 };
 
 export const upsertJKTeacherAssistant = async (
-  payload: JKTeacherAssistantPayload
+  payload: JKTeacherAssistantPayload,
+  opts: { keepalive?: boolean } = {}
 ): Promise<JKTeacherAssistantResponse> => {
   return apiClient<JKTeacherAssistantResponse>('/jk/teacher-assistant', {
     method: 'POST',
     body: payload,
+    keepalive: opts.keepalive,
   });
 };
 
@@ -181,11 +189,13 @@ export const getJKProgressReportComments = async (
 };
 
 export const bulkUpsertJKProgressReportComments = async (
-  entries: JKProgressReportCommentEntry[]
+  entries: JKProgressReportCommentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<JKBulkResponse> => {
   return apiClient<JKBulkResponse>('/jk/progress-report-comments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 

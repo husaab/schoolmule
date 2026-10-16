@@ -119,6 +119,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
             status={autosave.status}
             failedCount={autosave.failedKeys.size}
             onRetry={() => void autosave.retry()}
+            onDiscard={() => autosave.discard()}
           />
         }
       />

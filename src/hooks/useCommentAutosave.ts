@@ -57,6 +57,8 @@ export interface CommentAutosave<F extends string> {
   queue: (studentId: string, entry: FeedbackEntry<F>, saved: FeedbackEntry<F>) => void
   flush: (opts?: SaveOptions) => Promise<void>
   retry: () => Promise<void>
+  /** Forget every entry that didn't save (the pill's Discard). */
+  discard: () => void
   /** The student's entry not yet confirmed by the server (pending, in flight or failed), else null. */
   entryFor: (studentId: string) => FeedbackEntry<F> | null
   failedKeys: Set<string>
@@ -103,6 +105,7 @@ export function useCommentAutosave<K extends CommentKind>({
   )
   const flush = useCallback((opts?: SaveOptions) => autosaver.flush(opts), [autosaver])
   const retry = useCallback(() => autosaver.retry(), [autosaver])
+  const discard = useCallback(() => autosaver.discard(), [autosaver])
   const entryFor = useCallback(
     (studentId: string): FeedbackEntry<F> | null => {
       const local = state.pending[studentId] ?? state.inFlight[studentId] ?? state.failed[studentId]?.value
@@ -113,5 +116,5 @@ export function useCommentAutosave<K extends CommentKind>({
   const failedKeys = useMemo(() => new Set(Object.keys(state.failed)), [state.failed])
   const unsavedCount = new Set([...Object.keys(state.pending), ...Object.keys(state.inFlight), ...failedKeys]).size
 
-  return { status: statusOf(state), queue, flush, retry, entryFor, failedKeys, unsavedCount }
+  return { status: statusOf(state), queue, flush, retry, discard, entryFor, failedKeys, unsavedCount }
 }

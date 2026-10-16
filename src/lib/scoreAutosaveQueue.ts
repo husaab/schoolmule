@@ -54,6 +54,11 @@ export function retryFailed<V>(s: QueueState<V>): QueueState<V> {
   return { ...s, pending, failed: {} }
 }
 
+/** The teacher chose Discard: forget every value that failed to save (e.g. rejected with a 400). */
+export function discardFailed<V>(s: QueueState<V>): QueueState<V> {
+  return { ...s, failed: {} }
+}
+
 /** A missing/excused flag was set on this cell: forget any unsent number for it. */
 export function drop<V>(s: QueueState<V>, key: string): QueueState<V> {
   return { pending: without(s.pending, key), inFlight: s.inFlight, failed: without(s.failed, key) }

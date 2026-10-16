@@ -1,7 +1,8 @@
 // src/components/gradebook/SavedPill.tsx
 // The autosave state of the grades (D17), where a Save button used to be:
-// "All changes saved", "Saving…", or "{n} changes didn't save · Retry" (the
-// failed cells are outlined in the grid).
+// "All changes saved", "Saving…", or "{n} changes didn't save · Retry ·
+// Discard" (the failed cells are outlined in the grid). Discard drops what
+// could not be saved, e.g. a score the server rejected, after a confirm.
 'use client'
 
 import { ArrowPathIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
@@ -11,10 +12,12 @@ interface SavedPillProps {
   status: AutosaveStatus
   failedCount: number
   onRetry: () => void
+  /** Forget what didn't save (asks first). */
+  onDiscard?: () => void
   className?: string
 }
 
-export default function SavedPill({ status, failedCount, onRetry, className = '' }: SavedPillProps) {
+export default function SavedPill({ status, failedCount, onRetry, onDiscard, className = '' }: SavedPillProps) {
   const base = `inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] font-medium ${className}`
 
   if (status === 'error' && failedCount > 0) {
@@ -29,6 +32,21 @@ export default function SavedPill({ status, failedCount, onRetry, className = ''
         >
           Retry
         </button>
+        {onDiscard && (
+          <>
+            {' '}·{' '}
+            <button
+              type="button"
+              onClick={() => {
+                const what = `${failedCount} change${failedCount === 1 ? '' : 's'}`
+                if (window.confirm(`Discard ${what} that didn't save? The saved values come back.`)) onDiscard()
+              }}
+              className="cursor-pointer font-medium underline underline-offset-2 hover:text-rose-900"
+            >
+              Discard
+            </button>
+          </>
+        )}
       </span>
     )
   }

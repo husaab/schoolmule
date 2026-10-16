@@ -99,11 +99,13 @@ export const getSKAssessments = async (
 };
 
 export const bulkUpsertSKAssessments = async (
-  entries: SKAssessmentEntry[]
+  entries: SKAssessmentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<SKBulkResponse> => {
   return apiClient<SKBulkResponse>('/sk/assessments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 
@@ -119,11 +121,13 @@ export const getSKSubjectComments = async (
 };
 
 export const bulkUpsertSKSubjectComments = async (
-  entries: SKSubjectCommentEntry[]
+  entries: SKSubjectCommentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<SKBulkResponse> => {
   return apiClient<SKBulkResponse>('/sk/subject-comments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 
@@ -139,11 +143,13 @@ export const getSKTeacherAssistant = async (
 };
 
 export const upsertSKTeacherAssistant = async (
-  payload: SKTeacherAssistantPayload
+  payload: SKTeacherAssistantPayload,
+  opts: { keepalive?: boolean } = {}
 ): Promise<SKTeacherAssistantResponse> => {
   return apiClient<SKTeacherAssistantResponse>('/sk/teacher-assistant', {
     method: 'POST',
     body: payload,
+    keepalive: opts.keepalive,
   });
 };
 
@@ -159,11 +165,13 @@ export const getSKProgressReportComments = async (
 };
 
 export const bulkUpsertSKProgressReportComments = async (
-  entries: SKProgressReportCommentEntry[]
+  entries: SKProgressReportCommentEntry[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<SKBulkResponse> => {
   return apiClient<SKBulkResponse>('/sk/progress-report-comments/bulk', {
     method: 'POST',
     body: { entries },
+    keepalive: opts.keepalive,
   });
 };
 

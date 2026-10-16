@@ -101,6 +101,19 @@ describe('createScoreAutosaver', () => {
     expect(autosaver.getState().failed).toEqual({})
   })
 
+  it('Discard forgets a rejected value for good (the cell shows the saved score again)', async () => {
+    const { calls, autosaver } = setup()
+    autosaver.queue('s1|a1', 12)
+    const done = autosaver.flush()
+    calls[0].reject(new Error('Score must be between 0 and 10 for "Quiz"'))
+    await done
+    expect(autosaver.getState().failed['s1|a1'].value).toBe(12)
+    autosaver.discard()
+    expect(autosaver.getState()).toEqual({ pending: {}, inFlight: {}, failed: {} })
+    await autosaver.retry()
+    expect(calls).toHaveLength(1) // nothing left to resend
+  })
+
   it('typing a cell back to its saved value sends nothing', () => {
     const { calls, autosaver } = setup()
     autosaver.queue('s1|a1', 8, 5)
@@ -303,6 +316,72 @@ describe('leaving the Grades tab never loses a typed comment', () => {
     const retried = autosaver.retry()
     expect(calls[1].batch[0][1].comment).toBe('Reads every night.')
     calls[1].resolve({ status: 'success' })
+    await retried
+    expect(autosaver.getState().failed).toEqual({})
+  })
+})
+
+// JK/SK competency documents (controller ruling, D17): one whole-document
+// snapshot per "studentId|document". A rating or comment must survive every
+// way out of the Grades tab.
+describe('leaving the Grades tab never loses a JK/SK rating', () => {
+  interface Doc {
+    studentId: string
+    doc: string
+    ratings: Record<string, string>
+    comments: Record<string, string>
+  }
+  function setupDocs() {
+    const calls: { batch: [string, Doc][]; opts: SaveOptions; resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = []
+    const autosaver = createAutosaver<Doc, unknown>({
+      save: (batch, opts) => new Promise((resolve, reject) => calls.push({ batch, opts, resolve, reject })),
+      debounceMs: 1000,
+    })
+    const win = new EventTarget()
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState })
+    return { calls, autosaver, win, doc }
+  }
+  const base: Doc = { studentId: 'k1', doc: 'progress_report', ratings: { sk1: 'D' }, comments: {} }
+
+  it('picking a rating and leaving at once (sidebar, class tab) saves the document', () => {
+    const { calls, autosaver, win, doc } = setupDocs()
+    const disconnect = autosaver.connect(win, doc)
+    autosaver.queue('k1|progress_report', { ...base, ratings: { sk1: 'D', sk2: 'B' } })
+    disconnect()
+    expect(calls).toHaveLength(1)
+    expect(calls[0].batch).toEqual([['k1|progress_report', { ...base, ratings: { sk1: 'D', sk2: 'B' } }]])
+  })
+
+  it('closing the page sends it with keepalive', () => {
+    const { calls, autosaver, win, doc } = setupDocs()
+    autosaver.connect(win, doc)
+    autosaver.queue('k1|progress_report', { ...base, comments: { d1: 'Counts to 20.' } })
+    win.dispatchEvent(new Event('pagehide'))
+    expect(calls[0].opts).toEqual({ keepalive: true })
+  })
+
+  it('the newest document wins, and switching student keeps both students apart', async () => {
+    const { calls, autosaver } = setupDocs()
+    autosaver.queue('k1|progress_report', { ...base, ratings: { sk1: 'B' } })
+    autosaver.queue('k1|progress_report', { ...base, ratings: { sk1: 'I' } })
+    autosaver.queue('k2|progress_report', { ...base, studentId: 'k2', ratings: { sk1: 'D' } })
+    void autosaver.flush()
+    expect(calls[0].batch).toEqual([
+      ['k1|progress_report', { ...base, ratings: { sk1: 'I' } }],
+      ['k2|progress_report', { ...base, studentId: 'k2', ratings: { sk1: 'D' } }],
+    ])
+  })
+
+  it('a failed save keeps the document for Retry (or Discard)', async () => {
+    const { calls, autosaver } = setupDocs()
+    autosaver.queue('k1|report_card', { ...base, doc: 'report_card', comments: { d1: 'Shares toys.' } })
+    const done = autosaver.flush()
+    calls[0].reject(new Error('Failed to save'))
+    await done
+    expect(autosaver.getState().failed['k1|report_card'].value.comments.d1).toBe('Shares toys.')
+    const retried = autosaver.retry()
+    expect(calls[1].batch[0][1].comments.d1).toBe('Shares toys.')
+    calls[1].resolve(undefined)
     await retried
     expect(autosaver.getState().failed).toEqual({})
   })

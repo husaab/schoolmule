@@ -4,9 +4,12 @@
 // ratings and comments, one student at a time; the subjects and standards themselves are
 // set up in the class's Settings. The document and the student live in the
 // URL (?doc=report_card&student=; the progress report is the default).
+// Everything autosaves (D17, useKindergartenAutosave): the open document is
+// queued whole on every change and saved with the Save button's own calls;
+// the Save button is now a manual flush and the pill shows Saved / Retry.
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -15,13 +18,9 @@ import { getStudentsInClass } from '@/services/classService'
 import {
   getSKSubjects,
   getSKAssessments,
-  bulkUpsertSKAssessments,
   getSKSubjectComments,
-  bulkUpsertSKSubjectComments,
   getSKTeacherAssistant,
-  upsertSKTeacherAssistant,
   getSKProgressReportComments,
-  bulkUpsertSKProgressReportComments,
 } from '@/services/skService'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
@@ -38,6 +37,9 @@ import {
 import Spinner from '@/components/Spinner'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
+import SavedPill from '@/components/gradebook/SavedPill'
+import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
+import { kindergartenKey, type KindergartenSnapshot } from '@/lib/kindergartenSave'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -61,6 +63,17 @@ const SK_REPORT_CARD_RATINGS = [
 
 type TabType = 'progress_report' | 'report_card'
 
+// The open document's editable fields (the rest of a snapshot is who and which).
+type KindergartenFields = Pick<KindergartenSnapshot, 'ratings' | 'comments' | 'learningSkills' | 'teacherAssistant' | 'progressComments'>
+const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
+const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
+  ratings: s.ratings,
+  comments: s.comments,
+  learningSkills: s.learningSkills,
+  teacherAssistant: s.teacherAssistant,
+  progressComments: s.progressComments,
+})
+
 interface SKGradebookWorkspaceProps {
   classId: string
   classData: ClassPayload
@@ -75,7 +88,6 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [subjects, setSubjects] = useState<SKSubject[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
 
   // Selection state lives in the URL (?doc=report_card&student=; the default
   // document is omitted) so Back and refresh restore it. Not remembered: the
@@ -92,17 +104,36 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   const [subjectComments, setSubjectComments] = useState<Record<string, string>>({})
   // Teacher assistant
   const [teacherAssistant, setTeacherAssistant] = useState('')
-  // Progress report comments: sectionType -> comment
-  const [progressComments, setProgressComments] = useState<Record<string, string>>({})
+  // Progress report comments (sectionType -> comment) have no fields here: they
+  // ride in the open document (docRef) and are saved back as loaded.
 
   // AI generation state
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [generatingAllAI, setGeneratingAllAI] = useState(false)
 
-  // Track if there are unsaved changes
-  const [hasChanges, setHasChanges] = useState(false)
-
   const term = classData?.termName || ''
+
+  // Autosave. The open document's fields are mirrored in a ref, so a change
+  // (even several AI comments landing at once) queues the newest whole
+  // document. Changes queue only once this document has loaded (the teacher
+  // assistant is always sent, so a half-loaded report card must never save),
+  // and a late answer for another student or document is dropped.
+  const autosave = useKindergartenAutosave({ classId, kind: 'sk' })
+  const docKey = selectedStudentId ? kindergartenKey(selectedStudentId, activeTab) : null
+  const docRef = useRef<KindergartenFields>(EMPTY_FIELDS)
+  const readyKeyRef = useRef<string | null>(null)
+  const loadSeq = useRef(0)
+  const [docState, setDocState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const snapshotForRef = useRef(autosave.snapshotFor)
+  useEffect(() => {
+    snapshotForRef.current = autosave.snapshotFor
+  }, [autosave.snapshotFor])
+  const applyDoc = useCallback((next: KindergartenFields) => {
+    docRef.current = next
+    setRatings(next.ratings)
+    setSubjectComments(next.comments)
+    setTeacherAssistant(next.teacherAssistant)
+  }, [])
 
   // Load class and students on mount
   // Load the class's students (the class itself comes from the Grades tab)
@@ -136,12 +167,15 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   // Load student data when student or tab changes
   const loadStudentData = useCallback(async () => {
     if (!selectedStudentId || !term) return
+    const ticket = ++loadSeq.current
+    const key = kindergartenKey(selectedStudentId, activeTab)
+    readyKeyRef.current = null
+    setDocState('loading')
+    // Clear stale state before loading new data
+    applyDoc(EMPTY_FIELDS)
 
     try {
-      // Clear stale state before loading new data
-      setRatings({})
-      setSubjectComments({})
-      setProgressComments({})
+      const fields: KindergartenFields = { ...EMPTY_FIELDS }
 
       // Load standard assessments
       const assessRes = await getSKAssessments(selectedStudentId, term, activeTab)
@@ -150,7 +184,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
         assessRes.data.forEach((a) => {
           if (a.rating) map[a.standardId] = a.rating
         })
-        setRatings(map)
+        fields.ratings = map
       }
 
       // For report card tab, also load subject comments and TA
@@ -165,14 +199,10 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           commentsRes.data.forEach((c) => {
             if (c.comment) cmap[c.subjectId] = c.comment
           })
-          setSubjectComments(cmap)
+          fields.comments = cmap
         }
 
-        if (taRes.status === 'success' && taRes.data) {
-          setTeacherAssistant(taRes.data.teacherAssistantName || '')
-        } else {
-          setTeacherAssistant('')
-        }
+        fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
       }
 
       // For progress report tab, load subject comments and progress report comments
@@ -187,7 +217,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           commentsRes.data.forEach((c) => {
             if (c.comment) cmap[c.subjectId] = c.comment
           })
-          setSubjectComments(cmap)
+          fields.comments = cmap
         }
 
         if (prCommentsRes.status === 'success') {
@@ -195,46 +225,51 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           prCommentsRes.data.forEach((c) => {
             if (c.comment) pmap[c.sectionType] = c.comment
           })
-          setProgressComments(pmap)
+          fields.progressComments = pmap
         }
       }
 
-      setHasChanges(false)
+      if (ticket !== loadSeq.current) return
+      // What the teacher changed here and hasn't saved yet wins over the server.
+      const local = snapshotForRef.current(key)
+      applyDoc(local ? fieldsOf(local) : fields)
+      readyKeyRef.current = key
+      setDocState('ready')
     } catch (err) {
+      if (ticket !== loadSeq.current) return
       console.error('Error loading student data:', err)
+      setDocState('error')
     }
-  }, [selectedStudentId, term, activeTab])
+  }, [selectedStudentId, term, activeTab, applyDoc])
 
   useEffect(() => {
     loadStudentData()
   }, [loadStudentData])
 
-  // Warn about unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasChanges) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [hasChanges])
-
   // Handlers
-  const handleRatingChange = (standardId: string, value: string) => {
-    setRatings((prev) => ({ ...prev, [standardId]: value }))
-    setHasChanges(true)
+  // A change updates the fields and queues the whole open document.
+  const change = (patch: Partial<KindergartenFields>) => {
+    const next = { ...docRef.current, ...patch }
+    applyDoc(next)
+    if (!selectedStudentId || !user?.school || !docKey || readyKeyRef.current !== docKey) return
+    autosave.queue(docKey, {
+      studentId: selectedStudentId,
+      term,
+      doc: activeTab,
+      school: user.school,
+      assessedBy: user.id ?? null,
+      ...next,
+    })
   }
 
-  const handleSubjectCommentChange = (subjectId: string, value: string) => {
-    setSubjectComments((prev) => ({ ...prev, [subjectId]: value }))
-    setHasChanges(true)
-  }
+  const handleRatingChange = (standardId: string, value: string) =>
+    change({ ratings: { ...docRef.current.ratings, [standardId]: value } })
 
-  const handleProgressCommentChange = (sectionType: string, value: string) => {
-    setProgressComments((prev) => ({ ...prev, [sectionType]: value }))
-    setHasChanges(true)
-  }
+  const handleSubjectCommentChange = (subjectId: string, value: string) =>
+    change({ comments: { ...docRef.current.comments, [subjectId]: value } })
+
+  const handleProgressCommentChange = (sectionType: string, value: string) =>
+    change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } })
 
   // Generate AI comment for a single subject or section
   const handleGenerateAIComment = async (
@@ -317,96 +352,26 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     setGeneratingAllAI(false)
   }
 
-  const handleSave = async () => {
-    if (!selectedStudentId || !user?.school) return
-
-    setSaving(true)
-    try {
-      // Save standard assessments
-      const assessmentEntries = Object.entries(ratings)
-        .filter(([, val]) => val !== '')
-        .map(([standardId, rating]) => ({
-          studentId: selectedStudentId,
-          standardId,
-          term,
-          rating,
-          school: user.school!,
-          assessedBy: user.id,
-        }))
-
-      if (assessmentEntries.length > 0) {
-        await bulkUpsertSKAssessments(assessmentEntries)
-      }
-
-      // Save subject comments (both tabs use per-subject comments)
-      const commentEntries = Object.entries(subjectComments)
-        .filter(([, val]) => val && val.trim() !== '')
-        .map(([subjectId, comment]) => ({
-          studentId: selectedStudentId,
-          subjectId,
-          term,
-          comment,
-          school: user.school!,
-        }))
-
-      if (commentEntries.length > 0) {
-        await bulkUpsertSKSubjectComments(commentEntries)
-      }
-
-      // For progress report, also save progress report comments
-      if (activeTab === 'progress_report') {
-        const prCommentEntries = Object.entries(progressComments)
-          .filter(([, val]) => val && val.trim() !== '')
-          .map(([sectionType, comment]) => ({
-            studentId: selectedStudentId,
-            term,
-            sectionType: sectionType as 'academic_achievement' | 'socio_emotional',
-            comment,
-            school: user.school!,
-          }))
-
-        if (prCommentEntries.length > 0) {
-          await bulkUpsertSKProgressReportComments(prCommentEntries)
-        }
-      }
-
-      // For report card, also save TA
-      if (activeTab === 'report_card') {
-        if (teacherAssistant !== undefined) {
-          await upsertSKTeacherAssistant({
-            studentId: selectedStudentId,
-            teacherAssistantName: teacherAssistant || null,
-            term,
-            school: user.school!,
-          })
-        }
-      }
-
-      setHasChanges(false)
-      showNotification('Saved successfully', 'success')
-    } catch (err) {
-      console.error('Error saving:', err)
-      showNotification('Failed to save', 'error')
-    } finally {
-      setSaving(false)
-    }
+  // Save (manual): send whatever has not saved yet, now.
+  const saveNow = () => {
+    void autosave.flush()
   }
 
-  const handleStudentSwitch = async (studentId: string) => {
-    if (hasChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Switch student without saving?')
-      if (!confirmed) return
-    }
+  // Switching student or document saves the open one first (no confirm).
+  const handleStudentSwitch = (studentId: string) => {
+    void autosave.flush()
     setSelectedStudentId(studentId)
   }
 
   const handleTabChange = (tab: TabType) => {
-    if (hasChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Switch tab without saving?')
-      if (!confirmed) return
-    }
+    void autosave.flush()
     setActiveTab(tab)
   }
+
+  // A student whose progress report or report card didn't save.
+  const failedFor = (studentId: string) =>
+    autosave.failedKeys.has(kindergartenKey(studentId, 'progress_report')) ||
+    autosave.failedKeys.has(kindergartenKey(studentId, 'report_card'))
 
   const ratingOptions =
     activeTab === 'progress_report' ? SK_PROGRESS_REPORT_RATINGS : SK_REPORT_CARD_RATINGS
@@ -441,9 +406,15 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                 </Link>
               </div>
               <div className="flex items-center gap-3">
-                {hasChanges && (
-                  <span className="text-amber-600 text-sm font-medium">Unsaved changes</span>
-                )}
+                <SavedPill
+                  status={autosave.status}
+                  failedCount={autosave.failedKeys.size}
+                  onRetry={() => void autosave.retry()}
+                  onDiscard={() => {
+                    autosave.discard()
+                    void loadStudentData()
+                  }}
+                />
                 {selectedStudentId && (
                   <button
                     onClick={handleGenerateAllComments}
@@ -457,12 +428,13 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                   </button>
                 )}
                 <button
-                  onClick={handleSave}
-                  disabled={saving || !hasChanges}
+                  onClick={saveNow}
+                  disabled={autosave.status === 'saved'}
+                  title="Grades save by themselves; this saves right away"
                   className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
-                  {saving ? <Spinner size="sm" /> : <CheckCircleIcon className="w-4 h-4" />}
-                  {saving ? 'Saving...' : 'Save'}
+                  {autosave.status === 'saving' ? <Spinner size="sm" /> : <CheckCircleIcon className="w-4 h-4" />}
+                  {autosave.status === 'saving' ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </div>
@@ -494,6 +466,25 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
             </button>
           </div>
 
+          {!term && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              This class has no term yet, so ratings and comments can&apos;t be saved. Set its term in the class&apos;s Settings.
+            </div>
+          )}
+
+          {docState === 'error' && selectedStudentId && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              This student&apos;s record couldn&apos;t be loaded, so changes can&apos;t be saved yet.
+              <button
+                type="button"
+                onClick={() => void loadStudentData()}
+                className="cursor-pointer rounded-lg border border-rose-300 bg-white px-3 py-1.5 font-medium hover:bg-rose-100"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-6">
             {/* Student Sidebar */}
             <div className="w-56 flex-shrink-0">
@@ -516,20 +507,27 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                     >
                       <UserIcon className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate">{stu.name}</span>
+                      {failedFor(stu.studentId) && (
+                        <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-rose-500" title="Didn't save. Use Retry above." />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 min-w-0">
+            {/* Main Content: leaving any field saves at once */}
+            <div className="flex-1 min-w-0" onBlur={() => void autosave.flush()}>
               {!selectedStudentId ? (
                 <div className="text-center py-12 text-slate-500">
                   Select a student to begin assessment
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div
+                  className={`space-y-4 ${docState === 'ready' ? '' : 'opacity-60'}`}
+                  inert={docState !== 'ready'}
+                  aria-busy={docState === 'loading'}
+                >
                   {/* Sticky: Student Header + Legend */}
                   <div className="sticky top-20 z-10 space-y-2">
                     {/* Student Header */}
@@ -604,10 +602,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                       <input
                         type="text"
                         value={teacherAssistant}
-                        onChange={(e) => {
-                          setTeacherAssistant(e.target.value)
-                          setHasChanges(true)
-                        }}
+                        onChange={(e) => change({ teacherAssistant: e.target.value })}
                         placeholder="Enter teacher assistant name"
                         className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
@@ -742,22 +737,6 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                     </div>
                   ))}
 
-                  {/* Bottom Save Bar */}
-                  {hasChanges && (
-                    <div className="sticky bottom-4 bg-white rounded-xl shadow-lg border border-slate-200 p-4 flex items-center justify-between">
-                      <span className="text-sm text-amber-600 font-medium">
-                        You have unsaved changes for {selectedStudent?.name}
-                      </span>
-                      <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-5 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50 transition-colors cursor-pointer"
-                      >
-                        {saving ? <Spinner size="sm" /> : <CheckCircleIcon className="w-4 h-4" />}
-                        {saving ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

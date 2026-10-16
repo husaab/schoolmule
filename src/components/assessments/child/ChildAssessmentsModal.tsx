@@ -125,6 +125,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
             status={autosave.status}
             failedCount={autosave.failedKeys.size}
             onRetry={() => void autosave.retry()}
+            onDiscard={() => autosave.discard()}
           />
         }
       />
