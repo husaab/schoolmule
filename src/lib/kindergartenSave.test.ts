@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { kindergartenKey, saveJKDocument, saveSKDocument, type KindergartenSnapshot } from './kindergartenSave'
+import {
+  applyKindergartenChange,
+  kindergartenKey,
+  loadAfterPendingSaves,
+  saveJKDocument,
+  saveSKDocument,
+  type KindergartenSnapshot,
+} from './kindergartenSave'
+import { createAutosaver } from './scoreAutosaver'
 
 const snap = (over: Partial<KindergartenSnapshot> = {}): KindergartenSnapshot => ({
   studentId: 'k1',
@@ -111,5 +119,42 @@ describe('leaving the page', () => {
 
   it('keys a document by student and document', () => {
     expect(kindergartenKey('k1', 'report_card')).toBe('k1|report_card')
+  })
+})
+
+describe('applyKindergartenChange: a change lands only in the document it was made for', () => {
+  const open = {
+    readyKey: 'k1|report_card',
+    fields: { ratings: { s1: 'BG' }, comments: { d1: 'Old.' }, learningSkills: {}, teacherAssistant: 'Sami Haddad', progressComments: {} },
+  }
+
+  it('merges a change made for the open, loaded document', () => {
+    expect(applyKindergartenChange(open, 'k1|report_card', { comments: { d1: 'New.' } })).toEqual({ ...open.fields, comments: { d1: 'New.' } })
+  })
+
+  it('drops an AI comment that arrives after the teacher switched student (or document)', () => {
+    expect(applyKindergartenChange(open, 'k2|report_card', { comments: { d1: 'For k2.' } })).toBeNull()
+    expect(applyKindergartenChange(open, 'k1|progress_report', { comments: { d1: 'For the other document.' } })).toBeNull()
+  })
+
+  it('drops a change while the document is still loading (nothing is ready yet)', () => {
+    expect(applyKindergartenChange({ ...open, readyKey: null }, 'k1|report_card', { teacherAssistant: '' })).toBeNull()
+    expect(applyKindergartenChange(open, null, { teacherAssistant: '' })).toBeNull()
+  })
+})
+
+describe('loadAfterPendingSaves: a document is read only after earlier edits have saved', () => {
+  it('SK subject comments edited on one document are saved before the other document reads them', async () => {
+    const server = { subjectComment: 'Old.' }
+    const autosaver = createAutosaver<{ comment: string }, void>({
+      save: async (batch) => {
+        await new Promise((r) => setTimeout(r, 5))
+        server.subjectComment = batch[batch.length - 1][1].comment
+      },
+    })
+    autosaver.queue('k1|progress_report', { comment: 'Loves painting.' })
+    // The teacher switches to the report card at once: it must read the new comment.
+    const read = await loadAfterPendingSaves(() => autosaver.flush(), async () => server.subjectComment)
+    expect(read).toBe('Loves painting.')
   })
 })

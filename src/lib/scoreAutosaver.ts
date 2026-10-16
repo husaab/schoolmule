@@ -24,6 +24,7 @@
 import {
   ackBatch,
   discardFailed,
+  failKeys,
   drop as dropKey,
   emptyQueue,
   enqueue,
@@ -91,6 +92,19 @@ const defaultTimers: Timers = {
 }
 
 const LEAVE_WARNING = 'Some grades have not saved yet. Leave anyway?'
+
+/**
+ * Thrown by a save that saved part of its batch: only `failedKeys` are kept
+ * for Retry; the other keys count as saved (onSaved is not called for them).
+ */
+export class PartialSaveError extends Error {
+  failedKeys: string[]
+  constructor(failedKeys: string[], message: string) {
+    super(message)
+    this.name = 'PartialSaveError'
+    this.failedKeys = failedKeys
+  }
+}
 
 export const toScoreItem = ([key, score]: [string, CellValue]): ScoreSaveItem => {
   const [studentId, assessmentId] = key.split('|')
@@ -180,7 +194,7 @@ export function createAutosaver<V, R>({
         commit(ackBatch(state))
       } catch (err) {
         const message = messageOf(err)
-        commit(failBatch(state, message))
+        commit(err instanceof PartialSaveError ? failKeys(state, err.failedKeys, message) : failBatch(state, message))
         failedHandlers.forEach((h) => h(message))
       }
     }

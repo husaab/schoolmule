@@ -8,7 +8,7 @@
 // with the same bulk payloads Save All sends (Save All is now a manual flush).
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Spinner from '@/components/Spinner'
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal'
 
@@ -16,7 +16,7 @@ import { getStudentsInClass } from '@/services/classService'
 import { getClassProgressReportFeedback } from '@/services/progressReportService'
 import type { ClassProgressReportFeedbackEntry } from '@/services/progressReportService'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
-import { feedbackEntry, PROGRESS_FIELDS, withFeedbackField, type FeedbackEntry } from '@/lib/commentAutosave'
+import { commentChange, feedbackEntry, PROGRESS_FIELDS, type FeedbackEntry } from '@/lib/commentAutosave'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -84,6 +84,10 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
   const [loading, setLoading] = useState(true)
   // Nothing to load for a class without a term (it shows a note instead).
   const [loadingFeedback, setLoadingFeedback] = useState(() => Boolean(classData.termName))
+  // The saved comments must load before anything autosaves: the upsert nulls
+  // every field it is not sent, so an entry built on nothing would erase them.
+  const [feedbackLoaded, setFeedbackLoaded] = useState(false)
+  const [feedbackError, setFeedbackError] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
@@ -161,27 +165,33 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
       })
   }, [classId, user?.school, selectedYearId]) // refetch when the selected school year changes
 
-  // Load feedback when term changes
-  useEffect(() => {
+  // Load the saved comments for the class's term
+  const loadFeedback = useCallback(() => {
     if (!classId || !selectedTerm) return
 
     getClassProgressReportFeedback(classId, selectedTerm)
       .then((res) => {
-        if (res.status === 'success') {
-          const feedbackMap = new Map<string, ClassProgressReportFeedbackEntry>()
-          res.data.forEach((entry) => {
-            feedbackMap.set(entry.studentId, entry)
-          })
-          setExistingFeedback(feedbackMap)
-        }
+        if (res.status !== 'success') throw new Error(res.message || "The saved comments couldn't be loaded")
+        const feedbackMap = new Map<string, ClassProgressReportFeedbackEntry>()
+        res.data.forEach((entry) => {
+          feedbackMap.set(entry.studentId, entry)
+        })
+        setExistingFeedback(feedbackMap)
+        setFeedbackLoaded(true)
+        setFeedbackError(false)
       })
       .catch((err) => {
         console.error('Error loading progress feedback:', err)
+        setFeedbackError(true)
       })
       .finally(() => {
         setLoadingFeedback(false)
       })
   }, [classId, selectedTerm])
+
+  useEffect(() => {
+    loadFeedback()
+  }, [loadFeedback])
 
   // The student's entry as saved (what Save All sent for an untouched field).
   const savedEntry = (studentId: string): FeedbackEntry<ProgressField> =>
@@ -203,9 +213,12 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
 
   // Queue the student's whole entry (the class needs a term to save anything)
   const handleFieldChange = (studentId: string, field: ProgressField, value: string) => {
-    if (!selectedTerm) return
-    const saved = savedEntry(studentId)
-    comments.queue(studentId, withFeedbackField(comments.entryFor(studentId) ?? saved, field, value), saved)
+    const next = commentChange(
+      { term: selectedTerm, savedLoaded: feedbackLoaded, saved: savedEntry(studentId), local: comments.entryFor(studentId) },
+      field,
+      value,
+    )
+    if (next) comments.queue(studentId, next.entry, next.saved)
   }
 
   // Save All: send whatever has not saved yet, now
@@ -495,8 +508,27 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
 
           )}
 
-          {/* Progress Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          {feedbackError && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800">
+              The saved comments couldn&apos;t be loaded, so changes can&apos;t be saved yet.
+              <button
+                type="button"
+                onClick={() => {
+                  setLoadingFeedback(true)
+                  loadFeedback()
+                }}
+                className="cursor-pointer rounded-lg border border-rose-300 bg-white px-3 py-1.5 font-medium hover:bg-rose-100"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {/* Progress Table: editable only once the saved comments have loaded */}
+          <div
+            className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden ${feedbackError ? 'opacity-60' : ''}`}
+            inert={feedbackError}
+          >
             {loadingFeedback ? (
               <div className="flex justify-center items-center py-16">
                 <Spinner size="md" />

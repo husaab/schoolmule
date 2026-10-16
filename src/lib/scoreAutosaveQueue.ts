@@ -48,6 +48,17 @@ export function failBatch<V>(s: QueueState<V>, message: string): QueueState<V> {
   return { ...s, inFlight: {}, failed }
 }
 
+/**
+ * Part of the batch failed: those keys keep their value for Retry (unless a
+ * newer one is pending); the rest of the batch saved.
+ */
+export function failKeys<V>(s: QueueState<V>, keys: string[], message: string): QueueState<V> {
+  const failing = new Set(keys)
+  const failed = { ...s.failed }
+  for (const [k, v] of Object.entries(s.inFlight)) if (failing.has(k) && !(k in s.pending)) failed[k] = { value: v, message }
+  return { ...s, inFlight: {}, failed }
+}
+
 export function retryFailed<V>(s: QueueState<V>): QueueState<V> {
   const pending = { ...s.pending }
   for (const [k, f] of Object.entries(s.failed)) if (!(k in pending)) pending[k] = f.value

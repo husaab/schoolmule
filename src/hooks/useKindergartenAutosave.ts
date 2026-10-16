@@ -9,7 +9,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { createAutosaver, type SaveOptions } from '@/lib/scoreAutosaver'
+import { createAutosaver, PartialSaveError, type SaveOptions } from '@/lib/scoreAutosaver'
 import { statusOf } from '@/lib/scoreAutosaveQueue'
 import { saveJKDocument, saveSKDocument, type KindergartenSnapshot } from '@/lib/kindergartenSave'
 import {
@@ -79,12 +79,27 @@ export function useKindergartenAutosave({ classId, kind }: { classId: string; ki
         `${userId}|${classId}|${kind}`,
         () =>
           createAutosaver<KindergartenSnapshot, void>({
+            // Every document is attempted; only those that failed are kept
+            // for Retry (PartialSaveError), the rest count as saved.
             save: async (batch, opts) => {
+              const saveOne = (snapshot: KindergartenSnapshot) =>
+                SAVE_ONE[kind](snapshot, opts).catch((err: unknown) =>
+                  // A refused keepalive request (TypeError) is sent again as a plain one.
+                  opts.keepalive && err instanceof TypeError ? SAVE_ONE[kind](snapshot, {}) : Promise.reject(err),
+                )
+              const results: PromiseSettledResult<void>[] = []
               if (opts.keepalive) {
-                await Promise.all(batch.map(([, snapshot]) => SAVE_ONE[kind](snapshot, opts)))
-                return
+                results.push(...(await Promise.allSettled(batch.map(([, snapshot]) => saveOne(snapshot)))))
+              } else {
+                for (const [, snapshot] of batch) {
+                  results.push(...(await Promise.allSettled([saveOne(snapshot)])))
+                }
               }
-              for (const [, snapshot] of batch) await SAVE_ONE[kind](snapshot, opts)
+              const failed = batch.filter((_, i) => results[i].status === 'rejected').map(([key]) => key)
+              if (failed.length === 0) return
+              const first = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+              const reason = first?.reason
+              throw new PartialSaveError(failed, reason instanceof Error && reason.message ? reason.message : 'Could not save')
             },
             debounceMs: KINDERGARTEN_DEBOUNCE_MS,
           }),

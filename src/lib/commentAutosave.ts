@@ -35,6 +35,22 @@ export function withFeedbackField<F extends string>(entry: FeedbackEntry<F>, fie
   return { ...entry, [field]: value }
 }
 
+/**
+ * One field changed for one student: the entry to queue, built on what is
+ * typed and not yet saved, else on the saved entry. Null when nothing may be
+ * queued: a class without a term, or saved comments that failed to load (the
+ * upsert nulls every field it is not sent, so an entry built on nothing would
+ * erase the student's saved comments).
+ */
+export function commentChange<F extends string>(
+  state: { term: string; savedLoaded: boolean; saved: FeedbackEntry<F>; local: FeedbackEntry<F> | null },
+  field: NoInfer<F>,
+  value: string,
+): { entry: FeedbackEntry<F>; saved: FeedbackEntry<F> } | null {
+  if (!state.term || !state.savedLoaded) return null
+  return { entry: withFeedbackField(state.local ?? state.saved, field, value), saved: state.saved }
+}
+
 /** Same text in every field ('' and nothing saved are both empty): typing back to the saved entry sends nothing. */
 export const sameFeedback =
   <F extends string>(fields: readonly F[]) =>

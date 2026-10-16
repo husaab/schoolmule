@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createAutosaver, createScoreAutosaver, type SaveOptions, type ScoreSaveItem } from './scoreAutosaver'
+import { createAutosaver, createScoreAutosaver, PartialSaveError, type SaveOptions, type ScoreSaveItem } from './scoreAutosaver'
 
 // One fake server call: the test decides when (and how) it answers.
 interface Call {
@@ -370,6 +370,17 @@ describe('leaving the Grades tab never loses a JK/SK rating', () => {
       ['k1|progress_report', { ...base, ratings: { sk1: 'I' } }],
       ['k2|progress_report', { ...base, studentId: 'k2', ratings: { sk1: 'D' } }],
     ])
+  })
+
+  it('one failing document in a batch does not mark the others failed', async () => {
+    const { calls, autosaver } = setupDocs()
+    autosaver.queue('k1|progress_report', base)
+    autosaver.queue('k2|progress_report', { ...base, studentId: 'k2' })
+    const done = autosaver.flush()
+    calls[0].reject(new PartialSaveError(['k1|progress_report'], 'Failed to save'))
+    await done
+    expect(Object.keys(autosaver.getState().failed)).toEqual(['k1|progress_report'])
+    expect(autosaver.getState().inFlight).toEqual({})
   })
 
   it('a failed save keeps the document for Retry (or Discard)', async () => {

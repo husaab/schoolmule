@@ -39,7 +39,13 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import SavedPill from '@/components/gradebook/SavedPill'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
-import { kindergartenKey, type KindergartenSnapshot } from '@/lib/kindergartenSave'
+import {
+  applyKindergartenChange,
+  kindergartenKey,
+  loadAfterPendingSaves,
+  type KindergartenFields,
+  type KindergartenSnapshot,
+} from '@/lib/kindergartenSave'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -63,8 +69,6 @@ const SK_REPORT_CARD_RATINGS = [
 
 type TabType = 'progress_report' | 'report_card'
 
-// The open document's editable fields (the rest of a snapshot is who and which).
-type KindergartenFields = Pick<KindergartenSnapshot, 'ratings' | 'comments' | 'learningSkills' | 'teacherAssistant' | 'progressComments'>
 const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
 const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
   ratings: s.ratings,
@@ -124,6 +128,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   const readyKeyRef = useRef<string | null>(null)
   const loadSeq = useRef(0)
   const [docState, setDocState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const { flush: flushDocs } = autosave
   const snapshotForRef = useRef(autosave.snapshotFor)
   useEffect(() => {
     snapshotForRef.current = autosave.snapshotFor
@@ -175,59 +180,65 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     applyDoc(EMPTY_FIELDS)
 
     try {
-      const fields: KindergartenFields = { ...EMPTY_FIELDS }
+      // Earlier edits save first: SK subject comments belong to both
+      // documents, so this one must not read them before that save lands.
+      const fields = await loadAfterPendingSaves(flushDocs, async () => {
+        const fields: KindergartenFields = { ...EMPTY_FIELDS }
 
-      // Load standard assessments
-      const assessRes = await getSKAssessments(selectedStudentId, term, activeTab)
-      if (assessRes.status === 'success') {
-        const map: Record<string, string> = {}
-        assessRes.data.forEach((a) => {
-          if (a.rating) map[a.standardId] = a.rating
-        })
-        fields.ratings = map
-      }
-
-      // For report card tab, also load subject comments and TA
-      if (activeTab === 'report_card') {
-        const [commentsRes, taRes] = await Promise.all([
-          getSKSubjectComments(selectedStudentId, term),
-          getSKTeacherAssistant(selectedStudentId, term),
-        ])
-
-        if (commentsRes.status === 'success') {
-          const cmap: Record<string, string> = {}
-          commentsRes.data.forEach((c) => {
-            if (c.comment) cmap[c.subjectId] = c.comment
+        // Load standard assessments
+        const assessRes = await getSKAssessments(selectedStudentId, term, activeTab)
+        if (assessRes.status === 'success') {
+          const map: Record<string, string> = {}
+          assessRes.data.forEach((a) => {
+            if (a.rating) map[a.standardId] = a.rating
           })
-          fields.comments = cmap
+          fields.ratings = map
         }
 
-        fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
-      }
+        // For report card tab, also load subject comments and TA
+        if (activeTab === 'report_card') {
+          const [commentsRes, taRes] = await Promise.all([
+            getSKSubjectComments(selectedStudentId, term),
+            getSKTeacherAssistant(selectedStudentId, term),
+          ])
 
-      // For progress report tab, load subject comments and progress report comments
-      if (activeTab === 'progress_report') {
-        const [commentsRes, prCommentsRes] = await Promise.all([
-          getSKSubjectComments(selectedStudentId, term),
-          getSKProgressReportComments(selectedStudentId, term).catch(() => ({ status: 'error', data: [] })),
-        ])
+          if (commentsRes.status === 'success') {
+            const cmap: Record<string, string> = {}
+            commentsRes.data.forEach((c) => {
+              if (c.comment) cmap[c.subjectId] = c.comment
+            })
+            fields.comments = cmap
+          }
 
-        if (commentsRes.status === 'success') {
-          const cmap: Record<string, string> = {}
-          commentsRes.data.forEach((c) => {
-            if (c.comment) cmap[c.subjectId] = c.comment
-          })
-          fields.comments = cmap
+          fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
         }
 
-        if (prCommentsRes.status === 'success') {
-          const pmap: Record<string, string> = {}
-          prCommentsRes.data.forEach((c) => {
-            if (c.comment) pmap[c.sectionType] = c.comment
-          })
-          fields.progressComments = pmap
+        // For progress report tab, load subject comments and progress report comments
+        if (activeTab === 'progress_report') {
+          const [commentsRes, prCommentsRes] = await Promise.all([
+            getSKSubjectComments(selectedStudentId, term),
+            getSKProgressReportComments(selectedStudentId, term).catch(() => ({ status: 'error', data: [] })),
+          ])
+
+          if (commentsRes.status === 'success') {
+            const cmap: Record<string, string> = {}
+            commentsRes.data.forEach((c) => {
+              if (c.comment) cmap[c.subjectId] = c.comment
+            })
+            fields.comments = cmap
+          }
+
+          if (prCommentsRes.status === 'success') {
+            const pmap: Record<string, string> = {}
+            prCommentsRes.data.forEach((c) => {
+              if (c.comment) pmap[c.sectionType] = c.comment
+            })
+            fields.progressComments = pmap
+          }
         }
-      }
+
+        return fields
+      })
 
       if (ticket !== loadSeq.current) return
       // What the teacher changed here and hasn't saved yet wins over the server.
@@ -240,33 +251,32 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
       console.error('Error loading student data:', err)
       setDocState('error')
     }
-  }, [selectedStudentId, term, activeTab, applyDoc])
+  }, [selectedStudentId, term, activeTab, applyDoc, flushDocs])
 
   useEffect(() => {
     loadStudentData()
   }, [loadStudentData])
 
   // Handlers
-  // A change updates the fields and queues the whole open document.
-  const change = (patch: Partial<KindergartenFields>) => {
-    const next = { ...docRef.current, ...patch }
+  // A change updates the fields and queues the whole open document. `forKey`
+  // is the document it was made for: an AI comment requested for one student
+  // can arrive after the teacher switched, and is then dropped (false), never
+  // applied to the student now open.
+  const change = (patch: Partial<KindergartenFields>, forKey: string | null = docKey): boolean => {
+    const next = applyKindergartenChange({ readyKey: readyKeyRef.current, fields: docRef.current }, forKey, patch)
+    if (!next || !forKey) return false
     applyDoc(next)
-    if (!selectedStudentId || !user?.school || !docKey || readyKeyRef.current !== docKey) return
-    autosave.queue(docKey, {
-      studentId: selectedStudentId,
-      term,
-      doc: activeTab,
-      school: user.school,
-      assessedBy: user.id ?? null,
-      ...next,
-    })
+    if (!user?.school) return true
+    const [studentId, doc] = forKey.split('|') as [string, TabType]
+    autosave.queue(forKey, { studentId, term, doc, school: user.school, assessedBy: user.id ?? null, ...next })
+    return true
   }
 
   const handleRatingChange = (standardId: string, value: string) =>
     change({ ratings: { ...docRef.current.ratings, [standardId]: value } })
 
-  const handleSubjectCommentChange = (subjectId: string, value: string) =>
-    change({ comments: { ...docRef.current.comments, [subjectId]: value } })
+  const handleSubjectCommentChange = (subjectId: string, value: string, forKey: string | null = docKey) =>
+    change({ comments: { ...docRef.current.comments, [subjectId]: value } }, forKey)
 
   const handleProgressCommentChange = (sectionType: string, value: string) =>
     change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } })
@@ -278,6 +288,8 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     standardsForPrompt: Array<{ name: string; rating: string; description?: string }>
   ) => {
     if (!selectedStudent) return
+    // The document this comment is for, whatever is open when it arrives.
+    const requestedKey = docKey
 
     const ratedStandards = standardsForPrompt.filter((s) => s.rating && s.rating !== '')
     if (ratedStandards.length === 0) {
@@ -305,13 +317,10 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
 
       const data = await response.json()
       if (data.comment) {
-        if (activeTab === 'report_card') {
-          handleSubjectCommentChange(key, data.comment)
-        } else {
-          // For progress report, subject comments use subjectId key
-          handleSubjectCommentChange(key, data.comment)
-        }
-        showNotification('Comment generated successfully', 'success')
+        // Both documents keep subject comments by subjectId.
+        const applied = handleSubjectCommentChange(key, data.comment, requestedKey)
+        if (applied) showNotification('Comment generated successfully', 'success')
+        else showNotification(`The AI comment for ${selectedStudent.name} arrived after you switched, so it wasn't added.`, 'error')
       } else {
         throw new Error('No comment returned')
       }

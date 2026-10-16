@@ -40,7 +40,13 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import SavedPill from '@/components/gradebook/SavedPill'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
-import { kindergartenKey, type KindergartenSnapshot } from '@/lib/kindergartenSave'
+import {
+  applyKindergartenChange,
+  kindergartenKey,
+  loadAfterPendingSaves,
+  type KindergartenFields,
+  type KindergartenSnapshot,
+} from '@/lib/kindergartenSave'
 
 // Rating options for each document type
 const PROGRESS_REPORT_RATINGS = [
@@ -80,8 +86,6 @@ const SOCIO_EMOTIONAL_DOMAIN_NAMES = ['Social Skills', 'Emotional Development']
 
 type TabType = 'progress_report' | 'report_card'
 
-// The open document's editable fields (the rest of a snapshot is who and which).
-type KindergartenFields = Pick<KindergartenSnapshot, 'ratings' | 'comments' | 'learningSkills' | 'teacherAssistant' | 'progressComments'>
 const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
 const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
   ratings: s.ratings,
@@ -143,6 +147,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
   const readyKeyRef = useRef<string | null>(null)
   const loadSeq = useRef(0)
   const [docState, setDocState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const { flush: flushDocs } = autosave
   const snapshotForRef = useRef(autosave.snapshotFor)
   useEffect(() => {
     snapshotForRef.current = autosave.snapshotFor
@@ -195,60 +200,66 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     applyDoc(EMPTY_FIELDS)
 
     try {
-      const fields: KindergartenFields = { ...EMPTY_FIELDS }
+      // Earlier edits save first: SK subject comments belong to both
+      // documents, so this one must not read them before that save lands.
+      const fields = await loadAfterPendingSaves(flushDocs, async () => {
+        const fields: KindergartenFields = { ...EMPTY_FIELDS }
 
-      // Load skill assessments
-      const assessRes = await getJKAssessments(selectedStudentId, term, activeTab)
-      if (assessRes.status === 'success') {
-        const map: Record<string, string> = {}
-        assessRes.data.forEach((a) => {
-          if (a.rating) map[a.skillId] = a.rating
-        })
-        fields.ratings = map
-      }
-
-      // For report card tab, also load comments, learning skills, TA
-      if (activeTab === 'report_card') {
-        const [commentsRes, lsRes, taRes] = await Promise.all([
-          getJKDomainComments(selectedStudentId, term),
-          getJKLearningSkills(selectedStudentId, term),
-          getJKTeacherAssistant(selectedStudentId, term),
-        ])
-
-        if (commentsRes.status === 'success') {
-          const cmap: Record<string, string> = {}
-          commentsRes.data.forEach((c) => {
-            if (c.comment) cmap[c.domainId] = c.comment
+        // Load skill assessments
+        const assessRes = await getJKAssessments(selectedStudentId, term, activeTab)
+        if (assessRes.status === 'success') {
+          const map: Record<string, string> = {}
+          assessRes.data.forEach((a) => {
+            if (a.rating) map[a.skillId] = a.rating
           })
-          fields.comments = cmap
+          fields.ratings = map
         }
 
-        if (lsRes.status === 'success') {
-          const lmap: Record<string, string> = {}
-          lsRes.data.forEach((ls) => {
-            if (ls.rating) lmap[ls.skillName] = ls.rating
-          })
-          fields.learningSkills = lmap
-        }
+        // For report card tab, also load comments, learning skills, TA
+        if (activeTab === 'report_card') {
+          const [commentsRes, lsRes, taRes] = await Promise.all([
+            getJKDomainComments(selectedStudentId, term),
+            getJKLearningSkills(selectedStudentId, term),
+            getJKTeacherAssistant(selectedStudentId, term),
+          ])
 
-        fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
-      }
-
-      // For progress report tab, load progress report comments
-      if (activeTab === 'progress_report') {
-        try {
-          const prCommentsRes = await getJKProgressReportComments(selectedStudentId, term)
-          if (prCommentsRes.status === 'success') {
-            const pmap: Record<string, string> = {}
-            prCommentsRes.data.forEach((c) => {
-              if (c.comment) pmap[c.sectionType] = c.comment
+          if (commentsRes.status === 'success') {
+            const cmap: Record<string, string> = {}
+            commentsRes.data.forEach((c) => {
+              if (c.comment) cmap[c.domainId] = c.comment
             })
-            fields.progressComments = pmap
+            fields.comments = cmap
           }
-        } catch {
-          fields.progressComments = {}
+
+          if (lsRes.status === 'success') {
+            const lmap: Record<string, string> = {}
+            lsRes.data.forEach((ls) => {
+              if (ls.rating) lmap[ls.skillName] = ls.rating
+            })
+            fields.learningSkills = lmap
+          }
+
+          fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
         }
-      }
+
+        // For progress report tab, load progress report comments
+        if (activeTab === 'progress_report') {
+          try {
+            const prCommentsRes = await getJKProgressReportComments(selectedStudentId, term)
+            if (prCommentsRes.status === 'success') {
+              const pmap: Record<string, string> = {}
+              prCommentsRes.data.forEach((c) => {
+                if (c.comment) pmap[c.sectionType] = c.comment
+              })
+              fields.progressComments = pmap
+            }
+          } catch {
+            fields.progressComments = {}
+          }
+        }
+
+        return fields
+      })
 
       if (ticket !== loadSeq.current) return
       // What the teacher changed here and hasn't saved yet wins over the server.
@@ -261,39 +272,38 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
       console.error('Error loading student data:', err)
       setDocState('error')
     }
-  }, [selectedStudentId, term, activeTab, applyDoc])
+  }, [selectedStudentId, term, activeTab, applyDoc, flushDocs])
 
   useEffect(() => {
     loadStudentData()
   }, [loadStudentData])
 
   // Handlers
-  // A change updates the fields and queues the whole open document.
-  const change = (patch: Partial<KindergartenFields>) => {
-    const next = { ...docRef.current, ...patch }
+  // A change updates the fields and queues the whole open document. `forKey`
+  // is the document it was made for: an AI comment requested for one student
+  // can arrive after the teacher switched, and is then dropped (false), never
+  // applied to the student now open.
+  const change = (patch: Partial<KindergartenFields>, forKey: string | null = docKey): boolean => {
+    const next = applyKindergartenChange({ readyKey: readyKeyRef.current, fields: docRef.current }, forKey, patch)
+    if (!next || !forKey) return false
     applyDoc(next)
-    if (!selectedStudentId || !user?.school || !docKey || readyKeyRef.current !== docKey) return
-    autosave.queue(docKey, {
-      studentId: selectedStudentId,
-      term,
-      doc: activeTab,
-      school: user.school,
-      assessedBy: user.id ?? null,
-      ...next,
-    })
+    if (!user?.school) return true
+    const [studentId, doc] = forKey.split('|') as [string, TabType]
+    autosave.queue(forKey, { studentId, term, doc, school: user.school, assessedBy: user.id ?? null, ...next })
+    return true
   }
 
   const handleRatingChange = (skillId: string, value: string) =>
     change({ ratings: { ...docRef.current.ratings, [skillId]: value } })
 
-  const handleCommentChange = (domainId: string, value: string) =>
-    change({ comments: { ...docRef.current.comments, [domainId]: value } })
+  const handleCommentChange = (domainId: string, value: string, forKey: string | null = docKey) =>
+    change({ comments: { ...docRef.current.comments, [domainId]: value } }, forKey)
 
   const handleLearningSkillChange = (skillName: string, value: string) =>
     change({ learningSkills: { ...docRef.current.learningSkills, [skillName]: value } })
 
-  const handleProgressCommentChange = (sectionType: string, value: string) =>
-    change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } })
+  const handleProgressCommentChange = (sectionType: string, value: string, forKey: string | null = docKey) =>
+    change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } }, forKey)
 
   // Generate AI comment for a single domain or section
   const handleGenerateAIComment = async (
@@ -302,6 +312,8 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     skillsForPrompt: Array<{ name: string; rating: string; description?: string }>
   ) => {
     if (!selectedStudent) return
+    // The document this comment is for, whatever is open when it arrives.
+    const requestedKey = docKey
 
     const ratedSkills = skillsForPrompt.filter((s) => s.rating && s.rating !== '')
     if (ratedSkills.length === 0) {
@@ -335,12 +347,12 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
 
       const data = await response.json()
       if (data.comment) {
-        if (activeTab === 'report_card') {
-          handleCommentChange(key, data.comment)
-        } else {
-          handleProgressCommentChange(key, data.comment)
-        }
-        showNotification('Comment generated successfully', 'success')
+        const applied =
+          activeTab === 'report_card'
+            ? handleCommentChange(key, data.comment, requestedKey)
+            : handleProgressCommentChange(key, data.comment, requestedKey)
+        if (applied) showNotification('Comment generated successfully', 'success')
+        else showNotification(`The AI comment for ${selectedStudent.name} arrived after you switched, so it wasn't added.`, 'error')
       } else {
         throw new Error('No comment returned')
       }

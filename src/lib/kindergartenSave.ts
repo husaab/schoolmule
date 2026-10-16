@@ -41,6 +41,37 @@ export interface KindergartenSnapshot {
   progressComments: Record<string, string>
 }
 
+/** The open document's editable fields (the rest of a snapshot is who and which). */
+export type KindergartenFields = Pick<
+  KindergartenSnapshot,
+  'ratings' | 'comments' | 'learningSkills' | 'teacherAssistant' | 'progressComments'
+>
+
+/**
+ * A change made for document `forKey` (captured when it was made: an AI
+ * comment is requested for one student, and may arrive after the teacher has
+ * switched): the merged fields when that document is the one open and
+ * loaded, else null (the change is dropped, never applied to another student).
+ */
+export function applyKindergartenChange(
+  open: { readyKey: string | null; fields: KindergartenFields },
+  forKey: string | null,
+  patch: Partial<KindergartenFields>,
+): KindergartenFields | null {
+  if (!forKey || open.readyKey !== forKey) return null
+  return { ...open.fields, ...patch }
+}
+
+/**
+ * Read a document only after every earlier edit has saved (or failed). SK
+ * subject comments belong to both documents, so the next document must not
+ * read them before the previous one's save has landed.
+ */
+export async function loadAfterPendingSaves<T>(flush: () => Promise<void>, load: () => Promise<T>): Promise<T> {
+  await flush()
+  return load()
+}
+
 type SaveOpts = { keepalive?: boolean }
 type Call = () => Promise<unknown>
 

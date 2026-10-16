@@ -3,6 +3,7 @@ import {
   ackBatch,
   clampScoreInput,
   discardFailed,
+  failKeys,
   displayValue,
   drop,
   emptyQueue,
@@ -88,6 +89,18 @@ describe('scoreAutosaveQueue', () => {
     s = drop(drop(s, K1), K2)
     expect(s.failed).toEqual({})
     expect(s.pending).toEqual({ 's3|a1': 2 })
+  })
+
+  it('failKeys fails only the keys that failed; the rest of the batch counts as saved', () => {
+    let s = enqueue(emptyQueue(), K1, 8)
+    s = enqueue(s, K2, 4)
+    s = enqueue(s, 's3|a1', 5)
+    s = takeBatch(s).state
+    s = enqueue(s, 's3|a1', 6) // re-typed while in flight: stays pending
+    s = failKeys(s, [K2, 's3|a1'], 'Failed to save')
+    expect(s.inFlight).toEqual({})
+    expect(s.failed).toEqual({ [K2]: { value: 4, message: 'Failed to save' } })
+    expect(s.pending).toEqual({ 's3|a1': 6 })
   })
 
   it('discardFailed forgets every failed value (and nothing else)', () => {
