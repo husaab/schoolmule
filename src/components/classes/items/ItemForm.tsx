@@ -31,6 +31,7 @@ import { classTitle } from '@/lib/classesHome'
 import { dayLabel } from '@/lib/classStream'
 import { classHref, classItemHref } from '@/lib/classroomRoutes'
 import { KIND_LABELS } from '@/lib/classworkRows'
+import { GRADING_VIEW_CODES } from '@/lib/gradingView'
 import {
   autosaveFailure,
   draftItemInput,
@@ -116,6 +117,8 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
+  // A refusal the grading view resolves (grades already on students' work): the banner links there.
+  const [bannerLink, setBannerLink] = useState<string | null>(null)
   const [topicModalOpen, setTopicModalOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [autosave, setAutosave] = useState<AutosaveState>(item ? 'saved' : 'idle')
@@ -315,6 +318,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     }
     setSaving(true)
     setBanner(null)
+    setBannerLink(null)
     // An autosave in flight may be creating the item: let it land first, and
     // hold any new one until this save is done.
     if (timerRef.current !== null) {
@@ -356,6 +360,13 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     } catch (err) {
       const message = messageOf(err, `The ${kindWord} couldn't be saved.`)
       setBanner(message)
+      const id = itemIdRef.current
+      const gradable = kind === 'assignment' || kind === 'quiz'
+      setBannerLink(
+        isApiError(err) && err.code && GRADING_VIEW_CODES.includes(err.code) && id && gradable && savedRef.current?.effectiveStatus === 'posted'
+          ? classItemHref(classId, id)
+          : null,
+      )
       showNotification(message, 'error')
       finishFailed()
     }
@@ -544,8 +555,32 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
         {banner && (
           <div role="alert" className="flex basis-full items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
             <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" aria-hidden="true" />
-            <p className="flex-1">{banner}</p>
-            <button type="button" aria-label="Dismiss" onClick={() => setBanner(null)} className="cursor-pointer text-rose-700 hover:text-rose-900">
+            <p className="flex-1">
+              {banner}
+              {bannerLink && (
+                <>
+                  {' '}
+                  {/* A new tab, so this form (and what is typed in it) stays open. */}
+                  <Link
+                    href={bannerLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-rose-900 underline underline-offset-2"
+                  >
+                    Open the grading view
+                  </Link>
+                </>
+              )}
+            </p>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => {
+                setBanner(null)
+                setBannerLink(null)
+              }}
+              className="cursor-pointer text-rose-700 hover:text-rose-900"
+            >
               <XMarkIcon className="h-4 w-4" />
             </button>
           </div>

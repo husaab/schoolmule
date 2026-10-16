@@ -33,7 +33,17 @@ interface PublishAssessmentsModalProps {
   publications: Record<string, AssessmentPublicationState>
   /** Called after any change, so the gradebook can refresh its badges. */
   onChanged: () => void
+  /**
+   * Drafts on students' turned-in work that this Publish releases too, by
+   * assessment (a category counts the columns inside it): publishing a
+   * column publishes every pending draft on it (spec D3).
+   */
+  draftCounts?: Record<string, number>
+  /** "Draft · not posted" and the like, for columns whose classwork students can't see yet. */
+  notPosted?: Record<string, string>
 }
+
+const allDrafts = (n: number) => (n === 1 ? 'the 1 draft' : `all ${n} drafts`)
 
 /**
  * Publish / manage assessments: publishing shows the grades to students and parents.
@@ -52,6 +62,8 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
   assessments,
   publications,
   onChanged,
+  draftCounts = {},
+  notPosted = {},
 }) => {
   const [preview, setPreview] = useState<PublishPreview | null>(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
@@ -74,6 +86,7 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
     [assessments],
   )
   const anyPublished = assessments.some((a) => publications[a.assessmentId]?.isPublished)
+  const totalDrafts = assessments.reduce((sum, a) => sum + (draftCounts[a.assessmentId] ?? 0), 0)
 
   // Reset only on the closed -> open transition.
   //
@@ -304,6 +317,16 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                           {state?.isPublished && (
                             <p className="text-xs text-emerald-600">Already live to parents</p>
                           )}
+                          {(draftCounts[a.assessmentId] ?? 0) > 0 && (
+                            <p className="text-xs text-cyan-700">
+                              Publishes {allDrafts(draftCounts[a.assessmentId])} on students&rsquo; turned-in work too
+                            </p>
+                          )}
+                          {notPosted[a.assessmentId] && (
+                            <p className="text-xs text-amber-700">
+                              {notPosted[a.assessmentId]}: students can&rsquo;t see the work yet, but publishing shows its grades
+                            </p>
+                          )}
                         </div>
                         {loadingPreview ? (
                           <span className="text-xs text-slate-400">checking…</span>
@@ -386,6 +409,12 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                         {preview?.skippedUngradedChildIds.length} ungraded item
                         {preview?.skippedUngradedChildIds.length === 1 ? '' : 's'} inside those
                         categories stay unpublished.
+                      </p>
+                    )}
+                    {totalDrafts > 0 && (
+                      <p className="text-cyan-800">
+                        Publishing also releases {allDrafts(totalDrafts)} on students&rsquo; turned-in work.
+                        Students and parents will see these grades.
                       </p>
                     )}
                     <p className="text-slate-500">

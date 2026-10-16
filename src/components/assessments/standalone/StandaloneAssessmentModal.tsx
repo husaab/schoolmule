@@ -3,9 +3,13 @@
 // One standalone (non-category) assessment: every student's score in a single
 // column, the class average, publish state, and an inline editor for the
 // assessment's own details. Scores autosave as the teacher types (D17),
-// through the class's grades autosave, exactly like the grid.
+// through the class's grades autosave, exactly like the grid. A column filled
+// by an assignment or quiz shows the classwork layer like the grid (drafts,
+// "In", past due), links to its grading view and offers "Publish N" while it
+// holds drafts; drafts never count in the average.
 
 import React, { useMemo, useState } from 'react'
+import Link from 'next/link'
 import Modal from '@/components/shared/modal'
 import {
   Button,
@@ -29,7 +33,10 @@ import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav
 import { cellState, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { toEngineAssessment } from '@/components/assessments/scores/liveGrade'
 import SavedPill from '@/components/gradebook/SavedPill'
+import GridLegend from '@/components/gradebook/GridLegend'
 import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
+import { classItemHref } from '@/lib/classroomRoutes'
+import { draftCount, EMPTY_OVERLAY, overlayCell, type OverlayIndex } from '@/lib/gridOverlay'
 
 interface StandaloneAssessmentModalProps {
   isOpen: boolean
@@ -50,7 +57,15 @@ interface StandaloneAssessmentModalProps {
   onPublish: (assessments: AssessmentPayload[]) => void
   /** Edits to name, points, max score or date, to merge into the page's list. */
   onAssessmentMutated: (result: AssessmentMutation) => void
+  /** The classwork layer (turn-in columns and their draft / In / past-due cells). */
+  overlay?: OverlayIndex
+  /** A turn-in column not published yet: what is typed into it is a draft. */
+  keepsDrafts?: (assessmentId: string) => boolean
+  /** "Publish N" on a turn-in column holding drafts. */
+  onPublishDrafts?: (assessment: AssessmentPayload) => void
 }
+
+const noDrafts = () => false
 
 // Dates arrive as ISO strings; split off the day so a UTC midnight doesn't
 // roll back to the previous evening in Toronto.
@@ -74,6 +89,9 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   publications,
   onPublish,
   onAssessmentMutated,
+  overlay = EMPTY_OVERLAY,
+  keepsDrafts = noDrafts,
+  onPublishDrafts,
 }) => {
   // The page keys this modal by assessment id, so switching columns remounts
   // it and the editor starts closed.
@@ -86,21 +104,32 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   const maxScore = Number(assessment.maxScore || 100)
   const points = assessment.weightPoints || assessment.weightPercent || 0
   const summary = summarizePublication(assessment, allAssessments, publications)
+  const column = overlay.columns[assessment.assessmentId]
+  const drafts = draftCount(overlay, assessment.assessmentId)
+  const holdsDrafts = keepsDrafts(assessment.assessmentId)
 
   // Resolve each student's cell (local value first, then saved) and run it through
   // the engine. Blank cells are not yet graded and carry no weight anywhere
   // in SchoolMule; missing counts as 0; excused never counts.
   const engineAssessment = toEngineAssessment(assessment)
+  // Drafts are not grades: the average reads the gradebook's own value for them.
   const rows = students.map((student) => {
     const key = `${student.studentId}|${assessment.assessmentId}`
-    const saved = lookups.existing[key] ?? null
+    const matrix = { saved: lookups.existing[key] ?? null, status: lookups.status[key] ?? 'graded' }
+    const cell = overlayCell(overlay, student.studentId, assessment.assessmentId, matrix, !holdsDrafts)
+    const saved = cell.saved
     const value = autosave.displayValue(key, saved)
-    const status = lookups.status[key] ?? 'graded'
-    const row = { assessment_id: assessment.assessmentId, score: value, status }
+    const status = cell.status
+    const draft = cell.draft || (holdsDrafts && value != null)
+    const counted = draft || holdsDrafts ? { score: matrix.saved, status: matrix.status } : { score: value, status }
+    const row = { assessment_id: assessment.assessmentId, ...counted }
     const result = computeAssessmentForStudent(engineAssessment, [engineAssessment], {
       [assessment.assessmentId]: { score: row.score, state: cellState(row) },
     })
-    return { student, key, saved, value, status, result }
+    const mark = column
+      ? { draft, turnedIn: cell.turnedIn, late: cell.isLate, derivedMissing: cell.derivedMissing }
+      : undefined
+    return { student, key, saved, value, status, result, mark }
   })
   const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
   const counted = rows.filter((r) => r.result.isCounted)
@@ -126,7 +155,18 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
 
       <ModalBody>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <PublishStateBadge summary={summary} variant="chip" />
+          <span className="flex flex-wrap items-center gap-2">
+            <PublishStateBadge summary={summary} variant="chip" />
+            {column && (
+              <Link
+                href={`${classItemHref(classId, column.itemId)}?from=grades`}
+                onClick={() => void autosave.flush()}
+                className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
+              >
+                Grade with the student&apos;s work
+              </Link>
+            )}
+          </span>
           {!editing && (
             <Button variant="secondary" onClick={() => setEditing(true)}>
               <PencilSquareIcon className="h-4 w-4" />
@@ -200,6 +240,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                             onCommit={() => void autosave.flush()}
                             onSetStatus={(status) => setStatus(row.student.studentId, assessment.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, 0)}
+                            mark={row.mark}
                           />
                           <td className="px-4 py-2 text-right text-sm tabular-nums text-slate-500">
                             {pct == null ? '—' : `${(Math.round(pct * 10) / 10).toFixed(1)}%`}
@@ -212,6 +253,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
               </div>
             )}
 
+            {column && <GridLegend variant="category" classwork />}
             <ul className="space-y-1 text-xs text-slate-400">
               <li>Arrow keys move between students; Enter moves down.</li>
               <li>Blank cells are not yet graded and carry no weight anywhere in SchoolMule. A typed 0 is a real 0.</li>
@@ -227,8 +269,13 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
+        {column && drafts > 0 && onPublishDrafts && (
+          <Button onClick={() => onPublishDrafts(assessment)} disabled={editing} title="Publish the drafts in this column">
+            Publish {drafts}
+          </Button>
+        )}
         <Button
-          variant={summary.state === 'all' ? 'secondary' : 'primary'}
+          variant={summary.state === 'all' || (column && drafts > 0) ? 'secondary' : 'primary'}
           onClick={() => onPublish([assessment])}
           disabled={editing}
           title={

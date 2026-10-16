@@ -53,6 +53,10 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
   const { setParams } = filters
   const sub = parseGradesSub(filters.get('sub'))
   const addRequested = filters.get('add') === '1'
+  // ?focus={assessmentId} (Classwork rows, Create assessment, the grading
+  // view's Back): transient, dropped once the Scores grid has shown it.
+  const focusAssessmentId = filters.get('focus') || null
+  const clearFocus = useCallback(() => setParams({ focus: null }), [setParams])
   const kindergarten = isJK(data.class.grade) || isSK(data.class.grade)
 
   // The gradebook components take the class as /classes/:id returns it.
@@ -111,7 +115,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
   const selectSub = useCallback(
     (next: GradesSub, extra: Record<string, string | null> = {}) => {
       flushAll()
-      setParams({ sub: next === 'scores' ? null : next, add: null, ...extra })
+      setParams({ sub: next === 'scores' ? null : next, add: null, focus: null, ...extra })
     },
     [flushAll, setParams],
   )
@@ -225,7 +229,13 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
 
       <div role="tabpanel" aria-labelledby={`grades-sub-${sub}`}>
         {sub === 'scores' && (
-          <GradebookWorkspace classId={classId} classData={classData} onClassAverage={setClassAverage} />
+          <GradebookWorkspace
+            classId={classId}
+            classData={classData}
+            onClassAverage={setClassAverage}
+            focusAssessmentId={focusAssessmentId}
+            onFocusHandled={clearFocus}
+          />
         )}
         {sub === 'setup' && <AssessmentsSection classId={classId} openAdd={addRequested} onAddOpened={clearAdd} />}
         {sub === 'report-comments' && (

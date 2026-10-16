@@ -1,6 +1,17 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+// The category window (D15, Teacher-Grades board): every assessment in a
+// category as a column, the category total pinned at the far right. Scores
+// autosave as the teacher types (D17), through the class's grades autosave.
+//
+// Classwork (spec D3): a column filled by an assignment or quiz shows its
+// drafts grey and italic, "In" for work turned in with no grade yet and a
+// rose dot for work past due. Its name opens the grading view, and while it
+// holds drafts its header offers "Publish N" instead of its publish state.
+// Drafts never count in the category score.
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import Modal from '@/components/shared/modal'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
@@ -17,7 +28,11 @@ import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav
 import { buildScoreLookup, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade'
 import SavedPill from '@/components/gradebook/SavedPill'
+import GridLegend from '@/components/gradebook/GridLegend'
+import Avatar from '@/components/avatar/Avatar'
 import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
+import { classItemHref } from '@/lib/classroomRoutes'
+import { categoryDot, draftCount, EMPTY_OVERLAY, overlayCell, withoutDraftColumns, type OverlayIndex } from '@/lib/gridOverlay'
 
 
 interface ChildAssessmentsModalProps {
@@ -36,7 +51,19 @@ interface ChildAssessmentsModalProps {
   publications: Record<string, AssessmentPublicationState>
   /** Opens the publish modal for the given assessments (children here). */
   onPublish: (assessments: AssessmentPayload[]) => void
+  /** The classwork layer (turn-in columns and their draft / In / past-due cells). */
+  overlay?: OverlayIndex
+  /** A turn-in column not published yet: what is typed into it is a draft. */
+  keepsDrafts?: (assessmentId: string) => boolean
+  /** "Draft · not posted" and the like, by assessment, for columns whose classwork students can't see yet. */
+  notPosted?: Record<string, string>
+  /** A column to bring into view and flash when the window opens (?focus=). */
+  highlightAssessmentId?: string | null
+  /** "Publish N" on a turn-in column holding drafts. */
+  onPublishDrafts?: (assessment: AssessmentPayload) => void
 }
+
+const noDrafts = () => false
 
 const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   isOpen,
@@ -50,12 +77,34 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   onRefresh,
   publications,
   onPublish,
+  overlay = EMPTY_OVERLAY,
+  keepsDrafts = noDrafts,
+  notPosted = {},
+  highlightAssessmentId = null,
+  onPublishDrafts,
 }) => {
   // Individual items are publishable on their own, so they get the same
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
   const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
+
+  // ?focus= on a column inside this category: scroll it into view and flash it.
+  const thRefs = useRef<Record<string, HTMLTableCellElement | null>>({})
+  const [flashId, setFlashId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isOpen || !highlightAssessmentId) return
+    let timer: number | undefined
+    const frame = window.requestAnimationFrame(() => {
+      thRefs.current[highlightAssessmentId]?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+      setFlashId(highlightAssessmentId)
+      timer = window.setTimeout(() => setFlashId(null), 1500)
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [isOpen, highlightAssessmentId])
 
   const toggleChildSelected = (assessmentId: string) => {
     setSelectedChildIds((prev) => {
@@ -73,9 +122,11 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   )
   const rowsByStudent = useMemo(() => groupRowsByStudent(scoresMatrix), [scoresMatrix])
   const { pendingMap } = autosave
+  const hasClasswork = childAssessments.some((c) => c.assessmentId in overlay.columns)
 
   // The category roll-up comes from the engine: counted items weighted by
-  // their points, blanks carry nothing, missing counts as 0, excused never counts.
+  // their points, blanks carry nothing, missing counts as 0, excused never
+  // counts, and drafts are not grades yet.
   const engineAssessments = useMemo(
     () => toEngineAssessments([parentAssessment, ...childAssessments]),
     [parentAssessment, childAssessments]
@@ -85,11 +136,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   const liveByStudent = useMemo(() => {
     const engineParent = engineAssessments[0]
     const engineChildren = engineAssessments.slice(1)
+    const local = withoutDraftColumns(pendingMap(), keepsDrafts)
     return new Map(
       students.map((student) => {
-        const lookup = buildScoreLookup(
-          liveRowsForStudent(student.studentId, rowsByStudent[student.studentId], pendingMap())
-        )
+        const lookup = buildScoreLookup(liveRowsForStudent(student.studentId, rowsByStudent[student.studentId], local))
         return [
           student.studentId,
           {
@@ -99,7 +149,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         ] as const
       })
     )
-  }, [students, rowsByStudent, pendingMap, engineAssessments])
+  }, [students, rowsByStudent, pendingMap, engineAssessments, keepsDrafts])
 
   // Check if all child points add up to parent points
   const totalChildPoints = childAssessments.reduce((sum, child) => {
@@ -111,6 +161,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   // Judged by the children: the category's own flag stays stale after a
   // partial publish, and parents see whichever items are live.
   const summary = summarizePublication(parentAssessment, childAssessments, publications)
+  const childIds = childAssessments.map((c) => c.assessmentId)
 
   return (
     // Wider than the rest of the set on purpose: this one is a grade grid, and
@@ -164,58 +215,99 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                   </th>
                   {childAssessments.map((child) => {
                     const childPublished = publications[child.assessmentId]?.isPublished
+                    const column = overlay.columns[child.assessmentId]
+                    const drafts = draftCount(overlay, child.assessmentId)
+                    const name = (
+                      <span className="flex flex-col items-center gap-0.5">
+                        <span className="max-w-[160px] truncate text-sm font-semibold text-slate-700">{child.name}</span>
+                        <span className="text-xs font-normal text-slate-500">
+                          {child.weightPoints || child.weightPercent || 0} pts · out of {Number(child.maxScore || 100)}
+                        </span>
+                      </span>
+                    )
                     return (
                       <th
                         key={child.assessmentId}
-                        className="whitespace-nowrap px-4 py-2 text-center align-top"
+                        ref={(el) => {
+                          thRefs.current[child.assessmentId] = el
+                        }}
+                        className={`whitespace-nowrap px-4 py-2 text-center align-top transition-shadow duration-300 ${
+                          flashId === child.assessmentId ? 'ring-2 ring-inset ring-cyan-400' : ''
+                        }`}
                       >
-                        <label className="flex cursor-pointer items-center justify-center gap-1.5">
+                        <div className="flex items-start justify-center gap-1.5">
                           <input
                             type="checkbox"
                             checked={selectedChildIds.has(child.assessmentId)}
                             onChange={() => toggleChildSelected(child.assessmentId)}
-                            className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            className="mt-1 h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
                             title="Select this assessment to publish on its own"
+                            aria-label={`Select ${child.name} to publish on its own`}
                           />
-                          <span className="truncate text-sm font-semibold text-slate-700">
-                            {child.name}
-                          </span>
-                        </label>
-                        <div className="mt-0.5 text-xs font-normal text-slate-500">
-                          {child.weightPoints || child.weightPercent || 0} pts · order{' '}
-                          {child.sortOrder || '—'}
+                          {column ? (
+                            // A turn-in column's name opens the grading view, with the students' work.
+                            <Link
+                              href={`${classItemHref(classId, column.itemId)}?from=grades`}
+                              onClick={() => void autosave.flush()}
+                              title="Grade with the student's work"
+                              className="rounded-lg px-1 hover:bg-cyan-50 [&_span:first-child]:text-cyan-700"
+                            >
+                              {name}
+                            </Link>
+                          ) : (
+                            name
+                          )}
                         </div>
+                        {notPosted[child.assessmentId] && (
+                          <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                            {notPosted[child.assessmentId]}
+                          </span>
+                        )}
                         {/* Status, and a way straight into managing just this
                             one — an individual item can be published or pulled
-                            back without touching the rest of the category. */}
-                        <button
-                          onClick={() => onPublish([child])}
-                          className={`mt-1 inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium transition-colors ${
-                            childPublished
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                              : 'border-dashed border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
-                          }`}
-                          title={
-                            childPublished
-                              ? 'Live to parents — click to manage or unpublish this item'
-                              : 'Not visible to parents — click to publish just this item'
-                          }
-                        >
-                          {childPublished ? (
-                            <>
-                              <CheckIcon className="h-3 w-3" />
-                              Live · manage
-                            </>
+                            back without touching the rest of the category. A
+                            column holding drafts offers "Publish N" instead. */}
+                        <div className="mt-1">
+                          {column && drafts > 0 && onPublishDrafts ? (
+                            <button
+                              type="button"
+                              onClick={() => onPublishDrafts(child)}
+                              className="cursor-pointer rounded-full bg-cyan-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-cyan-700"
+                              title="Publish the drafts in this column"
+                            >
+                              Publish {drafts}
+                            </button>
                           ) : (
-                            'Publish'
+                            <button
+                              onClick={() => onPublish([child])}
+                              className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium transition-colors ${
+                                childPublished
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                  : 'border-dashed border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                              }`}
+                              title={
+                                childPublished
+                                  ? 'Live to parents — click to manage or unpublish this item'
+                                  : 'Not visible to parents — click to publish just this item'
+                              }
+                            >
+                              {childPublished ? (
+                                <>
+                                  <CheckIcon className="h-3 w-3" />
+                                  Live · manage
+                                </>
+                              ) : (
+                                'Publish'
+                              )}
+                            </button>
                           )}
-                        </button>
+                        </div>
                       </th>
                     )
                   })}
                   {/* Pinned at the far right, like the main grid's Term total. */}
                   <th className="sticky right-0 z-10 bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-slate-600 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]">
-                    Category score
+                    {parentAssessment.name} total
                   </th>
                 </tr>
               </thead>
@@ -243,31 +335,51 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         className="border-t border-slate-100 hover:bg-slate-50/70"
                       >
                         <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm font-medium text-slate-800">
-                          {student.name}
+                          <span className="flex items-center gap-2.5">
+                            <Avatar name={student.name} avatar={student.avatar ?? null} size={28} />
+                            {student.name}
+                          </span>
                         </td>
 
                         {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
-                          const saved = existingScoreMap[key] ?? null
-                          const status = statusMap[key] ?? 'graded'
+                          const cell = overlayCell(
+                            overlay,
+                            student.studentId,
+                            child.assessmentId,
+                            { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded' },
+                            !keepsDrafts(child.assessmentId),
+                          )
+                          const shown = autosave.displayValue(key, cell.saved)
                           const maxScore = Number(child.maxScore || 100)
+                          const turnIn = child.assessmentId in overlay.columns
 
                           return (
                             <ScoreCell
                               key={child.assessmentId}
                               inputId={nav.inputId(rowIndex, colIndex)}
                               label={`${student.name} score for ${child.name}`}
-                              value={autosave.displayValue(key, saved)}
+                              value={shown}
                               maxScore={maxScore}
-                              status={status}
+                              status={cell.status}
                               isToggling={togglingKey === key}
                               toggleDisabled={togglingKey !== null}
                               failed={autosave.failedKeys.has(key)}
+                              mark={
+                                turnIn
+                                  ? {
+                                      draft: cell.draft || (keepsDrafts(child.assessmentId) && shown != null),
+                                      turnedIn: cell.turnedIn,
+                                      late: cell.isLate,
+                                      derivedMissing: cell.derivedMissing,
+                                    }
+                                  : undefined
+                              }
                               onValue={(v) => {
                                 // A flagged cell shows a pill, not an input, and a cell (or its
                                 // category) mid-flag takes nothing: a stray value must not clear a flag.
-                                if (status !== 'graded' || togglingKey === key || togglingKey === categoryKey) return
-                                autosave.queue(student.studentId, child.assessmentId, v, saved)
+                                if (cell.status !== 'graded' || togglingKey === key || togglingKey === categoryKey) return
+                                autosave.queue(student.studentId, child.assessmentId, v, cell.saved)
                               }}
                               onCommit={() => void autosave.flush()}
                               onSetStatus={(status) => setStatus(student.studentId, child.assessmentId, status)}
@@ -280,6 +392,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           label={`${student.name} score for ${parentAssessment.name}`}
                           result={live.result}
                           childStates={live.childStates}
+                          dot={categoryDot(overlay, student.studentId, childIds, live.childStates.includes('missing'))}
                           isToggling={togglingKey === categoryKey}
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
@@ -294,11 +407,11 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
           </div>
         )}
 
+        <GridLegend variant="category" classwork={hasClasswork} />
         <ul className="space-y-1 text-xs text-slate-400">
           <li>Arrow keys move between score cells; Enter moves down.</li>
-          <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight.</li>
+          <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight; drafts count once published.</li>
           <li>Hover a cell for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
-          <li>Scores save by themselves as you type; there is no Save button.</li>
         </ul>
       </ModalBody>
 

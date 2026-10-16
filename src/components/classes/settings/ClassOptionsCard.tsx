@@ -21,7 +21,7 @@ interface ClassOptionsCardProps {
 const ROWS: { key: keyof ClassOptions; label: string }[] = [
   { key: 'emailNewPosts', label: 'Email students and parents about new posts by default' },
   { key: 'acceptLate', label: 'Accept work after the due date (marked late)' },
-  { key: 'showClassAverage', label: 'Show students their class average' },
+  { key: 'showClassAverage', label: 'Show students their class average in Classes' },
 ]
 
 export default function ClassOptionsCard({

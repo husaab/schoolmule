@@ -45,7 +45,11 @@ export function useScoreAutosave({
   onSaved,
 }: {
   classId: string
-  /** Merges the saved rows (res.data, and res.drafts once the server sends them) into the grid. */
+  /**
+   * Merges what was saved into the grid: `res.data` (live gradebook cells)
+   * into the score matrix, `res.drafts` (turn-in columns not published yet)
+   * into the classwork overlay (GradebookWorkspace).
+   */
   onSaved?: (res: UpsertScoresResponse) => void
 }): ScoreAutosave {
   const userId = useUserStore((s) => s.user.id) ?? ''

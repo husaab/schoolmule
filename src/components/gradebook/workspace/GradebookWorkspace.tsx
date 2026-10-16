@@ -10,9 +10,18 @@
 // the page or hides it. There is no Save button; the Saved pill in the Grades
 // toolbar shows the state and failed cells are outlined with Retry. What is
 // saved, and through which endpoint, is exactly what the old Save sent.
+//
+// Classwork (spec D3, Teacher-Grades board): a column filled by an assignment
+// or quiz keeps its scores as drafts on the students' submissions until it is
+// published, so the grid lays the classwork overlay
+// (GET /api/classroom/classes/:id/grid-overlay, re-read after saves) over the
+// score matrix: drafts grey and italic, "In" for work turned in with no grade
+// yet, a rose dot for work past due, dots on categories, and "Publish N" on a
+// column holding N drafts. Drafts never count in the totals.
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   getStudentsInClass,
@@ -51,6 +60,29 @@ import { useMessagingStore } from '@/store/useMessagingStore'
 import { useScoreAutosave } from '@/hooks/useScoreAutosave'
 import type { CellValue } from '@/lib/scoreAutosaveQueue'
 import {
+  applySavedScores,
+  categoryDot,
+  draftCount,
+  EMPTY_OVERLAY,
+  indexOverlay,
+  isTurnInColumn,
+  notPostedLabel,
+  overlayCell,
+  withoutDraftColumns,
+  type OverlayIndex,
+} from '@/lib/gridOverlay'
+import { classItemHref } from '@/lib/classroomRoutes'
+import { firstName, OUTSIDE_AUDIENCE_CODE, publishOutcome } from '@/lib/gradingView'
+import { isApiError } from '@/services/apiClient'
+import { getGridOverlay, publishGrades } from '@/services/gradingService'
+import { getClasswork } from '@/services/classworkService'
+import type { ItemStatus } from '@/services/types/classwork'
+import type { ScoreCellMark } from '@/components/assessments/scores/ScoreCell'
+import { useNotificationStore } from '@/store/useNotificationStore'
+import Modal from '@/components/shared/modal'
+import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
+import GridLegend from '@/components/gradebook/GridLegend'
+import {
   MinusCircleIcon,
   AcademicCapIcon,
   UserGroupIcon,
@@ -67,7 +99,26 @@ interface GradebookWorkspaceProps {
   classData: ClassPayload
   /** The class average (null when nothing is graded yet), for the Grades toolbar. */
   onClassAverage?: (average: number | null) => void
+  /**
+   * ?focus= (transient): a column to bring into view once the grid has
+   * loaded. A top-level column scrolls into view and flashes; an assessment
+   * inside a category opens the category window on it.
+   */
+  focusAssessmentId?: string | null
+  /** The focus was applied (the page drops ?focus=). */
+  onFocusHandled?: () => void
 }
+
+/** A turn-in column's "Publish N": publishes its drafts after a confirm. */
+interface DraftPublish {
+  assessment: AssessmentPayload
+  itemId: string
+  count: number
+  /** The column also holds grades for students the item isn't for: publish it whole instead. */
+  outside: boolean
+}
+
+const OVERLAY_REFRESH_MS = 800
 
 const pointsOf = (a: AssessmentPayload) => a.weightPoints || a.weightPercent || 0
 
@@ -75,8 +126,61 @@ const pointsOf = (a: AssessmentPayload) => a.weightPoints || a.weightPercent || 
 // scroll beneath it.
 const TOTAL_SHADOW = 'shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
 
-export default function GradebookWorkspace({ classId, classData, onClassAverage }: GradebookWorkspaceProps) {
+export default function GradebookWorkspace({
+  classId,
+  classData,
+  onClassAverage,
+  focusAssessmentId = null,
+  onFocusHandled,
+}: GradebookWorkspaceProps) {
   const router = useRouter()
+  const showNotification = useNotificationStore((s) => s.showNotification)
+
+  // The classwork layer: turn-in columns and their draft / In / past-due
+  // cells, and the posting state of each column's classwork (by assessment).
+  const [overlay, setOverlay] = useState<OverlayIndex>(EMPTY_OVERLAY)
+  const [itemStatus, setItemStatus] = useState<Record<string, ItemStatus>>({})
+  const [draftPublish, setDraftPublish] = useState<DraftPublish | null>(null)
+  const [publishingDrafts, setPublishingDrafts] = useState(false)
+  // The column the category window opens on (?focus= on an assessment inside a category).
+  const [modalFocusId, setModalFocusId] = useState<string | null>(null)
+
+  const loadOverlay = useCallback(async () => {
+    try {
+      const res = await getGridOverlay(classId)
+      setOverlay(indexOverlay(res.data))
+    } catch (err) {
+      // The overlay is informational: grade entry goes on without it.
+      console.error('Error loading the classwork overlay:', err)
+    }
+  }, [classId])
+
+  // After saves the overlay is read again, once things go quiet.
+  const overlayTimerRef = useRef<number | null>(null)
+  const refreshOverlaySoon = useCallback(() => {
+    if (overlayTimerRef.current) window.clearTimeout(overlayTimerRef.current)
+    overlayTimerRef.current = window.setTimeout(() => {
+      overlayTimerRef.current = null
+      void loadOverlay()
+    }, OVERLAY_REFRESH_MS)
+  }, [loadOverlay])
+  useEffect(
+    () => () => {
+      if (overlayTimerRef.current) window.clearTimeout(overlayTimerRef.current)
+    },
+    [],
+  )
+
+  const loadItemStatus = useCallback(async () => {
+    try {
+      const res = await getClasswork(classId)
+      const next: Record<string, ItemStatus> = {}
+      for (const item of res.data.items) if (item.gradebook) next[item.gradebook.assessmentId] = item.effectiveStatus
+      setItemStatus(next)
+    } catch (err) {
+      console.error('Error loading the classwork list:', err)
+    }
+  }, [classId])
 
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
@@ -123,6 +227,9 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
   const loadedRef = useRef(false)
   const ackedWhileLoadingRef = useRef(false)
   const mergeSaved = useCallback((res: UpsertScoresResponse) => {
+    // Drafts (turn-in columns not published yet) land in the overlay at once.
+    setOverlay((prev) => applySavedScores(prev, res))
+    refreshOverlaySoon()
     if (!loadedRef.current) {
       ackedWhileLoadingRef.current = true
       return
@@ -138,7 +245,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         return { ...row, score: hit.score, status, is_excluded: status === 'excused' }
       }),
     )
-  }, [])
+  }, [refreshOverlaySoon])
 
   const autosave = useScoreAutosave({ classId, onSaved: mergeSaved })
   const { pendingMap, drop: dropLocal } = autosave
@@ -183,9 +290,11 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
     }
   }, [classId])
 
-  // Re-read the matrix (after a missing/excused flag). A cell flagged since
-  // the teacher typed into it keeps the flag: its unsent value is forgotten.
+  // Re-read the matrix (after a missing/excused flag) and the overlay (a flag
+  // on an unpublished turn-in column is a draft). A cell flagged since the
+  // teacher typed into it keeps the flag: its unsent value is forgotten.
   const refreshScoresMatrix = useCallback(async () => {
+    void loadOverlay()
     try {
       const refreshed = await getScoresByClass(classId)
       if (refreshed.status === 'success') {
@@ -202,7 +311,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
     } catch (err) {
       console.error('Error refreshing scores matrix:', err)
     }
-  }, [classId, pendingMap, dropLocal, forgetGoneKeys])
+  }, [classId, pendingMap, dropLocal, forgetGoneKeys, loadOverlay])
 
   // Missing / excused flags save straight away (after any typed score), then
   // the matrix is re-read.
@@ -232,13 +341,15 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         }
         void loadPublications()
         void loadThreadStubs()
+        void loadOverlay()
+        void loadItemStatus()
       })
       .catch((err: unknown) => {
         console.error(err)
         setError(err instanceof Error && err.message ? err.message : 'Unexpected error')
       })
       .finally(() => setLoading(false))
-  }, [classId, loadPublications, loadThreadStubs, forgetGoneKeys])
+  }, [classId, loadPublications, loadThreadStubs, forgetGoneKeys, loadOverlay, loadItemStatus])
 
   useEffect(() => {
     load()
@@ -254,17 +365,66 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
     [engineAssessments],
   )
   const rowsByStudent = useMemo(() => groupRowsByStudent(scoresMatrix), [scoresMatrix])
+
+  // A turn-in column not published yet keeps what is typed into it as drafts.
+  const keepsDrafts = useCallback(
+    (assessmentId: string) =>
+      isTurnInColumn(overlay, assessmentId) && publications[assessmentId] !== undefined && !publications[assessmentId].isPublished,
+    [overlay, publications],
+  )
+  const childIdsOf = useMemo(() => {
+    const out: Record<string, string[]> = {}
+    for (const a of assessments) if (a.parentAssessmentId) (out[a.parentAssessmentId] ||= []).push(a.assessmentId)
+    return out
+  }, [assessments])
+  // What "Publish" publishes besides the gradebook's own cells: a column's
+  // drafts, and for a category the drafts of every column inside it.
+  const draftsByColumn = useMemo(() => {
+    const out: Record<string, number> = {}
+    for (const a of assessments) {
+      const n = a.isParent
+        ? (childIdsOf[a.assessmentId] ?? []).reduce((sum, id) => sum + draftCount(overlay, id), 0)
+        : draftCount(overlay, a.assessmentId)
+      if (n > 0) out[a.assessmentId] = n
+    }
+    return out
+  }, [assessments, childIdsOf, overlay])
+  const notPosted = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [id, status] of Object.entries(itemStatus)) {
+      const label = notPostedLabel(status)
+      if (label) out[id] = label
+    }
+    return out
+  }, [itemStatus])
+
+  /** One cell with the classwork layer over the matrix: its saved value and status, and its marks. */
+  const cellFor = useCallback(
+    (studentId: string, assessmentId: string) => {
+      const key = `${studentId}|${assessmentId}`
+      return overlayCell(
+        overlay,
+        studentId,
+        assessmentId,
+        { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded' },
+        !keepsDrafts(assessmentId),
+      )
+    },
+    [overlay, existingScoreMap, statusMap, keepsDrafts],
+  )
+
   // Live rows merge the values not yet confirmed by the server over the saved
-  // matrix, so totals show what the grid shows.
+  // matrix, so totals show what the grid shows. Drafts are not grades: a
+  // value typed into a column that keeps drafts never counts.
   const liveByStudent = useMemo(() => {
-    const local = pendingMap()
+    const local = withoutDraftColumns(pendingMap(), keepsDrafts)
     return new Map(
       students.map((stu) => {
         const rows = liveRowsForStudent(stu.studentId, rowsByStudent[stu.studentId], local)
         return [stu.studentId, { lookup: buildScoreLookup(rows), grade: computeClassGrade(engineAssessments, rows) }]
       }),
     )
-  }, [students, rowsByStudent, pendingMap, engineAssessments])
+  }, [students, rowsByStudent, pendingMap, engineAssessments, keepsDrafts])
 
   // Class average = mean of the students who have any graded work.
   const assessedPcts = [...liveByStudent.values()].map((v) => v.grade.pct).filter((pct): pct is number => pct != null)
@@ -289,18 +449,28 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
   }, [classId, storedGrades, loading, error, students.length])
 
   // The per-student window re-reads its inputs whenever they change identity,
-  // so they are memoized: its saved scores, and the local values in its old
-  // shape ('' = cleared).
-  const studentModalScores = useMemo(
-    () =>
-      scoresMatrix.map((score) => ({
-        studentId: score.student_id,
-        assessmentId: score.assessment_id,
-        score: score.score,
-        status: score.status,
-      })),
-    [scoresMatrix],
-  )
+  // so they are memoized: its saved scores (a draft shows as the cell's value,
+  // so it is neither hidden nor cleared by mistake), and the local values in
+  // its old shape ('' = cleared).
+  const studentModalScores = useMemo(() => {
+    const byKey = new Map(
+      scoresMatrix.map((score) => [
+        `${score.student_id}|${score.assessment_id}`,
+        { studentId: score.student_id, assessmentId: score.assessment_id, score: score.score, status: score.status },
+      ]),
+    )
+    for (const cell of Object.values(overlay.cells)) {
+      if (cell.state !== 'draft') continue
+      const status = cell.draftStatus ?? 'graded'
+      byKey.set(`${cell.studentId}|${cell.assessmentId}`, {
+        studentId: cell.studentId,
+        assessmentId: cell.assessmentId,
+        score: status === 'missing' ? null : cell.draftScore,
+        status,
+      })
+    }
+    return [...byKey.values()]
+  }, [scoresMatrix, overlay])
   const studentModalLocal = useMemo(
     () =>
       Object.fromEntries(Object.entries(pendingMap()).map(([k, v]) => [k, v == null ? '' : v])) as Record<
@@ -309,6 +479,39 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
       >,
     [pendingMap],
   )
+
+  // Scroll the grid horizontally so the clicked assessment's column is centered.
+  // Manual scrollLeft math (not scrollIntoView) so the page never scrolls vertically.
+  const handleJumpToAssessment = useCallback((assessmentId: string) => {
+    const container = scrollContainerRef.current
+    const th = thRefs.current[assessmentId]
+    if (!container || !th) return
+    const targetLeft = th.offsetLeft - (container.clientWidth - th.clientWidth) / 2
+    container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' })
+    setHighlightedAssessmentId(assessmentId)
+    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current)
+    highlightTimeoutRef.current = window.setTimeout(() => setHighlightedAssessmentId(null), 1500)
+  }, [])
+
+  // ?focus=: once the grid is on screen, bring the column into view (or open
+  // its category window on it), then let the page drop the param.
+  useEffect(() => {
+    if (loading || error || !focusAssessmentId) return
+    const frame = window.requestAnimationFrame(() => {
+      const target = assessments.find((a) => a.assessmentId === focusAssessmentId)
+      const parent = target?.parentAssessmentId
+        ? assessments.find((a) => a.assessmentId === target.parentAssessmentId)
+        : null
+      if (target && parent) {
+        setModalFocusId(target.assessmentId)
+        setSelectedParentAssessment(parent)
+      } else if (target) {
+        handleJumpToAssessment(target.assessmentId)
+      }
+      onFocusHandled?.()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, error, focusAssessmentId, assessments, handleJumpToAssessment, onFocusHandled])
 
   if (loading) {
     return (
@@ -372,8 +575,10 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
     setIsPublishModalOpen(true)
   }
 
+  // A Publish also copies a turn-in column's drafts into the gradebook, so
+  // the matrix and the overlay are read again with the publish state.
   const handlePublishChanged = async () => {
-    await loadPublications()
+    await Promise.all([loadPublications(), refreshScoresMatrix()])
     setSelectedAssessmentIds(new Set())
   }
 
@@ -389,8 +594,55 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
   // flag is being set) never take a number, so a stray value can't clear a flag.
   const handleValue = (studentId: string, assessmentId: string, value: CellValue) => {
     const key = `${studentId}|${assessmentId}`
-    if ((statusMap[key] ?? 'graded') !== 'graded' || togglingKey === key) return
-    autosave.queue(studentId, assessmentId, value, existingScoreMap[key] ?? null)
+    const cell = cellFor(studentId, assessmentId)
+    if (cell.status !== 'graded' || togglingKey === key) return
+    autosave.queue(studentId, assessmentId, value, cell.saved)
+  }
+
+  // The marks a turn-in column's cell carries (none on a plain column).
+  const markFor = (assessmentId: string, cell: ReturnType<typeof cellFor>, shown: CellValue): ScoreCellMark | undefined =>
+    isTurnInColumn(overlay, assessmentId)
+      ? {
+          draft: cell.draft || (keepsDrafts(assessmentId) && shown != null),
+          turnedIn: cell.turnedIn,
+          late: cell.isLate,
+          derivedMissing: cell.derivedMissing,
+        }
+      : undefined
+
+  const studentFirst = (studentId: string) => firstName(students.find((s) => s.studentId === studentId)?.name) || 'the student'
+
+  // "Publish N" on a turn-in column: asks first, then publishes every draft.
+  const openDraftPublish = (a: AssessmentPayload) => {
+    const column = overlay.columns[a.assessmentId]
+    const count = draftCount(overlay, a.assessmentId)
+    if (!column || count === 0) return
+    void autosave.flush()
+    setDraftPublish({ assessment: a, itemId: column.itemId, count, outside: false })
+  }
+
+  const runDraftPublish = async () => {
+    if (!draftPublish || publishingDrafts) return
+    setPublishingDrafts(true)
+    try {
+      await autosave.flush()
+      if (autosave.hasFailures()) {
+        showNotification("Some grades didn't save. Retry them, then publish.", 'error')
+        return
+      }
+      const res = await publishGrades(draftPublish.itemId, 'graded')
+      showNotification(publishOutcome(res.data, studentFirst).message, 'success')
+      setDraftPublish(null)
+      await Promise.all([refreshScoresMatrix(), loadPublications()])
+    } catch (err) {
+      if (isApiError(err) && err.code === OUTSIDE_AUDIENCE_CODE) {
+        setDraftPublish((d) => (d ? { ...d, outside: true } : d))
+      } else {
+        showNotification(err instanceof Error && err.message ? err.message : "The drafts couldn't be published.", 'error')
+      }
+    } finally {
+      setPublishingDrafts(false)
+    }
   }
 
   const handleExportExcel = async () => {
@@ -412,19 +664,6 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
       console.error(err)
       setExportError('Failed to download Excel sheet')
     }
-  }
-
-  // Scroll the grid horizontally so the clicked assessment's column is centered.
-  // Manual scrollLeft math (not scrollIntoView) so the page never scrolls vertically.
-  const handleJumpToAssessment = (assessmentId: string) => {
-    const container = scrollContainerRef.current
-    const th = thRefs.current[assessmentId]
-    if (!container || !th) return
-    const targetLeft = th.offsetLeft - (container.clientWidth - th.clientWidth) / 2
-    container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' })
-    setHighlightedAssessmentId(assessmentId)
-    if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current)
-    highlightTimeoutRef.current = window.setTimeout(() => setHighlightedAssessmentId(null), 1500)
   }
 
   const openColumn = (a: AssessmentPayload) => {
@@ -565,14 +804,47 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
                           <span className="whitespace-nowrap text-[11px] font-normal text-slate-500">{detail}</span>
                         </button>
                       </div>
-                      {/* Categories are judged by their children ("2 of 13 sent"),
-                          not the category's own flag. Clicking a live badge
+                      {notPosted[a.assessmentId] && (
+                        <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                          {notPosted[a.assessmentId]}
+                        </span>
+                      )}
+                      {/* A turn-in column holding drafts offers "Publish N";
+                          other columns keep their publish state. Categories
+                          are judged by their children ("2 of 13 sent"), not
+                          the category's own flag. Clicking a live badge
                           manages publishing; "Not sent" falls through to the header. */}
-                      <PublishStateBadge
-                        summary={summarizePublication(a, assessments, publications)}
-                        variant="header"
-                        onClick={() => openPublishModal(manageTargets(a))}
-                      />
+                      {!a.isParent && draftCount(overlay, a.assessmentId) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openDraftPublish(a)
+                          }}
+                          className="mt-1 cursor-pointer rounded-full bg-cyan-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-cyan-700"
+                          title="Publish the drafts in this column"
+                        >
+                          Publish {draftCount(overlay, a.assessmentId)}
+                        </button>
+                      ) : (
+                        <PublishStateBadge
+                          summary={summarizePublication(a, assessments, publications)}
+                          variant="header"
+                          onClick={() => openPublishModal(manageTargets(a))}
+                        />
+                      )}
+                      {!a.isParent && overlay.columns[a.assessmentId] && (
+                        <Link
+                          href={`${classItemHref(classId, overlay.columns[a.assessmentId].itemId)}?from=grades`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void autosave.flush()
+                          }}
+                          className="mt-1 block text-[11px] font-medium text-cyan-700 hover:text-cyan-800"
+                        >
+                          Grade with work
+                        </Link>
+                      )}
                     </th>
                   )
                 })}
@@ -656,14 +928,22 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
                         const cellLabel = `${stu.name} score for ${a.name}`
 
                         if (a.isParent) {
+                          const childStates = engineAssessments
+                            .filter((c) => c.parent_assessment_id === a.assessmentId)
+                            .map((c) => live.lookup[c.assessment_id]?.state ?? 'blank')
                           return (
                             <CategoryCell
                               key={a.assessmentId}
                               label={cellLabel}
                               result={computeAssessmentForStudent(engineById[a.assessmentId], engineAssessments, live.lookup)}
-                              childStates={engineAssessments
-                                .filter((c) => c.parent_assessment_id === a.assessmentId)
-                                .map((c) => live.lookup[c.assessment_id]?.state ?? 'blank')}
+                              childStates={childStates}
+                              dot={categoryDot(
+                                overlay,
+                                stu.studentId,
+                                childIdsOf[a.assessmentId] ?? [],
+                                childStates.includes('missing') ||
+                                  (childIdsOf[a.assessmentId] ?? []).some((id) => cellFor(stu.studentId, id).status === 'missing'),
+                              )}
                               isToggling={togglingKey === key}
                               toggleDisabled={togglingKey !== null}
                               onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
@@ -675,15 +955,17 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
                           )
                         }
 
-                        const saved = existingScoreMap[key] ?? null
+                        const cell = cellFor(stu.studentId, a.assessmentId)
+                        const shown = autosave.displayValue(key, cell.saved)
                         return (
                           <ScoreCell
                             key={a.assessmentId}
                             inputId={nav.inputId(rowIndex, colIndex)}
                             label={cellLabel}
-                            value={autosave.displayValue(key, saved)}
+                            value={shown}
                             maxScore={Number(a.maxScore || 100)}
-                            status={statusMap[key] ?? 'graded'}
+                            status={cell.status}
+                            mark={markFor(a.assessmentId, cell, shown)}
                             isToggling={togglingKey === key}
                             toggleDisabled={togglingKey !== null}
                             failed={autosave.failedKeys.has(key)}
@@ -737,13 +1019,8 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-600">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-rose-600" aria-hidden="true" />
-          Something missing inside
-        </span>
-        <span className="text-slate-500">Click a category (or any score in it) to open its assessments.</span>
-      </div>
+      <GridLegend variant="grid" classwork={Object.keys(overlay.columns).length > 0} />
+
 
       {/* Floating publish tray: appears when columns are ticked. */}
       {selectedAssessmentIds.size > 0 && (
@@ -783,7 +1060,13 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
           onClose={() => {
             void autosave.flush()
             setSelectedParentAssessment(null)
+            setModalFocusId(null)
           }}
+          overlay={overlay}
+          keepsDrafts={keepsDrafts}
+          notPosted={notPosted}
+          highlightAssessmentId={modalFocusId}
+          onPublishDrafts={openDraftPublish}
           parentAssessment={selectedParentAssessment}
           childAssessments={assessments.filter((a) => a.parentAssessmentId === selectedParentAssessment.assessmentId)}
           students={sortedStudents}
@@ -808,6 +1091,9 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
             void autosave.flush()
             setStandaloneAssessmentId(null)
           }}
+          overlay={overlay}
+          keepsDrafts={keepsDrafts}
+          onPublishDrafts={openDraftPublish}
           assessment={standaloneAssessment}
           allAssessments={assessments}
           students={sortedStudents}
@@ -867,7 +1153,56 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         assessments={publishTargets}
         publications={publications}
         onChanged={handlePublishChanged}
+        draftCounts={draftsByColumn}
+        notPosted={notPosted}
       />
+
+      {/* "Publish N" on a turn-in column: every draft in it, after a confirm. */}
+      <Modal isOpen={draftPublish !== null} onClose={() => !publishingDrafts && setDraftPublish(null)} size="md">
+        {draftPublish && (
+          <>
+            <ModalHeader
+              title={
+                draftPublish.outside
+                  ? 'Publish the whole column'
+                  : `Publish ${draftPublish.count} draft${draftPublish.count === 1 ? '' : 's'}?`
+              }
+              subtitle={draftPublish.assessment.name}
+              icon={MegaphoneIcon}
+            />
+            <ModalBody>
+              <ConfirmBody tone={draftPublish.outside ? 'warning' : 'brand'}>
+                {draftPublish.outside
+                  ? "This column also has grades for students the assignment isn't assigned to, so it is published as a whole: its Publish window shows those grades and every draft in it."
+                  : 'Students and parents will see these grades.'}
+              </ConfirmBody>
+            </ModalBody>
+            <ModalFooter>
+              <Button type="button" variant="secondary" onClick={() => setDraftPublish(null)} disabled={publishingDrafts}>
+                Cancel
+              </Button>
+              {draftPublish.outside ? (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const target = draftPublish.assessment
+                    setDraftPublish(null)
+                    setSelectedParentAssessment(null)
+                    setStandaloneAssessmentId(null)
+                    openPublishModal([target])
+                  }}
+                >
+                  Open Publish…
+                </Button>
+              ) : (
+                <Button type="button" loading={publishingDrafts} onClick={() => void runDraftPublish()}>
+                  Publish
+                </Button>
+              )}
+            </ModalFooter>
+          </>
+        )}
+      </Modal>
 
       {selectedExclusionStudent && (
         <ExcludedAssessmentsModal

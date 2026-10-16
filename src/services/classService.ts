@@ -15,6 +15,7 @@ import {
   UnenrollStudentResponse,
 } from "./types/student";
 import { GradeValue } from "@/lib/schoolUtils";
+import type { UpsertDraftRow } from "./types/grading";
 
 /**
  * Fetch all classes for a given school
@@ -287,14 +288,15 @@ export interface UpsertedScoreRow {
 }
 
 /**
- * POST …/scores answers with the saved rows. Later the server also returns
- * `drafts` (turn-in columns that are not published yet); callers must
- * tolerate both shapes.
+ * POST …/scores answers with the saved rows: `data` for live gradebook cells,
+ * `drafts` for cells of turn-in columns that are not published yet (spec D3:
+ * those wait on the students' submissions, not in the gradebook). A
+ * plain-only save answers `drafts: []`; an older server sends none.
  */
 export interface UpsertScoresResponse {
   status: string;
   data: UpsertedScoreRow[];
-  drafts?: unknown[];
+  drafts?: UpsertDraftRow[];
   message?: string;
 }
 

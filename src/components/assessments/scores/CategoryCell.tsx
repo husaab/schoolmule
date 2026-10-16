@@ -4,10 +4,14 @@
 // item inside is counted, "—" when nothing is graded yet, "Excused" when every
 // item is excused. Its "…" control applies a status to the whole category.
 // Clicking anywhere in the cell (or Enter on its button) opens the category
-// window, where the items inside are scored.
+// window, where the items inside are scored. A dot says what is inside
+// (D15): rose when anything is missing (flagged, or classwork past due), else
+// cyan when classwork inside is turned in or holds a draft, waiting for the
+// teacher.
 
 import React from 'react'
 import type { AssessmentResult, CellState, ScoreStatus } from '@/lib/gradeEngine'
+import type { CategoryDot } from '@/lib/gridOverlay'
 import StatusControl from './StatusControl'
 import { pillClass } from './ScoreCell'
 
@@ -25,8 +29,15 @@ interface CategoryCellProps {
   onClick?: () => void
   /** A score inside this category failed to save. */
   failed?: boolean
+  /** The classwork layer's dot; without it, a flagged-missing item inside still shows the rose dot. */
+  dot?: CategoryDot
   className?: string
   title?: string
+}
+
+const DOTS: Record<Exclude<CategoryDot, null>, { className: string; label: string }> = {
+  missing: { className: 'bg-rose-600', label: 'Something missing inside' },
+  waiting: { className: 'bg-cyan-500', label: 'Turned in or draft, waiting for you' },
 }
 
 /**
@@ -56,13 +67,14 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   onSetStatus,
   onClick,
   failed = false,
+  dot,
   className = '',
   title,
 }) => {
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
   // Something inside is flagged missing (counts as 0): the board's rose dot.
-  const missingInside = childStates.includes('missing')
+  const shownDot: CategoryDot = dot !== undefined ? dot : childStates.includes('missing') ? 'missing' : null
   const score = excused ? (
     <span className={`inline-block rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${pillClass.excused}`}>
       Excused
@@ -79,8 +91,12 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   const value = (
     <span className="inline-flex items-center gap-1.5">
       {score}
-      {missingInside && (
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-rose-600" title="Something missing inside" aria-label="Something missing inside" />
+      {shownDot && (
+        <span
+          className={`h-[7px] w-[7px] shrink-0 rounded-full ${DOTS[shownDot].className}`}
+          title={DOTS[shownDot].label}
+          aria-label={DOTS[shownDot].label}
+        />
       )}
     </span>
   )
