@@ -7,7 +7,7 @@ import { listAnnouncements } from '@/services/announcementService'
 import type { AnnouncementItem } from '@/services/types/announcement'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { formatListStamp } from '@/components/messaging/formatters'
-import { childColor, childInitial } from './childColors'
+import ChildAvatar from './ChildAvatar'
 
 /**
  * Dashboard card: the latest announcements across every child, unread
@@ -59,19 +59,15 @@ const AnnouncementsCard: React.FC<{ limit?: number }> = ({ limit = 3 }) => {
         <ul className="divide-y divide-stone-100">
           {items.map((a) => {
             const child = a.children?.[0] ?? null
-            const color = child ? childColor(child.studentId) : null
             return (
               <li key={a.announcementId}>
                 <Link
                   href={`/parent/messages?tab=announcements&announcement=${encodeURIComponent(a.announcementId)}`}
                   className="flex items-center gap-3 py-2.5 hover:bg-stone-50/60 -mx-2 px-2 rounded-xl"
                 >
-                  {color && child ? (
-                    <span
-                      className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-xs font-semibold flex-shrink-0`}
-                      title={child.name}
-                    >
-                      {childInitial(child.name)}
+                  {child ? (
+                    <span className="flex flex-shrink-0" title={child.name}>
+                      <ChildAvatar studentId={child.studentId} name={child.name} size={32} />
                     </span>
                   ) : (
                     <span className="w-8 h-8 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center flex-shrink-0" title="Whole school">

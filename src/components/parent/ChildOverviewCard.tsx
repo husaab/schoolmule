@@ -10,7 +10,8 @@ import {
 } from '@heroicons/react/24/outline'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { ChildSummary } from '@/services/types/parentPortal'
-import { childColor, childInitial, gradeTextColor } from './childColors'
+import { gradeTextColor } from './childColors'
+import ChildAvatar from './ChildAvatar'
 
 /**
  * Where each card link goes, with a one-line hint built from the numbers
@@ -60,17 +61,12 @@ const ChildOverviewCard: React.FC<{ summary: ChildSummary; recentMarks?: number 
   recentMarks = 0,
 }) => {
   const selectChild = useSelectedChildStore((s) => s.selectChild)
-  const color = childColor(summary.studentId)
 
   return (
     <div className="h-full bg-white rounded-2xl shadow-sm border border-stone-200/70 p-6">
       {/* Child identity */}
       <div className="flex items-center gap-4 mb-6">
-        <span
-          className={`w-12 h-12 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-lg font-semibold flex-shrink-0`}
-        >
-          {childInitial(summary.name)}
-        </span>
+        <ChildAvatar studentId={summary.studentId} name={summary.name} size={48} />
         <div className="min-w-0">
           <h3 className="text-lg font-semibold text-slate-900 truncate">{summary.name}</h3>
           <p className="text-sm text-slate-500">

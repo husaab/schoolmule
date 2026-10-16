@@ -6,7 +6,8 @@ import { ArrowRightIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { getRecentPublications, markPublicationsSeen } from '@/services/parentPortalService'
 import { RecentPublicationItem } from '@/services/types/parentPortal'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
-import { childColor, childInitial, gradeTextColor } from './childColors'
+import { gradeTextColor } from './childColors'
+import ChildAvatar from './ChildAvatar'
 
 const formatRelativeDate = (iso: string) => {
   const then = new Date(iso)
@@ -22,16 +23,11 @@ const FeedRow: React.FC<{ item: RecentPublicationItem; showChild: boolean }> = (
   item,
   showChild,
 }) => {
-  const color = childColor(item.studentId)
-
   return (
     <li className="flex items-center gap-3 py-3">
       {showChild && (
-        <span
-          className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-xs font-semibold flex-shrink-0`}
-          title={item.childName}
-        >
-          {childInitial(item.childName)}
+        <span className="flex flex-shrink-0" title={item.childName}>
+          <ChildAvatar studentId={item.studentId} name={item.childName} size={32} />
         </span>
       )}
 

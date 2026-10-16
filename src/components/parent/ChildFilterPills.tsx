@@ -6,7 +6,8 @@ import {
   ALL_CHILDREN,
   useSelectedChildStore,
 } from '@/store/useSelectedChildStore'
-import { childColor, childInitial } from './childColors'
+import { childColor } from './childColors'
+import ChildAvatar from './ChildAvatar'
 
 /**
  * Horizontal student filter pills for page toolbars. Drives the same
@@ -54,11 +55,7 @@ const ChildFilterPills: React.FC = () => {
                 : 'border-stone-200 text-slate-500 hover:bg-stone-50'
             }`}
           >
-            <span
-              className={`w-6 h-6 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0`}
-            >
-              {childInitial(child.name)}
-            </span>
+            <ChildAvatar studentId={child.studentId} name={child.name} avatar={child.avatar} size={24} />
             {firstName}
           </button>
         )

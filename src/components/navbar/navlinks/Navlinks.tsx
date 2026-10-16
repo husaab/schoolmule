@@ -82,7 +82,7 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
         title="Account settings"
         aria-label="Account settings"
       >
-        <Avatar name={name} avatar={user.avatar} photoUrl={user.photoUrl} size={36} className="block" />
+        <Avatar name={name} avatar={user.avatar} photoUrl={user.photoUrl} size={36} />
       </Link>
     </div>
   )

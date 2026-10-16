@@ -5,6 +5,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import { useState, useEffect, Suspense } from 'react';
 import { getAllStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
+import Avatar from '@/components/avatar/Avatar';
 import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { format } from 'date-fns-tz';
@@ -327,11 +328,7 @@ function GeneralAttendanceContent() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-medium text-cyan-700">
-                                  {student.name.charAt(0)}
-                                </span>
-                              </div>
+                              <Avatar name={student.name} avatar={student.avatar} size={36} />
                               <div>
                                 <p className="font-medium text-slate-900">{student.name}</p>
                                 <p className="text-slate-500 text-sm">Grade {student.grade}</p>

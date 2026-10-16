@@ -94,7 +94,6 @@ const NavBar: FC = () => {
                 avatar={user?.avatar}
                 photoUrl={user?.photoUrl}
                 size={36}
-                className="block"
               />
             </Link>
           </div>

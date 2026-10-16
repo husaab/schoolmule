@@ -21,7 +21,8 @@ interface AvatarProps {
 
 export default function Avatar({ name, avatar = null, photoUrl = null, size = 32, className = '' }: AvatarProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  const label = name.trim() || 'Avatar'
+  // Server names can be missing (a removed sender): never let that throw.
+  const label = (name ?? '').trim() || 'Avatar'
   const box = `inline-block shrink-0 rounded-full ${className}`
 
   // A server-rendered <img> can fail before React attaches onError, so the

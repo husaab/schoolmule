@@ -6,7 +6,7 @@ import {
   useSelectedChildStore,
   useVisibleChildren,
 } from '@/store/useSelectedChildStore'
-import { childColor, childInitial } from './childColors'
+import ChildAvatar from './ChildAvatar'
 import { childSectionId } from './ChildSections'
 
 /**
@@ -50,7 +50,6 @@ const ChildJumpNav: React.FC = () => {
       className="hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-2 bg-white/80 backdrop-blur rounded-full border border-stone-200/70 shadow-md p-2"
     >
       {visible.map((child) => {
-        const color = childColor(child.studentId)
         const active = activeId === childSectionId(child.studentId)
         return (
           <button
@@ -61,11 +60,12 @@ const ChildJumpNav: React.FC = () => {
                 .getElementById(childSectionId(child.studentId))
                 ?.scrollIntoView({ behavior: 'smooth' })
             }
-            className={`group relative w-9 h-9 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-xs font-semibold cursor-pointer transition-all duration-200 ${
+            aria-label={`Jump to ${child.name}`}
+            className={`group relative w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 ${
               active ? 'scale-110 shadow-md' : 'opacity-45 hover:opacity-90'
             }`}
           >
-            {childInitial(child.name)}
+            <ChildAvatar studentId={child.studentId} name={child.name} avatar={child.avatar} size={36} />
             {/* Name flyout on hover */}
             <span className="pointer-events-none absolute right-full mr-2 px-2.5 py-1 rounded-lg bg-slate-900/90 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               {child.name}

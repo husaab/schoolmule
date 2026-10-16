@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { DocumentChartBarIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import ChildSections from '@/components/parent/ChildSections'
-import { childColor, childInitial } from '@/components/parent/childColors'
+import ChildAvatar from '@/components/parent/ChildAvatar'
 
 const ParentReportCardsPage: React.FC = () => {
   const router = useRouter()
@@ -19,18 +19,13 @@ const ParentReportCardsPage: React.FC = () => {
       <ChildSections
         withHeaders={false}
         renderChild={(child) => {
-          const color = childColor(child.studentId)
           return (
             <div
               onClick={() => router.push(`/parent/report-cards/${child.studentId}`)}
               className="group flex items-center justify-between gap-4 bg-white rounded-2xl shadow-sm border border-stone-200/70 p-5 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4 min-w-0">
-                <span
-                  className={`w-12 h-12 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-lg font-semibold flex-shrink-0`}
-                >
-                  {childInitial(child.name)}
-                </span>
+                <ChildAvatar studentId={child.studentId} name={child.name} avatar={child.avatar} size={48} />
                 <div className="min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate">{child.name}</h3>
                   {child.grade != null && (

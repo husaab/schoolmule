@@ -15,7 +15,7 @@ import ParentPageShell from '@/components/parent/ParentPageShell'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
 import SearchableSelect from '@/components/ui/SearchableSelect'
-import { childColor, childInitial } from '@/components/parent/childColors'
+import ChildAvatar from '@/components/parent/ChildAvatar'
 import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams'
 import {
   EyeIcon,
@@ -171,7 +171,6 @@ const ParentStudentReportCardsContent: React.FC = () => {
     }
   }
 
-  const color = childColor(studentId)
   const childName = student?.student?.name || 'Report Cards'
 
   return (
@@ -207,11 +206,7 @@ const ParentStudentReportCardsContent: React.FC = () => {
           {/* Header with term selector */}
           <div className="p-6 border-b border-stone-100">
             <div className="flex items-center gap-4 mb-5">
-              <span
-                className={`w-12 h-12 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-lg font-semibold flex-shrink-0`}
-              >
-                {childInitial(childName)}
-              </span>
+              <ChildAvatar studentId={studentId} name={childName} avatar={student.student?.avatar} size={48} />
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">{childName}</h2>
                 <p className="text-sm text-slate-500">Select a term to view available report cards</p>

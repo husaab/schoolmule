@@ -5,7 +5,11 @@
 // the app renders with, so the two can't drift. Re-run after changing
 // src/lib/avatarShapes.json and commit the output:
 //
-//   node scripts/render-avatar-pngs.mjs
+//   npm run avatars:render     (node scripts/render-avatar-pngs.mjs)
+//
+// Needs Node 20+ plus `jiti` and `sharp` in node_modules. Neither is a
+// declared dependency: jiti ships with the Tailwind/ESLint toolchain and sharp
+// with Next. If an upgrade drops either, `npm i -D jiti sharp` first.
 //
 // The backend links them as `${EMAIL_ASSET_BASE_URL}/email/avatars/<style>-<skin>-<bg>.png`
 // (utils/avatar.js avatarPngUrl).
