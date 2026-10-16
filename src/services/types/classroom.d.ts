@@ -176,3 +176,85 @@ export interface ClassPageData {
   permissions: ClassPagePermissions
   settings: { parentsReadPrivateComments: boolean; studentPhotos: boolean; enabled: boolean }
 }
+
+// ---------------------------------------------------------------------------
+// The class Stream (GET /api/classroom/classes/:classId/stream).
+
+/**
+ * A live assignment, quiz or material the Stream shows beside the posts.
+ * `turnedInCount` and `total` come with turn-in work only.
+ */
+export interface StreamNotice {
+  itemId: string
+  kind: ItemKind
+  title: string
+  /** ISO time the item went live. */
+  postedAt: string
+  /** ISO time the work is due, or null. */
+  dueAt: string | null
+  turnedInCount?: number
+  total?: number
+}
+
+export interface StreamAudience {
+  /** Students who would be EMAILED (the school's student-email switch and their grade permitting). */
+  students: number
+  /** Guardians with an account, an invite pending or only an address on file. */
+  guardians: number
+}
+
+export interface ClassStreamData {
+  /** This class's own posts, pinned first then newest. Custom (hand-picked) posts are not part of it. */
+  announcements: import('./announcement').AnnouncementItem[]
+  notices: StreamNotice[]
+  /** Dated classwork in the next two weeks, earliest first. */
+  upcoming: ComingUpRow[]
+  audience: StreamAudience
+}
+
+// ---------------------------------------------------------------------------
+// The class People tab (GET /api/classroom/classes/:classId/people).
+
+export interface PeopleParent {
+  name: string
+  relation: string | null
+  /** A linked SchoolMule account exists. */
+  hasAccount: boolean
+}
+
+export interface PeopleStudentAccount {
+  status: import('./studentAccount').AccountStatus
+  /** The student's login, when there is one. */
+  userId: string | null
+  lastSeenAt: string | null
+  /** A QR card can be printed (invited or active, and in a QR grade). */
+  qrEligible: boolean
+}
+
+export interface PeopleStudent {
+  studentId: string
+  name: string
+  avatar: import('./profile').AvatarSpec | null
+  photoUrl: string | null
+  account: PeopleStudentAccount
+  parents: PeopleParent[]
+  /** Items the student can see in this class that count as missing. */
+  missingCount: number
+}
+
+export interface PeopleCounts {
+  students: number
+  /** Not invited or invited, not yet signed in. */
+  notSignedIn: number
+  /** Students with at least one missing item. */
+  missingWork: number
+}
+
+export interface ClassPeopleData {
+  teachers: ClassPageTeacher[]
+  students: PeopleStudent[]
+  counts: PeopleCounts
+  /** Admins only: inviting is the school's call. */
+  canInvite: boolean
+  canManageAccounts: boolean
+}

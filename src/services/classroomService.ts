@@ -4,6 +4,8 @@
 
 import apiClient from './apiClient'
 import apiUpload from './apiUpload'
+import { postForPdf } from '@/lib/pdfDownload'
+import { readSkipped } from '@/lib/studentAccounts'
 import type { AvatarSpec } from './types/profile'
 import type {
   ClassArchiveResult,
@@ -13,6 +15,8 @@ import type {
   ClassOptions,
   ClassOptionsResult,
   ClassPageData,
+  ClassPeopleData,
+  ClassStreamData,
   ClassroomEnvelope,
   StudentAvatarResult,
 } from './types/classroom'
@@ -75,3 +79,33 @@ export const setStudentAvatar = (classId: string, studentId: string, avatar: Ava
     `${classPath(classId)}/students/${encodeURIComponent(studentId)}/avatar`,
     { method: 'PUT', body: { avatar } },
   )
+
+/**
+ * GET stream: the class's own announcements (with guardian and student seen
+ * counts), live classwork notices, what is coming up and how many students
+ * and guardians a new post would email.
+ */
+export const getClassStream = (classId: string) => apiClient<ClassroomEnvelope<ClassStreamData>>(`${classPath(classId)}/stream`)
+
+/** GET people: the class's teachers and students with login status, parents, missing work and last active. */
+export const getClassPeople = (classId: string) => apiClient<ClassroomEnvelope<ClassPeopleData>>(`${classPath(classId)}/people`)
+
+const studentPath = (classId: string, studentId: string) => `${classPath(classId)}/students/${encodeURIComponent(studentId)}`
+
+/** POST resend-invite: the invite email again, for a student on the class roster whose invite is still open. */
+export const resendStudentInvite = (classId: string, studentId: string) =>
+  apiClient<ClassroomEnvelope<{ sent: true }>>(`${studentPath(classId, studentId)}/resend-invite`, { method: 'POST' })
+
+/** POST reset-password: a fresh 7-day password link to the student's own email; older links stop working. */
+export const resetStudentPassword = (classId: string, studentId: string) =>
+  apiClient<ClassroomEnvelope<{ sent: true }>>(`${studentPath(classId, studentId)}/reset-password`, { method: 'POST' })
+
+/**
+ * POST qr-cards.pdf for students on the class roster and save the PDF.
+ * Printing always reissues: each printed card voids that student's older one.
+ * Resolves to how many students got no card (and, for a short list, which).
+ */
+export const printClassQrCards = async (classId: string, studentIds: string[], filename = 'student-cards.pdf') => {
+  const headers = await postForPdf(`${classPath(classId)}/qr-cards.pdf`, { studentIds }, filename)
+  return readSkipped(headers)
+}

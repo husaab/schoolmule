@@ -104,6 +104,8 @@ export const createAnnouncement = async (input: NewAnnouncementInput): Promise<A
   if (input.grade) form.set('grade', input.grade);
   (input.studentIds ?? []).forEach((id) => form.append('studentIds', id));
   form.set('ackRequested', input.ackRequested ? '1' : '0');
+  // Only an explicit false turns the emails off (the server's default is on).
+  if (input.sendEmail === false) form.set('sendEmail', 'false');
   form.set('title', input.title);
   form.set('body', input.body);
   if (input.pinnedUntil) form.set('pinnedUntil', input.pinnedUntil);

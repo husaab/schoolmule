@@ -71,6 +71,14 @@ export interface AnnouncementItem {
   seenCount?: number;
   audienceCount?: number;
   ackCount?: number;
+  /**
+   * Staff lists and detail: every student login that can READ the post, and how many of them
+   * opened it. (Not the same as AudiencePreview.studentsWithAccount, which counts who would be EMAILED.)
+   */
+  studentAudienceCount?: number;
+  studentSeenCount?: number;
+  /** Staff only: false when the author posted without emailing anyone. */
+  sendEmail?: boolean;
   /** Custom scope, staff lists: how many students were picked and the first three as "Amina R.". */
   studentCount?: number;
   studentNamesPreview?: string[];
@@ -128,7 +136,13 @@ export interface AnnouncementTargets {
 }
 
 export interface AudiencePreview {
+  /** Students in the audience. */
   students: number;
+  /**
+   * Students who would be EMAILED: a signed-in-capable login, the school's student-email switch on
+   * and their grade permitting. Can be lower than `students`.
+   */
+  studentsWithAccount: number;
   guardiansWithAccount: number;
   guardiansInvitePending: number;
   guardiansEmailOnly: number;
@@ -155,6 +169,8 @@ export interface NewAnnouncementInput {
   /** Custom scope: the picked students (1–500). */
   studentIds?: string[];
   ackRequested?: boolean;
+  /** false posts without emailing guardians or students (default true). */
+  sendEmail?: boolean;
   title: string;
   body: string;
   pinnedUntil?: string | null;
