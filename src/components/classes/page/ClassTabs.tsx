@@ -17,11 +17,19 @@ interface ClassTabsProps {
   onSelect: (tab: ClassTab) => void
   /** The staff tabs unless a variant passes its own (the student and parent class pages). */
   tabs?: ClassTabItem[]
+  /** The open tab's look: it joins the page below it (slate for the student page, white inside the parent's card). */
+  activeClassName?: string
 }
 
 const isPlainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
 
-export default function ClassTabs({ active, hrefFor, onSelect, tabs = CLASS_TABS }: ClassTabsProps) {
+export default function ClassTabs({
+  active,
+  hrefFor,
+  onSelect,
+  tabs = CLASS_TABS,
+  activeClassName = 'bg-slate-50 text-slate-900',
+}: ClassTabsProps) {
   const navRef = useRef<HTMLElement>(null)
 
   // On a phone the bar scrolls sideways: keep the open tab in view (sideways only, never the page).
@@ -51,7 +59,7 @@ export default function ClassTabs({ active, hrefFor, onSelect, tabs = CLASS_TABS
               if (!on) onSelect(tab.id)
             }}
             className={`whitespace-nowrap rounded-t-xl px-4 pb-3 pt-2.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-current ${
-              on ? 'bg-slate-50 text-slate-900' : 'hover:bg-white/45'
+              on ? activeClassName : 'hover:bg-white/45'
             }`}
           >
             {tab.label}

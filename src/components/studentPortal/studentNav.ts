@@ -3,7 +3,7 @@
 // phone tab bar. Home is first; later tasks append Grades, To-do and Messages.
 
 import type { ComponentType, SVGProps } from 'react'
-import { HomeIcon } from '@heroicons/react/24/outline'
+import { ChartBarIcon, HomeIcon } from '@heroicons/react/24/outline'
 
 export type StudentBadgeKey = 'todo' | 'messages'
 
@@ -15,7 +15,10 @@ export interface StudentNavItem {
   badgeKey?: StudentBadgeKey
 }
 
-export const STUDENT_NAV: StudentNavItem[] = [{ href: '/student', label: 'Home', icon: HomeIcon }]
+export const STUDENT_NAV: StudentNavItem[] = [
+  { href: '/student', label: 'Home', icon: HomeIcon },
+  { href: '/student/grades', label: 'Grades', icon: ChartBarIcon },
+]
 
 /** Home matches only itself; every other item also owns its sub-pages. */
 export const isStudentNavActive = (href: string, pathname: string): boolean =>

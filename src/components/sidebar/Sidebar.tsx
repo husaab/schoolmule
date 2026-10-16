@@ -53,6 +53,7 @@ import ViewSwitcher from '@/components/navbar/ViewSwitcher'
 import { canSwitchViews, viewLabelFor } from '@/lib/viewSwitch'
 import { roleLabel } from '@/components/adminUsers/userDisplay'
 import { useRememberedHref } from '@/hooks/useFilterParams'
+import { useParentClassesSeen } from '@/lib/parentClassesSeen'
 
 interface NavLink {
   href: string;
@@ -74,6 +75,7 @@ const teacherLinks: NavLink[] = [
 
 const parentLinks: NavLink[] = [
   { href: '/parent/dashboard', label: 'Overview', icon: HomeIcon },
+  { href: '/parent/classes', label: 'Classes', icon: AcademicCapIcon },
   { href: '/parent/grades', label: 'Grades', icon: BookOpenIcon },
   { href: '/parent/messages', label: 'Messages', icon: InboxIcon },
   { href: '/parent/attendance', label: 'Attendance', icon: ClipboardDocumentCheckIcon },
@@ -129,6 +131,8 @@ const Sidebar = () => {
   const unreadTotal = useMessagingStore((s) => s.summary.unreadConversations + s.summary.unreadAnnouncements);
   // Hidden on the server render; shown after hydration unless dismissed.
   const gradebookHintHidden = useSyncExternalStore(subscribeGradebookHint, readGradebookHintDismissed, () => true);
+  // A small "New" pill beside a parent's Classes link until they first open the page.
+  const parentClassesSeen = useParentClassesSeen();
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -179,7 +183,7 @@ const Sidebar = () => {
 
   // Nav hrefs re-expand each page's remembered filters (filter memory), so
   // returning to Students via the sidebar shows the grade the user had picked.
-  const NavItem = ({ href, label, icon: Icon, isActive, badge }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number }) => (
+  const NavItem = ({ href, label, icon: Icon, isActive, badge, pill }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number; pill?: string }) => (
     <Link
       href={useRememberedHref(href)}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
@@ -190,6 +194,9 @@ const Sidebar = () => {
     >
       <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-cyan-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
       <span className="text-sm flex-1">{label}</span>
+      {pill && (
+        <span className="rounded-full bg-amber-700 px-[7px] py-0.5 text-[10px] font-semibold text-white">{pill}</span>
+      )}
       {badge !== undefined && badge > 0 && (
         <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${user?.role === 'PARENT' ? 'bg-amber-700' : 'bg-cyan-600'}`}>
           {badge > 99 ? '99+' : badge}
@@ -318,6 +325,7 @@ const Sidebar = () => {
                   : pathname === link.href
               }
               badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
+              pill={link.href === '/parent/classes' && !parentClassesSeen ? 'New' : undefined}
             />
             {link.href === '/classes' && (user?.role === 'TEACHER' || user?.role === 'ADMIN') && !gradebookHintHidden && (
               <div className="ml-11 mr-1 flex items-start gap-2 rounded-lg bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
