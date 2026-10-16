@@ -3,9 +3,14 @@ import {
   applyKindergartenChange,
   kindergartenKey,
   loadAfterPendingSaves,
+  openSKDocument,
   saveJKDocument,
   saveSKDocument,
+  type KindergartenDoc,
+  type KindergartenFields,
   type KindergartenSnapshot,
+  type OpenedKindergartenDoc,
+  type SKSaveApi,
 } from './kindergartenSave'
 import { createAutosaver } from './scoreAutosaver'
 
@@ -156,5 +161,125 @@ describe('loadAfterPendingSaves: a document is read only after earlier edits hav
     // The teacher switches to the report card at once: it must read the new comment.
     const read = await loadAfterPendingSaves(() => autosaver.flush(), async () => server.subjectComment)
     expect(read).toBe('Loves painting.')
+  })
+})
+
+describe('openSKDocument: SK subject comments are shared by both documents', () => {
+  const EMPTY: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
+
+  // One SK class on a fake server: subject comments by student and subject,
+  // written and read by both documents. The autosaver saves each document with
+  // the Save button's own calls (saveSKDocument).
+  function setup() {
+    const server = { comments: { k1: { sub1: 'Old.' }, k2: { sub1: 'Draws.' } } as Record<string, Record<string, string>>, down: false }
+    const reachable = () => {
+      if (server.down) throw new Error('Network down')
+    }
+    const api: SKSaveApi = {
+      assessments: async () => reachable(),
+      subjectComments: async (entries) => {
+        reachable()
+        for (const e of entries) server.comments[e.studentId][e.subjectId] = e.comment ?? ''
+      },
+      progressComments: async () => reachable(),
+      teacherAssistant: async () => reachable(),
+    }
+    const autosaver = createAutosaver<KindergartenSnapshot, void>({
+      save: async (batch, opts) => {
+        for (const [, s] of batch) await saveSKDocument(s, api, opts)
+      },
+    })
+    const open = (studentId: string, doc: KindergartenDoc) =>
+      openSKDocument(studentId, doc, autosaver, async () => ({ ...EMPTY, comments: { ...server.comments[studentId] } }))
+    const edit = (studentId: string, doc: KindergartenDoc, fields: KindergartenFields) =>
+      autosaver.queue(kindergartenKey(studentId, doc), { studentId, term: 'Term 1', doc, school: 'DEMO', assessedBy: 'u1', ...fields })
+    return { server, autosaver, open, edit }
+  }
+
+  const fieldsOf = (opened: OpenedKindergartenDoc): KindergartenFields => {
+    if (opened.state !== 'ready') throw new Error(`expected the document to open, got ${JSON.stringify(opened)}`)
+    return opened.fields
+  }
+
+  it('a failed report card save, then Retry from the progress report and an edit there, keeps the retried comment', async () => {
+    const { server, autosaver, open, edit } = setup()
+
+    // 1. The teacher rewrites a subject comment on the report card; its save fails.
+    const rc = fieldsOf(await open('k1', 'report_card'))
+    expect(rc.comments).toEqual({ sub1: 'Old.' })
+    server.down = true
+    edit('k1', 'report_card', { ...rc, comments: { sub1: 'New.' } })
+    await autosaver.flush()
+    expect(Object.keys(autosaver.getState().failed)).toEqual(['k1|report_card'])
+    server.down = false
+
+    // 2. They switch to the progress report.
+    let pr = await open('k1', 'progress_report')
+
+    // 3. They press Retry there (the page opens a waiting document again once
+    //    the retry has run).
+    const retried = autosaver.retry()
+    if (pr.state === 'blocked') pr = await open('k1', 'progress_report')
+    await retried
+    expect(server.comments.k1.sub1).toBe('New.')
+
+    // 4. They edit the progress report (a rating), which saves the whole document.
+    edit('k1', 'progress_report', { ...fieldsOf(pr), ratings: { st1: 'E' } })
+    await autosaver.flush()
+
+    expect(server.comments.k1.sub1).toBe('New.')
+  })
+
+  it("waits while the other document's save has failed, and opens on the saved comment after Discard", async () => {
+    const { server, autosaver, open, edit } = setup()
+    server.down = true
+    edit('k1', 'report_card', { ...EMPTY, comments: { sub1: 'New.' } })
+    await autosaver.flush()
+    server.down = false
+
+    expect(await open('k1', 'progress_report')).toEqual({ state: 'blocked', by: 'report_card' })
+    autosaver.discard()
+    expect(fieldsOf(await open('k1', 'progress_report')).comments).toEqual({ sub1: 'Old.' })
+  })
+
+  it("the document whose save failed opens on the teacher's unsaved version", async () => {
+    const { server, autosaver, open, edit } = setup()
+    server.down = true
+    edit('k1', 'report_card', { ...EMPTY, comments: { sub1: 'New.' }, teacherAssistant: 'Rana Kareem' })
+    await autosaver.flush()
+
+    expect(fieldsOf(await open('k1', 'report_card'))).toEqual({ ...EMPTY, comments: { sub1: 'New.' }, teacherAssistant: 'Rana Kareem' })
+  })
+
+  it('a Retry pressed while the document is being read still opens on the retried version', async () => {
+    const { server, autosaver, edit } = setup()
+    server.down = true
+    edit('k1', 'report_card', { ...EMPTY, comments: { sub1: 'New.' } })
+    await autosaver.flush()
+    server.down = false
+
+    const opened = await openSKDocument('k1', 'report_card', autosaver, async () => {
+      const read = { ...EMPTY, comments: { ...server.comments.k1 } } // read before the retried save lands
+      await autosaver.retry()
+      return read
+    })
+    expect(fieldsOf(opened).comments).toEqual({ sub1: 'New.' })
+  })
+
+  it("another student's failed save does not hold this student's documents", async () => {
+    const { server, autosaver, open, edit } = setup()
+    server.down = true
+    edit('k2', 'report_card', { ...EMPTY, comments: { sub1: 'Paints.' } })
+    await autosaver.flush()
+    server.down = false
+
+    expect(fieldsOf(await open('k1', 'progress_report')).comments).toEqual({ sub1: 'Old.' })
+  })
+
+  it('a document opens only after an edit to the other one has landed', async () => {
+    const { server, open, edit } = setup()
+    edit('k1', 'progress_report', { ...EMPTY, comments: { sub1: 'Loves painting.' } })
+    expect(fieldsOf(await open('k1', 'report_card')).comments).toEqual({ sub1: 'Loves painting.' })
+    expect(server.comments.k1.sub1).toBe('Loves painting.')
   })
 })

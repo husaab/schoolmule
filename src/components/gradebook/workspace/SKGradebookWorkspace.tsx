@@ -42,9 +42,9 @@ import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
 import {
   applyKindergartenChange,
   kindergartenKey,
-  loadAfterPendingSaves,
+  openSKDocument,
+  otherKindergartenDoc,
   type KindergartenFields,
-  type KindergartenSnapshot,
 } from '@/lib/kindergartenSave'
 
 // Rating options for each document type
@@ -70,13 +70,7 @@ const SK_REPORT_CARD_RATINGS = [
 type TabType = 'progress_report' | 'report_card'
 
 const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
-const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
-  ratings: s.ratings,
-  comments: s.comments,
-  learningSkills: s.learningSkills,
-  teacherAssistant: s.teacherAssistant,
-  progressComments: s.progressComments,
-})
+const DOC_NAME: Record<TabType, string> = { progress_report: 'progress report', report_card: 'report card' }
 
 interface SKGradebookWorkspaceProps {
   classId: string
@@ -122,17 +116,16 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   // document. Changes queue only once this document has loaded (the teacher
   // assistant is always sent, so a half-loaded report card must never save),
   // and a late answer for another student or document is dropped.
+  // 'blocked': the student's other document has a save that failed; the two
+  // share subject comments, so this one opens after Retry or Discard
+  // (openSKDocument).
   const autosave = useKindergartenAutosave({ classId, kind: 'sk' })
   const docKey = selectedStudentId ? kindergartenKey(selectedStudentId, activeTab) : null
   const docRef = useRef<KindergartenFields>(EMPTY_FIELDS)
   const readyKeyRef = useRef<string | null>(null)
   const loadSeq = useRef(0)
-  const [docState, setDocState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const { flush: flushDocs } = autosave
-  const snapshotForRef = useRef(autosave.snapshotFor)
-  useEffect(() => {
-    snapshotForRef.current = autosave.snapshotFor
-  }, [autosave.snapshotFor])
+  const [docState, setDocState] = useState<'loading' | 'ready' | 'error' | 'blocked'>('loading')
+  const { flush: flushDocs, getState: docsQueue } = autosave
   const applyDoc = useCallback((next: KindergartenFields) => {
     docRef.current = next
     setRatings(next.ratings)
@@ -180,9 +173,10 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     applyDoc(EMPTY_FIELDS)
 
     try {
-      // Earlier edits save first: SK subject comments belong to both
-      // documents, so this one must not read them before that save lands.
-      const fields = await loadAfterPendingSaves(flushDocs, async () => {
+      // Earlier edits save first, and a failed save of the other document
+      // holds this one: SK subject comments belong to both documents. What
+      // the teacher changed here and hasn't saved yet wins over the server.
+      const opened = await openSKDocument(selectedStudentId, activeTab, { flush: flushDocs, getState: docsQueue }, async () => {
         const fields: KindergartenFields = { ...EMPTY_FIELDS }
 
         // Load standard assessments
@@ -241,9 +235,11 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
       })
 
       if (ticket !== loadSeq.current) return
-      // What the teacher changed here and hasn't saved yet wins over the server.
-      const local = snapshotForRef.current(key)
-      applyDoc(local ? fieldsOf(local) : fields)
+      if (opened.state === 'blocked') {
+        setDocState('blocked')
+        return
+      }
+      applyDoc(opened.fields)
       readyKeyRef.current = key
       setDocState('ready')
     } catch (err) {
@@ -251,7 +247,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
       console.error('Error loading student data:', err)
       setDocState('error')
     }
-  }, [selectedStudentId, term, activeTab, applyDoc, flushDocs])
+  }, [selectedStudentId, term, activeTab, applyDoc, flushDocs, docsQueue])
 
   useEffect(() => {
     loadStudentData()
@@ -366,6 +362,13 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     void autosave.flush()
   }
 
+  // Retry. A document held by its sibling's failed save opens again once the
+  // retry has run (the load waits for it, and stays held if it fails again).
+  const retrySaves = () => {
+    void autosave.retry()
+    if (docState === 'blocked') void loadStudentData()
+  }
+
   // Switching student or document saves the open one first (no confirm).
   const handleStudentSwitch = (studentId: string) => {
     void autosave.flush()
@@ -418,7 +421,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                 <SavedPill
                   status={autosave.status}
                   failedCount={autosave.failedKeys.size}
-                  onRetry={() => void autosave.retry()}
+                  onRetry={retrySaves}
                   onDiscard={() => {
                     autosave.discard()
                     void loadStudentData()
@@ -490,6 +493,22 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                 className="cursor-pointer rounded-lg border border-rose-300 bg-white px-3 py-1.5 font-medium hover:bg-rose-100"
               >
                 Try again
+              </button>
+            </div>
+          )}
+
+          {docState === 'blocked' && selectedStudentId && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              <span>
+                {selectedStudent?.name ?? 'This student'}&apos;s {DOC_NAME[otherKindergartenDoc(activeTab)]} didn&apos;t save, and the
+                two share subject comments. The {DOC_NAME[activeTab]} opens once you Retry (or Discard) that save.
+              </span>
+              <button
+                type="button"
+                onClick={retrySaves}
+                className="cursor-pointer rounded-lg border border-rose-300 bg-white px-3 py-1.5 font-medium hover:bg-rose-100"
+              >
+                Retry
               </button>
             </div>
           )}

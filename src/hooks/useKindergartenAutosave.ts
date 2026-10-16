@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { createAutosaver, PartialSaveError, type SaveOptions } from '@/lib/scoreAutosaver'
-import { statusOf } from '@/lib/scoreAutosaveQueue'
+import { statusOf, type QueueState } from '@/lib/scoreAutosaveQueue'
 import { saveJKDocument, saveSKDocument, type KindergartenSnapshot } from '@/lib/kindergartenSave'
 import {
   bulkUpsertJKAssessments,
@@ -69,6 +69,8 @@ export interface KindergartenAutosave {
   /** The document not yet confirmed by the server (pending, in flight or failed), else null. */
   snapshotFor: (key: string) => KindergartenSnapshot | null
   failedKeys: Set<string>
+  /** The queue right now (for code that reads it after an await, not a render's copy). */
+  getState: () => QueueState<KindergartenSnapshot>
 }
 
 export function useKindergartenAutosave({ classId, kind }: { classId: string; kind: KindergartenKind }): KindergartenAutosave {
@@ -119,6 +121,7 @@ export function useKindergartenAutosave({ classId, kind }: { classId: string; ki
     [state],
   )
   const failedKeys = useMemo(() => new Set(Object.keys(state.failed)), [state.failed])
+  const getState = useCallback(() => autosaver.getState(), [autosaver])
 
-  return { status: statusOf(state), queue, flush, retry, discard, snapshotFor, failedKeys }
+  return { status: statusOf(state), queue, flush, retry, discard, snapshotFor, failedKeys, getState }
 }

@@ -20,6 +20,7 @@ import type {
   SKSubjectCommentEntry,
   SKTeacherAssistantPayload,
 } from '@/services/types/sk'
+import type { QueueState } from './scoreAutosaveQueue'
 
 export type KindergartenDoc = 'progress_report' | 'report_card'
 
@@ -63,9 +64,10 @@ export function applyKindergartenChange(
 }
 
 /**
- * Read a document only after every earlier edit has saved (or failed). SK
- * subject comments belong to both documents, so the next document must not
- * read them before the previous one's save has landed.
+ * Read a document only after every earlier edit has saved (or failed). JK
+ * opens its documents this way (they share nothing); SK goes through
+ * openSKDocument, which also holds a document while the other one's save has
+ * failed.
  */
 export async function loadAfterPendingSaves<T>(flush: () => Promise<void>, load: () => Promise<T>): Promise<T> {
   await flush()
@@ -76,6 +78,68 @@ type SaveOpts = { keepalive?: boolean }
 type Call = () => Promise<unknown>
 
 export const kindergartenKey = (studentId: string, doc: KindergartenDoc) => `${studentId}|${doc}`
+
+export const kindergartenFieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
+  ratings: s.ratings,
+  comments: s.comments,
+  learningSkills: s.learningSkills,
+  teacherAssistant: s.teacherAssistant,
+  progressComments: s.progressComments,
+})
+
+/** What opening an SK document found. */
+export type OpenedKindergartenDoc =
+  | { state: 'ready'; fields: KindergartenFields }
+  | { state: 'blocked'; by: KindergartenDoc }
+
+/** The autosaver's live queue (read after awaits, never a render's copy). */
+export interface KindergartenQueue {
+  flush: () => Promise<void>
+  getState: () => QueueState<KindergartenSnapshot>
+}
+
+const unsavedOf = (s: QueueState<KindergartenSnapshot>, key: string) =>
+  s.pending[key] ?? s.inFlight[key] ?? s.failed[key]?.value ?? null
+
+export const otherKindergartenDoc = (doc: KindergartenDoc): KindergartenDoc =>
+  doc === 'report_card' ? 'progress_report' : 'report_card'
+
+/**
+ * Opens one student's SK document: after every earlier edit has saved (or
+ * failed), the server's version, unless the teacher's own unsaved version of
+ * this document is still queued, which wins.
+ *
+ * SK subject comments belong to both documents, and each document saves them
+ * whole. So while the student's other document has a save that failed (its
+ * subject comments wait for Retry), this one does not open ('blocked'): it
+ * would read the old comments, and its next edit would save them over the
+ * retried ones. It opens once that save is retried or discarded. Nothing of
+ * the other document can be queued while this one loads (its fields are not
+ * open), so checking before the read is enough.
+ */
+export async function openSKDocument(
+  studentId: string,
+  doc: KindergartenDoc,
+  queue: KindergartenQueue,
+  load: () => Promise<KindergartenFields>,
+): Promise<OpenedKindergartenDoc> {
+  const other = otherKindergartenDoc(doc)
+  const otherKey = kindergartenKey(studentId, other)
+  for (;;) {
+    await queue.flush()
+    const s = queue.getState()
+    if (otherKey in s.failed) return { state: 'blocked', by: other }
+    // Still queued (a Retry pressed in the same instant): flush again before reading.
+    if (!(otherKey in s.pending) && !(otherKey in s.inFlight)) break
+  }
+  // This document's unsaved version as the read starts: a Retry pressed
+  // during the read can save it before the read's answer, which may be older.
+  const key = kindergartenKey(studentId, doc)
+  const before = unsavedOf(queue.getState(), key)
+  const fields = await load()
+  const local = unsavedOf(queue.getState(), key) ?? before
+  return { state: 'ready', fields: local ? kindergartenFieldsOf(local) : fields }
+}
 
 const filled = (value: string | undefined) => !!value && value.trim() !== ''
 type Section = JKProgressReportCommentEntry['sectionType']
