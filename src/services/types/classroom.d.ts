@@ -204,7 +204,7 @@ export interface StreamAudience {
 }
 
 export interface ClassStreamData {
-  /** This class's own posts, pinned first then newest. Custom (hand-picked) posts are not part of it. */
+  /** This class's own posts, pinned first then newest, posts to chosen students of the class included. */
   announcements: import('./announcement').AnnouncementItem[]
   notices: StreamNotice[]
   /** Dated classwork in the next two weeks, earliest first. */

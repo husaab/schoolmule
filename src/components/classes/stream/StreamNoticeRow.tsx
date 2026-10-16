@@ -1,6 +1,7 @@
 // src/components/classes/stream/StreamNoticeRow.tsx
 // A classwork notice in the Stream: "New assignment: Plant cell diagram" with
-// "Oct 13 · due Fri, Oct 16 · 12 of 22 turned in", linking to the item.
+// "Oct 13 · due Fri, Oct 16 · 12 of 22 turned in", linking to the item (an
+// assignment's grading view, a material's edit page).
 'use client'
 
 import type { ComponentType, SVGProps } from 'react'
@@ -13,7 +14,7 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { CLASS_COLORS } from '@/lib/classIdentity'
-import { classItemHref } from '@/lib/classroomRoutes'
+import { teacherItemHref } from '@/lib/classroomRoutes'
 import { noticeHeadline, noticeMeta } from '@/lib/classStream'
 import type { ClassColor, ItemKind, StreamNotice } from '@/services/types/classroom'
 
@@ -37,7 +38,7 @@ export default function StreamNoticeRow({ notice, classId, color = 'teal' }: Str
   const Icon = ICONS[notice.kind] ?? DocumentTextIcon
   return (
     <Link
-      href={classItemHref(classId, notice.itemId)}
+      href={teacherItemHref(classId, { itemId: notice.itemId, kind: notice.kind })}
       className="flex items-center gap-3.5 rounded-2xl border border-slate-200/70 bg-white px-5 py-4 text-slate-900 transition-colors hover:border-slate-300 hover:bg-slate-50/60"
     >
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${tone.tint}`}>

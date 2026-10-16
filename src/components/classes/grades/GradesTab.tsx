@@ -22,7 +22,7 @@ import AssessmentsSection from '@/components/assessments/section/AssessmentsSect
 import { useScoreAutosave, type AutosaveStatus } from '@/hooks/useScoreAutosave'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { useFilterParams } from '@/hooks/useFilterParams'
-import { classHref, GRADES_SUB_IDS, parseGradesSub, type GradesSub } from '@/lib/classroomRoutes'
+import { classHref, GRADES_SUB_IDS, newItemHref, parseGradesSub, type GradesSub } from '@/lib/classroomRoutes'
 import { isJK, isSK } from '@/lib/schoolUtils'
 import { getClassById } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
@@ -114,9 +114,11 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
     [flushAll, setParams],
   )
 
-  // T18 points this at the New assessment form; until then it opens the add
-  // form of Assessments & categories.
-  const createAssessment = () => selectSub('setup', { add: '1' })
+  // The New assessment form, which comes back here (to the new column) when done.
+  const createAssessment = () => {
+    flushAll()
+    router.push(newItemHref(classId, 'assessment', { from: 'grades' }))
+  }
   const clearAdd = useCallback(() => setParams({ add: null }), [setParams])
 
   const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {

@@ -39,8 +39,8 @@ interface StreamComposerProps {
   emailDefault: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** After a successful post. `custom` posts (hand-picked students) are not part of the class Stream. */
-  onPosted: (detail: AnnouncementDetail, info: { custom: boolean; students: number }) => void
+  /** After a successful post (to every student or to chosen ones; both show in this Stream). */
+  onPosted: (detail: AnnouncementDetail) => void
 }
 
 const audienceOfPreview = (preview: AudiencePreview | null): StreamAudience => ({
@@ -164,17 +164,16 @@ export default function StreamComposer({
     try {
       const res = await createAnnouncement(
         custom
-          ? { scope: 'custom', studentIds, title: title.trim(), body: body.trim(), ackRequested, sendEmail, files: files.files }
+          ? { scope: 'custom', classId, studentIds, title: title.trim(), body: body.trim(), ackRequested, sendEmail, files: files.files }
           : { scope: 'class', classId, title: title.trim(), body: body.trim(), ackRequested, sendEmail, files: files.files },
       )
       if (res.status !== 'success' || !res.data) throw new Error(res.message || "The announcement couldn't be posted.")
       showNotification(sendEmail ? 'Announcement posted. Emails go out in 2 minutes.' : 'Announcement posted.', 'success')
       void bump()
       const posted = res.data
-      const count = studentIds.length
       reset()
       onOpenChange(false)
-      onPosted(posted, { custom, students: count })
+      onPosted(posted)
     } catch (err) {
       const message = err instanceof Error && err.message ? err.message : "The announcement couldn't be posted."
       setError(message)
@@ -235,12 +234,7 @@ export default function StreamComposer({
       </div>
 
       {mode === 'choose' && (
-        <div className="flex flex-col gap-1.5">
-          <StudentPicker students={roster ?? []} value={studentIds} onChange={setStudentIds} loading={roster === null} />
-          <p className="text-xs text-slate-500">
-            A post to chosen students is kept under Messages, Announcements, not in the class Stream.
-          </p>
-        </div>
+        <StudentPicker students={roster ?? []} value={studentIds} onChange={setStudentIds} loading={roster === null} />
       )}
 
       <label className="flex flex-col gap-1.5">

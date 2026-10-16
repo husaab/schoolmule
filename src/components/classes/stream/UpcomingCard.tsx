@@ -1,10 +1,11 @@
 // src/components/classes/stream/UpcomingCard.tsx
 // The Stream's left rail: what is dated in the next two weeks in this class
-// ("Due Fri, Oct 16" / "Fri, Oct 23 · in class"), then a link to all classwork.
+// ("Due Fri, Oct 16" / "Fri, Oct 23 · in class"), each opening where it is
+// worked on (an assessment's column in Grades), then a link to all classwork.
 'use client'
 
 import Link from 'next/link'
-import { classHref, classItemHref } from '@/lib/classroomRoutes'
+import { classHref, teacherItemHref } from '@/lib/classroomRoutes'
 import { upcomingLabel } from '@/lib/classStream'
 import type { ComingUpRow } from '@/services/types/classroom'
 
@@ -24,7 +25,11 @@ export default function UpcomingCard({ classId, rows }: UpcomingCardProps) {
           {rows.map((row) => (
             <li key={row.itemId ?? row.assessmentId ?? `${row.date}:${row.title}`}>
               <Link
-                href={row.itemId ? classItemHref(classId, row.itemId) : classHref(classId, 'classwork')}
+                href={
+                  row.itemId
+                    ? teacherItemHref(classId, { itemId: row.itemId, kind: row.kind, assessmentId: row.assessmentId })
+                    : classHref(classId, 'classwork')
+                }
                 className="flex flex-col gap-0.5 rounded-lg text-slate-900 transition-colors hover:text-cyan-800"
               >
                 <span className="text-xs text-slate-500">{upcomingLabel(row)}</span>

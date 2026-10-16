@@ -18,7 +18,7 @@ const getToken = (): string | null => {
 export async function apiUpload<T>(
   endpoint: string,
   form: FormData,
-  options: { method?: 'POST' | 'PATCH' } = {},
+  options: { method?: 'POST' | 'PATCH' | 'PUT' } = {},
 ): Promise<T> {
   const token = getToken();
   const selectedYearId =

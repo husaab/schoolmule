@@ -8,8 +8,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type FC } from 'react'
-import Link from 'next/link'
-import { MegaphoneIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MegaphoneIcon } from '@heroicons/react/24/outline'
 import AnnouncementComposerModal from '@/components/announcements/AnnouncementComposerModal'
 import DeleteAnnouncementModal from '@/components/announcements/DeleteAnnouncementModal'
 import TabEmptyState from '@/components/classes/page/TabEmptyState'
@@ -24,11 +23,6 @@ import UpcomingCard from './UpcomingCard'
 import WhoGetsEmailsCard from './WhoGetsEmailsCard'
 import { useClassStream } from './useClassStream'
 
-interface CustomPosted {
-  announcementId: string
-  students: number
-}
-
 const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
   const filters = useFilterParams({ remember: false })
   const { setParams } = filters
@@ -39,7 +33,6 @@ const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
   const [seenCompose, setSeenCompose] = useState(composeRequested)
   const [editing, setEditing] = useState<AnnouncementDetail | null>(null)
   const [deleting, setDeleting] = useState<AnnouncementItem | null>(null)
-  const [customPosted, setCustomPosted] = useState<CustomPosted | null>(null)
 
   // ?compose=1 arriving while the tab is open opens the composer too.
   if (composeRequested !== seenCompose) {
@@ -103,41 +96,12 @@ const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
             emailDefault={cls.options.emailNewPosts}
             open={composerOpen}
             onOpenChange={setComposerOpen}
-            onPosted={(detail, info) => {
-              setCustomPosted(info.custom ? { announcementId: detail.announcementId, students: info.students } : null)
-              void reload()
-            }}
+            onPosted={() => void reload()}
           />
         ) : (
           <p className="rounded-2xl border border-slate-200/70 bg-white px-5 py-3.5 text-sm text-slate-500">
             This class is from a past school year, so it is read-only.
           </p>
-        )}
-
-        {customPosted && (
-          <div
-            role="status"
-            className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
-          >
-            <p className="flex-1">
-              Posted to {customPosted.students} chosen {customPosted.students === 1 ? 'student' : 'students'}. Posts to chosen
-              students are kept under Messages, not in this Stream.{' '}
-              <Link
-                href={`/messages?tab=announcements&announcement=${encodeURIComponent(customPosted.announcementId)}`}
-                className="font-medium underline"
-              >
-                Open it
-              </Link>
-            </p>
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={() => setCustomPosted(null)}
-              className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-emerald-700 hover:bg-emerald-100"
-            >
-              <XMarkIcon className="h-4 w-4" />
-            </button>
-          </div>
         )}
 
         {error && (

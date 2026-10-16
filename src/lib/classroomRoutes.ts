@@ -108,3 +108,35 @@ export function legacyGradebookRedirect(pathname: string, search: string): strin
 /** A classwork item's page (the grading view), or its edit form. */
 export const classItemHref = (classId: string, itemId: string, page?: 'edit'): string =>
   `/classes/${encodeURIComponent(classId)}/items/${encodeURIComponent(itemId)}${page ? `/${page}` : ''}`
+
+export type ItemFormKind = 'assessment' | 'assignment' | 'quiz' | 'material'
+
+/**
+ * The new-item form: `/classes/{id}/items/new?kind=…&topic=…&from=…`. `topic`
+ * preselects a topic; `from=grades` sends Cancel and Save back to Grades.
+ */
+export function newItemHref(
+  classId: string,
+  kind: ItemFormKind,
+  params: { topic?: string | null; from?: 'grades' | null } = {},
+): string {
+  const query = new URLSearchParams({ kind })
+  if (params.topic) query.set('topic', params.topic)
+  if (params.from) query.set('from', params.from)
+  return `/classes/${encodeURIComponent(classId)}/items/new?${query.toString()}`
+}
+
+/**
+ * Where a teacher's link to a classwork item goes: an assignment or quiz to
+ * its grading view, a plain assessment to its column in Grades, a material
+ * (and anything not live yet: a draft, a scheduled post) to its edit page.
+ */
+export function teacherItemHref(
+  classId: string,
+  item: { itemId: string; kind: ItemFormKind; assessmentId?: string | null; live?: boolean },
+): string {
+  if (item.live === false) return classItemHref(classId, item.itemId, 'edit')
+  if (item.kind === 'assignment' || item.kind === 'quiz') return classItemHref(classId, item.itemId)
+  if (item.kind === 'assessment' && item.assessmentId) return classHref(classId, 'grades', { focus: item.assessmentId })
+  return classItemHref(classId, item.itemId, 'edit')
+}

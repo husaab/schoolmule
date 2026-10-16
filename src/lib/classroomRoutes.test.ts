@@ -7,8 +7,10 @@ import {
   isGradesSub,
   legacyEditRedirect,
   legacyGradebookRedirect,
+  newItemHref,
   parseClassTab,
   parseGradesSub,
+  teacherItemHref,
 } from './classroomRoutes'
 
 describe('classHref', () => {
@@ -77,6 +79,34 @@ describe('classItemHref', () => {
   it('opens an item, or its edit page', () => {
     expect(classItemHref('c1', 'i9')).toBe('/classes/c1/items/i9')
     expect(classItemHref('c1', 'i9', 'edit')).toBe('/classes/c1/items/i9/edit')
+  })
+})
+
+describe('newItemHref', () => {
+  it('names the kind, then the topic and where the form was opened from', () => {
+    expect(newItemHref('c1', 'assignment')).toBe('/classes/c1/items/new?kind=assignment')
+    expect(newItemHref('c1', 'material', { topic: 't1' })).toBe('/classes/c1/items/new?kind=material&topic=t1')
+    expect(newItemHref('c1', 'assessment', { from: 'grades' })).toBe('/classes/c1/items/new?kind=assessment&from=grades')
+    expect(newItemHref('c1', 'quiz', { topic: '', from: null })).toBe('/classes/c1/items/new?kind=quiz')
+  })
+})
+
+describe('teacherItemHref', () => {
+  it('an assignment or quiz opens its grading view', () => {
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'assignment' })).toBe('/classes/c1/items/i1')
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'quiz' })).toBe('/classes/c1/items/i1')
+  })
+
+  it("an assessment opens its column in Grades; a material its edit page", () => {
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'assessment', assessmentId: 'a1' })).toBe(
+      '/classes/c1?tab=grades&focus=a1',
+    )
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'assessment', assessmentId: null })).toBe('/classes/c1/items/i1/edit')
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'material' })).toBe('/classes/c1/items/i1/edit')
+  })
+
+  it('work that is not live yet opens its edit page', () => {
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'assignment', live: false })).toBe('/classes/c1/items/i1/edit')
   })
 })
 
