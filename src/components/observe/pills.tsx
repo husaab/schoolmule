@@ -20,8 +20,8 @@ export const SourcePill = ({ source }: { source: 'server' | 'client' }) => (
   <span className={`${base} ${source === 'server' ? 'bg-violet-400/15 text-violet-300' : 'bg-pink-400/15 text-pink-300'}`}>{source}</span>
 )
 
-const OUTCOME: Record<string, string> = { success: 'bg-emerald-400/15 text-emerald-300', bad_password: 'bg-amber-400/15 text-amber-300', unknown_email: 'bg-rose-400/15 text-rose-300', archived: 'bg-white/[0.06] text-slate-400', not_verified: 'bg-sky-400/15 text-sky-300' }
-export const OutcomePill = ({ outcome }: { outcome: string }) => <span className={`${base} ${OUTCOME[outcome] ?? 'bg-white/[0.06] text-slate-400'}`}>{outcome.replace('_', ' ')}</span>
+const OUTCOME: Record<string, string> = { success: 'bg-emerald-400/15 text-emerald-300', bad_password: 'bg-amber-400/15 text-amber-300', unknown_email: 'bg-rose-400/15 text-rose-300', archived: 'bg-white/[0.06] text-slate-400', not_verified: 'bg-sky-400/15 text-sky-300', google_unverified_email: 'bg-amber-400/15 text-amber-300' }
+export const OutcomePill = ({ outcome }: { outcome: string }) => <span className={`${base} ${OUTCOME[outcome] ?? 'bg-white/[0.06] text-slate-400'}`}>{outcome.replaceAll('_', ' ')}</span>
 
 const DEPLOY: Record<string, string> = { SUCCESS: 'bg-emerald-400/15 text-emerald-300', FAILED: 'bg-rose-400/15 text-rose-300', CRASHED: 'bg-rose-400/15 text-rose-300', BUILDING: 'bg-sky-400/15 text-sky-300', DEPLOYING: 'bg-sky-400/15 text-sky-300', REMOVED: 'bg-white/[0.06] text-slate-500', SLEEPING: 'bg-white/[0.06] text-slate-400' }
 export const DeployPill = ({ status }: { status: string }) => <span className={`${base} ${DEPLOY[status] ?? 'bg-white/[0.06] text-slate-400'}`}>{status.toLowerCase()}</span>

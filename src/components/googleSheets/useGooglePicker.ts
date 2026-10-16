@@ -2,31 +2,9 @@
 
 import { useCallback, useState } from 'react';
 import type { PickedSpreadsheet } from '@/services/types/googleSheets';
-
-// Loaded on demand rather than app-wide: only this one screen needs Google's
-// picker script, and pulling it into every page would cost every other page.
-const GAPI_SRC = 'https://apis.google.com/js/api.js';
-const GIS_SRC = 'https://accounts.google.com/gsi/client';
+import { GAPI_SRC, GIS_SRC, loadScript } from '@/lib/googleScripts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-declare global {
-  interface Window {
-    gapi?: any;
-    google?: any;
-  }
-}
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const el = document.createElement('script');
-    el.src = src;
-    el.async = true;
-    el.onload = () => resolve();
-    el.onerror = () => reject(new Error(`Could not load ${src}`));
-    document.head.appendChild(el);
-  });
-}
 
 /**
  * Opens Google's own file picker so the admin can choose a spreadsheet.

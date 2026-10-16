@@ -4,7 +4,7 @@ import LegalPage from '@/components/legal/LegalPage'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="Last updated 2 September 2026">
+    <LegalPage title="Privacy Policy" updated="Last updated 15 October 2026">
       <p>
         SchoolMule is school administration software used by schools to manage student
         records, attendance, grades, report cards and registration forms. This policy
@@ -52,12 +52,31 @@ export default function PrivacyPolicyPage() {
 
       <h2>Google user data</h2>
       <p>
-        SchoolMule offers an optional integration that keeps a school&apos;s Google Sheet up to
-        date with the submissions received on one of its forms. This section describes
-        exactly what that integration does, because it involves your Google account.
+        SchoolMule uses Google in two optional ways: signing in with your Google account, and
+        an integration that keeps a school&apos;s Google Sheet up to date with the submissions
+        received on one of its forms. This section describes exactly what each one does,
+        because both involve your Google account.
       </p>
 
-      <h3>What we request</h3>
+      <h3>Signing in with Google</h3>
+      <p>
+        You can sign in to SchoolMule, or create an account, with your Google account instead
+        of a password. For this we ask Google only for your basic profile: your name, your email
+        address and Google&apos;s identifier for your account. We do not request access to your
+        Gmail, Drive, contacts, calendar or any other Google data.
+      </p>
+      <ul>
+        <li>We use your email address to find your SchoolMule account, or to create one when you sign up, and to match a parent account to their children&apos;s school records.</li>
+        <li>We keep Google&apos;s account identifier so that your Google account keeps opening the same SchoolMule account. We store no Google password or access token for sign-in.</li>
+        <li>When you sign up with Google, we fill in your name from your Google profile. Your school still reviews every new account before it can be used.</li>
+      </ul>
+      <p>
+        You can stop using Google sign-in at any time by removing SchoolMule from your Google
+        account permissions page, and you can set a password instead with &ldquo;Forgot your
+        password?&rdquo; on the sign-in page.
+      </p>
+
+      <h3>Google Sheets integration: what we request</h3>
       <p>
         When a school connects Google, we request a single permission:{' '}
         <strong>
@@ -119,7 +138,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Supabase</strong> — database and file storage.</li>
         <li><strong>Railway</strong> — application hosting.</li>
         <li><strong>Resend</strong> — transactional email.</li>
-        <li><strong>Google</strong> — only where a school has connected the optional Sheets integration described above.</li>
+        <li><strong>Google</strong> — when you choose to sign in with Google, and where a school has connected the optional Sheets integration described above.</li>
       </ul>
 
       <h2>Retention</h2>

@@ -47,6 +47,12 @@ export interface LoginRequest {
   password: string;
 }
 
+// POST /auth/google. `code` comes from Google's sign-in popup. A signup names
+// the school and role it is for; a login never creates an account.
+export type GoogleAuthRequest =
+  | { code: string; intent: 'login' }
+  | { code: string; intent: 'signup'; school: string; role: import('./adminApproval').SignupRole };
+
 // Response from backend after login
 export interface LoginResponse {
   success: boolean;
@@ -73,4 +79,12 @@ export interface LoginResponse {
     activeSchoolYear?: { schoolYearId: string; label: string } | null;
     schoolYears?: import('./schoolYear').SchoolYear[];
   };
+}
+
+// The login payload, plus whether this request created the account (false
+// when a signup found an existing account and signed into it instead).
+// A login with no matching account fails with code GOOGLE_NO_ACCOUNT and
+// `data.email` set to the Google address.
+export interface GoogleAuthResponse extends LoginResponse {
+  data: LoginResponse['data'] & { accountCreated: boolean };
 }

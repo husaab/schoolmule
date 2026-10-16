@@ -1,6 +1,6 @@
 // services/authService.ts
 import apiClient from './apiClient';
-import { LoginResponse, LoginRequest, RegisterRequest, RegisterResponse } from './types/auth';
+import { LoginResponse, LoginRequest, RegisterRequest, RegisterResponse, GoogleAuthRequest, GoogleAuthResponse } from './types/auth';
 import type { SchoolYear } from './types/schoolYear';
 
 // Token management functions
@@ -23,6 +23,13 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
   return apiClient<LoginResponse>('/auth/login', {
     method: 'POST',
     body: credentials,
+  });
+};
+
+export const googleAuth = async (request: GoogleAuthRequest): Promise<GoogleAuthResponse> => {
+  return apiClient<GoogleAuthResponse>('/auth/google', {
+    method: 'POST',
+    body: request,
   });
 };
 

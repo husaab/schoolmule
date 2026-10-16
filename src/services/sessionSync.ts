@@ -5,7 +5,8 @@
 // 403s once the account's claims changed).
 
 import { getToken, setToken, removeToken, type SessionValidationResponse } from './authService'
-import { useUserStore } from '@/store/useUserStore'
+import type { LoginResponse, RegisterResponse } from './types/auth'
+import { useUserStore, type User } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
@@ -18,26 +19,44 @@ export type SessionData = NonNullable<SessionValidationResponse['data']>
 // user's token back.
 const sessionChangedSince = (sentToken: string | null) => !sentToken || getToken() !== sentToken
 
-// A full sign-in from /auth/me: user, token and school years.
-export const applySession = async (data: SessionData, sentToken: string | null): Promise<boolean> => {
-  if (sessionChangedSince(sentToken)) return false
-  if (data.token) setToken(data.token)
-  useUserStore.getState().setUser({
+type SignInData = SessionData | LoginResponse['data'] | RegisterResponse['data']
+
+// The stored user and school years for a session payload. Every response that
+// opens a session (/auth/me, sign-in, signup) carries the same fields.
+const storeSession = (data: SignInData): User => {
+  const user: User = {
     id: data.userId,
     username: data.username,
     email: data.email,
     school: data.school,
     role: data.role,
-    baseRole: data.baseRole ?? data.role,
-    roles: data.roles ?? [data.role],
+    baseRole: ('baseRole' in data && data.baseRole) || data.role,
+    roles: ('roles' in data && data.roles) || [data.role],
     isVerifiedEmail: data.isVerified,
     isVerifiedSchool: data.isVerifiedSchool,
     activeTerm: data.activeTerm || null,
     isPlatformOwner: Boolean(data.isPlatformOwner),
-  })
+  }
+  useUserStore.getState().setUser(user)
   useSchoolYearStore.getState().setYears(data.schoolYears ?? [])
   useSchoolYearStore.getState().selectYear(data.activeSchoolYear?.schoolYearId ?? null)
+  return user
+}
+
+// A full sign-in from /auth/me: user, token and school years.
+export const applySession = async (data: SessionData, sentToken: string | null): Promise<boolean> => {
+  if (sessionChangedSince(sentToken)) return false
+  if (data.token) setToken(data.token)
+  storeSession(data)
   return true
+}
+
+// A fresh sign-in (password, Google, or a new signup): its token, user and
+// school years. Returns the stored user so the caller can route it
+// (landingFor / homeFor).
+export const startSession = (data: LoginResponse['data'] | RegisterResponse['data']): User => {
+  setToken(data.token)
+  return storeSession(data)
 }
 
 // Brings a persisted user's access flags up to date without touching the

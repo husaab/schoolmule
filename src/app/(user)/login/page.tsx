@@ -4,11 +4,13 @@ import React, { useState, useEffect, Suspense, FC } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import Link from 'next/link'
 import Image from 'next/image'
-import { login, setToken } from '@/services/authService'
+import { login } from '@/services/authService'
+import { startSession } from '@/services/sessionSync'
+import type { LoginResponse } from '@/services/types/auth'
+import GoogleSignIn from '@/components/auth/GoogleSignIn'
 import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice'
 import { landingFor } from '@/lib/authRouting'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
@@ -153,7 +155,6 @@ const LoginPage: FC = () => {
 const LoginForm: FC = () => {
   const router = useRouter()
   const showNotification = useNotificationStore(state => state.showNotification)
-  const setUser = useUserStore.getState().setUser
   const [showPassword, setShowPassword] = useState(false)
 
   const {
@@ -162,129 +163,115 @@ const LoginForm: FC = () => {
     formState: { errors, isSubmitting }
   } = useForm<LoginFormInputs>()
 
+  // Password and Google sign-ins finish the same way.
+  const finishSignIn = (data: LoginResponse['data']) => {
+    const user = startSession(data)
+    showNotification('Logged in successfully', 'success')
+
+    // Same decision AuthGuard makes when it sees a signed-in user on
+    // /login, so the two navigations always agree.
+    const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null
+    router.replace(landingFor(user, next))
+  }
+
   const onSubmit: SubmitHandler<LoginFormInputs> = async data => {
     try {
       const response = await login(data)
-      if (response.success) {
-        setToken(response.data.token)
-
-        const user = {
-          id: response.data.userId,
-          username: response.data.username,
-          email: response.data.email,
-          role: response.data.role,
-          baseRole: response.data.baseRole ?? response.data.role,
-          roles: response.data.roles ?? [response.data.role],
-          school: response.data.school,
-          isVerifiedEmail: response.data.isVerified,
-          isVerifiedSchool: response.data.isVerifiedSchool,
-          activeTerm: response.data.activeTerm,
-          isPlatformOwner: Boolean(response.data.isPlatformOwner),
-        }
-        setUser(user)
-
-        const { useSchoolYearStore } = await import('@/store/useSchoolYearStore')
-        useSchoolYearStore.getState().setYears(response.data.schoolYears ?? [])
-        useSchoolYearStore.getState().selectYear(response.data.activeSchoolYear?.schoolYearId ?? null)
-
-        showNotification('Logged in successfully', 'success')
-
-        // Same decision AuthGuard makes when it sees a signed-in user on
-        // /login, so the two navigations always agree.
-        const next = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null
-        router.replace(landingFor(user, next))
-      }
+      if (response.success) finishSignIn(response.data)
     } catch {
       showNotification('Login failed, invalid email or password', 'error')
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Email Field */}
-      <div>
-        <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
-          Email Address
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <EnvelopeIcon className="w-5 h-5 text-slate-400" />
+    <div className="space-y-5">
+      <GoogleSignIn intent="login" dividerLabel="or sign in with email" onSignedIn={finishSignIn} />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Email Field */}
+        <div>
+          <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+            Email Address
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <EnvelopeIcon className="w-5 h-5 text-slate-400" />
+            </div>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@school.edu"
+              {...register('email', { required: 'Email is required' })}
+              className="w-full pl-12 pr-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
+            />
           </div>
-          <input
-            id="email"
-            type="email"
-            placeholder="you@school.edu"
-            {...register('email', { required: 'Email is required' })}
-            className="w-full pl-12 pr-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
-          />
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1.5">{errors.email.message}</p>
+          )}
         </div>
-        {errors.email && (
-          <p className="text-red-500 text-sm mt-1.5">{errors.email.message}</p>
-        )}
-      </div>
 
-      {/* Password Field */}
-      <div>
-        <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
-          Password
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <LockClosedIcon className="w-5 h-5 text-slate-400" />
+        {/* Password Field */}
+        <div>
+          <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <LockClosedIcon className="w-5 h-5 text-slate-400" />
+            </div>
+            <input
+              id="password"
+              placeholder="••••••••"
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', { required: 'Password is required' })}
+              className="w-full pl-12 pr-12 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(prev => !prev)}
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showPassword ? (
+                <EyeIcon className="w-5 h-5" />
+              ) : (
+                <EyeSlashIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
-          <input
-            id="password"
-            placeholder="••••••••"
-            type={showPassword ? 'text' : 'password'}
-            {...register('password', { required: 'Password is required' })}
-            className="w-full pl-12 pr-12 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(prev => !prev)}
-            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1.5">{errors.password.message}</p>
+          )}
+        </div>
+
+        {/* Forgot Password Link */}
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
           >
-            {showPassword ? (
-              <EyeIcon className="w-5 h-5" />
-            ) : (
-              <EyeSlashIcon className="w-5 h-5" />
-            )}
-          </button>
+            Forgot your password?
+          </Link>
         </div>
-        {errors.password && (
-          <p className="text-red-500 text-sm mt-1.5">{errors.password.message}</p>
-        )}
-      </div>
 
-      {/* Forgot Password Link */}
-      <div className="flex justify-end">
-        <Link
-          href="/forgot-password"
-          className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-semibold rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          Forgot your password?
-        </Link>
-      </div>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-semibold rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-      >
-        {isSubmitting ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Signing in...
-          </span>
-        ) : (
-          'Sign In'
-        )}
-      </button>
-    </form>
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Signing in...
+            </span>
+          ) : (
+            'Sign In'
+          )}
+        </button>
+      </form>
+    </div>
   )
 }
 
