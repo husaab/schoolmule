@@ -17,6 +17,8 @@ interface LoadState<T> {
 
 export interface Loaded<T> {
   data: T | null
+  /** While a new scope loads: the last answer of the scope before it (a picker can stay put). */
+  previous: T | null
   error: Error | null
   loading: boolean
   /** Fetch again, keeping what is shown until the answer arrives. */
@@ -60,6 +62,7 @@ export function useLoad<T>(scope: string | null, load: () => Promise<T>): Loaded
   const current = scope !== null && state?.scope === scope ? state : null
   return {
     data: current?.data ?? null,
+    previous: current ? null : (state?.data ?? null),
     error: current && current.version === version ? current.error : null,
     loading: scope !== null && (!current || current.version !== version),
     reload,

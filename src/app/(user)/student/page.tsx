@@ -83,7 +83,7 @@ export default function StudentHomePage() {
               </h2>
               <p className="order-first text-sm text-slate-500 md:order-none md:text-base md:text-slate-600">{longDateLine(now)}</p>
             </div>
-            <Avatar name={name} avatar={ownAvatar} photoUrl={photoUrl} size={44} className="md:hidden" />
+            <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} className="md:hidden" />
           </div>
 
           {showPick && <PickAvatarCard onPick={() => setPickerOpen(true)} />}
@@ -116,7 +116,7 @@ export default function StudentHomePage() {
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         title="Your avatar"
-        subtitle="Your teachers and classmates see it next to your name."
+        subtitle="Your teachers see it next to your name."
         name={name}
         value={ownAvatar}
         onSave={save}

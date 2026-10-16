@@ -191,7 +191,7 @@ function StudentUserCard() {
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         title="Your avatar"
-        subtitle="Your teachers and classmates see it next to your name."
+        subtitle="Your teachers see it next to your name."
         name={name}
         value={avatar}
         onSave={save}

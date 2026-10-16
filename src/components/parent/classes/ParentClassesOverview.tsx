@@ -13,7 +13,7 @@ import NewConversationModal from '@/components/messaging/NewConversationModal'
 import ChildClassroomCard from '@/components/parent/classes/ChildClassroomCard'
 import NeedsYouCard from '@/components/parent/classes/NeedsYouCard'
 import { useLoad } from '@/hooks/useLoad'
-import { firstNameOf } from '@/lib/classroomText'
+import { firstNameOf, visibleNeedsYou } from '@/lib/classroomText'
 import { acknowledgeAnnouncement } from '@/services/announcementService'
 import { getClassroomSummary } from '@/services/parentClassroomService'
 import type { NeedsYouAck, NeedsYouMissing } from '@/services/types/parentClassroom'
@@ -108,7 +108,7 @@ export default function ParentClassesOverview({ onOpenChild }: ParentClassesOver
           )}
 
           <NeedsYouCard
-            items={data.needsYou}
+            items={visibleNeedsYou(data.needsYou, kids)}
             kids={kids}
             onGotIt={gotIt}
             onAsk={setAsking}

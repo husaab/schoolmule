@@ -15,7 +15,7 @@ import { useStudentClasses } from '@/components/studentPortal/useStudentClasses'
 import { useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { useLoad } from '@/hooks/useLoad'
-import { noMarksNote } from '@/lib/classroomText'
+import { commonTeacher, noMarksNote } from '@/lib/classroomText'
 import { studentItemHref } from '@/lib/portalRoutes'
 import { getStudentGrades } from '@/services/studentPortalService'
 import { useUserStore } from '@/store/useUserStore'
@@ -33,11 +33,14 @@ function StudentGradesContent() {
     getStudentGrades(termParam || undefined).then((r) => r.data),
   )
   const data = grades.data
-  const termValue = termParam || data?.termId || ''
-  const lead = classes?.[0]?.teacher ?? null
+  const termValue = termParam || (data ?? grades.previous)?.termId || ''
+  // A JK or SK child's grades have no classes to read the teacher from: the one teacher their classes share, else "Your teacher".
+  const lead = commonTeacher(classes ?? [])
 
-  const picker = data ? (
-    <TermSelect terms={data.terms} value={termValue} onChange={(termId) => filters.setParams({ term: termId })} />
+  // While another term loads the picker keeps the terms it already knew.
+  const terms = (data ?? grades.previous)?.terms ?? []
+  const picker = terms.length > 0 ? (
+    <TermSelect terms={terms} value={termValue} onChange={(termId) => filters.setParams({ term: termId })} />
   ) : null
 
   return (

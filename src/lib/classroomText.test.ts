@@ -3,7 +3,9 @@ import {
   cardLines,
   childSubline,
   classDetailLine,
+  classMissingFlag,
   classNote,
+  commonTeacher,
   classPageMeta,
   dueLine,
   dueWhen,
@@ -18,7 +20,11 @@ import {
   missingSubline,
   needsYouMissingSubline,
   noMarksNote,
+  openChildLabel,
+  otherTermFor,
   notSigningNote,
+  isTeacherConfirmedMissing,
+  visibleNeedsYou,
   pctText,
   pickClass,
   postedAtLabel,
@@ -230,8 +236,14 @@ describe('the parent Classes page', () => {
   })
 
   it("explains a child who doesn't sign in", () => {
-    expect(notSigningNote('Noor Haddad', 'Lina Farouk')).toBe("Noor doesn't sign in. Lina Farouk's posts show here and in your Friday email.")
-    expect(notSigningNote('Noor Haddad', null)).toBe("Noor doesn't sign in. Posts from Noor's teachers show here and in your Friday email.")
+    expect(notSigningNote('Noor Haddad', 'Lina Farouk')).toBe("Noor doesn't sign in. Lina Farouk's posts show here and in your weekly summary email.")
+    expect(notSigningNote('Noor Haddad', null)).toBe("Noor doesn't sign in. Posts from Noor's teachers show here and in your weekly summary email.")
+  })
+
+  it('names no weekday for the summary email (the school picks the day)', () => {
+    const days = /monday|tuesday|wednesday|thursday|friday|saturday|sunday/i
+    expect(notSigningNote('Noor Haddad', 'Lina Farouk')).not.toMatch(days)
+    expect(notSigningNote('Noor Haddad', null)).not.toMatch(days)
   })
 
   it('builds the three tiles', () => {
@@ -259,5 +271,76 @@ describe('the parent Classes page', () => {
 
   it('names the child in the lens banner', () => {
     expect(lensBannerText('Amal Haddad')).toEqual({ lead: "You're seeing ", name: "Amal's", tail: ' classes, the way Amal sees them.' })
+  })
+})
+
+describe('missing work for a child who cannot sign in', () => {
+  const missing = (studentId: string, over = {}) => ({
+    kind: 'missing' as const, itemId: `i-${studentId}`, assessmentId: null, title: 'Reading log', classId: 'c1', classSubject: 'English',
+    teacher: { userId: 't1', name: 'Rana Kareem', avatar: null }, studentId, dueAt: '2026-10-13T19:30:00Z', date: null, ...over,
+  })
+  const ack = { kind: 'ack' as const, announcementId: 'a1', title: 'Trip form', classSubject: null, authorName: 'Lina Farouk', publishedAt: '2026-10-14T15:00:00Z', studentIds: ['s-out'] }
+  const kids = [{ studentId: 's-in', signsIn: true }, { studentId: 's-out', signsIn: false }]
+
+  it('keeps every row of a child who signs in', () => {
+    const items = [missing('s-in'), missing('s-in', { dueAt: null, date: '2026-10-12' })]
+    expect(visibleNeedsYou(items, kids)).toEqual(items)
+  })
+
+  it('drops a past-due row for a child who cannot sign in: it can only be a derived Missing', () => {
+    expect(visibleNeedsYou([missing('s-out')], kids)).toEqual([])
+  })
+
+  it('keeps a dated in-class row for that child: with no due time it can only be teacher-confirmed', () => {
+    const dated = missing('s-out', { dueAt: null, date: '2026-10-12' })
+    expect(visibleNeedsYou([dated], kids)).toEqual([dated])
+    expect(isTeacherConfirmedMissing(dated)).toBe(true)
+    expect(isTeacherConfirmedMissing(missing('s-out'))).toBe(false)
+  })
+
+  it('filters per child and never touches "Got it" posts', () => {
+    const items = [ack, missing('s-out'), missing('s-in')]
+    expect(visibleNeedsYou(items, kids)).toEqual([ack, missing('s-in')])
+  })
+
+  it('flags a class only for a child known to sign in', () => {
+    expect(classMissingFlag(2, true)).toBe('2 missing')
+    expect(classMissingFlag(0, true)).toBeNull()
+    expect(classMissingFlag(2, false)).toBeNull()
+    // Not known yet (still loading, or it failed): no flag rather than a wrong one.
+    expect(classMissingFlag(2, undefined)).toBeNull()
+  })
+})
+
+describe('minor wording and lookups', () => {
+  it('writes the open button: plural unless a single homeroom class', () => {
+    expect(openChildLabel({ name: 'Amal Haddad', signsIn: true, classCount: 8 })).toBe("See Amal's classes")
+    expect(openChildLabel({ name: 'Noor Haddad', signsIn: false, classCount: 1 })).toBe("See Noor's class")
+    expect(openChildLabel({ name: 'Sami Kareem', signsIn: false, classCount: 8 })).toBe("See Sami's classes")
+  })
+
+  it('finds the one teacher every class shares', () => {
+    const lina = { userId: 't1', name: 'Lina Farouk' }
+    const rana = { userId: 't2', name: 'Rana Kareem' }
+    expect(commonTeacher([{ teacher: lina }, { teacher: lina }])).toBe(lina)
+    expect(commonTeacher([{ teacher: lina }, { teacher: rana }])).toBeNull()
+    expect(commonTeacher([{ teacher: lina }, { teacher: null }])).toBeNull()
+    expect(commonTeacher([])).toBeNull()
+  })
+
+  it('finds the term to ask for when a class is not in the default term', () => {
+    const grades = {
+      usesMarks: true,
+      termId: 't2',
+      terms: [{ termId: 't1', name: 'Term 1', isActive: false }, { termId: 't2', name: 'Term 2', isActive: true }],
+      classes: [{ classId: 'c-now' }] as never[],
+    }
+    expect(otherTermFor(grades, { classId: 'c-old', termName: 'Term 1' })).toBe('t1')
+    // Already in the default term's grades: nothing to ask for.
+    expect(otherTermFor(grades, { classId: 'c-now', termName: 'Term 1' })).toBeNull()
+    // The class is in the default term but has no grades there: the default is the right term.
+    expect(otherTermFor(grades, { classId: 'c-old', termName: 'Term 2' })).toBeNull()
+    expect(otherTermFor(grades, { classId: 'c-old', termName: null })).toBeNull()
+    expect(otherTermFor({ ...grades, usesMarks: false }, { classId: 'c-old', termName: 'Term 1' })).toBeNull()
   })
 })

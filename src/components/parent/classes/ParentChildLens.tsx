@@ -19,8 +19,9 @@ import StreamFeed from '@/components/classroom/StreamFeed'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
 import LensBanner from '@/components/parent/classes/LensBanner'
 import { useFilterParams, type FilterPatch } from '@/hooks/useFilterParams'
+import { useClassTermGrades } from '@/hooks/useClassTermGrades'
 import { useLoad } from '@/hooks/useLoad'
-import { classPageMeta, firstNameOf, noMarksNote, pickClass } from '@/lib/classroomText'
+import { classMissingFlag, classPageMeta, firstNameOf, noMarksNote, pickClass } from '@/lib/classroomText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import {
   PARENT_CLASS_TABS,
@@ -35,7 +36,7 @@ import {
   markAnnouncementRead,
   unacknowledgeAnnouncement,
 } from '@/services/announcementService'
-import { getLensClass, getLensClasses, getLensGrades, getLensStream } from '@/services/parentClassroomService'
+import { getClassroomSummary, getLensClass, getLensClasses, getLensGrades, getLensStream } from '@/services/parentClassroomService'
 import type { Thread } from '@/services/types/messaging'
 import type { StudentAnnouncement, StudentAttachment, StudentClassCard, StudentClassHeader } from '@/services/types/studentPortal'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -123,7 +124,9 @@ function StreamBody({ studentId, classId }: { studentId: string; classId: string
 
 function GradesBody({ child, header }: { child: ChildLite; header: StudentClassHeader }) {
   const yearId = useSchoolYearStore((s) => s.selectedYearId)
-  const grades = useLoad(`lens-grades:${child.studentId}:${yearId ?? ''}`, () => getLensGrades(child.studentId).then((r) => r.data))
+  const grades = useClassTermGrades(`lens-grades:${child.studentId}:${header.classId}:${yearId ?? ''}`, header, (termId) =>
+    getLensGrades(child.studentId, termId).then((r) => r.data),
+  )
   const lead = header.teachers.find((t) => t.role === 'lead') ?? header.teachers[0] ?? null
 
   if (grades.error && !grades.data) {
@@ -157,6 +160,10 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
   const tab = parseParentClassTab(filters.get('tab'))
   const [asking, setAsking] = useState(false)
 
+  // The flags need to know whether this child signs in (a derived Missing is not flagged for one who cannot).
+  const childSummary = useLoad(`lens-summary:${child.studentId}:${yearId ?? ''}`, () =>
+    getClassroomSummary().then((r) => r.data.children.find((c) => c.studentId === child.studentId)?.signsIn ?? false),
+  )
   const classes = useLoad(`lens-classes:${child.studentId}:${yearId ?? ''}`, () => getLensClasses(child.studentId).then((r) => r.data.classes))
   const selected: StudentClassCard | null = classes.data ? pickClass(classes.data, filters.get('class')) : null
   const page = useLoad(
@@ -212,7 +219,7 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
                 classId: c.classId,
                 subject: c.subject,
                 iconUrl: c.identity.iconUrl,
-                flag: c.missingCount > 0 ? `${c.missingCount} missing` : null,
+                flag: classMissingFlag(c.missingCount, childSummary.data ?? undefined),
               }))}
               selectedId={selected.classId}
               hrefFor={(id) => parentClassesHref({ classId: id, tab })}

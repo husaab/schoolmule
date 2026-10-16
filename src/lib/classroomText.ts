@@ -10,8 +10,8 @@
 
 import { dayKeyLabel } from '@/lib/classStream'
 import { gradeLabel, shortDate, torontoDateKey } from '@/lib/studentAccounts'
-import type { ChildClassGrades, GradeItem, StudentClassNext, StudentAnnouncement, TodoItem } from '@/services/types/studentPortal'
-import type { ChildClassroomSummary, NeedsYouMissing } from '@/services/types/parentClassroom'
+import type { ChildClassGrades, ChildGrades, GradeItem, StudentClassNext, StudentAnnouncement, TodoItem } from '@/services/types/studentPortal'
+import type { ChildClassroomSummary, NeedsYouItem, NeedsYouMissing } from '@/services/types/parentClassroom'
 
 const TZ = 'America/Toronto'
 
@@ -37,12 +37,26 @@ export const childSubline = (child: Pick<ChildClassroomSummary, 'grade' | 'class
     ? `${gradeLabel(child.grade)} · ${plural(child.classCount, 'class', 'classes')}`
     : [gradeLabel(child.grade), child.homeroomTeacherName].filter(Boolean).join(' · ')
 
-/** "Maryam doesn't sign in. Ms. Jaber's posts show here and in your Friday email." */
+/**
+ * "Noor doesn't sign in. Ms. Farouk's posts show here and in your weekly summary email."
+ * No weekday: the school picks the summary day, and a parent cannot read that setting.
+ */
 export const notSigningNote = (name: string, homeroomTeacher: string | null): string => {
   const who = firstNameOf(name)
   return homeroomTeacher
-    ? `${who} doesn't sign in. ${homeroomTeacher}'s posts show here and in your Friday email.`
-    : `${who} doesn't sign in. Posts from ${who}'s teachers show here and in your Friday email.`
+    ? `${who} doesn't sign in. ${homeroomTeacher}'s posts show here and in your weekly summary email.`
+    : `${who} doesn't sign in. Posts from ${who}'s teachers show here and in your weekly summary email.`
+}
+
+/** "See Amal's classes" for a child with several classes or a login, "See Noor's class" for a single homeroom. */
+export const openChildLabel = (child: Pick<ChildClassroomSummary, 'name' | 'signsIn' | 'classCount'>): string =>
+  `See ${firstNameOf(child.name)}'s ${child.signsIn || child.classCount > 1 ? 'classes' : 'class'}`
+
+/** The one teacher shared by every class, or null when the classes have different leads (or none). */
+export function commonTeacher<T extends { userId: string | null }>(classes: { teacher: T | null }[]): T | null {
+  const first = classes[0]?.teacher ?? null
+  if (!first) return null
+  return classes.every((c) => c.teacher?.userId === first.userId) ? first : null
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +268,18 @@ export function gradeLinkLabel(grade: Pick<GradeItem, 'kind' | 'status' | 'itemI
   return null
 }
 
+/**
+ * A class page can open a class from an earlier term, while the grades come for the default term. When
+ * the class is not in them, this is the term to ask for instead: the one that carries the class's term name.
+ */
+export function otherTermFor(
+  grades: Pick<ChildGrades, 'termId' | 'terms' | 'classes' | 'usesMarks'>,
+  header: { classId: string; termName: string | null },
+): string | null {
+  if (!grades.usesMarks || grades.classes.some((c) => c.classId === header.classId) || !header.termName) return null
+  return grades.terms.find((t) => t.name === header.termName && t.termId !== grades.termId)?.termId ?? null
+}
+
 /** The class a Grades page opens on: the one in the URL when it exists, else the first. */
 export const pickClass = <T extends { classId: string }>(classes: T[], wanted: string | null | undefined): T | null =>
   classes.find((c) => c.classId === wanted) ?? classes[0] ?? null
@@ -284,6 +310,30 @@ export const statTiles = (child: Pick<ChildClassroomSummary, 'dueThisWeek' | 'mi
   { key: 'missing', value: child.missingCount, label: 'missing' },
   { key: 'grades', value: child.newGradeCount, label: child.newGradeCount === 1 ? 'new grade' : 'new grades' },
 ]
+
+/**
+ * A "Missing" row that cannot be a derived one. Derived Missing (past due, nothing handed in, workStatus
+ * rule 7) needs a due time, so a row with none is a dated in-class assessment the teacher marked missing.
+ * The parent payload does not say which kind a row is, so this is the one case that can be told for sure.
+ */
+export const isTeacherConfirmedMissing = (row: Pick<NeedsYouMissing, 'dueAt'>): boolean => row.dueAt === null
+
+/**
+ * What "Needs you" may show. A child who cannot sign in cannot hand anything in, so work that is only
+ * Missing because its due date passed is not shown for them; a "Got it" post always is.
+ * A child who signs in keeps every row.
+ */
+export function visibleNeedsYou(items: NeedsYouItem[], kids: Pick<ChildClassroomSummary, 'studentId' | 'signsIn'>[]): NeedsYouItem[] {
+  const cannotSignIn = new Set(kids.filter((k) => !k.signsIn).map((k) => k.studentId))
+  return items.filter((item) => item.kind !== 'missing' || !cannotSignIn.has(item.studentId) || isTeacherConfirmedMissing(item))
+}
+
+/**
+ * The "1 missing" flag beside a class in the lens. The class count mixes teacher-confirmed and derived
+ * Missing and cannot be split here, so only a child known to sign in gets a flag.
+ */
+export const classMissingFlag = (missingCount: number, childSignsIn: boolean | undefined): string | null =>
+  childSignsIn === true && missingCount > 0 ? `${missingCount} missing` : null
 
 /** "English · Ms. Bennett · was due Tuesday" under a "Missing: …" row. */
 export const needsYouMissingSubline = (item: NeedsYouMissing, now: Date = new Date()): string =>

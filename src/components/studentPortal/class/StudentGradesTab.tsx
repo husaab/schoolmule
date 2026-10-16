@@ -5,7 +5,7 @@
 
 import ChildGradesView from '@/components/classroom/ChildGradesView'
 import LoadError from '@/components/classroom/LoadError'
-import { useLoad } from '@/hooks/useLoad'
+import { useClassTermGrades } from '@/hooks/useClassTermGrades'
 import { noMarksNote } from '@/lib/classroomText'
 import { studentItemHref } from '@/lib/portalRoutes'
 import { getStudentGrades } from '@/services/studentPortalService'
@@ -15,7 +15,7 @@ export const STUDENT_GRADES_FOOTNOTE =
   'Grades show here once your teacher publishes them. Missing work counts as 0 until you hand it in.'
 
 export default function StudentGradesTab({ header }: { header: StudentClassHeader }) {
-  const grades = useLoad(`grades:class:${header.classId}`, () => getStudentGrades().then((r) => r.data))
+  const grades = useClassTermGrades(`grades:class:${header.classId}`, header, (termId) => getStudentGrades(termId).then((r) => r.data))
   const lead = header.teachers.find((t) => t.role === 'lead') ?? header.teachers[0] ?? null
 
   if (grades.error && !grades.data) {

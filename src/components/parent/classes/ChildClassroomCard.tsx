@@ -7,7 +7,7 @@
 
 import { ChevronRightIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
-import { childSubline, firstNameOf, notSigningNote, recentPostMeta, scoreText, statTiles } from '@/lib/classroomText'
+import { childSubline, firstNameOf, notSigningNote, openChildLabel, recentPostMeta, scoreText, statTiles } from '@/lib/classroomText'
 import type { ChildClassroomSummary } from '@/services/types/parentClassroom'
 
 interface ChildClassroomCardProps {
@@ -82,7 +82,7 @@ export default function ChildClassroomCard({ child, onOpen, className = 'flex', 
             : 'border border-stone-200 bg-white text-slate-700 hover:bg-stone-50'
         }`}
       >
-        {child.signsIn ? `See ${first}'s classes` : `See ${first}'s class`}
+        {openChildLabel(child)}
         <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
       </button>
     </article>
