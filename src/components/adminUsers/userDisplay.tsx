@@ -18,8 +18,10 @@ const roleStyles: Record<string, string> = {
   PARENT: 'bg-cyan-50 text-cyan-700 ring-cyan-200/60',
 }
 
+// Student logins are managed on Admin Panel → Student accounts, never added
+// here, so STUDENT is a label only (the "view as" bar), not a role option.
 export const roleLabel = (role: string) =>
-  ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role
+  ROLE_OPTIONS.find((r) => r.value === role)?.label ?? (role === 'STUDENT' ? 'Student' : role)
 
 export const RoleBadge = ({ role, title }: { role: string; title?: string | null }) => (
   <span

@@ -5,6 +5,7 @@ import { useForm, SubmitHandler } from 'react-hook-form'
 import Link from 'next/link'
 import Image from 'next/image'
 import { login } from '@/services/authService'
+import { isApiError } from '@/services/apiClient'
 import { startSession } from '@/services/sessionSync'
 import type { LoginResponse } from '@/services/types/auth'
 import GoogleSignIn from '@/components/auth/GoogleSignIn'
@@ -65,6 +66,15 @@ const LoginNotice: FC = () => {
     </div>
   )
 }
+
+// A wrong email or password stays one vague message. Verdicts the person can
+// act on keep the server's words: a student whose school hasn't turned
+// sign-in on (403 with a code), two accounts differing only by capitals
+// (409 EMAIL_AMBIGUOUS), an archived account (403), too many attempts (429).
+const signInFailureMessage = (err: unknown): string =>
+  isApiError(err) && (err.code || [403, 409, 429].includes(err.status)) && err.message
+    ? err.message
+    : 'Login failed, invalid email or password'
 
 const features = [
   { icon: AcademicCapIcon, text: 'Student Management' },
@@ -178,8 +188,8 @@ const LoginForm: FC = () => {
     try {
       const response = await login(data)
       if (response.success) finishSignIn(response.data)
-    } catch {
-      showNotification('Login failed, invalid email or password', 'error')
+    } catch (err) {
+      showNotification(signInFailureMessage(err), 'error')
     }
   }
 

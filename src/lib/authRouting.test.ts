@@ -34,8 +34,9 @@ const APP_ROUTES = [...new Set(discoverRoutes(appDir))]
 const GUARDED_ROUTES = [...new Set(discoverRoutes(path.join(appDir, '(user)')))]
 
 // Guarded pages a signed-out visitor may still open.
+// /qr is the QR sign-in card's link: it must open signed out (and from any session).
 const isSignedOutPage = (p: string) =>
-  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token'].includes(p) || p.startsWith('/signup/')
+  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token', '/qr'].includes(p) || p.startsWith('/signup/')
 
 // Follows redirects until the user settles; throws on a loop.
 const settle = (start: string, state: RouteState): string => {
@@ -49,10 +50,13 @@ const settle = (start: string, state: RouteState): string => {
 }
 
 // Shapes the filesystem can't express on its own.
-const EXTRA_PATHS = ['/jcc/enrolment-form', '/jcc/schedule/abc123', '/signup/jcc', '/parentfoo', '/does-not-exist']
+const EXTRA_PATHS = [
+  '/jcc/enrolment-form', '/jcc/schedule/abc123', '/signup/jcc', '/parentfoo', '/does-not-exist',
+  '/student/todo', '/studentfoo', '/qr',
+]
 const PATHS = [...new Set([...APP_ROUTES, ...EXTRA_PATHS])]
 
-const ROLES = ['ADMIN', 'TEACHER', 'PARENT', 'STAFF', null]
+const ROLES = ['ADMIN', 'TEACHER', 'PARENT', 'STUDENT', 'STAFF', null]
 const BOOLS = [true, false]
 const OWNER = [true, false, undefined]
 
@@ -75,6 +79,8 @@ const states: RouteState[] = [
     { hasToken: false, user },
   ]),
 ]
+
+const signedInState = (user: RouteUser): RouteState => ({ hasToken: true, user })
 
 const describeState = (s: RouteState) =>
   `token=${s.hasToken} id=${s.user.id} role=${s.user.role} email=${s.user.isVerifiedEmail} school=${s.user.isVerifiedSchool} owner=${s.user.isPlatformOwner}`
@@ -102,10 +108,80 @@ describe('guarded pages stay protected', () => {
     const leaks = GUARDED_ROUTES.filter(
       (r) =>
         !r.startsWith('/signup/') &&
+        r !== '/qr' &&
         !['/parent', '/settings', '/support', '/contact-us'].some((pre) => r === pre || r.startsWith(`${pre}/`)) &&
         resolveRedirect(r, { hasToken: true, user: p }) === null,
     )
     expect(leaks).toEqual([])
+  })
+
+  it('a student is kept out of every guarded page except the student portal and /qr', () => {
+    const s = { id: 's1', role: 'STUDENT', isVerifiedEmail: true, isVerifiedSchool: true }
+    const leaks = GUARDED_ROUTES.filter(
+      (r) =>
+        !r.startsWith('/signup/') &&
+        r !== '/qr' &&
+        !(r === '/student' || r.startsWith('/student/')) &&
+        resolveRedirect(r, { hasToken: true, user: s }) === null,
+    )
+    expect(leaks).toEqual([])
+  })
+
+  it('staff and parents never open a student page', () => {
+    for (const role of ['ADMIN', 'TEACHER', 'PARENT']) {
+      const u = { id: 'x1', role, isVerifiedEmail: true, isVerifiedSchool: true }
+      const open = GUARDED_ROUTES.filter(
+        (r) => (r === '/student' || r.startsWith('/student/')) && resolveRedirect(r, { hasToken: true, user: u }) === null,
+      )
+      expect(open, role).toEqual([])
+    }
+  })
+})
+
+// STUDENT users live in /student and nowhere else; the QR card link (/qr)
+// works signed out and from any session, because classroom devices are shared.
+describe('student routing', () => {
+  const student: RouteUser = { id: 's1', role: 'STUDENT', isVerifiedEmail: true, isVerifiedSchool: true }
+  const teacher: RouteUser = { id: 't1', role: 'TEACHER', isVerifiedEmail: true, isVerifiedSchool: true }
+  const parentUser: RouteUser = { id: 'p1', role: 'PARENT', isVerifiedEmail: true, isVerifiedSchool: true }
+
+  it('a student lands on /student', () => {
+    expect(homeFor(student)).toBe('/student')
+    expect(resolveRedirect('/student', signedInState(student))).toBeNull()
+  })
+
+  it('a student on a staff, parent or admin page goes to /student', () => {
+    expect(resolveRedirect('/dashboard', signedInState(student))).toBe('/student')
+    expect(resolveRedirect('/parent/classes', signedInState(student))).toBe('/student')
+    expect(resolveRedirect('/admin-panel', signedInState(student))).toBe('/student')
+    expect(resolveRedirect('/login', signedInState(student))).toBe('/student')
+  })
+
+  it('a student may open any student page', () => {
+    expect(resolveRedirect('/student/todo', signedInState(student))).toBeNull()
+    expect(resolveRedirect('/student/classes/abc', signedInState(student))).toBeNull()
+  })
+
+  it('/studentfoo is not a student page', () => {
+    expect(resolveRedirect('/studentfoo', signedInState(student))).toBe('/student')
+  })
+
+  it('staff and parents are sent home from student pages', () => {
+    expect(resolveRedirect('/student', signedInState(teacher))).toBe('/dashboard')
+    expect(resolveRedirect('/student/grades', signedInState(parentUser))).toBe('/parent/dashboard')
+  })
+
+  it('the QR sign-in page opens signed out and from any session', () => {
+    expect(resolveRedirect('/qr', { hasToken: false, user: anonymous })).toBeNull()
+    expect(resolveRedirect('/qr', signedInState(teacher))).toBeNull()
+    expect(resolveRedirect('/qr', signedInState(parentUser))).toBeNull()
+    expect(resolveRedirect('/qr', signedInState(student))).toBeNull()
+  })
+
+  it('landing after sign-in keeps a student inside the portal', () => {
+    expect(landingFor(student, '/student/grades')).toBe('/student/grades')
+    expect(landingFor(student, '/classes')).toBe('/student')
+    expect(landingFor(student)).toBe('/student')
   })
 })
 
@@ -161,6 +237,9 @@ const PAGE_REDIRECTS: { from: string; to: string; signedIn: boolean; roles: (str
   // Logout and delete-account: token removed, then a push to /login or /signup.
   { from: '/verify-email', to: '/login', signedIn: false, roles: [null] },
   { from: '/school-approval', to: '/signup', signedIn: false, roles: [null] },
+  // A QR card sign-in lands the student in the portal; a refused card offers /login.
+  { from: '/qr', to: '/student', signedIn: true, roles: ['STUDENT'] },
+  { from: '/qr', to: '/login', signedIn: false, roles: [null] },
 ]
 
 describe('page-level redirects', () => {

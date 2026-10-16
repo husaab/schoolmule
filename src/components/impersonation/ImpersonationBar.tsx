@@ -58,7 +58,10 @@ export default function ImpersonationBar() {
       <div
         role="status"
         aria-live="polite"
-        className="fixed bottom-4 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 lg:left-[calc(50%+9rem)] print:hidden"
+        className={`fixed left-1/2 z-[90] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 lg:left-[calc(50%+9rem)] print:hidden ${
+          // The student portal has a bottom tab bar below md: sit above it.
+          target.role === 'STUDENT' ? 'bottom-20 md:bottom-4' : 'bottom-4'
+        }`}
       >
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/95 px-3 py-2.5 text-white shadow-2xl shadow-violet-900/30 backdrop-blur-md sm:px-4">
           <span className="relative flex h-2.5 w-2.5 flex-shrink-0" aria-hidden>

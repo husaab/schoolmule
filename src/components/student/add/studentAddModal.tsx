@@ -25,6 +25,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
   const [submitting, setSubmitting] = useState(false);
 
   const user = useUserStore((state) => state.user);
+  const isAdmin = user?.role === 'ADMIN';
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
@@ -76,7 +77,9 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       dateOfBirth: values.dateOfBirth || null,
       address: values.address || null,
       healthCardNumber: values.healthCardNumber || null,
-      medicalNotes: values.medicalNotes || null
+      medicalNotes: values.medicalNotes || null,
+      // Admins only: any other role's body must not carry the key at all.
+      ...(isAdmin && values.studentEmail.trim() && { studentEmail: values.studentEmail.trim().toLowerCase() })
     };
 
     setSubmitting(true);
@@ -92,6 +95,8 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       } else {
         showNotification('Failed to add student', 'error');
       }
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Failed to add student', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -112,6 +117,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             onChange={setField}
             teachers={teachers}
             idPrefix="student-add"
+            showStudentEmail={isAdmin}
           />
         </ModalBody>
 

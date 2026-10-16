@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon } from '@heroicons/react/24/outline';
 
 const adminLinks = [
   {
@@ -14,6 +14,15 @@ const adminLinks = [
     color: 'bg-cyan-500',
     bgColor: 'from-cyan-50 to-sky-50',
     borderColor: 'border-cyan-100',
+  },
+  {
+    href: '/admin-panel/student-accounts',
+    label: 'Student accounts',
+    description: 'Invite students, record parental consent, print QR sign-in cards and set classroom options.',
+    icon: KeyIcon,
+    color: 'bg-indigo-500',
+    bgColor: 'from-indigo-50 to-violet-50',
+    borderColor: 'border-indigo-100',
   },
   {
     href: '/admin-panel/approvals',

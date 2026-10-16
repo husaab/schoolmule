@@ -14,7 +14,12 @@
 //   2. Onboarding (email unverified, then school approval pending): the user
 //      may only be on that step's pages. Nothing else applies until it's done.
 //   3. Fully onboarded: auth/onboarding pages send you home, then role and
-//      owner gates.
+//      owner gates. A STUDENT may open only the student portal (/student);
+//      staff and parents never open it.
+//
+// The QR sign-in page (/qr) is open to everyone, signed in or not: a QR card
+// is scanned on shared classroom devices, so the page itself swaps whatever
+// session it finds for the student's.
 
 export type RouteUser = {
   id: string | null
@@ -44,6 +49,10 @@ const ONBOARDING_PATHS = [...VERIFY_EMAIL_PATHS, ...SCHOOL_APPROVAL_PATHS]
 
 const ADMIN_ONLY_PREFIXES = ['/admin-panel', '/staff-attendance', '/finance']
 const PARENT_PREFIXES = ['/parent', '/settings', '/support', '/contact-us']
+const STUDENT_PREFIXES = ['/student']
+
+// A QR card's link must work signed out and from any session (shared devices).
+const QR_SIGN_IN_PATH = '/qr'
 
 // Known top-level app route segments (to distinguish from public form slugs).
 // Every folder under src/app/(user) must be listed, or its two-segment pages
@@ -56,6 +65,7 @@ const KNOWN_APP_ROUTES = [
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
   'finance', 'messages', 'observe', 'student-views', 'analytics',
+  'student', 'qr',
   'forbidden', 'api', '_next',
 ]
 
@@ -85,6 +95,8 @@ const isOpenPath = (path: string) =>
 
 export const isParentPath = (path: string) => PARENT_PREFIXES.some((p) => underPrefix(path, p))
 
+export const isStudentPath = (path: string) => STUDENT_PREFIXES.some((p) => underPrefix(path, p))
+
 // The onboarding page the user must finish first, or null when done.
 // Admins are created by invite and are never held for school approval.
 export const onboardingStep = (user: RouteUser): string | null => {
@@ -97,12 +109,15 @@ const stepPaths = (step: string) => (step === '/verify-email' ? VERIFY_EMAIL_PAT
 
 // Where a signed-in user lands when nothing more specific applies.
 export const homeFor = (user: RouteUser): string =>
-  onboardingStep(user) ?? (user.role === 'PARENT' ? '/parent/dashboard' : '/dashboard')
+  onboardingStep(user) ??
+  (user.role === 'PARENT' ? '/parent/dashboard' : user.role === 'STUDENT' ? '/student' : '/dashboard')
 
 // The redirect target for `path`, or null when the user may stay.
 export const resolveRedirect = (path: string, state: RouteState): string | null => {
   if (!state.hasToken) {
-    return AUTH_ENTRY_PATHS.includes(path) || path === '/verify-email-token' || isOpenPath(path) ? null : '/'
+    return AUTH_ENTRY_PATHS.includes(path) || path === '/verify-email-token' || path === QR_SIGN_IN_PATH || isOpenPath(path)
+      ? null
+      : '/'
   }
 
   // Token but no user yet: AuthGuard is validating the session. Stay put.
@@ -115,6 +130,12 @@ export const resolveRedirect = (path: string, state: RouteState): string | null 
   const home = homeFor(user)
   if (AUTH_ENTRY_PATHS.includes(path) || ONBOARDING_PATHS.includes(path)) return home
   if (isOpenPath(path)) return null
+  // The QR page signs out whoever is here and signs the card's student in.
+  if (path === QR_SIGN_IN_PATH) return null
+  // Students live in the student portal and nowhere else.
+  if (user.role === 'STUDENT') return isStudentPath(path) ? null : home
+  // Staff and parents never open student pages.
+  if (isStudentPath(path)) return home
   if (underPrefix(path, '/observe') && user.isPlatformOwner === false) return home
   if (ADMIN_ONLY_PREFIXES.some((p) => underPrefix(path, p)) && user.role !== 'ADMIN') return home
   if (user.role === 'PARENT' && !isParentPath(path)) return home

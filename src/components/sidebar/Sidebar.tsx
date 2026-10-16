@@ -36,7 +36,8 @@ import {
   InboxIcon,
   UsersIcon,
   BanknotesIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  KeyIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -407,6 +408,7 @@ const Sidebar = () => {
 
                   <SubNavGroup label="People" />
                   <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
+                  <SubNavItem href="/admin-panel/student-accounts" label="Student accounts" icon={KeyIcon} />
                   <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
                   <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
                   <SubNavItem href="/admin-panel/messages" label="All Messages" icon={ChatBubbleOvalLeftEllipsisIcon} />

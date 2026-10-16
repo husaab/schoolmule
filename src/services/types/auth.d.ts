@@ -1,4 +1,8 @@
 // services/types/auth.d.ts
+
+/** Every database role. STUDENT logins only ever open the student portal (/student). */
+export type UserRole = 'ADMIN' | 'TEACHER' | 'PARENT' | 'STUDENT';
+
 export interface User {
     userId: string;
     username: string;

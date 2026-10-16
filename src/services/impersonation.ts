@@ -11,8 +11,9 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { useSelectedChildStore } from '@/store/useSelectedChildStore';
 import { useImpersonationStore } from '@/store/useImpersonationStore';
 
-/** Where to send the admin when the preview ends. */
+/** Where to send the admin when the preview ends: back to the page the preview started from. */
 const IMPERSONATION_RETURN_PATH = '/admin-panel/users';
+const STUDENT_IMPERSONATION_RETURN_PATH = '/admin-panel/student-accounts';
 
 // Set once a preview is being torn down, so overlapping callers (several 401s
 // arriving together) cannot restore and then clear the admin token in turn.
@@ -21,7 +22,8 @@ let ending = false;
 // A one-shot message shown after the reload that ends a preview.
 const FLASH_KEY = 'impersonation_flash';
 
-const landingPathFor = (role: string) => (role === 'PARENT' ? '/parent/dashboard' : '/dashboard');
+export const landingPathFor = (role: string) =>
+  role === 'PARENT' ? '/parent/dashboard' : role === 'STUDENT' ? '/student' : '/dashboard';
 
 const clearIdentityStores = () => {
   useUserStore.getState().clearUser();
@@ -79,7 +81,8 @@ export const startImpersonation = (
 };
 
 /**
- * Restore the admin's own session and go back to the Users page.
+ * Restore the admin's own session and go back to the Users page (Student
+ * accounts after previewing a student).
  * Safe to call when no preview is active (it then just clears state).
  */
 export const endImpersonation = (reason: 'manual' | 'expired' = 'manual') => {
@@ -108,7 +111,9 @@ export const endImpersonation = (reason: 'manual' | 'expired' = 'manual') => {
     // sessionStorage can be unavailable (private mode); the message is a nicety.
   }
 
-  window.location.href = session?.adminToken ? IMPERSONATION_RETURN_PATH : '/';
+  const returnPath =
+    session?.target.role === 'STUDENT' ? STUDENT_IMPERSONATION_RETURN_PATH : IMPERSONATION_RETURN_PATH;
+  window.location.href = session?.adminToken ? returnPath : '/';
 };
 
 /** Read and clear the post-exit message, if one was left. */

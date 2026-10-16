@@ -26,6 +26,19 @@ export const login = async (credentials: LoginRequest): Promise<LoginResponse> =
   });
 };
 
+/**
+ * POST /auth/student-qr: sign in with a printed QR card (`t` from /qr?t=…).
+ * Same payload as a password sign-in. Fails with 401 QR_INVALID for a voided
+ * or forged card, 403 QR_NOT_ENABLED above the QR grades, or a sign-in gate
+ * code (CLASSROOM_DISABLED, NO_STUDENT_LINK, CONSENT_REQUIRED, GRADE_NOT_ENABLED).
+ */
+export const studentQrSignIn = async (token: string): Promise<LoginResponse> => {
+  return apiClient<LoginResponse>('/auth/student-qr', {
+    method: 'POST',
+    body: { token },
+  });
+};
+
 export const googleAuth = async (request: GoogleAuthRequest): Promise<GoogleAuthResponse> => {
   return apiClient<GoogleAuthResponse>('/auth/google', {
     method: 'POST',

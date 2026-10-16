@@ -76,7 +76,8 @@ export interface ImpersonationStart {
   fullName: string;
   email: string;
   school: string;
-  role: SchoolRole;
+  /** STUDENT when an admin previews a student login (Admin Panel → Student accounts). */
+  role: SchoolRole | 'STUDENT';
   /** Dual-role claims, when the backend sends them. The switcher is hidden during a preview anyway. */
   baseRole?: string;
   roles?: string[];

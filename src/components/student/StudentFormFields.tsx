@@ -25,6 +25,8 @@ import {
 export interface StudentFormValues {
   name: string
   grade: GradeValue | ''
+  /** The student's own address. Shown and sent for admins only. */
+  studentEmail: string
   oen: string
   dateOfBirth: string
   healthCardNumber: string
@@ -43,6 +45,7 @@ export interface StudentFormValues {
 export const emptyStudentForm: StudentFormValues = {
   name: '',
   grade: '',
+  studentEmail: '',
   oen: '',
   dateOfBirth: '',
   healthCardNumber: '',
@@ -64,6 +67,8 @@ interface StudentFormFieldsProps {
   teachers: TeacherPayload[]
   /** Prefix for input ids, so two forms can coexist on a page without colliding. */
   idPrefix: string
+  /** Show the student's own email (admins only: the server refuses it from anyone else). */
+  showStudentEmail?: boolean
 }
 
 const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
@@ -71,6 +76,7 @@ const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
   onChange,
   teachers,
   idPrefix,
+  showStudentEmail = false,
 }) => {
   const id = (field: string) => `${idPrefix}-${field}`
 
@@ -139,6 +145,23 @@ const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
             />
           </Field>
         </FieldRow>
+
+        {showStudentEmail && (
+          <Field
+            label="Student's own email"
+            htmlFor={id('student-email')}
+            hint="The address the student signs in with, never a parent's. Once the student has a login, change it on Admin Panel → Student accounts."
+          >
+            <input
+              id={id('student-email')}
+              type="email"
+              value={values.studentEmail}
+              onChange={(e) => onChange('studentEmail', e.target.value)}
+              placeholder="student@school.example.com"
+              className={inputClass}
+            />
+          </Field>
+        )}
 
         <Field label="Homeroom teacher" htmlFor={id('homeroom')}>
           <select

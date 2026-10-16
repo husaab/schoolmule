@@ -28,6 +28,12 @@ export interface StudentPayload {
   healthCardNumber: string | null;
   medicalNotes: string | null;
   /**
+   * The student's own address (their SchoolMule sign-in once invited).
+   * Admin-only to set: the server refuses any other role's body that carries
+   * this key, so non-admin forms must leave it out entirely.
+   */
+  studentEmail?: string | null;
+  /**
    * The registration form submission this student was imported from, or null
    * when the record was entered manually.
    */

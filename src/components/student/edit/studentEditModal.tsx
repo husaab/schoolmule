@@ -23,6 +23,7 @@ interface StudentEditModalProps {
 const toFormValues = (student: StudentPayload): StudentFormValues => ({
   name: student.name || '',
   grade: student.grade ?? '',
+  studentEmail: student.studentEmail || '',
   oen: student.oen || '',
   // The API returns a full ISO timestamp; <input type="date"> needs YYYY-MM-DD.
   dateOfBirth: student.dateOfBirth ? student.dateOfBirth.slice(0, 10) : '',
@@ -45,6 +46,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
   const [submitting, setSubmitting] = useState(false);
 
   const user = useUserStore((state) => state.user);
+  const isAdmin = user?.role === 'ADMIN';
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
@@ -100,6 +102,12 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       healthCardNumber: values.healthCardNumber || null,
       medicalNotes: values.medicalNotes || null
     };
+    // The student's own address: admins only (the server refuses the key from
+    // anyone else), and only when it changed, so an edit never touches it by accident.
+    const nextStudentEmail = values.studentEmail.trim().toLowerCase();
+    if (isAdmin && nextStudentEmail !== (student.studentEmail || '').toLowerCase()) {
+      updateData.studentEmail = nextStudentEmail || null;
+    }
 
     setSubmitting(true);
     try {
@@ -114,6 +122,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       } else {
         showNotification('Failed to update student', 'error');
       }
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : 'Failed to update student', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -130,6 +140,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
             onChange={setField}
             teachers={teachers}
             idPrefix="student-edit"
+            showStudentEmail={isAdmin}
           />
         </ModalBody>
 

@@ -55,9 +55,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
           if (!response.success || !response.data) return
           if (!(await applySession(response.data, token))) return
 
-          // Check for unread patch notes
+          // Check for unread patch notes (staff and parents; the API refuses students)
           try {
-            if (previewing) return
+            if (previewing || response.data.role === 'STUDENT') return
             const patchRes = await getUnreadPatchNotes()
             if (patchRes.data.hasUnread) {
               setUnread(true, patchRes.data.notes)
@@ -92,7 +92,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   // Check for unread patch notes when user is already logged in (once per session)
   useEffect(() => {
     if (!hasHydrated || !getToken() || !user.id || !user.isVerifiedEmail || !user.isVerifiedSchool) return
-    if (patchNotesChecked.current || previewing) return
+    // "What's new" is for staff and parents; the API answers a student 403.
+    if (patchNotesChecked.current || previewing || user.role === 'STUDENT') return
     patchNotesChecked.current = true
     getUnreadPatchNotes()
       .then((patchRes) => {
@@ -102,7 +103,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {})
-  }, [hasHydrated, user.id, user.isVerifiedEmail, user.isVerifiedSchool, previewing, setUnread])
+  }, [hasHydrated, user.id, user.role, user.isVerifiedEmail, user.isVerifiedSchool, previewing, setUnread])
 
   // Routing: every rule lives in lib/authRouting, which is tested so that no
   // redirect can lead to another. The loop detector is the backstop for a

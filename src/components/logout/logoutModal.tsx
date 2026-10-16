@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { ArrowRightStartOnRectangleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useUserStore } from '@/store/useUserStore'
 import Modal from '../shared/modal'
@@ -10,7 +10,15 @@ import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { useRouter } from 'next/navigation'
 
-const LogoutModal = () => {
+interface LogoutModalProps {
+  /**
+   * Renders the control that opens the confirmation, in place of the
+   * sidebar's "Logout" row (e.g. the student portal's "Not you? Sign out").
+   */
+  trigger?: (open: () => void) => ReactNode
+}
+
+const LogoutModal = ({ trigger }: LogoutModalProps = {}) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const user = useUserStore((state) => state.user)
@@ -43,13 +51,17 @@ const LogoutModal = () => {
 
   return (
     <>
-      <button
-        onClick={openModal}
-        className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors cursor-pointer group"
-      >
-        <ArrowRightStartOnRectangleIcon className="w-5 h-5 text-red-400 group-hover:text-red-500" />
-        <span className="text-sm font-medium">Logout</span>
-      </button>
+      {trigger ? (
+        trigger(openModal)
+      ) : (
+        <button
+          onClick={openModal}
+          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors cursor-pointer group"
+        >
+          <ArrowRightStartOnRectangleIcon className="w-5 h-5 text-red-400 group-hover:text-red-500" />
+          <span className="text-sm font-medium">Logout</span>
+        </button>
+      )}
 
       <Modal isOpen={isModalOpen} onClose={closeModal} size="sm">
         <div className="p-6">
