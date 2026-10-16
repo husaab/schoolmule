@@ -60,6 +60,7 @@ import {
   MegaphoneIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
+import Avatar from '@/components/avatar/Avatar'
 
 interface GradebookWorkspaceProps {
   classId: string
@@ -116,8 +117,16 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
   const [exportError, setExportError] = useState<string | null>(null)
 
   // Saved rows come back from POST …/scores: merge them in place (by
-  // student and assessment) instead of re-reading the whole matrix.
+  // student and assessment) instead of re-reading the whole matrix. A save
+  // acknowledged while the grid is still loading (the teacher came back while
+  // it was in flight) may postdate the GET, so the matrix is read once more.
+  const loadedRef = useRef(false)
+  const ackedWhileLoadingRef = useRef(false)
   const mergeSaved = useCallback((res: UpsertScoresResponse) => {
+    if (!loadedRef.current) {
+      ackedWhileLoadingRef.current = true
+      return
+    }
     const rows = Array.isArray(res?.data) ? res.data : []
     if (rows.length === 0) return
     const byKey = new Map(rows.map((r) => [`${r.student_id}|${r.assessment_id}`, r]))
@@ -133,6 +142,19 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
 
   const autosave = useScoreAutosave({ classId, onSaved: mergeSaved })
   const { pendingMap, drop: dropLocal } = autosave
+
+  // A value queued for a column or student that no longer exists (deleted in
+  // Assessments & categories, unenrolled) can never save, and has no cell to
+  // retype: forget it whenever the matrix is read.
+  const localRef = useRef({ pendingMap, dropLocal })
+  useEffect(() => {
+    localRef.current = { pendingMap, dropLocal }
+  }, [pendingMap, dropLocal])
+  const forgetGoneKeys = useCallback((rows: ScoreRow[]) => {
+    const present = new Set(rows.map((r) => `${r.student_id}|${r.assessment_id}`))
+    const { pendingMap: local, dropLocal: forget } = localRef.current
+    for (const key of Object.keys(local())) if (!present.has(key)) forget(key)
+  }, [])
 
   const loadThreadStubs = useCallback(async () => {
     try {
@@ -169,6 +191,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
       if (refreshed.status === 'success') {
         const rows = refreshed.data as ScoreRow[]
         setScoresMatrix(rows)
+        forgetGoneKeys(rows)
         const flagged = new Set(
           rows
             .filter((r) => r.status === 'missing' || r.status === 'excused')
@@ -179,7 +202,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
     } catch (err) {
       console.error('Error refreshing scores matrix:', err)
     }
-  }, [classId, pendingMap, dropLocal])
+  }, [classId, pendingMap, dropLocal, forgetGoneKeys])
 
   // Missing / excused flags save straight away (after any typed score), then
   // the matrix is re-read.
@@ -192,10 +215,21 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         if (stuRes.status !== 'success') throw new Error(stuRes.message || 'Failed to load students')
         if (assessRes.status !== 'success') throw new Error(assessRes.message || 'Failed to load assessments')
         if (scoreRes.status !== 'success') throw new Error(scoreRes.message || 'Failed to load scores')
+        const rows = scoreRes.data as ScoreRow[]
         setStudents(stuRes.data)
         setAssessments(assessRes.data)
-        setScoresMatrix(scoreRes.data as ScoreRow[])
+        setScoresMatrix(rows)
         setError(null)
+        forgetGoneKeys(rows)
+        loadedRef.current = true
+        if (ackedWhileLoadingRef.current) {
+          ackedWhileLoadingRef.current = false
+          getScoresByClass(classId)
+            .then((again) => {
+              if (again.status === 'success') setScoresMatrix(again.data as ScoreRow[])
+            })
+            .catch((err) => console.error('Error re-reading scores:', err))
+        }
         void loadPublications()
         void loadThreadStubs()
       })
@@ -204,7 +238,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         setError(err instanceof Error && err.message ? err.message : 'Unexpected error')
       })
       .finally(() => setLoading(false))
-  }, [classId, loadPublications, loadThreadStubs])
+  }, [classId, loadPublications, loadThreadStubs, forgetGoneKeys])
 
   useEffect(() => {
     load()
@@ -572,6 +606,7 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
                     <tr key={stu.studentId} className="transition-colors hover:bg-slate-50/50">
                       <td className="sticky left-0 z-10 border-r border-t border-slate-100 bg-white px-4 py-3">
                         <div className="flex items-center gap-2">
+                          <Avatar name={stu.name} avatar={stu.avatar ?? null} size={32} />
                           <button
                             type="button"
                             onClick={() => {
@@ -702,7 +737,13 @@ export default function GradebookWorkspace({ classId, classData, onClassAverage 
         </div>
       </div>
 
-      <p className="text-[13px] text-slate-500">Click a category (or any score in it) to open its assessments.</p>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-600">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-rose-600" aria-hidden="true" />
+          Something missing inside
+        </span>
+        <span className="text-slate-500">Click a category (or any score in it) to open its assessments.</span>
+      </div>
 
       {/* Floating publish tray: appears when columns are ticked. */}
       {selectedAssessmentIds.size > 0 && (

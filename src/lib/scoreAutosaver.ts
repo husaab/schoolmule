@@ -16,6 +16,10 @@
 // The autosaver outlives the view (useScoreAutosave keeps one per class), so a
 // save that fails after the teacher left is still there, outlined with Retry,
 // when they come back to Grades.
+//
+// createAutosaver is generic over what a key holds: createScoreAutosaver
+// queues one score per "studentId|assessmentId"; report card and progress
+// comments queue one entry per student (src/lib/commentAutosave.ts).
 
 import {
   ackBatch,
@@ -45,27 +49,33 @@ export interface SaveOptions {
 
 export type SaveScores<R> = (items: ScoreSaveItem[], opts: SaveOptions) => Promise<R>
 
+/** Saves one batch of [key, value] pairs (the latest value of each key). */
+export type SaveBatch<V, R> = (batch: [string, V][], opts: SaveOptions) => Promise<R>
+
 /** The page's window and document, or stand-ins in tests. */
 export type LifecycleTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener'>
 export type VisibilityTarget = LifecycleTarget & { visibilityState: DocumentVisibilityState }
 
-export interface ScoreAutosaver<R> {
-  getState(): QueueState
+export interface Autosaver<V, R> {
+  getState(): QueueState<V>
   subscribe(listener: () => void): () => void
   /** The teacher typed `value`; `saved` (when given) lets a cell typed back to its saved value send nothing. */
-  queue(key: string, value: CellValue, saved?: CellValue): void
+  queue(key: string, value: V, saved?: V): void
   /** Save now. Resolves once everything typed so far has been saved (or has failed). */
   flush(opts?: SaveOptions): Promise<void>
   /** Send every failed value again. */
   retry(): Promise<void>
   /** Forget the unsent and failed value of one cell (it was just flagged missing/excused). */
   drop(key: string): void
-  onSaved(handler: (res: R) => void): () => void
+  /** Called with the server's answer and the batch it answered. */
+  onSaved(handler: (res: R, batch: [string, V][]) => void): () => void
   onFailed(handler: (message: string) => void): () => void
   /** A view starts showing this class's grid; the returned disconnect saves on the way out. */
   connect(win: LifecycleTarget, doc: VisibilityTarget): () => void
   isConnected(): boolean
 }
+
+export type ScoreAutosaver<R> = Autosaver<CellValue, R>
 
 interface Timers {
   set: (fn: () => void, ms: number) => unknown
@@ -79,32 +89,53 @@ const defaultTimers: Timers = {
 
 const LEAVE_WARNING = 'Some grades have not saved yet. Leave anyway?'
 
-const toItem = ([key, score]: [string, CellValue]): ScoreSaveItem => {
+export const toScoreItem = ([key, score]: [string, CellValue]): ScoreSaveItem => {
   const [studentId, assessmentId] = key.split('|')
   return { studentId, assessmentId, score }
 }
 
 const messageOf = (err: unknown) => (err instanceof Error && err.message ? err.message : 'Could not save')
 
+/** The score autosave: one score per "studentId|assessmentId", saved as ScoreSaveItems. */
 export function createScoreAutosaver<R>({
   save,
-  debounceMs = AUTOSAVE_DEBOUNCE_MS,
-  timers = defaultTimers,
+  debounceMs,
+  timers,
 }: {
   save: SaveScores<R>
   debounceMs?: number
   timers?: Timers
 }): ScoreAutosaver<R> {
-  let state = emptyQueue()
+  return createAutosaver<CellValue, R>({
+    save: (batch, opts) => save(batch.map(toScoreItem), opts),
+    same: sameScore,
+    debounceMs,
+    timers,
+  })
+}
+
+export function createAutosaver<V, R>({
+  save,
+  same,
+  debounceMs = AUTOSAVE_DEBOUNCE_MS,
+  timers = defaultTimers,
+}: {
+  save: SaveBatch<V, R>
+  /** Two values are the same (a key typed back to its saved value sends nothing). */
+  same?: (a: V, b: V) => boolean
+  debounceMs?: number
+  timers?: Timers
+}): Autosaver<V, R> {
+  let state = emptyQueue<V>()
   let timer: unknown = null
   let running: Promise<void> | null = null
   let connections = 0
   let detach: (() => void) | null = null
   const listeners = new Set<() => void>()
-  const savedHandlers = new Set<(res: R) => void>()
+  const savedHandlers = new Set<(res: R, batch: [string, V][]) => void>()
   const failedHandlers = new Set<(message: string) => void>()
 
-  const commit = (next: QueueState) => {
+  const commit = (next: QueueState<V>) => {
     state = next
     listeners.forEach((l) => l())
   }
@@ -116,13 +147,13 @@ export function createScoreAutosaver<R>({
     }
   }
 
-  const send = async (items: ScoreSaveItem[], opts: SaveOptions): Promise<R> => {
+  const send = async (batch: [string, V][], opts: SaveOptions): Promise<R> => {
     try {
-      return await save(items, opts)
+      return await save(batch, opts)
     } catch (err) {
       // A browser that refuses the keepalive request (a TypeError, before
       // anything reached the server) gets the same save as a plain request.
-      if (opts.keepalive && err instanceof TypeError) return save(items, {})
+      if (opts.keepalive && err instanceof TypeError) return save(batch, {})
       throw err
     }
   }
@@ -135,10 +166,10 @@ export function createScoreAutosaver<R>({
       if (batch.length === 0) return
       commit(next)
       try {
-        const res = await send(batch.map(toItem), opts)
+        const res = await send(batch, opts)
         savedHandlers.forEach((h) => {
           try {
-            h(res)
+            h(res, batch)
           } catch (err) {
             console.error('Applying saved scores failed:', err)
           }
@@ -157,10 +188,12 @@ export function createScoreAutosaver<R>({
     if (running) {
       // The page is going away while a batch is in flight: the next batch
       // would never be sent, so send the newer values now as well. They stay
-      // pending and go out again (idempotently) if the page lives on.
+      // pending and go out again (idempotently) if the page lives on. On a
+      // real unload this request can race the in-flight one for the same key;
+      // the alternative (waiting) would lose the newer value for certain.
       if (opts.keepalive) {
         const entries = Object.entries(state.pending)
-        if (entries.length) void send(entries.map(toItem), { keepalive: true }).catch(() => {})
+        if (entries.length) void send(entries, { keepalive: true }).catch(() => {})
       }
       return running
     }
@@ -171,8 +204,8 @@ export function createScoreAutosaver<R>({
     return running
   }
 
-  const queue = (key: string, value: CellValue, saved?: CellValue) => {
-    if (saved !== undefined && sameScore(value, saved) && !(key in state.inFlight)) {
+  const queue = (key: string, value: V, saved?: V) => {
+    if (saved !== undefined && same && same(value, saved) && !(key in state.inFlight)) {
       // Back to what the server already holds: nothing to send.
       if (key in state.pending || key in state.failed) commit(dropKey(state, key))
       return

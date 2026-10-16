@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Modal from '../../shared/modal'
 import { useNotificationStore } from '../../../store/useNotificationStore'
 import { upsertScoresByClass, type ScoreUpsertItem } from '../../../services/classService'
@@ -121,31 +121,36 @@ export default function StudentAssessmentsModal({
     )
   }
 
-  // Initialize edited scores when modal opens
-  useEffect(() => {
-    if (isOpen && student) {
+  // Seed the window's fields when it opens for a student, and only then: a
+  // grade saving in the background (the gradebook autosaves) must not reset
+  // what the teacher has already typed here.
+  const openFor = isOpen && student ? student.studentId : null
+  const [seededFor, setSeededFor] = useState<string | null>(null)
+  if (openFor !== seededFor) {
+    setSeededFor(openFor)
+    if (openFor) {
       const scoreMap: Record<string, string> = {}
-      
+
       // First, load from saved scores in database
       existingScores.forEach(score => {
-        if (score.studentId === student.studentId) {
+        if (score.studentId === openFor) {
           const key = `${score.studentId}|${score.assessmentId}`
           scoreMap[key] = score.score?.toString() || ''
         }
       })
-      
-      // Then, override with any current edited scores from gradebook
+
+      // Then, override with any values from the gradebook not saved yet
       Object.entries(currentEditedScores).forEach(([key, value]) => {
         const [stuId] = key.split('|')
-        if (stuId === student.studentId) {
+        if (stuId === openFor) {
           scoreMap[key] = typeof value === 'number' ? value.toString() : value || ''
         }
       })
-      
+
       setEditedScores(scoreMap)
       setHasChanges(false)
     }
-  }, [isOpen, student, existingScores, currentEditedScores])
+  }
 
   const handleScoreChange = (assessmentId: string, value: string) => {
     if (!student) return

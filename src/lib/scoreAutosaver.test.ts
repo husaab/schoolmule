@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createScoreAutosaver, type SaveOptions, type ScoreSaveItem } from './scoreAutosaver'
+import { createAutosaver, createScoreAutosaver, type SaveOptions, type ScoreSaveItem } from './scoreAutosaver'
 
 // One fake server call: the test decides when (and how) it answers.
 interface Call {
@@ -233,5 +233,77 @@ describe('leaving the Grades tab never loses a typed score', () => {
     autosaver.queue('s1|a1', 9)
     win.dispatchEvent(new Event('pagehide'))
     expect(calls).toHaveLength(0)
+  })
+})
+
+// Report card and progress comments (controller ruling, D17): the same
+// autosaver, one entry per student. Typed text must survive every way out.
+describe('leaving the Grades tab never loses a typed comment', () => {
+  interface Entry {
+    studentId: string
+    classId: string
+    term: string
+    workHabits?: string
+    behavior?: string
+    comment?: string
+  }
+  function setupComments() {
+    const calls: { batch: [string, Entry][]; opts: SaveOptions; resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = []
+    const autosaver = createAutosaver<Entry, unknown>({
+      save: (batch, opts) => new Promise((resolve, reject) => calls.push({ batch, opts, resolve, reject })),
+      debounceMs: 1000,
+    })
+    const win = new EventTarget()
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState })
+    return { calls, autosaver, win, doc }
+  }
+  const base: Entry = { studentId: 's1', classId: 'c1', term: 'Term 1', workHabits: 'G' }
+
+  it('unmounting while the comment is still being typed saves the whole entry at once', () => {
+    const { calls, autosaver, win, doc } = setupComments()
+    const disconnect = autosaver.connect(win, doc)
+    autosaver.queue('s1', { ...base, comment: 'Works hard' })
+    autosaver.queue('s1', { ...base, comment: 'Works hard every day.' })
+    disconnect()
+    expect(calls).toHaveLength(1)
+    expect(calls[0].batch).toEqual([['s1', { ...base, comment: 'Works hard every day.' }]])
+  })
+
+  it('closing the page sends the comment with keepalive', () => {
+    const { calls, autosaver, win, doc } = setupComments()
+    autosaver.connect(win, doc)
+    autosaver.queue('s1', { ...base, comment: 'Kind to classmates.' })
+    win.dispatchEvent(new Event('pagehide'))
+    expect(calls).toHaveLength(1)
+    expect(calls[0].opts).toEqual({ keepalive: true })
+    expect(calls[0].batch[0][1].comment).toBe('Kind to classmates.')
+  })
+
+  it('text typed while a save is in flight goes out next (latest wins)', async () => {
+    const { calls, autosaver } = setupComments()
+    autosaver.queue('s1', { ...base, comment: 'Good' })
+    const done = autosaver.flush()
+    autosaver.queue('s1', { ...base, comment: 'Good effort.' })
+    calls[0].resolve({ status: 'success' })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(2)
+    expect(calls[1].batch).toEqual([['s1', { ...base, comment: 'Good effort.' }]])
+    calls[1].resolve({ status: 'success' })
+    await done
+    expect(autosaver.getState()).toEqual({ pending: {}, inFlight: {}, failed: {} })
+  })
+
+  it('a failed save keeps the text, and Retry sends it again', async () => {
+    const { calls, autosaver } = setupComments()
+    autosaver.queue('s1', { ...base, comment: 'Reads every night.' })
+    const done = autosaver.flush()
+    calls[0].reject(new Error('Failed to save feedback'))
+    await done
+    expect(autosaver.getState().failed.s1.value.comment).toBe('Reads every night.')
+    const retried = autosaver.retry()
+    expect(calls[1].batch[0][1].comment).toBe('Reads every night.')
+    calls[1].resolve({ status: 'success' })
+    await retried
+    expect(autosaver.getState().failed).toEqual({})
   })
 })

@@ -60,7 +60,8 @@ export const getClassReportCardFeedback = async (
  * → Insert or update feedback for multiple students at once
  */
 export const upsertBulkReportCardFeedback = async (
-  feedbackEntries: ReportCardFeedbackPayload[]
+  feedbackEntries: ReportCardFeedbackPayload[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<BulkFeedbackResponse> => {
   return apiClient<BulkFeedbackResponse>(
     `/report-cards/feedback/bulk`,
@@ -68,6 +69,7 @@ export const upsertBulkReportCardFeedback = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: { feedbackEntries },
+      keepalive: opts.keepalive,
     }
   );
 };

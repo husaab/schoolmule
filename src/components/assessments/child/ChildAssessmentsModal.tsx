@@ -263,8 +263,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               toggleDisabled={togglingKey !== null}
                               failed={autosave.failedKeys.has(key)}
                               onValue={(v) => {
-                                // A flagged cell shows a pill, not an input; never let a stray value clear its flag.
-                                if (status === 'graded') autosave.queue(student.studentId, child.assessmentId, v, saved)
+                                // A flagged cell shows a pill, not an input, and a cell (or its
+                                // category) mid-flag takes nothing: a stray value must not clear a flag.
+                                if (status !== 'graded' || togglingKey === key || togglingKey === categoryKey) return
+                                autosave.queue(student.studentId, child.assessmentId, v, saved)
                               }}
                               onCommit={() => void autosave.flush()}
                               onSetStatus={(status) => setStatus(student.studentId, child.assessmentId, status)}

@@ -150,14 +150,16 @@ export const getClassProgressReportFeedback = async (
 
 // Bulk upsert progress report feedback for multiple students
 export const upsertBulkProgressReportFeedback = async (
-  feedbackEntries: BulkProgressReportFeedbackPayload[]
+  feedbackEntries: BulkProgressReportFeedbackPayload[],
+  opts: { keepalive?: boolean } = {}
 ): Promise<BulkProgressReportFeedbackResponse> => {
   return apiClient<BulkProgressReportFeedbackResponse>(
     `/progress-reports/feedback/bulk`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: { feedbackEntries }
+      body: { feedbackEntries },
+      keepalive: opts.keepalive,
     }
   )
 }

@@ -61,7 +61,9 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
 }) => {
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
-  const value = excused ? (
+  // Something inside is flagged missing (counts as 0): the board's rose dot.
+  const missingInside = childStates.includes('missing')
+  const score = excused ? (
     <span className={`inline-block rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${pillClass.excused}`}>
       Excused
     </span>
@@ -72,6 +74,14 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   ) : (
     <span className="inline-block px-2 py-1 text-sm text-slate-400" title="Nothing graded yet">
       —
+    </span>
+  )
+  const value = (
+    <span className="inline-flex items-center gap-1.5">
+      {score}
+      {missingInside && (
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-rose-600" title="Something missing inside" aria-label="Something missing inside" />
+      )}
     </span>
   )
   return (

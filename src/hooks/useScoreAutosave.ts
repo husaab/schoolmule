@@ -5,24 +5,18 @@
 // 600 ms of quiet, at once when the teacher leaves a cell, and on every way
 // out of the page (see src/lib/scoreAutosaver.ts).
 //
-// One autosaver per signed-in user and class lives for the whole session, so
-// every component of the tab (the toolbar's Saved pill, the grid, the
-// windows) shares the same queue, and a save that fails after the teacher has
-// left is still outlined with Retry when they come back.
+// One autosaver per signed-in user and class lives for the whole session
+// (autosaverBinding.ts), so every component of the tab (the toolbar's Saved
+// pill, the grid, the windows) shares the same queue, and a save that fails
+// after the teacher has left is still outlined with Retry when they come back.
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useMemo } from 'react'
 import { upsertScoresByClass, type UpsertScoresResponse } from '@/services/classService'
-import { createScoreAutosaver, type SaveOptions, type ScoreAutosaver as Autosaver } from '@/lib/scoreAutosaver'
-import {
-  displayValue as displayOf,
-  emptyQueue,
-  statusOf,
-  type CellValue,
-  type QueueState,
-} from '@/lib/scoreAutosaveQueue'
-import { useNotificationStore } from '@/store/useNotificationStore'
+import { createScoreAutosaver, type SaveOptions } from '@/lib/scoreAutosaver'
+import { displayValue as displayOf, statusOf, type CellValue } from '@/lib/scoreAutosaveQueue'
 import { useUserStore } from '@/store/useUserStore'
+import { autosaverFor, useBoundAutosaver } from './autosaverBinding'
 
 export type AutosaveStatus = 'saved' | 'saving' | 'error'
 
@@ -33,7 +27,7 @@ export interface ScoreAutosave {
   /** Save now (leaving a cell, switching sub-tab); resolves when everything typed so far has saved or failed. */
   flush: (opts?: SaveOptions) => Promise<void>
   retry: () => Promise<void>
-  /** Forget a cell's unsent and failed value (it was flagged missing/excused). */
+  /** Forget a cell's unsent and failed value (it was flagged missing/excused, or its column is gone). */
   drop: (key: string) => void
   /** What a cell shows: the newest local value, else the saved one. */
   displayValue: (key: string, saved: CellValue) => CellValue
@@ -41,35 +35,6 @@ export interface ScoreAutosave {
   /** Every local value not yet confirmed by the server (failed < in flight < pending), for live totals. */
   pendingMap: () => Record<string, CellValue>
 }
-
-const autosavers = new Map<string, Autosaver<UpsertScoresResponse>>()
-
-function autosaverFor(userId: string, classId: string): Autosaver<UpsertScoresResponse> {
-  const key = `${userId}|${classId}`
-  const existing = autosavers.get(key)
-  if (existing) return existing
-  const autosaver = createScoreAutosaver<UpsertScoresResponse>({
-    save: (items, opts) => upsertScoresByClass(classId, items, opts),
-  })
-  // A save that fails after the teacher left the Grades tab must not fail
-  // silently: say so, and keep the values for Retry when they come back.
-  autosaver.onFailed(() => {
-    if (autosaver.isConnected()) return
-    const count = Object.keys(autosaver.getState().failed).length
-    useNotificationStore
-      .getState()
-      .showNotification(
-        `${count} grade change${count === 1 ? '' : 's'} didn't save. Open the class's Grades tab to retry.`,
-        'error',
-        8000,
-      )
-  })
-  autosavers.set(key, autosaver)
-  return autosaver
-}
-
-const SERVER_SNAPSHOT: QueueState = emptyQueue()
-const serverSnapshot = () => SERVER_SNAPSHOT
 
 export function useScoreAutosave({
   classId,
@@ -80,18 +45,19 @@ export function useScoreAutosave({
   onSaved?: (res: UpsertScoresResponse) => void
 }): ScoreAutosave {
   const userId = useUserStore((s) => s.user.id) ?? ''
-  const autosaver = useMemo(() => autosaverFor(userId, classId), [userId, classId])
-  const state = useSyncExternalStore(autosaver.subscribe, autosaver.getState, serverSnapshot)
-
-  const onSavedRef = useRef(onSaved)
-  useEffect(() => {
-    onSavedRef.current = onSaved
-  }, [onSaved])
-  useEffect(() => autosaver.onSaved((res) => onSavedRef.current?.(res)), [autosaver])
-
-  // While this view is up, page hide/unload save first; when it goes away
-  // (any in-app navigation) whatever is still typed is saved at once.
-  useEffect(() => autosaver.connect(window, document), [autosaver])
+  const autosaver = useMemo(
+    () =>
+      autosaverFor(
+        `${userId}|${classId}|scores`,
+        () =>
+          createScoreAutosaver<UpsertScoresResponse>({
+            save: (items, opts) => upsertScoresByClass(classId, items, opts),
+          }),
+        (count) => `${count} grade change${count === 1 ? '' : 's'} didn't save. Open the class's Grades tab to retry.`,
+      ),
+    [userId, classId],
+  )
+  const state = useBoundAutosaver(autosaver, onSaved ? (res) => onSaved(res) : undefined)
 
   const queue = useCallback(
     (studentId: string, assessmentId: string, value: CellValue, saved?: CellValue) =>

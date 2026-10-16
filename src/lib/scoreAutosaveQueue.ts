@@ -5,17 +5,19 @@
 // batch (a key re-typed meanwhile stays pending, so the latest value wins)
 // or moves its values to `failed`, where they wait for Retry. Keys are
 // "studentId|assessmentId". scoreAutosaver.ts drives this with timers and the
-// network; the grid only reads displayValue/statusOf.
+// network; the grid only reads displayValue/statusOf. The value type is a
+// score by default; report card and progress comments queue one entry per
+// student through the same transitions.
 
 export type CellValue = number | null
 
-export interface QueueState {
-  pending: Record<string, CellValue> // typed, not yet sent (key = studentId|assessmentId)
-  inFlight: Record<string, CellValue> // sent, awaiting the server
-  failed: Record<string, { value: CellValue; message: string }>
+export interface QueueState<V = CellValue> {
+  pending: Record<string, V> // typed, not yet sent (key = studentId|assessmentId)
+  inFlight: Record<string, V> // sent, awaiting the server
+  failed: Record<string, { value: V; message: string }>
 }
 
-export const emptyQueue = (): QueueState => ({ pending: {}, inFlight: {}, failed: {} })
+export const emptyQueue = <V = CellValue,>(): QueueState<V> => ({ pending: {}, inFlight: {}, failed: {} })
 
 const without = <T,>(o: Record<string, T>, k: string) => {
   const n = { ...o }
@@ -23,47 +25,47 @@ const without = <T,>(o: Record<string, T>, k: string) => {
   return n
 }
 
-export function enqueue(s: QueueState, key: string, value: CellValue): QueueState {
+export function enqueue<V>(s: QueueState<V>, key: string, value: V): QueueState<V> {
   return { ...s, pending: { ...s.pending, [key]: value }, failed: without(s.failed, key) }
 }
 
 /** Starts a save: everything pending moves in flight. Only one batch at a time. */
-export function takeBatch(s: QueueState): { state: QueueState; batch: [string, CellValue][] } {
+export function takeBatch<V>(s: QueueState<V>): { state: QueueState<V>; batch: [string, V][] } {
   if (Object.keys(s.inFlight).length > 0) return { state: s, batch: [] }
   const batch = Object.entries(s.pending)
   return { state: { ...s, pending: {}, inFlight: { ...s.pending } }, batch }
 }
 
 /** The server took the batch. A key re-typed meanwhile stays pending (latest wins). */
-export function ackBatch(s: QueueState): QueueState {
+export function ackBatch<V>(s: QueueState<V>): QueueState<V> {
   return { ...s, inFlight: {} }
 }
 
 /** The batch failed: keep each value for Retry unless the teacher already typed a newer one. */
-export function failBatch(s: QueueState, message: string): QueueState {
+export function failBatch<V>(s: QueueState<V>, message: string): QueueState<V> {
   const failed = { ...s.failed }
   for (const [k, v] of Object.entries(s.inFlight)) if (!(k in s.pending)) failed[k] = { value: v, message }
   return { ...s, inFlight: {}, failed }
 }
 
-export function retryFailed(s: QueueState): QueueState {
+export function retryFailed<V>(s: QueueState<V>): QueueState<V> {
   const pending = { ...s.pending }
   for (const [k, f] of Object.entries(s.failed)) if (!(k in pending)) pending[k] = f.value
   return { ...s, pending, failed: {} }
 }
 
 /** A missing/excused flag was set on this cell: forget any unsent number for it. */
-export function drop(s: QueueState, key: string): QueueState {
+export function drop<V>(s: QueueState<V>, key: string): QueueState<V> {
   return { pending: without(s.pending, key), inFlight: s.inFlight, failed: without(s.failed, key) }
 }
 
-export function statusOf(s: QueueState): 'saved' | 'saving' | 'error' {
+export function statusOf<V>(s: QueueState<V>): 'saved' | 'saving' | 'error' {
   if (Object.keys(s.pending).length || Object.keys(s.inFlight).length) return 'saving'
   return Object.keys(s.failed).length ? 'error' : 'saved'
 }
 
 /** What the cell shows: the newest local intent, else the saved value. */
-export function displayValue(s: QueueState, key: string, saved: CellValue): CellValue {
+export function displayValue<V>(s: QueueState<V>, key: string, saved: V): V {
   if (key in s.pending) return s.pending[key]
   if (key in s.inFlight) return s.inFlight[key]
   if (key in s.failed) return s.failed[key].value

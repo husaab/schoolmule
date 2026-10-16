@@ -3,11 +3,12 @@
 // moved into the class. Sub-tabs in the URL (?sub=, Scores is the default):
 // Scores · Assessments & categories · Report card comments · Progress report
 // comments, with the toolbar beside them (the autosave pill, the class
-// average and "Create assessment"). JK and SK classes show their competency
+// average and "Create assessment"). Scores and both kinds of comments
+// autosave (D17); the pill shows all three, and a sub-tab switch saves first. JK and SK classes show their competency
 // gradebook alone; their skill domains and subjects live in Settings.
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
@@ -18,7 +19,8 @@ import SKGradebookWorkspace from '@/components/gradebook/workspace/SKGradebookWo
 import ReportCardCommentsWorkspace from '@/components/gradebook/workspace/ReportCardCommentsWorkspace'
 import ProgressCommentsWorkspace from '@/components/gradebook/workspace/ProgressCommentsWorkspace'
 import AssessmentsSection from '@/components/assessments/section/AssessmentsSection'
-import { useScoreAutosave } from '@/hooks/useScoreAutosave'
+import { useScoreAutosave, type AutosaveStatus } from '@/hooks/useScoreAutosave'
+import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref, GRADES_SUB_IDS, parseGradesSub, type GradesSub } from '@/lib/classroomRoutes'
 import { isJK, isSK } from '@/lib/schoolUtils'
@@ -33,7 +35,9 @@ const SUB_LABELS: Record<GradesSub, string> = {
   'progress-comments': 'Progress report comments',
 }
 
-const LEAVE_COMMENTS = 'You have unsaved comments. Leave without saving them?'
+// The pill's one state for several queues: any failure first, then any save in progress.
+const combinedStatus = (statuses: AutosaveStatus[]): AutosaveStatus =>
+  statuses.includes('error') ? 'error' : statuses.includes('saving') ? 'saving' : 'saved'
 
 interface LoadedClass {
   classId: string
@@ -68,17 +72,28 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
   const classData = loaded?.classId === classId ? loaded.data : null
   const loadError = loaded?.classId === classId ? loaded.error : null
 
-  // The same queue the score grid and its windows use: the pill shows its
-  // state, and a sub-tab switch saves whatever is still typed first.
+  // The same queues the score grid, its windows and the comment sub-tabs
+  // use: the pill shows their state, and a sub-tab switch saves whatever is
+  // still typed first.
   const autosave = useScoreAutosave({ classId })
+  const reportComments = useCommentAutosave({ classId, kind: 'report' })
+  const progressComments = useCommentAutosave({ classId, kind: 'progress' })
+  const pillStatus = combinedStatus([autosave.status, reportComments.status, progressComments.status])
+  const failedCount = autosave.failedKeys.size + reportComments.failedKeys.size + progressComments.failedKeys.size
+  const { flush: flushScores, retry: retryScores } = autosave
+  const { flush: flushReport, retry: retryReport } = reportComments
+  const { flush: flushProgress, retry: retryProgress } = progressComments
+  const flushAll = useCallback(() => {
+    void flushScores()
+    void flushReport()
+    void flushProgress()
+  }, [flushScores, flushReport, flushProgress])
+  const retryAll = () => {
+    void retryScores()
+    void retryReport()
+    void retryProgress()
+  }
   const [classAverage, setClassAverage] = useState<number | null | undefined>(undefined)
-
-  // Unsaved comments (report card / progress) are kept by Save All, so a
-  // sub-tab switch asks before dropping them.
-  const commentsDirty = useRef(false)
-  const setCommentsDirty = useCallback((dirty: boolean) => {
-    commentsDirty.current = dirty
-  }, [])
 
   // JK and SK grading setup (skill domains, subjects) is in Settings: an old
   // #assessments link that landed on Grades → setup goes there.
@@ -88,11 +103,10 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
 
   const selectSub = useCallback(
     (next: GradesSub, extra: Record<string, string | null> = {}) => {
-      if (next !== sub && commentsDirty.current && !window.confirm(LEAVE_COMMENTS)) return
-      void autosave.flush()
+      flushAll()
       setParams({ sub: next === 'scores' ? null : next, add: null, ...extra })
     },
-    [sub, autosave, setParams],
+    [flushAll, setParams],
   )
 
   // T18 points this at the New assessment form; until then it opens the add
@@ -174,11 +188,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <SavedPill
-            status={autosave.status}
-            failedCount={autosave.failedKeys.size}
-            onRetry={() => void autosave.retry()}
-          />
+          <SavedPill status={pillStatus} failedCount={failedCount} onRetry={retryAll} />
           {classAverage !== undefined && (
             <span className="flex flex-col items-end px-2">
               <span className="text-xs text-slate-500">Class average</span>
@@ -204,20 +214,10 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
         )}
         {sub === 'setup' && <AssessmentsSection classId={classId} openAdd={addRequested} onAddOpened={clearAdd} />}
         {sub === 'report-comments' && (
-          <ReportCardCommentsWorkspace
-            classId={classId}
-            classData={classData}
-            onDirtyChange={setCommentsDirty}
-            onOpenSub={selectSub}
-          />
+          <ReportCardCommentsWorkspace classId={classId} classData={classData} onOpenSub={selectSub} />
         )}
         {sub === 'progress-comments' && (
-          <ProgressCommentsWorkspace
-            classId={classId}
-            classData={classData}
-            onDirtyChange={setCommentsDirty}
-            onOpenSub={selectSub}
-          />
+          <ProgressCommentsWorkspace classId={classId} classData={classData} onOpenSub={selectSub} />
         )}
       </div>
     </div>

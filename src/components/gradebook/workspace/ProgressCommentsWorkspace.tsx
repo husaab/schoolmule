@@ -2,9 +2,10 @@
 // Grades → Progress report comments on the class page (it was
 // /gradebook/[classId]/progress). The progress report ratings and comment of every
 // student for the class's own term, with AI-assisted comments. The grades
-// under each name come from the Scores sub-tab (bulkFeedbackGrades). Comments
-// still save with Save All; the Grades tab asks before a sub-tab switch would
-// drop unsaved ones (onDirtyChange).
+// under each name come from the Scores sub-tab (bulkFeedbackGrades).
+// Ratings and comments autosave (D17, useCommentAutosave): a second after the
+// teacher stops, at once on leaving a field, and on every way out of the tab,
+// with the same bulk payloads Save All sends (Save All is now a manual flush).
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -12,8 +13,10 @@ import Spinner from '@/components/Spinner'
 import ProgressReportModal from '@/components/progress-report/ProgressReportModal'
 
 import { getStudentsInClass } from '@/services/classService'
-import { getClassProgressReportFeedback, upsertBulkProgressReportFeedback } from '@/services/progressReportService'
-import type { ClassProgressReportFeedbackEntry, BulkProgressReportFeedbackPayload } from '@/services/progressReportService'
+import { getClassProgressReportFeedback } from '@/services/progressReportService'
+import type { ClassProgressReportFeedbackEntry } from '@/services/progressReportService'
+import { useCommentAutosave } from '@/hooks/useCommentAutosave'
+import { feedbackEntry, PROGRESS_FIELDS, withFeedbackField, type FeedbackEntry } from '@/lib/commentAutosave'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -56,23 +59,15 @@ const RATING_OPTIONS = [
 
 type ProgressField = 'coreStandards' | 'workHabit' | 'behavior' | 'comment'
 
-interface EditedProgress {
-  coreStandards?: string
-  workHabit?: string
-  behavior?: string
-  comment?: string
-}
 
 interface ProgressCommentsWorkspaceProps {
   classId: string
   classData: ClassPayload
-  /** Unsaved comments appeared or were saved (the Grades tab asks before dropping them). */
-  onDirtyChange?: (dirty: boolean) => void
   /** Opens another Grades sub-tab (the "report card" link). */
   onOpenSub?: (sub: GradesSub) => void
 }
 
-export default function ProgressCommentsWorkspace({ classId, classData, onDirtyChange, onOpenSub }: ProgressCommentsWorkspaceProps) {
+export default function ProgressCommentsWorkspace({ classId, classData, onOpenSub }: ProgressCommentsWorkspaceProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -84,12 +79,11 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
 
   // Progress feedback state: Map of studentId -> feedback data
   const [existingFeedback, setExistingFeedback] = useState<Map<string, ClassProgressReportFeedbackEntry>>(new Map())
-  const [editedFeedback, setEditedFeedback] = useState<Map<string, EditedProgress>>(new Map())
 
   // UI state
   const [loading, setLoading] = useState(true)
-  const [loadingFeedback, setLoadingFeedback] = useState(true)
-  const [saving, setSaving] = useState(false)
+  // Nothing to load for a class without a term (it shows a note instead).
+  const [loadingFeedback, setLoadingFeedback] = useState(() => Boolean(classData.termName))
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
@@ -98,19 +92,41 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
   // engine). pct is null when nothing has been graded yet — never 0.
   const [studentGrades] = useState<StoredGrades>(() => readStoredGrades(classId))
 
-  // Calculate if there are unsaved changes
-  const hasUnsavedChanges = editedFeedback.size > 0
-  useEffect(() => {
-    onDirtyChange?.(hasUnsavedChanges)
-  }, [hasUnsavedChanges, onDirtyChange])
-  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+  // Autosave: latest wins per student; a failed save keeps the text and the
+  // Grades toolbar's pill offers Retry. Saved entries fold into the saved
+  // comments, as Save All did.
+  const comments = useCommentAutosave({
+    classId,
+    kind: 'progress',
+    onSaved: (entries) =>
+      setExistingFeedback((prev) => {
+        const updated = new Map(prev)
+        for (const entry of entries) {
+          const current: ClassProgressReportFeedbackEntry = updated.get(entry.studentId) || {
+            studentId: entry.studentId,
+            studentName: students.find((s) => s.studentId === entry.studentId)?.name || '',
+            classId,
+            term: selectedTerm,
+            coreStandards: null,
+            workHabit: null,
+            behavior: null,
+            comment: null,
+          }
+          const next = { ...current }
+          for (const field of PROGRESS_FIELDS) if (entry[field] !== undefined) next[field] = entry[field] as string
+          updated.set(entry.studentId, next)
+        }
+        return updated
+      }),
+  })
+  const hasUnsavedChanges = comments.unsavedCount > 0
 
   // Calculate progress — complete when all 4 fields are filled
   const calculateProgress = () => {
     let completed = 0
     students.forEach((stu) => {
       const existing = existingFeedback.get(stu.studentId)
-      const edited = editedFeedback.get(stu.studentId)
+      const edited = comments.entryFor(stu.studentId)
 
       const coreStandards = edited?.coreStandards ?? existing?.coreStandards
       const workHabit = edited?.workHabit ?? existing?.workHabit
@@ -167,127 +183,34 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
       })
   }, [classId, selectedTerm])
 
-  // Warn about unsaved changes on navigation
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault()
-        e.returnValue = 'You have unsaved progress changes. Are you sure you want to leave?'
-        return e.returnValue
-      }
-    }
+  // The student's entry as saved (what Save All sent for an untouched field).
+  const savedEntry = (studentId: string): FeedbackEntry<ProgressField> =>
+    feedbackEntry({ studentId, classId, term: selectedTerm }, PROGRESS_FIELDS, existingFeedback.get(studentId))
 
-    const handlePopState = () => {
-      if (hasUnsavedChanges) {
-        const confirmLeave = window.confirm('You have unsaved progress changes. Are you sure you want to leave?')
-        if (!confirmLeave) {
-          window.history.pushState(null, '', window.location.href)
-        }
-      }
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('popstate', handlePopState)
-
-    if (hasUnsavedChanges) {
-      window.history.pushState(null, '', window.location.href)
-    }
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [hasUnsavedChanges])
-
-  // Get the current value for a field (edited or existing)
+  // Get the current value for a field (not yet saved, else saved)
   const getFieldValue = (studentId: string, field: ProgressField): string => {
-    const edited = editedFeedback.get(studentId)
-    if (edited && edited[field] !== undefined) {
-      return edited[field] || ''
-    }
+    const local = comments.entryFor(studentId)
+    if (local) return local[field] ?? ''
     const existing = existingFeedback.get(studentId)
     return existing?.[field] || ''
   }
 
-  // Check if a field has been edited
+  // A field whose new value is not saved yet
   const isFieldEdited = (studentId: string, field: ProgressField): boolean => {
-    const edited = editedFeedback.get(studentId)
-    return edited !== undefined && edited[field] !== undefined
+    const local = comments.entryFor(studentId)
+    return local !== null && (local[field] ?? '') !== (existingFeedback.get(studentId)?.[field] ?? '')
   }
 
-  // Handle field change
+  // Queue the student's whole entry (the class needs a term to save anything)
   const handleFieldChange = (studentId: string, field: ProgressField, value: string) => {
-    setEditedFeedback((prev) => {
-      const updated = new Map(prev)
-      const existing = updated.get(studentId) || {}
-      updated.set(studentId, { ...existing, [field]: value })
-      return updated
-    })
+    if (!selectedTerm) return
+    const saved = savedEntry(studentId)
+    comments.queue(studentId, withFeedbackField(comments.entryFor(studentId) ?? saved, field, value), saved)
   }
 
-  // Save all changes
-  const handleSaveAll = async () => {
-    if (!selectedTerm || editedFeedback.size === 0) return
-
-    setSaving(true)
-
-    const feedbackEntries: BulkProgressReportFeedbackPayload[] = []
-
-    editedFeedback.forEach((edited, studentId) => {
-      const existing = existingFeedback.get(studentId)
-      feedbackEntries.push({
-        studentId,
-        classId,
-        term: selectedTerm,
-        coreStandards: edited.coreStandards !== undefined ? edited.coreStandards : existing?.coreStandards ?? undefined,
-        workHabit: edited.workHabit !== undefined ? edited.workHabit : existing?.workHabit ?? undefined,
-        behavior: edited.behavior !== undefined ? edited.behavior : existing?.behavior ?? undefined,
-        comment: edited.comment !== undefined ? edited.comment : existing?.comment ?? undefined,
-      })
-    })
-
-    try {
-      const res = await upsertBulkProgressReportFeedback(feedbackEntries)
-
-      if (res.status === 'success') {
-        showNotification(`Saved progress reports for ${res.data.updated} students`, 'success')
-
-        // Move all edited data to existing
-        setExistingFeedback((prev) => {
-          const updated = new Map(prev)
-          editedFeedback.forEach((edited, studentId) => {
-            const current = updated.get(studentId) || {
-              studentId,
-              studentName: students.find(s => s.studentId === studentId)?.name || '',
-              classId,
-              term: selectedTerm,
-              coreStandards: null,
-              workHabit: null,
-              behavior: null,
-              comment: null,
-            }
-            updated.set(studentId, {
-              ...current,
-              coreStandards: edited.coreStandards !== undefined ? edited.coreStandards : current.coreStandards,
-              workHabit: edited.workHabit !== undefined ? edited.workHabit : current.workHabit,
-              behavior: edited.behavior !== undefined ? edited.behavior : current.behavior,
-              comment: edited.comment !== undefined ? edited.comment : current.comment,
-            })
-          })
-          return updated
-        })
-
-        // Clear edited state
-        setEditedFeedback(new Map())
-      } else {
-        showNotification(res.message || 'Failed to save progress reports', 'error')
-      }
-    } catch (err) {
-      console.error('Save all failed:', err)
-      showNotification('Failed to save progress reports', 'error')
-    } finally {
-      setSaving(false)
-    }
+  // Save All: send whatever has not saved yet, now
+  const handleSaveAll = () => {
+    void comments.flush()
   }
 
   // Generate AI comment for a student
@@ -425,15 +348,15 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                 {/* Save Button */}
                 <button
                   onClick={handleSaveAll}
-                  disabled={saving || editedFeedback.size === 0}
+                  disabled={comments.status === 'saved'}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm cursor-pointer ${
-                    saving || editedFeedback.size === 0
+                    comments.status === 'saved'
                       ? 'bg-white/20 text-white/50 cursor-not-allowed'
                       : 'bg-white text-emerald-600 hover:bg-white/90 shadow-lg hover:shadow-xl'
                   }`}
                 >
                   <CheckCircleIcon className="h-4 w-4" />
-                  {saving ? 'Saving...' : 'Save All'}
+                  {comments.status === 'saving' ? 'Saving…' : 'Save All'}
                 </button>
               </div>
             </div>
@@ -486,7 +409,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                     }`} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">{editedFeedback.size}</p>
+                    <p className="text-2xl font-bold text-white">{comments.unsavedCount}</p>
                     <p className="text-xs text-white/70">Unsaved</p>
                   </div>
                 </div>
@@ -562,6 +485,16 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
             </div>
           </div>
 
+          {!selectedTerm && (
+
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+
+              This class has no term yet, so comments can&apos;t be saved. Set its term in the class&apos;s Settings.
+
+            </div>
+
+          )}
+
           {/* Progress Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             {loadingFeedback ? (
@@ -609,7 +542,8 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                       students
                         .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
                         .map((stu) => {
-                          const hasEdits = editedFeedback.has(stu.studentId)
+                          const hasEdits = comments.entryFor(stu.studentId) !== null
+                          const saveFailed = comments.failedKeys.has(stu.studentId)
                           const isGenerating = generatingAI.has(stu.studentId)
                           const coreStandardsValue = getFieldValue(stu.studentId, 'coreStandards')
                           const workHabitValue = getFieldValue(stu.studentId, 'workHabit')
@@ -619,7 +553,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                             <tr
                               key={stu.studentId}
                               className={`hover:bg-slate-50/50 transition-colors ${
-                                hasEdits ? 'bg-amber-50/30' : ''
+                                saveFailed ? 'bg-rose-50/40' : hasEdits ? 'bg-amber-50/30' : ''
                               }`}
                             >
                               {/* Student Name */}
@@ -630,14 +564,21 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                                       {stu.name}
                                     </span>
                                     <button
-                                      onClick={() => setModalStudent({ id: stu.studentId, name: stu.name })}
+                                      onClick={() => {
+                                        // The window saves this student itself: send what was typed here first.
+                                        void comments.flush()
+                                        setModalStudent({ id: stu.studentId, name: stu.name })
+                                      }}
                                       className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
                                       title="Edit this student's progress report feedback"
                                     >
                                       <PencilSquareIcon className="h-4 w-4" />
                                     </button>
                                     {hasEdits && (
-                                      <span className="w-2 h-2 rounded-full bg-amber-400" title="Unsaved changes" />
+                                      <span
+                                        className={`w-2 h-2 rounded-full ${saveFailed ? 'bg-rose-500' : 'bg-amber-400'}`}
+                                        title={saveFailed ? "Didn't save. Use Retry above." : 'Saving…'}
+                                      />
                                     )}
                                   </div>
                                   <div className="mt-0.5">
@@ -664,6 +605,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                                 <select
                                   value={coreStandardsValue}
                                   onChange={(e) => handleFieldChange(stu.studentId, 'coreStandards', e.target.value)}
+                                  onBlur={() => void comments.flush()}
                                   className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
                                     isFieldEdited(stu.studentId, 'coreStandards')
                                       ? 'border-amber-300 bg-amber-50/50'
@@ -683,6 +625,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                                 <select
                                   value={workHabitValue}
                                   onChange={(e) => handleFieldChange(stu.studentId, 'workHabit', e.target.value)}
+                                  onBlur={() => void comments.flush()}
                                   className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
                                     isFieldEdited(stu.studentId, 'workHabit')
                                       ? 'border-amber-300 bg-amber-50/50'
@@ -702,6 +645,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                                 <select
                                   value={behaviorValue}
                                   onChange={(e) => handleFieldChange(stu.studentId, 'behavior', e.target.value)}
+                                  onBlur={() => void comments.flush()}
                                   className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
                                     isFieldEdited(stu.studentId, 'behavior')
                                       ? 'border-amber-300 bg-amber-50/50'
@@ -722,6 +666,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
                                   <textarea
                                     value={getFieldValue(stu.studentId, 'comment')}
                                     onChange={(e) => handleFieldChange(stu.studentId, 'comment', e.target.value)}
+                                    onBlur={() => void comments.flush()}
                                     placeholder="Enter comment or use AI to generate..."
                                     rows={4}
                                     className={`flex-1 px-3 py-2 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all ${
@@ -772,24 +717,6 @@ export default function ProgressCommentsWorkspace({ classId, classData, onDirtyC
             )}
           </div>
 
-          {/* Unsaved changes sticky bar */}
-          {hasUnsavedChanges && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-30">
-              <div className="bg-white rounded-xl shadow-lg border border-slate-200 px-4 py-3 flex items-center gap-4">
-                <div className="flex items-center gap-2 text-amber-600">
-                  <ExclamationTriangleIcon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{editedFeedback.size} unsaved changes</span>
-                </div>
-                <button
-                  onClick={handleSaveAll}
-                  disabled={saving}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save All'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
       {modalStudent && (
