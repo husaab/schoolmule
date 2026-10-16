@@ -40,7 +40,7 @@ import {
   CurrencyDollarIcon,
   KeyIcon
 } from '@heroicons/react/24/outline';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore, Fragment } from 'react';
 import { useUserStore } from '@/store/useUserStore'
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
@@ -68,7 +68,6 @@ const teacherLinks: NavLink[] = [
   { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/students', label: 'Students', icon: UserGroupIcon },
   { href: '/classes', label: 'Classes', icon: AcademicCapIcon },
-  { href: '/gradebook', label: 'Gradebook', icon: BookOpenIcon },
   { href: '/messages', label: 'Messages', icon: InboxIcon },
   { href: '/analytics', label: 'Analytics', icon: PresentationChartLineIcon },
 ];
@@ -89,6 +88,36 @@ const supportLinks: NavLink[] = [
   { href: '/contact-us', label: 'Contact', icon: EnvelopeIcon }
 ];
 
+// The Gradebook item left the sidebar (it is each class's Grades tab now).
+// Staff see a one-line pointer under Classes until they dismiss it. Stored
+// in localStorage; when storage is unavailable it stays dismissed for the tab.
+const GRADEBOOK_HINT_KEY = 'sm.hint.gradebookMoved'
+let gradebookHintDismissed = false
+const gradebookHintListeners = new Set<() => void>()
+const readGradebookHintDismissed = () => {
+  if (gradebookHintDismissed) return true
+  try {
+    return window.localStorage.getItem(GRADEBOOK_HINT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const subscribeGradebookHint = (listener: () => void) => {
+  gradebookHintListeners.add(listener)
+  return () => {
+    gradebookHintListeners.delete(listener)
+  }
+}
+const dismissGradebookHint = () => {
+  gradebookHintDismissed = true
+  try {
+    window.localStorage.setItem(GRADEBOOK_HINT_KEY, '1')
+  } catch {
+    // Storage unavailable: dismissed for this tab only.
+  }
+  gradebookHintListeners.forEach((l) => l())
+}
+
 const Sidebar = () => {
   const pathname = usePathname();
   const user = useUserStore(s => s.user);
@@ -98,6 +127,8 @@ const Sidebar = () => {
   const newSubmissionCount = useRegistrationStore((s) => s.newSubmissionCount);
   const setNewSubmissionCount = useRegistrationStore((s) => s.setNewSubmissionCount);
   const unreadTotal = useMessagingStore((s) => s.summary.unreadConversations + s.summary.unreadAnnouncements);
+  // Hidden on the server render; shown after hydration unless dismissed.
+  const gradebookHintHidden = useSyncExternalStore(subscribeGradebookHint, readGradebookHintDismissed, () => true);
 
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
@@ -276,18 +307,32 @@ const Sidebar = () => {
 
         {/* Main Links */}
         {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
-          <NavItem
-            key={link.href}
-            href={link.href}
-            label={link.label}
-            icon={link.icon}
-            isActive={
-              user?.role === 'PARENT'
-                ? pathname === link.href || pathname.startsWith(link.href + '/')
-                : pathname === link.href
-            }
-            badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
-          />
+          <Fragment key={link.href}>
+            <NavItem
+              href={link.href}
+              label={link.label}
+              icon={link.icon}
+              isActive={
+                user?.role === 'PARENT' || link.href === '/classes'
+                  ? pathname === link.href || pathname.startsWith(link.href + '/')
+                  : pathname === link.href
+              }
+              badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
+            />
+            {link.href === '/classes' && (user?.role === 'TEACHER' || user?.role === 'ADMIN') && !gradebookHintHidden && (
+              <div className="ml-11 mr-1 flex items-start gap-2 rounded-lg bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
+                <span className="flex-1">Gradebook moved: open a class, then Grades.</span>
+                <button
+                  type="button"
+                  onClick={dismissGradebookHint}
+                  aria-label="Dismiss the gradebook note"
+                  className="-mr-1 cursor-pointer rounded p-0.5 text-cyan-700 hover:bg-cyan-100"
+                >
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </Fragment>
         ))}
 
         {user?.role !== 'PARENT' && (

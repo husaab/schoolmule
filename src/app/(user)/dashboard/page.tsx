@@ -68,7 +68,7 @@ const greetingFor = (date: Date): string => {
 // the row is scannable by colour, not just by reading three similar labels.
 const QUICK_ACTIONS = [
   { href: '/classes', label: 'Open classes', icon: AcademicCapIcon, chip: 'text-cyan-700 bg-cyan-50', hover: 'hover:border-cyan-300 hover:bg-cyan-50/40' },
-  { href: '/gradebook', label: 'Enter grades', icon: BookOpenIcon, chip: 'text-violet-700 bg-violet-50', hover: 'hover:border-violet-300 hover:bg-violet-50/40' },
+  { href: '/classes', label: 'Enter grades', icon: BookOpenIcon, chip: 'text-violet-700 bg-violet-50', hover: 'hover:border-violet-300 hover:bg-violet-50/40' },
   { href: '/attendance/general', label: 'Take attendance', icon: ClipboardDocumentCheckIcon, chip: 'text-emerald-700 bg-emerald-50', hover: 'hover:border-emerald-300 hover:bg-emerald-50/40' },
 ]
 

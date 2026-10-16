@@ -10,7 +10,7 @@ import type { ComponentProps } from 'react'
 import { useRememberedHref } from '@/hooks/useFilterParams'
 
 type BackLinkProps = Omit<ComponentProps<typeof Link>, 'href'> & {
-  /** The bare list path to return to, e.g. "/gradebook". */
+  /** The bare list path to return to, e.g. "/classes". */
   to: string
 }
 

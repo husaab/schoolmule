@@ -8,10 +8,16 @@
 // A hover/focus "…" control switches between them; on a focused cell `m`
 // marks missing, `x` excuses, and Backspace/Delete on a pill clears it.
 // Renders the <td> itself so the grids stay thin.
+//
+// Scores autosave (D17): every keystroke reports the clamped value through
+// onValue, and leaving the cell (blur, Enter, Tab, an arrow key) calls
+// onCommit so the save goes out at once. A cell whose save failed is
+// outlined until Retry succeeds.
 
-import React, { ChangeEvent, KeyboardEvent } from 'react'
+import React, { KeyboardEvent } from 'react'
 import { inputClass } from '@/components/shared/modalKit'
 import type { ScoreStatus } from '@/lib/gradeEngine'
+import { clampScoreInput, type CellValue } from '@/lib/scoreAutosaveQueue'
 import StatusControl from './StatusControl'
 
 interface ScoreCellProps {
@@ -19,14 +25,20 @@ interface ScoreCellProps {
   inputId: string
   /** Accessible name, e.g. "Student A score for Quiz 1". */
   label: string
-  value: number | ''
+  /** What the cell shows (the newest local value, else the saved one); null is blank. */
+  value: CellValue
   maxScore: number
   status: ScoreStatus
   /** This cell's status round trip is in flight. */
   isToggling: boolean
   /** Some cell's round trip is in flight, so no second one may start. */
   toggleDisabled: boolean
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void
+  /** The typed score, clamped to [0, maxScore]; null when the cell is emptied. */
+  onValue: (value: CellValue) => void
+  /** The teacher left the cell: save now. */
+  onCommit: () => void
+  /** This cell's last save failed. */
+  failed?: boolean
   onSetStatus: (status: ScoreStatus) => void
   /** Arrow-key navigation; receives keys the cell did not handle itself. */
   onKeyDown: (e: KeyboardEvent<HTMLElement>) => void
@@ -56,6 +68,9 @@ const statusShortcut = (e: KeyboardEvent<HTMLElement>, onSetStatus: (s: ScoreSta
   return false
 }
 
+// Keys that leave the cell; the save goes out before focus moves.
+const LEAVE_KEYS = new Set(['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
+
 const ScoreCell: React.FC<ScoreCellProps> = ({
   inputId,
   label,
@@ -64,7 +79,9 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
   status,
   isToggling,
   toggleDisabled,
-  onChange,
+  onValue,
+  onCommit,
+  failed = false,
   onSetStatus,
   onKeyDown,
   className = '',
@@ -113,7 +130,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         </div>
       ) : (
         <div className="flex items-center justify-center gap-1">
-          <div className="w-16">
+          <div className={`w-16 rounded-xl ${failed ? 'ring-2 ring-rose-400' : ''}`}>
             <input
               id={inputId}
               type="number"
@@ -121,13 +138,16 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
               max={maxScore}
               step="1"
               aria-label={label}
+              aria-invalid={failed || undefined}
               className={`${inputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
-                value === '' ? 'border-dashed placeholder:text-slate-400' : ''
-              }`}
-              value={value}
-              onChange={onChange}
+                value == null ? 'border-dashed placeholder:text-slate-400' : ''
+              } ${failed ? 'border-rose-300' : ''}`}
+              value={value ?? ''}
+              onChange={(e) => onValue(clampScoreInput(e.target.value, maxScore))}
+              onBlur={onCommit}
               onKeyDown={(e) => {
                 if (statusShortcut(e, guarded)) return
+                if (LEAVE_KEYS.has(e.key)) onCommit()
                 onKeyDown(e)
               }}
               onKeyPress={(e) => {
@@ -135,7 +155,13 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
                 if (!/[0-9.]/.test(e.key)) e.preventDefault()
               }}
               placeholder="—"
-              title={value === '' ? 'Not yet graded — carries no weight' : undefined}
+              title={
+                failed
+                  ? "This score didn't save. Use Retry above the grid."
+                  : value == null
+                    ? 'Not yet graded — carries no weight'
+                    : undefined
+              }
             />
           </div>
           <span className="text-sm text-slate-400">/{maxScore}</span>

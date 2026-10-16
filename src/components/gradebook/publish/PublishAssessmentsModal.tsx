@@ -36,7 +36,7 @@ interface PublishAssessmentsModalProps {
 }
 
 /**
- * Publish / manage assessments for parents.
+ * Publish / manage assessments: publishing shows the grades to students and parents.
  *
  * One modal for both jobs on purpose: "publish these three" and "manage
  * this already-published one" differ only in what's preselected, and a
@@ -227,13 +227,16 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
             </span>
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-slate-900">
-                {result ? 'Publish Results' : 'Publish to Parents'}
+                {result ? 'Publish results' : 'Publish'}
               </h2>
               <p className="text-sm text-slate-500">
                 {result
                   ? `${result.emailSummary.sent} of ${result.emailSummary.attempted} notification${result.emailSummary.attempted === 1 ? '' : 's'} sent`
                   : `${assessments.length} assessment${assessments.length === 1 ? '' : 's'} selected`}
               </p>
+              {!result && (
+                <p className="text-sm text-slate-500">Publishing shows these grades to students and parents.</p>
+              )}
             </div>
           </div>
           <button

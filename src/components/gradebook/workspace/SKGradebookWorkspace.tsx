@@ -1,13 +1,17 @@
+// src/components/gradebook/workspace/SKGradebookWorkspace.tsx
+// The SK class's competency grades: Grades on the class page (it was the
+// /gradebook/sk/[classId] page). Progress report and report card
+// ratings and comments, one student at a time; the subjects and standards themselves are
+// set up in the class's Settings. The document and the student live in the
+// URL (?doc=report_card&student=; the progress report is the default).
 'use client'
 
-import React, { Suspense, useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
-import Navbar from '@/components/navbar/Navbar'
-import Sidebar from '@/components/sidebar/Sidebar'
+import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { getClassById, getStudentsInClass } from '@/services/classService'
+import { getStudentsInClass } from '@/services/classService'
 import {
   getSKSubjects,
   getSKAssessments,
@@ -23,7 +27,7 @@ import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { SKSubject } from '@/services/types/sk'
 import {
-  ArrowLeftIcon,
+  Cog6ToothIcon,
   AcademicCapIcon,
   CheckCircleIcon,
   UserIcon,
@@ -32,8 +36,8 @@ import {
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
-import BackLink from '@/components/shared/BackLink'
 import { useFilterParams } from '@/hooks/useFilterParams'
+import { classHref } from '@/lib/classroomRoutes'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -57,25 +61,29 @@ const SK_REPORT_CARD_RATINGS = [
 
 type TabType = 'progress_report' | 'report_card'
 
-const SKGradebookContent = () => {
-  const { classId } = useParams() as { classId: string }
+interface SKGradebookWorkspaceProps {
+  classId: string
+  classData: ClassPayload
+}
+
+export default function SKGradebookWorkspace({ classId, classData }: SKGradebookWorkspaceProps) {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   // Core data
-  const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
   const [subjects, setSubjects] = useState<SKSubject[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Selection state lives in the URL (?tab=report_card&student=; the default
-  // tab is omitted) so Back, refresh and the filter memory restore it.
-  const { get, setParams } = useFilterParams()
-  const activeTab: TabType = get('tab') === 'report_card' ? 'report_card' : 'progress_report'
+  // Selection state lives in the URL (?doc=report_card&student=; the default
+  // document is omitted) so Back and refresh restore it. Not remembered: the
+  // class page itself never re-expands a bare URL (?tab= is the class tab).
+  const { get, setParams } = useFilterParams({ remember: false })
+  const activeTab: TabType = get('doc') === 'report_card' ? 'report_card' : 'progress_report'
   const selectedStudentId = get('student') || null
-  const setActiveTab = (tab: TabType) => setParams({ tab: tab === 'progress_report' ? null : tab })
+  const setActiveTab = (tab: TabType) => setParams({ doc: tab === 'progress_report' ? null : tab })
   const setSelectedStudentId = (studentId: string) => setParams({ student: studentId })
 
   // Rating state: standardId -> rating
@@ -97,13 +105,11 @@ const SKGradebookContent = () => {
   const term = classData?.termName || ''
 
   // Load class and students on mount
+  // Load the class's students (the class itself comes from the Grades tab)
   useEffect(() => {
     if (!classId) return
-
-    setLoading(true)
-    Promise.all([getClassById(classId), getStudentsInClass(classId)])
-      .then(([classRes, stuRes]) => {
-        if (classRes.status === 'success') setClassData(classRes.data)
+    getStudentsInClass(classId)
+      .then((stuRes) => {
         if (stuRes.status === 'success') setStudents(stuRes.data)
       })
       .catch(console.error)
@@ -408,39 +414,31 @@ const SKGradebookContent = () => {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50 flex items-center justify-center">
-          <Spinner size="lg" />
-        </main>
-      </>
+      <div className="flex items-center justify-center py-24">
+        <Spinner size="lg" />
+      </div>
     )
   }
 
   return (
-    <>
-      <Navbar />
-      <Sidebar />
-      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div>
           {/* Header */}
           <div className="mb-6">
-            <BackLink
-              to="/gradebook"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3"
-            >
-              <ArrowLeftIcon className="w-4 h-4" />
-              Back to Gradebook
-            </BackLink>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-xl font-semibold text-slate-900">
                   {classData?.subject || 'Senior Kindergarten'}
-                </h1>
+                </h2>
                 <p className="text-slate-500 text-sm mt-0.5">
                   {classData?.teacherName} &middot; {term}
                 </p>
+                <Link
+                  href={classHref(classId, 'settings', {}, '#skills')}
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                >
+                  <Cog6ToothIcon className="h-4 w-4" aria-hidden="true" />
+                  Subjects and standards are set up in Settings
+                </Link>
               </div>
               <div className="flex items-center gap-3">
                 {hasChanges && (
@@ -765,17 +763,5 @@ const SKGradebookContent = () => {
             </div>
           </div>
         </div>
-      </main>
-    </>
   )
 }
-
-// useFilterParams reads the search params, so the page body needs a Suspense
-// boundary for the static prerender.
-const SKGradebook = () => (
-  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
-    <SKGradebookContent />
-  </Suspense>
-)
-
-export default SKGradebook

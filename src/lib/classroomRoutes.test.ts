@@ -4,8 +4,11 @@ import {
   classHref,
   classItemHref,
   isClassTab,
+  isGradesSub,
   legacyEditRedirect,
+  legacyGradebookRedirect,
   parseClassTab,
+  parseGradesSub,
 } from './classroomRoutes'
 
 describe('classHref', () => {
@@ -74,5 +77,65 @@ describe('classItemHref', () => {
   it('opens an item, or its edit page', () => {
     expect(classItemHref('c1', 'i9')).toBe('/classes/c1/items/i9')
     expect(classItemHref('c1', 'i9', 'edit')).toBe('/classes/c1/items/i9/edit')
+  })
+})
+
+describe('legacyGradebookRedirect', () => {
+  it('sends the gradebook list to the Classes home, keeping its filters', () => {
+    expect(legacyGradebookRedirect('/gradebook', '')).toBe('/classes')
+    expect(legacyGradebookRedirect('/gradebook', '?')).toBe('/classes')
+    expect(legacyGradebookRedirect('/gradebook/', '?grade=5&term=Term+1')).toBe('/classes?grade=5&term=Term+1')
+    expect(legacyGradebookRedirect('/gradebook', 'subject=Math')).toBe('/classes?subject=Math')
+  })
+
+  it('opens a class gradebook as its Grades tab, keeping its params', () => {
+    expect(legacyGradebookRedirect('/gradebook/c1', '')).toBe('/classes/c1?tab=grades')
+    expect(legacyGradebookRedirect('/gradebook/c1', '?q=Amal')).toBe('/classes/c1?tab=grades&q=Amal')
+  })
+
+  it('turns the old Assessments view into the setup sub-tab', () => {
+    expect(legacyGradebookRedirect('/gradebook/c1', '?view=assessments')).toBe('/classes/c1?tab=grades&sub=setup')
+    expect(legacyGradebookRedirect('/gradebook/c1', '?view=assessments&x=1')).toBe('/classes/c1?tab=grades&sub=setup&x=1')
+    // The old default view (grade entry) is the Scores sub-tab, the bare Grades URL.
+    expect(legacyGradebookRedirect('/gradebook/c1', '?view=grades')).toBe('/classes/c1?tab=grades')
+  })
+
+  it('never lets an old param pick another tab', () => {
+    expect(legacyGradebookRedirect('/gradebook/c1', '?tab=settings')).toBe('/classes/c1?tab=grades')
+  })
+
+  it('sends the comment pages to their sub-tabs', () => {
+    expect(legacyGradebookRedirect('/gradebook/c1/feedback', '?term=Term+1')).toBe(
+      '/classes/c1?tab=grades&sub=report-comments',
+    )
+    expect(legacyGradebookRedirect('/gradebook/c1/progress', '')).toBe('/classes/c1?tab=grades&sub=progress-comments')
+  })
+
+  it('opens JK and SK gradebooks on the Grades tab', () => {
+    expect(legacyGradebookRedirect('/gradebook/jk/c2', '?tab=report_card&student=s1')).toBe('/classes/c2?tab=grades')
+    expect(legacyGradebookRedirect('/gradebook/sk/c3', '')).toBe('/classes/c3?tab=grades')
+  })
+
+  it('keeps an encoded class id encoded once', () => {
+    expect(legacyGradebookRedirect('/gradebook/a%20b', '')).toBe('/classes/a%20b?tab=grades')
+  })
+
+  it('sends anything else to the Classes home', () => {
+    expect(legacyGradebookRedirect('/gradebook/c1/other', '')).toBe('/classes')
+    expect(legacyGradebookRedirect('/gradebook/jk', '')).toBe('/classes')
+    expect(legacyGradebookRedirect('/gradebook/jk/c2/extra', '')).toBe('/classes')
+    expect(legacyGradebookRedirect('/somewhere', '')).toBe('/classes')
+  })
+})
+
+describe('grades sub-tabs', () => {
+  it('recognises the four sub-tabs; anything else is Scores', () => {
+    expect(isGradesSub('setup')).toBe(true)
+    expect(isGradesSub('assessments')).toBe(false)
+    expect(parseGradesSub('report-comments')).toBe('report-comments')
+    expect(parseGradesSub('progress-comments')).toBe('progress-comments')
+    expect(parseGradesSub('')).toBe('scores')
+    expect(parseGradesSub(null)).toBe('scores')
+    expect(parseGradesSub('nope')).toBe('scores')
   })
 })

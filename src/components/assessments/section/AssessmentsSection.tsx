@@ -21,6 +21,9 @@ interface AssessmentsSectionProps {
   classId: string
   /** Notified after any successful add/edit/delete — lets a host page refresh its own data */
   onMutated?: () => void
+  /** Open the add form (Grades → "Create assessment"); onAddOpened fires once it is open. */
+  openAdd?: boolean
+  onAddOpened?: () => void
 }
 
 type RowMode =
@@ -32,7 +35,7 @@ type RowMode =
  * The primary assessment editor for standard-grade classes: inline add/edit/
  * delete directly in the list (no stacked modals).
  */
-const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMutated }) => {
+const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMutated, openAdd = false, onAddOpened }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [assessments, setAssessments] = useState<AssessmentPayload[]>([])
   const [assessLoading, setAssessLoading] = useState(true)
@@ -42,7 +45,23 @@ const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMuta
 
   // Only one row may be edited/deleted at a time; the add composer excludes both
   const [rowMode, setRowMode] = useState<RowMode>({ kind: 'view' })
-  const [composerOpen, setComposerOpen] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(openAdd)
+
+  // An "add" request from the host opens the composer (adjusted while
+  // rendering, so it also works when the section is already on screen).
+  const [handledOpenAdd, setHandledOpenAdd] = useState(openAdd)
+  if (openAdd !== handledOpenAdd) {
+    setHandledOpenAdd(openAdd)
+    if (openAdd) {
+      setComposerOpen(true)
+      setRowMode({ kind: 'view' })
+      setIsCollapsed(false)
+    }
+  }
+  // The request is one-shot: tell the host so it can clear it.
+  useEffect(() => {
+    if (openAdd) onAddOpened?.()
+  }, [openAdd, onAddOpened])
 
   const fetchAssessments = async () => {
     try {

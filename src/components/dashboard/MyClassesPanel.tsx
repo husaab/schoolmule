@@ -225,8 +225,8 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
               iconClassName="text-cyan-400"
               title="Grades appear once assessments are entered"
               action={
-                <Link href="/gradebook" className="text-sm font-medium text-cyan-700 hover:text-cyan-800">
-                  Open the gradebook →
+                <Link href="/classes" className="text-sm font-medium text-cyan-700 hover:text-cyan-800">
+                  Open your classes →
                 </Link>
               }
             />

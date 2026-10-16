@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ChangeEvent, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Modal from '@/components/shared/modal'
 import { AssessmentPayload } from '@/services/types/assessment'
 import { StudentPayload } from '@/services/types/student'
@@ -16,6 +16,8 @@ import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { buildScoreLookup, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade'
+import SavedPill from '@/components/gradebook/SavedPill'
+import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
 
 
 interface ChildAssessmentsModalProps {
@@ -25,8 +27,8 @@ interface ChildAssessmentsModalProps {
   childAssessments: AssessmentPayload[]
   students: StudentPayload[]
   scoresMatrix: ScoreRow[]
-  editedScores: { [key: string]: number | '' }
-  onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
+  /** The class's grades autosave: the scores typed here save by themselves. */
+  autosave: ScoreAutosave
   classId: string
   /** Re-reads the score matrix after a status change. */
   onRefresh: () => Promise<void>
@@ -43,8 +45,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   childAssessments,
   students,
   scoresMatrix,
-  editedScores,
-  onScoreChange,
+  autosave,
   classId,
   onRefresh,
   publications,
@@ -53,7 +54,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   // Individual items are publishable on their own, so they get the same
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
-  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh })
+  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
   const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
 
   const toggleChildSelected = (assessmentId: string) => {
@@ -71,6 +72,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
     [scoresMatrix]
   )
   const rowsByStudent = useMemo(() => groupRowsByStudent(scoresMatrix), [scoresMatrix])
+  const { pendingMap } = autosave
 
   // The category roll-up comes from the engine: counted items weighted by
   // their points, blanks carry nothing, missing counts as 0, excused never counts.
@@ -86,7 +88,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
     return new Map(
       students.map((student) => {
         const lookup = buildScoreLookup(
-          liveRowsForStudent(student.studentId, rowsByStudent[student.studentId], editedScores)
+          liveRowsForStudent(student.studentId, rowsByStudent[student.studentId], pendingMap())
         )
         return [
           student.studentId,
@@ -97,7 +99,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         ] as const
       })
     )
-  }, [students, rowsByStudent, editedScores, engineAssessments])
+  }, [students, rowsByStudent, pendingMap, engineAssessments])
 
   // Check if all child points add up to parent points
   const totalChildPoints = childAssessments.reduce((sum, child) => {
@@ -118,6 +120,13 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         title={parentAssessment.name}
         subtitle={`${parentPoints} points across ${childAssessments.length} individual assessment${childAssessments.length === 1 ? '' : 's'}`}
         icon={Squares2X2Icon}
+        actions={
+          <SavedPill
+            status={autosave.status}
+            failedCount={autosave.failedKeys.size}
+            onRetry={() => void autosave.retry()}
+          />
+        }
       />
 
       <ModalBody className="space-y-4">
@@ -203,7 +212,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                       </th>
                     )
                   })}
-                  <th className="bg-cyan-50/70 px-4 py-2 text-center text-sm font-semibold text-slate-600">
+                  {/* Pinned at the far right, like the main grid's Term total. */}
+                  <th className="sticky right-0 z-10 bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-slate-600 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]">
                     Category score
                   </th>
                 </tr>
@@ -237,10 +247,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
 
                         {childAssessments.map((child, colIndex) => {
                           const key = `${student.studentId}|${child.assessmentId}`
-                          const currentValue = editedScores[key] !== undefined
-                            ? editedScores[key]
-                            : existingScoreMap[key] ?? ''
-
+                          const saved = existingScoreMap[key] ?? null
+                          const status = statusMap[key] ?? 'graded'
                           const maxScore = Number(child.maxScore || 100)
 
                           return (
@@ -248,12 +256,17 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               key={child.assessmentId}
                               inputId={nav.inputId(rowIndex, colIndex)}
                               label={`${student.name} score for ${child.name}`}
-                              value={currentValue}
+                              value={autosave.displayValue(key, saved)}
                               maxScore={maxScore}
-                              status={statusMap[key] ?? 'graded'}
+                              status={status}
                               isToggling={togglingKey === key}
                               toggleDisabled={togglingKey !== null}
-                              onChange={(e) => onScoreChange(student.studentId, child.assessmentId, e)}
+                              failed={autosave.failedKeys.has(key)}
+                              onValue={(v) => {
+                                // A flagged cell shows a pill, not an input; never let a stray value clear its flag.
+                                if (status === 'graded') autosave.queue(student.studentId, child.assessmentId, v, saved)
+                              }}
+                              onCommit={() => void autosave.flush()}
                               onSetStatus={(status) => setStatus(student.studentId, child.assessmentId, status)}
                               onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
                             />
@@ -267,7 +280,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           isToggling={togglingKey === categoryKey}
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
-                          className="bg-cyan-50/70 px-4"
+                          className="sticky right-0 z-[5] bg-cyan-50 px-4 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]"
                         />
                       </tr>
                     )
@@ -282,7 +295,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
           <li>Arrow keys move between score cells; Enter moves down.</li>
           <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight.</li>
           <li>Hover a cell for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
-          <li>Save from the main gradebook when you are done — scores are not saved here.</li>
+          <li>Scores save by themselves as you type; there is no Save button.</li>
         </ul>
       </ModalBody>
 

@@ -3,6 +3,8 @@
 // A category (multiple-assessment) roll-up cell: "earned/points" when any
 // item inside is counted, "—" when nothing is graded yet, "Excused" when every
 // item is excused. Its "…" control applies a status to the whole category.
+// Clicking anywhere in the cell (or Enter on its button) opens the category
+// window, where the items inside are scored.
 
 import React from 'react'
 import type { AssessmentResult, CellState, ScoreStatus } from '@/lib/gradeEngine'
@@ -19,7 +21,10 @@ interface CategoryCellProps {
   isToggling: boolean
   toggleDisabled: boolean
   onSetStatus: (status: ScoreStatus) => void
+  /** Opens the category window. */
   onClick?: () => void
+  /** A score inside this category failed to save. */
+  failed?: boolean
   className?: string
   title?: string
 }
@@ -50,16 +55,30 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   toggleDisabled,
   onSetStatus,
   onClick,
+  failed = false,
   className = '',
   title,
 }) => {
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
+  const value = excused ? (
+    <span className={`inline-block rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${pillClass.excused}`}>
+      Excused
+    </span>
+  ) : result.isCounted ? (
+    <span className="inline-block rounded-lg bg-blue-100 px-2 py-1 text-sm font-medium tabular-nums text-blue-700">
+      {formatCategoryScore(result)}
+    </span>
+  ) : (
+    <span className="inline-block px-2 py-1 text-sm text-slate-400" title="Nothing graded yet">
+      —
+    </span>
+  )
   return (
     <td
-      className={`group relative px-2 py-2 text-center ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`group relative px-2 py-2 text-center ${onClick ? 'cursor-pointer' : ''} ${failed ? 'ring-2 ring-inset ring-rose-400' : ''} ${className}`}
       onClick={onClick}
-      title={title}
+      title={failed ? "A score in this category didn't save. Use Retry above the grid." : title}
     >
       <StatusControl
         label={label}
@@ -73,18 +92,20 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
             : undefined
         }
       />
-      {excused ? (
-        <span className={`inline-block rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${pillClass.excused}`}>
-          Excused
-        </span>
-      ) : result.isCounted ? (
-        <span className="inline-block rounded-lg bg-blue-100 px-2 py-1 text-sm font-medium tabular-nums text-blue-700">
-          {formatCategoryScore(result)}
-        </span>
+      {onClick ? (
+        <button
+          type="button"
+          aria-label={`${label}: open the category`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onClick()
+          }}
+          className="cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        >
+          {value}
+        </button>
       ) : (
-        <span className="inline-block px-2 py-1 text-sm text-slate-400" title="Nothing graded yet">
-          —
-        </span>
+        value
       )}
     </td>
   )

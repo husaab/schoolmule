@@ -60,11 +60,13 @@ interface ApiClientOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: T;
   headers?: HeadersInit;
+  /** Let the request outlive the page (a save sent from pagehide). */
+  keepalive?: boolean;
 }
 
 async function apiClient<T, B = unknown>(
     endpoint: string,
-        { method = 'GET', body, headers = {} }: ApiClientOptions<B> = {}
+        { method = 'GET', body, headers = {}, keepalive }: ApiClientOptions<B> = {}
 ): Promise<T> {
     const token = getToken();
 
@@ -80,6 +82,7 @@ async function apiClient<T, B = unknown>(
             ...headers,
         },
         // Remove credentials since we're using JWT tokens instead of cookies
+        ...(keepalive && { keepalive: true }),
     };
 
     if (body) {

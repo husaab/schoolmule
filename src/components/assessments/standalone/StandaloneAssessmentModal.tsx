@@ -2,10 +2,10 @@
 
 // One standalone (non-category) assessment: every student's score in a single
 // column, the class average, publish state, and an inline editor for the
-// assessment's own details. Scores edit the page's draft and are saved from
-// the main gradebook, exactly like the category modal.
+// assessment's own details. Scores autosave as the teacher types (D17),
+// through the class's grades autosave, exactly like the grid.
 
-import React, { ChangeEvent, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Modal from '@/components/shared/modal'
 import {
   Button,
@@ -28,6 +28,8 @@ import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { cellState, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { toEngineAssessment } from '@/components/assessments/scores/liveGrade'
+import SavedPill from '@/components/gradebook/SavedPill'
+import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
 
 interface StandaloneAssessmentModalProps {
   isOpen: boolean
@@ -38,8 +40,8 @@ interface StandaloneAssessmentModalProps {
   allAssessments: AssessmentPayload[]
   students: StudentPayload[]
   scoresMatrix: ScoreRow[]
-  editedScores: { [key: string]: number | '' }
-  onScoreChange: (studentId: string, assessmentId: string, e: ChangeEvent<HTMLInputElement>) => void
+  /** The class's grades autosave: the scores typed here save by themselves. */
+  autosave: ScoreAutosave
   classId: string
   /** Re-reads the score matrix after a status change. */
   onRefresh: () => Promise<void>
@@ -66,8 +68,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   allAssessments,
   students,
   scoresMatrix,
-  editedScores,
-  onScoreChange,
+  autosave,
   classId,
   onRefresh,
   publications,
@@ -78,7 +79,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   // it and the editor starts closed.
   const [editing, setEditing] = useState(false)
 
-  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh })
+  const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
   const nav = useScoreGridNav('standalone-grade', students.length, 1)
   const lookups = useMemo(() => buildScoreLookups(scoresMatrix), [scoresMatrix])
 
@@ -86,19 +87,20 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   const points = assessment.weightPoints || assessment.weightPercent || 0
   const summary = summarizePublication(assessment, allAssessments, publications)
 
-  // Resolve each student's cell (draft first, then saved) and run it through
+  // Resolve each student's cell (local value first, then saved) and run it through
   // the engine. Blank cells are not yet graded and carry no weight anywhere
   // in SchoolMule; missing counts as 0; excused never counts.
   const engineAssessment = toEngineAssessment(assessment)
   const rows = students.map((student) => {
     const key = `${student.studentId}|${assessment.assessmentId}`
-    const value = editedScores[key] !== undefined ? editedScores[key] : (lookups.existing[key] ?? '')
+    const saved = lookups.existing[key] ?? null
+    const value = autosave.displayValue(key, saved)
     const status = lookups.status[key] ?? 'graded'
-    const row = { assessment_id: assessment.assessmentId, score: value === '' ? null : value, status }
+    const row = { assessment_id: assessment.assessmentId, score: value, status }
     const result = computeAssessmentForStudent(engineAssessment, [engineAssessment], {
       [assessment.assessmentId]: { score: row.score, state: cellState(row) },
     })
-    return { student, key, value, status, result }
+    return { student, key, saved, value, status, result }
   })
   const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
   const counted = rows.filter((r) => r.result.isCounted)
@@ -112,6 +114,13 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
         title={assessment.name}
         subtitle={`${points} pts toward the final grade · out of ${maxScore}`}
         icon={ClipboardDocumentListIcon}
+        actions={
+          <SavedPill
+            status={autosave.status}
+            failedCount={autosave.failedKeys.size}
+            onRetry={() => void autosave.retry()}
+          />
+        }
       />
 
       <ModalBody>
@@ -180,7 +189,12 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                             status={row.status}
                             isToggling={togglingKey === row.key}
                             toggleDisabled={togglingKey !== null}
-                            onChange={(e) => onScoreChange(row.student.studentId, assessment.assessmentId, e)}
+                            failed={autosave.failedKeys.has(row.key)}
+                            onValue={(v) => {
+                              // A flagged cell shows a pill, not an input; never let a stray value clear its flag.
+                              if (row.status === 'graded') autosave.queue(row.student.studentId, assessment.assessmentId, v, row.saved)
+                            }}
+                            onCommit={() => void autosave.flush()}
                             onSetStatus={(status) => setStatus(row.student.studentId, assessment.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, 0)}
                           />
@@ -199,8 +213,8 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
               <li>Arrow keys move between students; Enter moves down.</li>
               <li>Blank cells are not yet graded and carry no weight anywhere in SchoolMule. A typed 0 is a real 0.</li>
               <li>Hover a score for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
-              <li>Save from the main gradebook when you are done — scores are not saved here.</li>
-              <li>To delete this assessment, use the Assessments view.</li>
+              <li>Scores save by themselves as you type; there is no Save button.</li>
+              <li>To delete this assessment, use Assessments &amp; categories.</li>
             </ul>
           </>
         )}
@@ -217,10 +231,10 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
           title={
             summary.state === 'all'
               ? 'Resend, edit the note, or unpublish'
-              : 'Send this assessment to parents'
+              : 'Publishing shows these grades to students and parents.'
           }
         >
-          {summary.state === 'all' ? 'Manage publishing' : 'Publish to parents'}
+          {summary.state === 'all' ? 'Manage publishing' : 'Publish'}
         </Button>
       </ModalFooter>
     </Modal>

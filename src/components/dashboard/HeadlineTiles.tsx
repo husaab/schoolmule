@@ -113,7 +113,7 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
         label="Missing work"
         value={missing}
         tone={loading || !classes.length ? 'neutral' : missing === 0 ? 'good' : 'warn'}
-        href="/gradebook"
+        href="/classes"
         loading={loading}
         sub="marked missing across your classes"
       />

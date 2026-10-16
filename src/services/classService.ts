@@ -278,14 +278,36 @@ export interface ScoreUpsertItem {
   status?: ScoreStatus;
 }
 
+/** One saved cell as POST …/scores returns it. */
+export interface UpsertedScoreRow {
+  student_id: string;
+  assessment_id: string;
+  score: number | null;
+  status: ScoreStatus;
+}
+
+/**
+ * POST …/scores answers with the saved rows. Later the server also returns
+ * `drafts` (turn-in columns that are not published yet); callers must
+ * tolerate both shapes.
+ */
+export interface UpsertScoresResponse {
+  status: string;
+  data: UpsertedScoreRow[];
+  drafts?: unknown[];
+  message?: string;
+}
+
 export const upsertScoresByClass = async (
   classId: string,
-  scores: ScoreUpsertItem[]
-) => {
-  return apiClient(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`, {
+  scores: ScoreUpsertItem[],
+  opts: { keepalive?: boolean } = {}
+): Promise<UpsertScoresResponse> => {
+  return apiClient<UpsertScoresResponse>(`/studentAssessments/classes/${encodeURIComponent(classId)}/scores`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: { scores },
+    keepalive: opts.keepalive,
   });
 };
 

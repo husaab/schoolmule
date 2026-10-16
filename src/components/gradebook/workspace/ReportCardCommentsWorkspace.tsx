@@ -1,12 +1,16 @@
+// src/components/gradebook/workspace/ReportCardCommentsWorkspace.tsx
+// Grades → Report card comments on the class page (it was
+// /gradebook/[classId]/feedback). The report card ratings and comment of every
+// student for the class's own term, with AI-assisted comments. The grades
+// under each name come from the Scores sub-tab (bulkFeedbackGrades). Comments
+// still save with Save All; the Grades tab asks before a sub-tab switch would
+// drop unsaved ones (onDirtyChange).
 'use client'
 
-import React, { Suspense, useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import Navbar from '@/components/navbar/Navbar'
-import Sidebar from '@/components/sidebar/Sidebar'
+import React, { useState, useEffect } from 'react'
 import Spinner from '@/components/Spinner'
 
-import { getClassById, getStudentsInClass } from '@/services/classService'
+import { getStudentsInClass } from '@/services/classService'
 import { getClassReportCardFeedback, upsertBulkReportCardFeedback } from '@/services/reportCardService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -16,18 +20,16 @@ import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import { gradeBand, readStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades'
 import { formatCoverage } from '@/lib/gradeEngine'
-import { useFilterParams, useRememberedHref } from '@/hooks/useFilterParams'
+import type { GradesSub } from '@/lib/classroomRoutes'
 import type { ClassFeedbackEntry, ReportCardFeedbackPayload } from '@/services/types/reportCard'
 
 import {
   UserGroupIcon,
   CheckCircleIcon,
-  ArrowLeftIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
   SparklesIcon,
-  LightBulbIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline'
 
@@ -48,21 +50,23 @@ interface EditedFeedback {
   comment?: string
 }
 
-const BulkFeedbackPageContent = () => {
-  const { classId } = useParams() as { classId: string }
-  const router = useRouter()
+interface ReportCardCommentsWorkspaceProps {
+  classId: string
+  classData: ClassPayload
+  /** Unsaved comments appeared or were saved (the Grades tab asks before dropping them). */
+  onDirtyChange?: (dirty: boolean) => void
+  /** Opens another Grades sub-tab (the "progress report" link). */
+  onOpenSub?: (sub: GradesSub) => void
+}
+
+export default function ReportCardCommentsWorkspace({ classId, classData, onDirtyChange, onOpenSub }: ReportCardCommentsWorkspaceProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
-  // Back returns to the gradebook list exactly as the teacher left it.
-  const gradebookHref = useRememberedHref('/gradebook')
-  // The term lives in the URL (?term=) so Back and refresh keep it; it is
-  // anchored to the class's own term once the class loads (see below).
-  const { get, setParams } = useFilterParams()
-  const selectedTerm = get('term')
+  // A class belongs to exactly one term: comments are always entered for it.
+  const selectedTerm = classData.termName ?? ''
 
   // Data state
-  const [classData, setClassData] = useState<ClassPayload | null>(null)
   const [students, setStudents] = useState<StudentPayload[]>([])
 
   // Feedback state: Map of studentId -> feedback data
@@ -71,23 +75,21 @@ const BulkFeedbackPageContent = () => {
 
   // UI state
   const [loading, setLoading] = useState(true)
-  const [loadingFeedback, setLoadingFeedback] = useState(false)
+  const [loadingFeedback, setLoadingFeedback] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
 
   // Student grades from localStorage (computed in the gradebook by the grade
   // engine). pct is null when nothing has been graded yet — never 0.
-  const [studentGrades, setStudentGrades] = useState<StoredGrades>({})
-
-  // Load grades from localStorage on mount
-  useEffect(() => {
-    if (!classId) return
-    setStudentGrades(readStoredGrades(classId))
-  }, [classId])
+  const [studentGrades] = useState<StoredGrades>(() => readStoredGrades(classId))
 
   // Calculate if there are unsaved changes
   const hasUnsavedChanges = editedFeedback.size > 0
+  useEffect(() => {
+    onDirtyChange?.(hasUnsavedChanges)
+  }, [hasUnsavedChanges, onDirtyChange])
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
   // Calculate progress
   const calculateProgress = () => {
@@ -108,23 +110,12 @@ const BulkFeedbackPageContent = () => {
     return { completed, total: students.length }
   }
 
-  // Initial data load
+  // Initial data load (the class itself comes from the Grades tab)
   useEffect(() => {
     if (!classId || !user?.school) return
 
-    setLoading(true)
-    setError(null)
-
-    Promise.all([
-      getClassById(classId),
-      getStudentsInClass(classId),
-    ])
-      .then(([classRes, stuRes]) => {
-        if (classRes.status !== 'success') {
-          throw new Error(classRes.message || 'Failed to load class info')
-        }
-        setClassData(classRes.data)
-
+    getStudentsInClass(classId)
+      .then((stuRes) => {
         if (stuRes.status !== 'success') {
           throw new Error(stuRes.message || 'Failed to load students')
         }
@@ -140,20 +131,9 @@ const BulkFeedbackPageContent = () => {
       })
   }, [classId, user?.school, selectedYearId]) // refetch when the selected school year changes
 
-  // A class belongs to exactly one term — feedback is always entered for
-  // that term, never a teacher-selected one. Anchor the URL to the class's term.
-  const classTerm = classData?.termName ?? ''
-  useEffect(() => {
-    if (classTerm && selectedTerm !== classTerm) setParams({ term: classTerm })
-  }, [classTerm, selectedTerm, setParams])
-
   // Load feedback when term changes
   useEffect(() => {
     if (!classId || !selectedTerm) return
-
-    setLoadingFeedback(true)
-    // Clear edited feedback when changing terms
-    setEditedFeedback(new Map())
 
     getClassReportCardFeedback(classId, selectedTerm)
       .then((res) => {
@@ -352,92 +332,44 @@ const BulkFeedbackPageContent = () => {
     }
   }
 
-  // Handle back button with unsaved changes check
-  const handleBackClick = () => {
-    if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm('You have unsaved feedback changes. Are you sure you want to leave?')
-      if (!confirmLeave) return
-    }
-    router.push(`/gradebook/${classId}`)
-  }
-
-  // Navigate to the progress report feedback page with unsaved changes check
-  const navigateToProgressReportFeedback = () => {
-    if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm('You have unsaved feedback changes. Are you sure you want to leave?')
-      if (!confirmLeave) return
-    }
-    router.push(`/gradebook/${classId}/progress`)
-  }
+  // Open the progress report comments (the Grades tab checks for unsaved changes)
+  const navigateToProgressReportFeedback = () => onOpenSub?.('progress-comments')
 
   // Loading state
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-          <div className="flex justify-center items-center py-32">
-            <Spinner size="lg" />
-          </div>
-        </main>
-      </>
+      <div className="flex justify-center items-center py-24">
+        <Spinner size="lg" />
+      </div>
     )
   }
 
   // Error state
   if (error) {
     return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-          <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
-                <ExclamationTriangleIcon className="h-8 w-8 text-red-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Page</h3>
-              <p className="text-red-600 mb-6">{error}</p>
-              <button
-                onClick={() => router.push(gradebookHref)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all font-medium cursor-pointer"
-              >
-                <ArrowLeftIcon className="h-4 w-4" />
-                Back to Gradebook
-              </button>
-            </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+            <ExclamationTriangleIcon className="h-8 w-8 text-red-400" />
           </div>
-        </main>
-      </>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Error Loading Page</h3>
+          <p className="text-red-600 mb-6">{error}</p>
+        </div>
     )
   }
-
-  if (!classData) return null
 
   const { completed, total } = calculateProgress()
   const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
     <>
-      <Navbar />
-      <Sidebar />
-      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div>
           {/* Header */}
           <div className="bg-gradient-to-br from-cyan-500 to-teal-500 rounded-2xl shadow-lg p-6 lg:p-8 text-white mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
-                <button
-                  onClick={handleBackClick}
-                  className="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm mb-2 cursor-pointer"
-                >
-                  <ArrowLeftIcon className="h-4 w-4" />
-                  Back to Gradebook
-                </button>
-                <h1 className="text-2xl lg:text-3xl font-bold">
-                  Report Card Feedback
-                </h1>
+                <h2 className="text-2xl lg:text-3xl font-bold">
+                  Report card comments
+                </h2>
                 <p className="text-white/80 mt-1">
                   Grade {classData.grade} - {classData.subject}
                 </p>
@@ -550,7 +482,7 @@ const BulkFeedbackPageContent = () => {
                   onClick={navigateToProgressReportFeedback}
                   className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 cursor-pointer"
                 >
-                  Go to Progress Report Feedback
+                  Go to Progress report comments
                   <span aria-hidden>&rarr;</span>
                 </button>
               </div>
@@ -794,17 +726,6 @@ const BulkFeedbackPageContent = () => {
             </div>
           )}
         </div>
-      </main>
     </>
   )
 }
-
-// useFilterParams reads the search params, so the page body needs a Suspense
-// boundary for the static prerender.
-const BulkFeedbackPage = () => (
-  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
-    <BulkFeedbackPageContent />
-  </Suspense>
-)
-
-export default BulkFeedbackPage

@@ -9,8 +9,12 @@ import type { AssessmentPayload } from '@/services/types/assessment'
 import type { EngineAssessment, EngineScoreRow } from '@/lib/gradeEngine'
 import type { ScoreRow } from './types'
 
-/** Unsaved cell edits keyed "studentId|assessmentId"; '' means cleared. */
-export type EditedScores = Record<string, number | ''>
+/**
+ * Local cell values not yet confirmed by the server, keyed
+ * "studentId|assessmentId" (the autosave queue's pendingMap()); null or ''
+ * means the cell was cleared.
+ */
+export type EditedScores = Record<string, number | '' | null>
 
 export function toEngineAssessment(a: AssessmentPayload): EngineAssessment {
   return {
@@ -37,8 +41,8 @@ export function groupRowsByStudent(rows: ScoreRow[]): Record<string, ScoreRow[]>
 }
 
 /**
- * One student's saved rows with the teacher's unsaved edits merged over them.
- * A cell edited to '' becomes score null (blank); a typed number is graded.
+ * One student's saved rows with the teacher's not-yet-saved values merged over
+ * them. A cleared cell becomes score null (blank); a typed number is graded.
  * Status changes are saved immediately, so the saved status always wins:
  * an unsaved edit on a cell that is now missing/excused is ignored.
  */
@@ -60,7 +64,7 @@ export function liveRowsForStudent(
     if (!key.startsWith(prefix)) continue
     const assessmentId = key.slice(prefix.length)
     const current = byAssessment.get(assessmentId)
-    const score = value === '' ? null : value
+    const score = value === '' || value == null ? null : value
     // A missing/excused flag saved after the edit wins over the stale edit.
     if (current && current.status !== 'graded') continue
     if (current) {

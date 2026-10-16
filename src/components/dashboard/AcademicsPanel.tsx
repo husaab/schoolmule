@@ -111,16 +111,16 @@ const AcademicsPanel: React.FC<AcademicsPanelProps> = ({
           title={hasTerm ? 'Grades appear once assessments are entered' : 'No term set up yet'}
           description={
             hasTerm
-              ? 'Enter scores in the gradebook and this term’s averages, distribution and subject strengths show up here.'
+              ? 'Enter scores in a class’s Grades tab and this term’s averages, distribution and subject strengths show up here.'
               : 'Create the school year’s terms first; grades and analytics are organised by term.'
           }
           action={
             hasTerm ? (
               <Link
-                href="/gradebook"
+                href="/classes"
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white text-sm font-medium rounded-xl hover:bg-cyan-700 transition"
               >
-                Open the gradebook
+                Open your classes
                 <ArrowRightIcon className="h-4 w-4" />
               </Link>
             ) : undefined

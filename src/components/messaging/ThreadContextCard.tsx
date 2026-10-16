@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import type { AssessmentContext, SenderRole } from '@/services/types/messaging'
 import { toneClasses, type Tone } from './tones'
+import { classHref } from '@/lib/classroomRoutes'
 
 interface ThreadContextCardProps {
   context: AssessmentContext | null
@@ -29,7 +30,7 @@ const formatDate = (iso: string | null) => {
 const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, classId, classSubject, tone, role }) => {
   const t = toneClasses(tone)
   const isParent = role === 'PARENT'
-  const href = isParent ? '/parent/grades' : classId ? `/gradebook/${encodeURIComponent(classId)}` : '/gradebook'
+  const href = isParent ? '/parent/grades' : classId ? classHref(classId, 'grades') : '/classes'
   const meta = context
     ? [
         classSubject,

@@ -40,14 +40,16 @@ interface ModalHeaderProps {
   /** Heroicon component, rendered in a tinted tile beside the title. */
   icon?: React.ComponentType<{ className?: string }>
   tone?: Tone
+  /** Shown at the right of the title, e.g. the grades' Saved pill. */
+  actions?: React.ReactNode
 }
 
-export const ModalHeader = ({ title, subtitle, icon: Icon, tone = 'brand' }: ModalHeaderProps) => (
+export const ModalHeader = ({ title, subtitle, icon: Icon, tone = 'brand', actions }: ModalHeaderProps) => (
   <header
     className={`sticky top-0 z-10 border-b border-slate-100 bg-gradient-to-br px-6 py-5 ${headerToneClasses[tone]}`}
   >
     {/* pr-10 keeps the title clear of the shared Modal's close button. */}
-    <div className="flex items-center gap-3 pr-10">
+    <div className="flex flex-wrap items-center gap-3 pr-10">
       {Icon && (
         <div
           className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-sm ${iconToneClasses[tone]}`}
@@ -59,6 +61,7 @@ export const ModalHeader = ({ title, subtitle, icon: Icon, tone = 'brand' }: Mod
         <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
+      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </div>
   </header>
 )
