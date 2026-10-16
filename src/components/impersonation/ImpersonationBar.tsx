@@ -12,20 +12,16 @@ import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { endImpersonation, takeImpersonationFlash } from '@/services/impersonation'
 import { roleLabel } from '@/components/adminUsers/userDisplay'
-
-const initialsOf = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('') || '?'
+import Avatar from '@/components/avatar/Avatar'
 
 export default function ImpersonationBar() {
   const session = useImpersonationStore((s) => s.session)
   const hasHydrated = useImpersonationStore((s) => s.hasHydrated)
   const clearSession = useImpersonationStore((s) => s.clearSession)
   const currentUserId = useUserStore((s) => s.user.id)
+  // The bar only shows while the signed-in user is the previewed one, so the
+  // store's avatar is theirs.
+  const avatar = useUserStore((s) => s.user.avatar)
   const userHydrated = useUserStore((s) => s.hasHydrated)
   const notify = useNotificationStore((s) => s.showNotification)
 
@@ -69,9 +65,7 @@ export default function ImpersonationBar() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-400" />
           </span>
 
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-500 text-[11px] font-semibold tracking-wide">
-            {initialsOf(target.fullName)}
-          </div>
+          <Avatar name={target.fullName} avatar={avatar} size={32} className="ring-2 ring-violet-400/60" />
 
           <div className="min-w-0 flex-1 leading-tight">
             <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-violet-200">

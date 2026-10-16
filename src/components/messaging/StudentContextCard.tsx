@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import type { StudentContext } from '@/services/types/messaging'
-import { initials } from './formatters'
+import Avatar from '@/components/avatar/Avatar'
 import { toneClasses, type Tone } from './tones'
 
 /**
@@ -21,9 +21,7 @@ const StudentContextCard: React.FC<{ student: StudentContext; tone: Tone }> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
-        {initials(student.name)}
-      </span>
+      <Avatar name={student.name} size={40} />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Student</p>
         <p className="truncate text-sm font-medium text-slate-900">{student.name}</p>

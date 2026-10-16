@@ -23,6 +23,8 @@ export interface SchoolUser {
   declinedAt: string | null;
   /** Created by an admin and hasn't set a password yet. */
   invitePending: boolean;
+  /** null = the neutral avatar. */
+  avatar?: import('./profile').AvatarSpec | null;
   createdAt: string;
   lastModifiedAt: string;
 }
@@ -83,6 +85,8 @@ export interface ImpersonationStart {
   roles?: string[];
   isVerified: boolean;
   isVerifiedSchool: boolean;
+  /** The previewed account's avatar (null = the neutral avatar). */
+  avatar?: import('./profile').AvatarSpec | null;
   activeTerm: string | false;
   activeSchoolYear: { schoolYearId: string; label: string } | null;
   schoolYears: import('./schoolYear').SchoolYear[];

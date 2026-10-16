@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { EllipsisHorizontalIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import type { Message } from '@/services/types/messaging'
 import AttachmentChip from './AttachmentChip'
-import { formatTime, initials } from './formatters'
+import Avatar from '@/components/avatar/Avatar'
+import { formatTime } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 interface MessageBubbleProps {
@@ -42,7 +43,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
 
   const removed = Boolean(message.deletedAt)
   const senderLabel = message.senderRelation ? `${message.senderName} (${message.senderRelation})` : message.senderName
-  const avatarClass = message.senderRole === 'PARENT' ? t.avatarParent : t.avatarStaff
 
   const saveEdit = async () => {
     const text = draft.trim()
@@ -154,11 +154,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
   return (
     <div className={`group flex items-end gap-2.5 ${mine ? 'flex-row-reverse' : ''}`}>
       {!mine && (
-        <span
-          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${avatarClass}`}
-          title={senderLabel}
-        >
-          {initials(message.senderName)}
+        <span title={senderLabel} className="flex-shrink-0">
+          <Avatar name={message.senderName} avatar={message.senderAvatar} size={32} className="block" />
         </span>
       )}
       <div className={`flex max-w-[78%] flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>

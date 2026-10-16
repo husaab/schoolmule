@@ -8,8 +8,13 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { ArrowRightStartOnRectangleIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
+import { ArrowRightStartOnRectangleIcon, EllipsisVerticalIcon, FaceSmileIcon } from '@heroicons/react/24/outline'
 import LogoutModal from '@/components/logout/logoutModal'
+import Avatar from '@/components/avatar/Avatar'
+import AvatarPickerModal from '@/components/avatar/AvatarPickerModal'
+import { saveAvatar } from '@/services/profileService'
+import type { AvatarSpec } from '@/services/types/profile'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { gradeLabel } from '@/lib/studentAccounts'
 import { STUDENT_NAV, isStudentNavActive } from './studentNav'
@@ -85,11 +90,15 @@ export default function StudentSidebar() {
   )
 }
 
-// The bottom card: who is signed in, and a menu with Sign out.
+// The bottom card: who is signed in, and a menu with Change avatar and Sign out.
 function StudentUserCard() {
   const username = useUserStore((s) => s.user.username)
+  const avatar = useUserStore((s) => s.user.avatar ?? null)
+  const photoUrl = useUserStore((s) => s.user.photoUrl ?? null)
+  const notify = useNotificationStore((s) => s.showNotification)
   const { me } = useStudentMe()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -110,12 +119,17 @@ function StudentUserCard() {
 
   const name = me?.student.name ?? username ?? ''
 
+  const save = async (next: AvatarSpec) => {
+    const res = await saveAvatar(next)
+    const store = useUserStore.getState()
+    store.setUser({ ...store.user, avatar: res.data.avatar })
+    notify('Avatar saved', 'success')
+  }
+
   return (
     <div ref={cardRef} className="relative shrink-0 border-t border-slate-100 p-4">
       <div className="flex items-center gap-3">
-        {/* Neutral avatar until the avatar picker ships. */}
-        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG avatar */}
-        <img src="/avatars/neutral.svg" alt="" className="h-10 w-10 shrink-0 rounded-full" />
+        <Avatar name={name || 'You'} avatar={avatar} photoUrl={photoUrl} size={40} />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-slate-900">{name}</span>
           <span className="truncate text-xs text-slate-500">
@@ -143,6 +157,18 @@ function StudentUserCard() {
           menuOpen ? '' : 'hidden'
         }`}
       >
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setMenuOpen(false)
+            setPickerOpen(true)
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          <FaceSmileIcon className="h-4 w-4 text-slate-400" />
+          Change avatar
+        </button>
         <LogoutModal
           trigger={(open) => (
             <button
@@ -160,6 +186,16 @@ function StudentUserCard() {
           )}
         />
       </div>
+
+      <AvatarPickerModal
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Your avatar"
+        subtitle="Your teachers and classmates see it next to your name."
+        name={name}
+        value={avatar}
+        onSave={save}
+      />
     </div>
   )
 }

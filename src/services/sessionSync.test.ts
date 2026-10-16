@@ -9,17 +9,20 @@ const setUser = vi.fn()
 const setYears = vi.fn()
 const selectYear = vi.fn()
 
+let storedToken: string | null = null
+let storedUser: Record<string, unknown> = {}
+
 vi.mock('./authService', () => ({
-  getToken: () => null,
+  getToken: () => storedToken,
   setToken: (...args: unknown[]) => setToken(...args),
   removeToken: vi.fn(),
 }))
-vi.mock('@/store/useUserStore', () => ({ useUserStore: { getState: () => ({ setUser }) } }))
+vi.mock('@/store/useUserStore', () => ({ useUserStore: { getState: () => ({ setUser, user: storedUser }) } }))
 vi.mock('@/store/useSchoolYearStore', () => ({ useSchoolYearStore: { getState: () => ({ setYears, selectYear }) } }))
 vi.mock('@/store/useSelectedChildStore', () => ({ useSelectedChildStore: { getState: () => ({}) } }))
 vi.mock('@/store/useImpersonationStore', () => ({ useImpersonationStore: { getState: () => ({}) } }))
 
-const { startSession } = await import('./sessionSync')
+const { startSession, refreshAccessFlags } = await import('./sessionSync')
 
 const year: SchoolYear = { schoolYearId: 'year-1', school: 'TEST', label: '2026-2027', startDate: '2026-09-01', endDate: '2027-06-30', isActive: true }
 
@@ -67,6 +70,9 @@ describe('startSession', () => {
       isVerifiedSchool: false,
       activeTerm: 'Term 1',
       isPlatformOwner: false,
+      fullName: 'Demo Parent',
+      avatar: null,
+      photoUrl: null,
     })
     expect(setUser).toHaveBeenCalledWith(user)
     expect(setYears).toHaveBeenCalledWith([year])
@@ -87,5 +93,45 @@ describe('startSession', () => {
     expect(user).toMatchObject({ role: 'PARENT', baseRole: 'PARENT', roles: ['PARENT'], activeTerm: null })
     expect(setYears).toHaveBeenCalledWith([])
     expect(selectYear).toHaveBeenCalledWith(null)
+  })
+})
+
+describe('avatar and photo in the session', () => {
+  beforeEach(() => {
+    setToken.mockReset()
+    setUser.mockReset()
+    storedToken = null
+    storedUser = {}
+  })
+
+  it('stores the avatar, photo and full name a sign-in carries', () => {
+    const avatar = { style: 'hijab', skin: 2, bg: 5 } as const
+    const user = startSession({ ...signIn, avatar, photoUrl: 'https://cdn.example.com/p.jpg' })
+    expect(user).toMatchObject({ avatar, photoUrl: 'https://cdn.example.com/p.jpg', fullName: 'Demo Parent' })
+  })
+
+  it('refreshes a changed avatar or photo from /auth/me without touching the rest', () => {
+    storedToken = 'session-token'
+    storedUser = {
+      id: 'user-1', username: 'Demo Parent', role: 'TEACHER', baseRole: 'TEACHER', roles: ['TEACHER', 'PARENT'],
+      isVerifiedEmail: true, isVerifiedSchool: false, isPlatformOwner: false,
+      fullName: 'Demo Parent', avatar: null, photoUrl: null, activeTerm: 'Term 1',
+    }
+    const avatar = { style: 'curly', skin: 4, bg: 0 } as const
+    const changed = refreshAccessFlags({ ...signIn, avatar, photoUrl: 'https://cdn.example.com/new.jpg' }, 'session-token')
+    expect(changed).toBe(true)
+    expect(setUser).toHaveBeenCalledWith(expect.objectContaining({ avatar, photoUrl: 'https://cdn.example.com/new.jpg', activeTerm: 'Term 1' }))
+  })
+
+  it('reports no change when the avatar and photo are the same', () => {
+    const avatar = { style: 'kufi', skin: 1, bg: 1 }
+    storedToken = 'session-token'
+    storedUser = {
+      id: 'user-1', role: 'TEACHER', baseRole: 'TEACHER', roles: ['TEACHER', 'PARENT'],
+      isVerifiedEmail: true, isVerifiedSchool: false, isPlatformOwner: false,
+      fullName: 'Demo Parent', avatar: { ...avatar }, photoUrl: null,
+    }
+    expect(refreshAccessFlags({ ...signIn, avatar: { style: 'kufi', skin: 1, bg: 1 }, photoUrl: null }, 'session-token')).toBe(false)
+    expect(setUser).not.toHaveBeenCalled()
   })
 })

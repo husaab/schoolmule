@@ -12,6 +12,7 @@ import PastYearBanner from './PastYearBanner';
 import ScheduleMenu from '@/components/schedulePlanner/ScheduleMenu';
 import InboxBell from '@/components/messaging/InboxBell';
 import ViewSwitcher from './ViewSwitcher';
+import Avatar from '@/components/avatar/Avatar';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -85,11 +86,16 @@ const NavBar: FC = () => {
             {/* User Avatar (Mobile) */}
             <Link
               href="/settings"
-              className={`lg:hidden w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm ${
-                user?.role === 'PARENT' ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
-              }`}
+              aria-label="Account settings"
+              className="lg:hidden rounded-full transition-shadow hover:shadow-md"
             >
-              {user?.username?.charAt(0).toUpperCase() || 'U'}
+              <Avatar
+                name={user?.fullName || user?.username || 'You'}
+                avatar={user?.avatar}
+                photoUrl={user?.photoUrl}
+                size={36}
+                className="block"
+              />
             </Link>
           </div>
         </div>

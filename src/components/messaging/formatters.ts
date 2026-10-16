@@ -44,14 +44,6 @@ export const formatBytes = (n: number) => {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('') || '?'
-
 /** "Layla Test (Mother)" for guardians, plain name for staff. */
 export const displayName = (p: { name: string; role: SenderRole; relation?: string | null }) =>
   p.role === 'PARENT' && p.relation ? `${p.name} (${p.relation})` : p.name

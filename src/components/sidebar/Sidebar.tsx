@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import LogoutModal from '../logout/logoutModal';
+import Avatar from '@/components/avatar/Avatar';
 import {
   Cog6ToothIcon,
   ChevronDownIcon,
@@ -479,13 +480,12 @@ const Sidebar = () => {
           view and carries the switch; this is the only placement on phones. */}
       <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white font-semibold text-sm ${
-              user.role === 'PARENT' ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
-            }`}
-          >
-            {user.username?.charAt(0).toUpperCase() || 'U'}
-          </div>
+          <Avatar
+            name={user.fullName || user.username || 'You'}
+            avatar={user.avatar}
+            photoUrl={user.photoUrl}
+            size={40}
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 truncate">{user.username}</p>
             <p className="text-xs text-slate-500 truncate">

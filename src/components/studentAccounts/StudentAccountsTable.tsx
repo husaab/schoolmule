@@ -13,6 +13,7 @@ import {
   studentSubline,
   type RowAction,
 } from '@/lib/studentAccounts'
+import Avatar from '@/components/avatar/Avatar'
 import AccountStatusPill from './AccountStatusPill'
 import StudentAccountActionsMenu from './StudentAccountActionsMenu'
 
@@ -83,9 +84,8 @@ export default function StudentAccountsTable({ rows, settings, selected, onToggl
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex min-w-0 items-center gap-3">
-                    {/* Neutral avatar until the avatar picker ships. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element -- static SVG avatar */}
-                    <img src="/avatars/neutral.svg" alt="" className="h-9 w-9 shrink-0 rounded-full" />
+                    {/* The accounts list carries no avatar yet: the neutral one. */}
+                    <Avatar name={row.name} size={36} />
                     <div className="min-w-0">
                       <div className="truncate font-medium text-slate-900">{row.name}</div>
                       <div className="truncate text-xs text-slate-500">{studentSubline(row)}</div>

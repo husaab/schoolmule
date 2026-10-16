@@ -68,6 +68,10 @@ export const startImpersonation = (
     isVerifiedEmail: preview.isVerified,
     isVerifiedSchool: preview.isVerifiedSchool,
     activeTerm: preview.activeTerm || null,
+    fullName: preview.fullName,
+    avatar: preview.avatar ?? null,
+    // The preview payload carries no photo; /auth/me fills it in on reload.
+    photoUrl: null,
   });
   const years = preview.schoolYears ?? [];
   useSchoolYearStore.getState().setYears(years);

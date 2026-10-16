@@ -110,6 +110,9 @@ export interface SessionValidationResponse {
     isVerifiedSchool: boolean;
     /** True only for the platform owner (backend env allowlist). */
     isPlatformOwner?: boolean;
+    /** The picked avatar (null = the neutral one) and a signed URL (about six hours) for the optional photo. */
+    avatar?: import('./types/profile').AvatarSpec | null;
+    photoUrl?: string | null;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;

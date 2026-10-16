@@ -38,6 +38,8 @@ export interface ConversationItem {
   lastMessageAt: string;
   createdAt: string;
   leadTeacherName: string | null;
+  /** The lead teacher's avatar (null = the neutral avatar). */
+  leadTeacherAvatar?: import('./profile').AvatarSpec | null;
   /** The class's term, for the staff inbox's term filter. */
   termName: string | null;
   /** Every guardian of the student (accounts and free-text rows), for the parent filter. */
@@ -64,6 +66,8 @@ export interface Message {
   messageId: string;
   senderId: string | null;
   senderName: string;
+  /** The sender's avatar (null = the neutral avatar). */
+  senderAvatar?: import('./profile').AvatarSpec | null;
   senderRole: SenderRole;
   /** e.g. "Mother" — only for guardians. */
   senderRelation: string | null;
@@ -83,6 +87,7 @@ export interface Participant {
   relation: string | null;
   /** Invited guardian who has not set a password yet. */
   invitePending: boolean;
+  avatar?: import('./profile').AvatarSpec | null;
 }
 
 /** Staff-only context strip for general threads. */

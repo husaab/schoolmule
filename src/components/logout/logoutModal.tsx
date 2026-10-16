@@ -8,7 +8,6 @@ import { logout } from '@/services/authService'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
-import { useRouter } from 'next/navigation'
 
 interface LogoutModalProps {
   /**
@@ -24,7 +23,6 @@ const LogoutModal = ({ trigger }: LogoutModalProps = {}) => {
   const user = useUserStore((state) => state.user)
   const clearUser = useUserStore((state) => state.clearUser)
   const showNotification = useNotificationStore((state) => state.showNotification)
-  const router = useRouter()
 
   const openModal = () => setIsModalOpen(true)
   const closeModal = () => setIsModalOpen(false)
@@ -39,12 +37,14 @@ const LogoutModal = ({ trigger }: LogoutModalProps = {}) => {
       // Logging out mid-preview ends both sessions: the parked admin token
       // must not outlive the sign-out.
       useImpersonationStore.getState().clearSession()
-      closeModal()
-      router.push('/login')
+      // A full page load, not router.push: clearing the user re-runs
+      // AuthGuard, whose signed-out redirect to "/" would otherwise win the
+      // race. Every role (and the next student on a shared device) should
+      // land on the sign-in page. The spinner stays until the page unloads.
+      window.location.assign('/login')
     } catch (error) {
       console.error('Logout failed:', error)
       showNotification('Logout failed. Please try again.', 'error')
-    } finally {
       setIsLoading(false)
     }
   }

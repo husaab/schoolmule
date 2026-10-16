@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Modal from '@/components/shared/modal'
+import Avatar from '@/components/avatar/Avatar'
 import { StaffPayload } from '@/services/types/staff'
 import {
   AcademicCapIcon,
@@ -18,14 +19,6 @@ interface StaffViewModalProps {
   onClose: () => void
   staff: StaffPayload
 }
-
-const initialsOf = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('') || '?'
 
 const formatDate = (value: string | null | undefined): string => {
   if (!value) return '—'
@@ -118,9 +111,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({
       {/* Identity */}
       <header className="border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 px-6 pt-6 pb-5">
         <div className="flex items-center gap-4 pr-8">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-lg font-semibold tracking-wide text-white shadow-sm">
-            {initialsOf(staff.fullName)}
-          </div>
+          {/* Staff directory rows have no account of their own: the neutral avatar. */}
+          <Avatar name={staff.fullName} size={56} className="shadow-sm" />
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold text-slate-900">{staff.fullName}</h2>
             <p className="mt-0.5 truncate text-sm text-slate-500">{staff.staffRole}</p>

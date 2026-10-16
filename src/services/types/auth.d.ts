@@ -37,6 +37,9 @@ export interface RegisterResponse {
     isVerified: boolean;
     isVerifiedSchool: boolean;
     isPlatformOwner?: boolean;
+    /** The picked avatar (null = the neutral one) and a signed URL for the optional photo. */
+    avatar?: import('./profile').AvatarSpec | null;
+    photoUrl?: string | null;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;
@@ -76,6 +79,9 @@ export interface LoginResponse {
     isVerified: boolean;
     isVerifiedSchool: boolean;
     isPlatformOwner: boolean;
+    /** The picked avatar (null = the neutral one) and a signed URL for the optional photo. */
+    avatar?: import('./profile').AvatarSpec | null;
+    photoUrl?: string | null;
     createdAt: string;
     lastModifiedAt: string;
     activeTerm: string;

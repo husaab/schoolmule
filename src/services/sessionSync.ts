@@ -6,6 +6,7 @@
 
 import { getToken, setToken, removeToken, type SessionValidationResponse } from './authService'
 import type { LoginResponse, RegisterResponse } from './types/auth'
+import type { AvatarSpec } from './types/profile'
 import { useUserStore, type User } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
@@ -36,6 +37,9 @@ const storeSession = (data: SignInData): User => {
     isVerifiedSchool: data.isVerifiedSchool,
     activeTerm: data.activeTerm || null,
     isPlatformOwner: Boolean(data.isPlatformOwner),
+    fullName: data.fullName ?? null,
+    avatar: data.avatar ?? null,
+    photoUrl: data.photoUrl ?? null,
   }
   useUserStore.getState().setUser(user)
   useSchoolYearStore.getState().setYears(data.schoolYears ?? [])
@@ -59,9 +63,13 @@ export const startSession = (data: LoginResponse['data'] | RegisterResponse['dat
   return storeSession(data)
 }
 
-// Brings a persisted user's access flags up to date without touching the
-// rest of the session (e.g. the school year they picked). Returns true when
-// anything changed. Ignores a reply for a different user.
+const sameAvatar = (a: AvatarSpec | null | undefined, b: AvatarSpec | null | undefined): boolean =>
+  (a ?? null) === (b ?? null) || (!!a && !!b && a.style === b.style && a.skin === b.skin && a.bg === b.bg)
+
+// Brings a persisted user's access flags (and avatar, photo and name) up to
+// date without touching the rest of the session (e.g. the school year they
+// picked). Returns true when anything changed. Ignores a reply for a
+// different user.
 export const refreshAccessFlags = (data: SessionData, sentToken: string | null): boolean => {
   const current = useUserStore.getState().user
   if (sessionChangedSince(sentToken) || current.id !== data.userId) return false
@@ -74,6 +82,9 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
     isVerifiedEmail: data.isVerified,
     isVerifiedSchool: data.isVerifiedSchool,
     isPlatformOwner: Boolean(data.isPlatformOwner),
+    fullName: data.fullName ?? current.fullName ?? null,
+    avatar: data.avatar ?? null,
+    photoUrl: data.photoUrl ?? null,
   }
   const changed =
     next.role !== current.role ||
@@ -81,7 +92,10 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
     next.roles.join() !== (current.roles ?? []).join() ||
     next.isVerifiedEmail !== current.isVerifiedEmail ||
     next.isVerifiedSchool !== current.isVerifiedSchool ||
-    next.isPlatformOwner !== current.isPlatformOwner
+    next.isPlatformOwner !== current.isPlatformOwner ||
+    next.fullName !== current.fullName ||
+    sameAvatar(next.avatar, current.avatar) === false ||
+    next.photoUrl !== (current.photoUrl ?? null)
   if (changed) useUserStore.getState().setUser(next)
   return changed
 }

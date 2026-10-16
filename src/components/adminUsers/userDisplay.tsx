@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
+import Avatar from '@/components/avatar/Avatar'
 
 export const ROLE_OPTIONS: { value: SchoolRole; label: string; description: string }[] = [
   { value: 'TEACHER', label: 'Teacher', description: 'Classes, gradebook, attendance and reports' },
@@ -74,27 +75,20 @@ export const StatusBadge = ({ user }: { user: SchoolUser }) => {
   )
 }
 
-export const initialsOf = (user: Pick<SchoolUser, 'firstName' | 'lastName' | 'email'>) =>
-  `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() ||
-  user.email[0]?.toUpperCase() ||
-  '?'
-
+/** A user's picked avatar (the neutral one until they pick). */
 export const UserAvatar = ({
   user,
   size = 'sm',
 }: {
-  user: Pick<SchoolUser, 'firstName' | 'lastName' | 'email'>
+  user: Pick<SchoolUser, 'firstName' | 'lastName' | 'email'> & { avatar?: SchoolUser['avatar'] }
   size?: 'sm' | 'lg'
 }) => (
-  <div
-    className={`flex flex-shrink-0 items-center justify-center font-semibold tracking-wide ${
-      size === 'lg'
-        ? 'h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-lg text-white shadow-sm'
-        : 'h-9 w-9 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 text-xs text-cyan-700'
-    }`}
-  >
-    {initialsOf(user)}
-  </div>
+  <Avatar
+    name={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
+    avatar={user.avatar}
+    size={size === 'lg' ? 56 : 36}
+    className={size === 'lg' ? 'shadow-sm' : ''}
+  />
 )
 
 export const formatDate = (value: string | null | undefined): string => {

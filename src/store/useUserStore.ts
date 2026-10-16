@@ -1,6 +1,7 @@
 import { create, StateCreator } from 'zustand';
 import { createJSONStorage, persist, PersistOptions } from 'zustand/middleware';
 import { clearFilterMemory, getFilterMemoryStorage } from '@/lib/filterMemory';
+import type { AvatarSpec } from '@/services/types/profile';
 
 export type User = {
     id: string | null;
@@ -20,6 +21,13 @@ export type User = {
     // neither, and reads as single-role until /auth/me fills them in.
     baseRole?: string | null;
     roles?: string[];
+    // "First Last" as the server spells it (username is the editable handle).
+    fullName?: string | null;
+    // The picked avatar (null = the neutral one) and a signed URL for the
+    // optional photo, which expires after a few hours and is refreshed by
+    // /auth/me. Optional for the same reason as the fields above.
+    avatar?: AvatarSpec | null;
+    photoUrl?: string | null;
 }
 
 type UserStore = {

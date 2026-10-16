@@ -10,7 +10,7 @@ import {
 } from '@/store/useSelectedChildStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getStudentsByParentId } from '@/services/parentStudentService'
-import { childColor, childInitial } from './childColors'
+import Avatar from '@/components/avatar/Avatar'
 
 /**
  * Persistent child selector shown at the top of the parent sidebar.
@@ -34,6 +34,7 @@ const ChildSwitcher: React.FC = () => {
           studentId: link.studentId,
           name: link.student?.name || 'Unnamed Student',
           grade: link.student?.grade ?? null,
+          avatar: link.student?.avatar ?? null,
         }))
         setChildren(list)
       })
@@ -66,7 +67,6 @@ const ChildSwitcher: React.FC = () => {
         </button>
 
         {children.map((child) => {
-          const color = childColor(child.studentId)
           const active = selectedChildId === child.studentId
           return (
             <button
@@ -74,11 +74,7 @@ const ChildSwitcher: React.FC = () => {
               onClick={() => selectChild(child.studentId)}
               className={pillClass(active)}
             >
-              <span
-                className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.solid} flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}
-              >
-                {childInitial(child.name)}
-              </span>
+              <Avatar name={child.name} avatar={child.avatar} size={32} />
               <span className="min-w-0">
                 <span className="block text-sm truncate">{child.name}</span>
                 {child.grade != null && (

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Modal from '../../shared/modal';
+import Avatar from '@/components/avatar/Avatar';
 import { StudentPayload } from '@/services/types/student';
 import { getTeacherById } from '@/services/teacherService';
 import { getGradeDisplayName, getSchoolName } from '@/lib/schoolUtils';
@@ -37,14 +38,6 @@ const clean = (value: string | null | undefined): string | null => {
   if (!trimmed || trimmed.toLowerCase() === 'n/a') return null;
   return trimmed;
 };
-
-const initialsOf = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('') || '?';
 
 const formatDate = (value: string | null | undefined): string => {
   if (!value) return '—';
@@ -190,9 +183,7 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
       {/* Identity */}
       <header className="border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 px-6 pt-6 pb-5">
         <div className="flex items-center gap-4 pr-8">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-lg font-semibold tracking-wide text-white shadow-sm">
-            {initialsOf(student.name)}
-          </div>
+          <Avatar name={student.name} avatar={student.avatar} size={56} className="shadow-sm" />
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold text-slate-900">{student.name}</h2>
             <p className="mt-0.5 truncate text-sm text-slate-500">

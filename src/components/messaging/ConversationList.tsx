@@ -3,7 +3,8 @@
 import React from 'react'
 import { ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import type { ConversationItem, SenderRole } from '@/services/types/messaging'
-import { formatListStamp, initials } from './formatters'
+import Avatar from '@/components/avatar/Avatar'
+import { formatListStamp } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 export type ListView = 'open' | 'needsReply' | 'resolved'
@@ -67,9 +68,8 @@ const Row: React.FC<{
       {isParent ? (
         <span className={`mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${unread ? t.badge : 'bg-slate-200'}`} aria-hidden />
       ) : (
-        <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-          {initials(item.studentName)}
-        </span>
+        // Thread lists carry no student avatar yet, so this is the neutral one.
+        <Avatar name={item.studentName} size={36} />
       )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">

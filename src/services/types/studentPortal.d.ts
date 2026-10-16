@@ -7,7 +7,13 @@ import type { GradeCode } from './studentAccount';
 /** GET /api/student/me: who is signed in, for the portal shell. */
 export interface StudentMe {
   student: { studentId: string; name: string; firstName: string; grade: GradeCode };
-  user: { userId: string; email: string | null };
+  /** `avatar` is the student's own pick (null until they choose one); `photoUrl` is null while the school has student photos off. */
+  user: {
+    userId: string
+    email: string | null
+    avatar?: import('./profile').AvatarSpec | null
+    photoUrl?: string | null
+  };
   school: { code: string; name: string };
   settings: { studentPhotos: boolean };
   schoolYear: { schoolYearId: string; label: string | null };

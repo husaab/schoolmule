@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { AvatarSpec } from '@/services/types/profile';
 
 export const ALL_CHILDREN = 'all';
 
@@ -8,6 +9,8 @@ export type ChildLite = {
   studentId: string;
   name: string;
   grade: string | number | null;
+  /** The child's own pick, else the one a teacher set (null = the neutral avatar). */
+  avatar?: AvatarSpec | null;
 };
 
 type SelectedChildStore = {

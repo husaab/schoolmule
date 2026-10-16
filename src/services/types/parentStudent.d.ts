@@ -13,6 +13,8 @@ export interface ParentStudentPayload {
   student?: {
     name: string;
     grade: GradeValue;
+    /** The child's own pick, else the one a teacher set (null = the neutral avatar). */
+    avatar?: import('./profile').AvatarSpec | null;
   };
   parentUser?: {
     firstName: string;

@@ -34,9 +34,6 @@ export interface ToneClasses {
   contextValue: string
   /** Focus ring on inputs. */
   focus: string
-  /** Avatar for staff senders / parent senders. */
-  avatarStaff: string
-  avatarParent: string
 }
 
 const STAFF: ToneClasses = {
@@ -58,8 +55,6 @@ const STAFF: ToneClasses = {
   contextLabel: 'text-cyan-700',
   contextValue: 'text-cyan-800',
   focus: 'focus:ring-cyan-200 focus:border-cyan-300',
-  avatarStaff: 'bg-slate-900 text-white',
-  avatarParent: 'bg-amber-100 text-amber-800',
 }
 
 const PARENT: ToneClasses = {
@@ -80,8 +75,6 @@ const PARENT: ToneClasses = {
   contextLabel: 'text-amber-700',
   contextValue: 'text-amber-800',
   focus: 'focus:ring-amber-200 focus:border-amber-300',
-  avatarStaff: 'bg-slate-900 text-white',
-  avatarParent: 'bg-amber-100 text-amber-800',
 }
 
 export const toneClasses = (tone: Tone): ToneClasses => (tone === 'parent' ? PARENT : STAFF)
