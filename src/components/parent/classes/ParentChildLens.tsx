@@ -18,10 +18,11 @@ import NothingHere from '@/components/classroom/NothingHere'
 import StreamFeed from '@/components/classroom/StreamFeed'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
 import LensBanner from '@/components/parent/classes/LensBanner'
+import ParentClassworkTab from '@/components/parent/classes/ParentClassworkTab'
 import { useFilterParams, type FilterPatch } from '@/hooks/useFilterParams'
 import { useClassTermGrades } from '@/hooks/useClassTermGrades'
 import { useLoad } from '@/hooks/useLoad'
-import { classMissingFlag, classPageMeta, firstNameOf, noMarksNote, pickClass } from '@/lib/classroomText'
+import { classPageMeta, firstNameOf, missingFlag, noMarksNote, pickClass } from '@/lib/classroomText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import {
   PARENT_CLASS_TABS,
@@ -36,7 +37,7 @@ import {
   markAnnouncementRead,
   unacknowledgeAnnouncement,
 } from '@/services/announcementService'
-import { getClassroomSummary, getLensClass, getLensClasses, getLensGrades, getLensStream } from '@/services/parentClassroomService'
+import { getLensClass, getLensClasses, getLensGrades, getLensStream } from '@/services/parentClassroomService'
 import type { Thread } from '@/services/types/messaging'
 import type { StudentAnnouncement, StudentAttachment, StudentClassCard, StudentClassHeader } from '@/services/types/studentPortal'
 import { useMessagingStore } from '@/store/useMessagingStore'
@@ -145,6 +146,8 @@ function GradesBody({ child, header }: { child: ChildLite; header: StudentClassH
       grades={{ ...grades.data, classes: cls ? [cls] : [] }}
       selectedClassId={header.classId}
       onSelectClass={() => {}}
+      itemHref={(g) => (g.itemId ? parentItemHref(child.studentId, g.itemId) : null)}
+      linkOwner={firstNameOf(child.name)}
       footnote={`Grades show here once the teacher publishes them. Missing work counts as 0 until ${firstNameOf(child.name)} hands it in.`}
       teacherOf={() => lead}
       noMarksNote={noMarksNote({ grade: String(child.grade ?? header.grade), teacherName: lead?.name ?? null, owner: { name: child.name } })}
@@ -160,10 +163,6 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
   const tab = parseParentClassTab(filters.get('tab'))
   const [asking, setAsking] = useState(false)
 
-  // The flags need to know whether this child signs in (a derived Missing is not flagged for one who cannot).
-  const childSummary = useLoad(`lens-summary:${child.studentId}:${yearId ?? ''}`, () =>
-    getClassroomSummary().then((r) => r.data.children.find((c) => c.studentId === child.studentId)?.signsIn ?? false),
-  )
   const classes = useLoad(`lens-classes:${child.studentId}:${yearId ?? ''}`, () => getLensClasses(child.studentId).then((r) => r.data.classes))
   const selected: StudentClassCard | null = classes.data ? pickClass(classes.data, filters.get('class')) : null
   const page = useLoad(
@@ -219,7 +218,7 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
                 classId: c.classId,
                 subject: c.subject,
                 iconUrl: c.identity.iconUrl,
-                flag: classMissingFlag(c.missingCount, childSummary.data ?? undefined),
+                flag: missingFlag(c.missingCount),
               }))}
               selectedId={selected.classId}
               hrefFor={(id) => parentClassesHref({ classId: id, tab })}
@@ -257,7 +256,16 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
 
                 <div className="flex flex-col gap-3.5 p-5 sm:px-6 sm:pb-[26px] sm:pt-[22px]">
                   {tab === 'stream' && <StreamBody key={selected.classId} studentId={child.studentId} classId={selected.classId} />}
-                  {tab === 'classwork' && <NothingHere />}
+                  {tab === 'classwork' && (
+                    <ParentClassworkTab
+                      key={selected.classId}
+                      studentId={child.studentId}
+                      classId={selected.classId}
+                      childName={child.name}
+                      color={page.data.class.identity.color}
+                      teacherName={teacher?.name ?? null}
+                    />
+                  )}
                   {tab === 'grades' && <GradesBody key={selected.classId} child={child} header={page.data.class} />}
                 </div>
               </>

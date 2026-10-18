@@ -4,7 +4,7 @@
 // nudge to pick an avatar until they have, what is due soon and missing, the
 // latest published grades, and a card for each of their classes.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Avatar from '@/components/avatar/Avatar'
 import AvatarPickerModal from '@/components/avatar/AvatarPickerModal'
 import PickAvatarCard from '@/components/avatar/PickAvatarCard'
@@ -16,8 +16,9 @@ import StudentShell from '@/components/studentPortal/StudentShell'
 import { shareClassesFromHome } from '@/components/studentPortal/useStudentClasses'
 import { useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useLoad } from '@/hooks/useLoad'
-import { firstNameOf, greetingFor } from '@/lib/classroomText'
+import { firstNameOf, greetingFor, thingsDueThisWeek } from '@/lib/classroomText'
 import { studentClassHref, studentGradesHref } from '@/lib/portalRoutes'
+import { rememberSubmissionModes } from '@/lib/submissionModeCache'
 import { longDateLine } from '@/lib/studentAccounts'
 import { saveAvatar } from '@/services/profileService'
 import { getStudentHome } from '@/services/studentPortalService'
@@ -42,6 +43,10 @@ export default function StudentHomePage() {
   })
 
   const data = home.data
+  // Due soon and Missing know how each item is handed in; the assignment page reads it from here.
+  useEffect(() => {
+    if (data) rememberSubmissionModes([...data.dueSoon, ...data.missing])
+  }, [data])
   const now = new Date()
   const first = firstNameOf(data?.student.firstName || me?.student.firstName || username) || 'there'
   // The login's own pick; the neutral avatar until they choose one.
@@ -81,7 +86,9 @@ export default function StudentHomePage() {
                   {greetingFor(now)}, {first}
                 </span>
               </h2>
-              <p className="order-first text-sm text-slate-500 md:order-none md:text-base md:text-slate-600">{longDateLine(now)}</p>
+              <p className="order-first text-sm text-slate-500 md:order-none md:text-base md:text-slate-600">
+                {[longDateLine(now), thingsDueThisWeek(data.dueSoon.length)].filter(Boolean).join(' · ')}
+              </p>
             </div>
             <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} className="md:hidden" />
           </div>

@@ -4,10 +4,12 @@ import {
   parentItemHref,
   parseParentClassTab,
   parseStudentClassTab,
+  parseTodoTab,
   studentClassHref,
   studentGradesHref,
   studentItemHref,
   studentMessageHref,
+  studentTodoHref,
 } from './portalRoutes'
 
 describe('student class links', () => {
@@ -38,7 +40,28 @@ describe('other student links', () => {
 
   it('builds item and message links', () => {
     expect(studentItemHref('i1')).toBe('/student/items/i1')
+    expect(studentItemHref('i1', { from: 'todo' })).toBe('/student/items/i1?from=todo')
     expect(studentMessageHref({ teacherId: 't1', classId: 'c1' })).toBe('/student/messages?compose=1&teacher=t1&class=c1')
+  })
+})
+
+describe('the To-do link', () => {
+  it('leaves Assigned and all classes as the bare URL', () => {
+    expect(studentTodoHref()).toBe('/student/todo')
+    expect(studentTodoHref({ tab: 'assigned' })).toBe('/student/todo')
+  })
+
+  it('adds the tab and the class', () => {
+    expect(studentTodoHref({ tab: 'missing' })).toBe('/student/todo?tab=missing')
+    expect(studentTodoHref({ tab: 'done', classId: 'c1' })).toBe('/student/todo?tab=done&class=c1')
+    expect(studentTodoHref({ classId: 'c1' })).toBe('/student/todo?class=c1')
+  })
+
+  it('reads a tab, falling back to Assigned', () => {
+    expect(parseTodoTab('done')).toBe('done')
+    expect(parseTodoTab('missing')).toBe('missing')
+    expect(parseTodoTab('later')).toBe('assigned')
+    expect(parseTodoTab(null)).toBe('assigned')
   })
 })
 

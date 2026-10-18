@@ -11,7 +11,7 @@
 import { dayKeyLabel } from '@/lib/classStream'
 import { gradeLabel, shortDate, torontoDateKey } from '@/lib/studentAccounts'
 import type { ChildClassGrades, ChildGrades, GradeItem, StudentClassNext, StudentAnnouncement, TodoItem } from '@/services/types/studentPortal'
-import type { ChildClassroomSummary, NeedsYouItem, NeedsYouMissing } from '@/services/types/parentClassroom'
+import type { ChildClassroomSummary, NeedsYouMissing } from '@/services/types/parentClassroom'
 
 const TZ = 'America/Toronto'
 
@@ -77,7 +77,7 @@ const dayNumber = (key: string): number => {
   return Math.round(Date.UTC(y, m - 1, d) / 86_400_000)
 }
 
-const weekday = (key: string, style: 'short' | 'long'): string => {
+export const weekday = (key: string, style: 'short' | 'long'): string => {
   const [y, m, d] = key.split('-').map(Number)
   return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: style }).format(new Date(Date.UTC(y, m - 1, d)))
 }
@@ -89,7 +89,7 @@ export const dayKeyOf = (item: { dueAt: string | null; date: string | null }): s
 /** Whole days from today (Toronto) to `key`; negative once it has passed. */
 export const daysFromToday = (key: string, now: Date = new Date()): number => dayNumber(key) - dayNumber(torontoDateKey(now))
 
-const timeText = (iso: string): string =>
+export const timeText = (iso: string): string =>
   new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(new Date(iso)).replace(/\s?([AP]M)$/i, (_, ap: string) => ` ${ap.toLowerCase()}`)
 
 /** "Today, 2:10 pm" for today's posts, otherwise "Oct 10". */
@@ -178,6 +178,16 @@ export function upcomingLabel(item: Pick<TodoItem, 'dueAt' | 'date' | 'status'>,
   return { text: `${dayKeyLabel(key)}${inClass}`, soon: false }
 }
 
+/** Home lists at most this many things due soon, so a full list means "at least". */
+export const HOME_DUE_SOON_CAP = 5
+
+/** "3 things due this week" for the end of Home's date line; null when nothing is due. */
+export function thingsDueThisWeek(count: number): string | null {
+  if (count <= 0) return null
+  if (count >= HOME_DUE_SOON_CAP) return `${HOME_DUE_SOON_CAP}+ things due this week`
+  return `${count} ${count === 1 ? 'thing' : 'things'} due this week`
+}
+
 export interface DuePill {
   text: string
   tone: 'amber' | 'slate'
@@ -257,14 +267,18 @@ export function classDetailLine(cls: Pick<ChildClassGrades, 'teacherName' | 'gra
     .join(' · ')
 }
 
-/** The link under a grade on the Grades page, or null when it has nowhere to go. */
-export function gradeLinkLabel(grade: Pick<GradeItem, 'kind' | 'status' | 'itemId'>): string | null {
+/**
+ * The link under a grade on the Grades page, or null when it has nowhere to go. A parent passes the child's
+ * first name: "See Amal's work and comments" (a student reads "your", and is offered "Turn it in now").
+ */
+export function gradeLinkLabel(grade: Pick<GradeItem, 'kind' | 'status' | 'itemId'>, childFirstName: string | null = null): string | null {
   if (!grade.itemId) return null
+  const whose = childFirstName ? `${childFirstName}'s` : 'your'
   if (grade.kind === 'assignment') {
-    if (grade.status === 'graded') return 'See your work and comments'
-    if (grade.status === 'missing') return 'Turn it in now'
+    if (grade.status === 'graded') return `See ${whose} work and comments`
+    if (grade.status === 'missing') return childFirstName ? `See ${whose} work` : 'Turn it in now'
   }
-  if (grade.kind === 'quiz' && grade.status === 'graded') return 'See your answers'
+  if (grade.kind === 'quiz' && grade.status === 'graded') return `See ${whose} answers`
   return null
 }
 
@@ -311,29 +325,8 @@ export const statTiles = (child: Pick<ChildClassroomSummary, 'dueThisWeek' | 'mi
   { key: 'grades', value: child.newGradeCount, label: child.newGradeCount === 1 ? 'new grade' : 'new grades' },
 ]
 
-/**
- * A "Missing" row that cannot be a derived one. Derived Missing (past due, nothing handed in, workStatus
- * rule 7) needs a due time, so a row with none is a dated in-class assessment the teacher marked missing.
- * The parent payload does not say which kind a row is, so this is the one case that can be told for sure.
- */
-export const isTeacherConfirmedMissing = (row: Pick<NeedsYouMissing, 'dueAt'>): boolean => row.dueAt === null
-
-/**
- * What "Needs you" may show. A child who cannot sign in cannot hand anything in, so work that is only
- * Missing because its due date passed is not shown for them; a "Got it" post always is.
- * A child who signs in keeps every row.
- */
-export function visibleNeedsYou(items: NeedsYouItem[], kids: Pick<ChildClassroomSummary, 'studentId' | 'signsIn'>[]): NeedsYouItem[] {
-  const cannotSignIn = new Set(kids.filter((k) => !k.signsIn).map((k) => k.studentId))
-  return items.filter((item) => item.kind !== 'missing' || !cannotSignIn.has(item.studentId) || isTeacherConfirmedMissing(item))
-}
-
-/**
- * The "1 missing" flag beside a class in the lens. The class count mixes teacher-confirmed and derived
- * Missing and cannot be split here, so only a child known to sign in gets a flag.
- */
-export const classMissingFlag = (missingCount: number, childSignsIn: boolean | undefined): string | null =>
-  childSignsIn === true && missingCount > 0 ? `${missingCount} missing` : null
+/** "1 missing" beside a class in the lens' class list, or null when nothing is missing. */
+export const missingFlag = (missingCount: number): string | null => (missingCount > 0 ? `${missingCount} missing` : null)
 
 /** "English · Ms. Bennett · was due Tuesday" under a "Missing: …" row. */
 export const needsYouMissingSubline = (item: NeedsYouMissing, now: Date = new Date()): string =>

@@ -7,7 +7,7 @@ export interface MessagingResponse<T> {
 
 export type ConversationStatus = 'open' | 'resolved';
 export type ConversationKind = 'assessment' | 'general';
-export type SenderRole = 'PARENT' | 'TEACHER' | 'ADMIN';
+export type SenderRole = 'PARENT' | 'TEACHER' | 'ADMIN' | 'STUDENT';
 
 export interface LastMessage {
   senderId: string | null;

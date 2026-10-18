@@ -52,8 +52,23 @@ export const studentGradesHref = (opts: { classId?: string | null; termId?: stri
 export const parentClassesHref = (opts: { classId?: string | null; tab?: ParentClassTab | null } = {}): string =>
   withQuery('/parent/classes', { class: opts.classId, tab: opts.tab && opts.tab !== 'stream' ? opts.tab : null })
 
-/** A classwork item for the student (its page arrives with the To-do). */
-export const studentItemHref = (itemId: string): string => `/student/items/${encodeURIComponent(itemId)}`
+/** The To-do's tabs, in order. Assigned is the bare URL. */
+export type TodoTab = 'assigned' | 'missing' | 'done'
+export const TODO_TABS: TodoTab[] = ['assigned', 'missing', 'done']
+
+/** The tab a ?tab= value names; anything else is Assigned. */
+export const parseTodoTab = (value: string | null | undefined): TodoTab => TODO_TABS.find((t) => t === value) ?? 'assigned'
+
+/** `/student/todo`, with `?tab=` for Missing and Done and `?class=` for one class. */
+export const studentTodoHref = (opts: { tab?: TodoTab | null; classId?: string | null } = {}): string =>
+  withQuery('/student/todo', { tab: opts.tab && opts.tab !== 'assigned' ? opts.tab : null, class: opts.classId })
+
+/**
+ * A classwork item for the student. `from: 'todo'` makes the page's back arrow
+ * return to the To-do (with its filters) instead of the class.
+ */
+export const studentItemHref = (itemId: string, opts: { from?: 'todo' | null } = {}): string =>
+  withQuery(`/student/items/${encodeURIComponent(itemId)}`, { from: opts.from })
 
 /** A classwork item in the parent's lens. */
 export const parentItemHref = (studentId: string, itemId: string): string =>

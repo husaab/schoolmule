@@ -22,6 +22,8 @@ interface ChildGradesViewProps {
   footnote?: string
   /** Where a grade's work opens; null leaves the grade without a link. */
   itemHref?: (grade: GradeItem) => string | null
+  /** A parent's page: the child's first name, so a link reads "See Amal's work and comments". */
+  linkOwner?: string | null
   /** The teacher of a class, for the avatar beside a comment. */
   teacherOf?: (classId: string) => PersonLite | null
   layout?: 'page' | 'embedded'
@@ -92,6 +94,7 @@ export default function ChildGradesView({
   onSelectClass,
   footnote,
   itemHref,
+  linkOwner = null,
   teacherOf,
   layout = 'page',
   noMarksNote,
@@ -141,7 +144,7 @@ export default function ChildGradesView({
               item={item}
               teacher={teacherOf?.(cls.classId) ?? null}
               href={href}
-              linkLabel={href ? gradeLinkLabel(item) : null}
+              linkLabel={href ? gradeLinkLabel(item, linkOwner) : null}
               tone={tone}
               now={now}
             />

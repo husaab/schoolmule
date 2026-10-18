@@ -5,6 +5,7 @@
 import type { GradeCode } from './studentAccount';
 import type { PersonLite } from './profile';
 import type { ClassIdentity, ItemKind } from './classroom';
+import type { Attachment } from './classwork';
 
 /** GET /api/student/me: who is signed in, for the portal shell. */
 export interface StudentMe {
@@ -78,6 +79,9 @@ export interface StudentClassHeader {
 
 export type WorkStatus = 'assigned' | 'missing' | 'turned_in' | 'graded' | 'excused' | 'no_turn_in' | 'material';
 
+/** How an assignment is handed in: a photo or file, a typed answer, a tap on "Mark as done", or not online. */
+export type SubmissionMode = 'file' | 'text' | 'done' | 'none';
+
 /** One piece of work, as the To-do, home and the class page list it. */
 export interface TodoItem {
   itemId: string;
@@ -87,7 +91,7 @@ export interface TodoItem {
   iconUrl: string;
   title: string;
   kind: ItemKind;
-  submissionMode: 'file' | 'text' | 'done' | 'none' | null;
+  submissionMode: SubmissionMode | null;
   dueAt: string | null;
   date: string | null;
   status: WorkStatus;
@@ -202,4 +206,119 @@ export interface StudentClassPage {
 export interface StudentClassStream {
   announcements: StudentAnnouncement[];
   notices: ClassNotice[];
+}
+
+// ---------------------------------------------------------------------------
+// The To-do, an assignment page and a class's Classwork (T15, T16, T17). The
+// parent's lens reads the same shapes for a child it owns, with every `can*`
+// false.
+
+/** GET /api/student/todo counts: what each tab holds (narrowed by `classId`). */
+export interface TodoCounts {
+  assigned: number;
+  missing: number;
+  done: number;
+}
+
+/** One group of a To-do tab: "Tomorrow", "Next week", "No due date", "Missing", "This week"… */
+export interface TodoGroup {
+  label: string;
+  items: TodoItem[];
+}
+
+/** GET /api/student/todo?tab=&classId= */
+export interface StudentTodo {
+  counts: TodoCounts;
+  groups: TodoGroup[];
+}
+
+/** A file the student added to their work. */
+export interface SubmissionFile {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+/** The student's own work on an assignment or quiz, with what they may do with it. */
+export interface StudentSubmission {
+  /** The work status (workStatus.js): assigned, turned_in, graded, missing, excused. */
+  status: WorkStatus;
+  isLate: boolean;
+  turnedInAt: string | null;
+  /** Text mode: the saved answer. */
+  textAnswer: string | null;
+  textSavedAt: string | null;
+  files: SubmissionFile[];
+  /** Files and the typed answer may change (not turned in, not closed, not graded). */
+  canEdit: boolean;
+  canTurnIn: boolean;
+  canUnsubmit: boolean;
+  /** Past due in a class that takes no late work. */
+  closed: boolean;
+}
+
+/** The grade the student may see: published only (spec 0.8). Feedback alone has no score. */
+export interface StudentItemGrade {
+  score: number | null;
+  maxScore: number | null;
+  status: 'graded' | 'missing' | 'excused';
+  feedback: string | null;
+  publishedAt: string | null;
+}
+
+/** The thread about this work, once there is one. */
+export interface ItemThreadInfo {
+  conversationId: string;
+  messageCount: number;
+}
+
+/** GET /api/student/items/:itemId and its parent-lens twin. */
+export interface StudentItem {
+  itemId: string;
+  classId: string;
+  subject: string;
+  identity: ClassIdentity;
+  kind: ItemKind;
+  title: string;
+  instructions: string | null;
+  teacher: (PersonLite & { photoUrl: string | null }) | null;
+  postedAt: string | null;
+  dueAt: string | null;
+  /** 'YYYY-MM-DD' of a dated in-class assessment. */
+  date: string | null;
+  points: number | null;
+  /**
+   * How the work is handed in. The server's item payload does not carry it yet (it is on the To-do and Classwork
+   * rows), so it is optional here: see inferSubmissionMode in lib/submissionMode.ts.
+   */
+  submissionMode?: SubmissionMode | null;
+  attachments: Attachment[];
+  /** Null when there is nothing to turn in online (an assessment, a material, work done in class). */
+  submission: StudentSubmission | null;
+  grade: StudentItemGrade | null;
+  /** Assignments and quizzes only; null in the lens when the school keeps the thread from guardians. */
+  thread: ItemThreadInfo | null;
+}
+
+/** One row of a class's Classwork: a TodoItem with its topic, posted time and visible grade. */
+export interface StudentItemSummary extends TodoItem {
+  topicId: string | null;
+  postedAt: string | null;
+  grade: { score: number | null; maxScore: number | null } | null;
+}
+
+export interface ClassworkTopic {
+  topicId: string;
+  name: string;
+  sortOrder: number;
+  /** Items in the topic the reader can see. */
+  itemCount: number;
+}
+
+/** GET /api/student/classes/:classId/classwork and its parent-lens twin. */
+export interface StudentClasswork {
+  topics: ClassworkTopic[];
+  items: StudentItemSummary[];
+  upcoming: TodoItem[];
 }

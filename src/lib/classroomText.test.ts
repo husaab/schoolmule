@@ -3,7 +3,6 @@ import {
   cardLines,
   childSubline,
   classDetailLine,
-  classMissingFlag,
   classNote,
   commonTeacher,
   classPageMeta,
@@ -17,14 +16,13 @@ import {
   greetingFor,
   joinNames,
   lensBannerText,
+  missingFlag,
   missingSubline,
   needsYouMissingSubline,
   noMarksNote,
   openChildLabel,
   otherTermFor,
   notSigningNote,
-  isTeacherConfirmedMissing,
-  visibleNeedsYou,
   pctText,
   pickClass,
   postedAtLabel,
@@ -32,6 +30,7 @@ import {
   recentPostMeta,
   scoreText,
   statTiles,
+  thingsDueThisWeek,
   upcomingLabel,
   wasDue,
 } from './classroomText'
@@ -206,6 +205,14 @@ describe('grades', () => {
     expect(gradeLinkLabel({ kind: 'assignment', status: 'excused', itemId: 'i1' })).toBeNull()
   })
 
+  it('words the same links for a parent, by the child\'s name', () => {
+    expect(gradeLinkLabel({ kind: 'assignment', status: 'graded', itemId: 'i1' }, 'Amal')).toBe("See Amal's work and comments")
+    expect(gradeLinkLabel({ kind: 'assignment', status: 'missing', itemId: 'i1' }, 'Amal')).toBe("See Amal's work")
+    expect(gradeLinkLabel({ kind: 'quiz', status: 'graded', itemId: 'i1' }, 'Amal')).toBe("See Amal's answers")
+    expect(gradeLinkLabel({ kind: 'assessment', status: 'graded', itemId: 'i1' }, 'Amal')).toBeNull()
+    expect(gradeLinkLabel({ kind: 'assignment', status: 'graded', itemId: null }, 'Amal')).toBeNull()
+  })
+
   it('picks the class in the URL, else the first', () => {
     const classes = [{ classId: 'a' }, { classId: 'b' }]
     expect(pickClass(classes, 'b')).toBe(classes[1])
@@ -274,41 +281,27 @@ describe('the parent Classes page', () => {
   })
 })
 
-describe('missing work for a child who cannot sign in', () => {
-  const missing = (studentId: string, over = {}) => ({
-    kind: 'missing' as const, itemId: `i-${studentId}`, assessmentId: null, title: 'Reading log', classId: 'c1', classSubject: 'English',
-    teacher: { userId: 't1', name: 'Rana Kareem', avatar: null }, studentId, dueAt: '2026-10-13T19:30:00Z', date: null, ...over,
-  })
-  const ack = { kind: 'ack' as const, announcementId: 'a1', title: 'Trip form', classSubject: null, authorName: 'Lina Farouk', publishedAt: '2026-10-14T15:00:00Z', studentIds: ['s-out'] }
-  const kids = [{ studentId: 's-in', signsIn: true }, { studentId: 's-out', signsIn: false }]
-
-  it('keeps every row of a child who signs in', () => {
-    const items = [missing('s-in'), missing('s-in', { dueAt: null, date: '2026-10-12' })]
-    expect(visibleNeedsYou(items, kids)).toEqual(items)
+describe('the Home date line', () => {
+  it('counts what is due this week', () => {
+    expect(thingsDueThisWeek(0)).toBeNull()
+    expect(thingsDueThisWeek(1)).toBe('1 thing due this week')
+    expect(thingsDueThisWeek(3)).toBe('3 things due this week')
   })
 
-  it('drops a past-due row for a child who cannot sign in: it can only be a derived Missing', () => {
-    expect(visibleNeedsYou([missing('s-out')], kids)).toEqual([])
+  it('says "5+" once the server has hit the most it lists', () => {
+    expect(thingsDueThisWeek(4)).toBe('4 things due this week')
+    expect(thingsDueThisWeek(5)).toBe('5+ things due this week')
+    expect(thingsDueThisWeek(9)).toBe('5+ things due this week')
   })
+})
 
-  it('keeps a dated in-class row for that child: with no due time it can only be teacher-confirmed', () => {
-    const dated = missing('s-out', { dueAt: null, date: '2026-10-12' })
-    expect(visibleNeedsYou([dated], kids)).toEqual([dated])
-    expect(isTeacherConfirmedMissing(dated)).toBe(true)
-    expect(isTeacherConfirmedMissing(missing('s-out'))).toBe(false)
-  })
-
-  it('filters per child and never touches "Got it" posts', () => {
-    const items = [ack, missing('s-out'), missing('s-in')]
-    expect(visibleNeedsYou(items, kids)).toEqual([ack, missing('s-in')])
-  })
-
-  it('flags a class only for a child known to sign in', () => {
-    expect(classMissingFlag(2, true)).toBe('2 missing')
-    expect(classMissingFlag(0, true)).toBeNull()
-    expect(classMissingFlag(2, false)).toBeNull()
-    // Not known yet (still loading, or it failed): no flag rather than a wrong one.
-    expect(classMissingFlag(2, undefined)).toBeNull()
+describe('missing work on the parent side', () => {
+  // The server never derives Missing for a child who cannot sign in, so every
+  // count and every "Needs you" row it sends is shown as it comes.
+  it('flags a class with missing work', () => {
+    expect(missingFlag(2)).toBe('2 missing')
+    expect(missingFlag(1)).toBe('1 missing')
+    expect(missingFlag(0)).toBeNull()
   })
 })
 

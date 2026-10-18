@@ -2,10 +2,13 @@
 // "Due soon" on the student's Home (Student-Home board): work that is missing
 // first, highlighted in rose with "Do it now", then up to three things due in
 // the coming week with a pill ("Due tomorrow" in amber, otherwise the date).
-// Hidden when there is nothing to show.
+// On a phone the next thing due, when it is handed in with a photo, gets a big
+// "Take a photo & turn in" button (Student-Phone board). Hidden when there is
+// nothing to show.
 'use client'
 
 import Link from 'next/link'
+import { CameraIcon } from '@heroicons/react/24/outline'
 import { duePill, missingSubline } from '@/lib/classroomText'
 import { studentItemHref } from '@/lib/portalRoutes'
 import type { TodoItem } from '@/services/types/studentPortal'
@@ -55,23 +58,33 @@ export default function DueSoonCard({ missing, dueSoon, now = new Date() }: DueS
         </Link>
       ))}
 
-      {due.map((item) => {
+      {due.map((item, index) => {
         const pill = duePill(item, now)
         return (
-          <Link
-            key={item.itemId}
-            href={studentItemHref(item.itemId)}
-            className="flex items-center gap-3.5 rounded-[14px] border border-slate-200 px-4 py-3.5 text-slate-900 transition-colors hover:bg-slate-50"
-          >
-            <ClassIconTile item={item} />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate text-[15px] font-medium">{item.title}</span>
-              <span className="truncate text-[13px] text-slate-500">
-                {[item.subject, item.teacherName].filter(Boolean).join(' · ')}
+          <div key={item.itemId} className="flex flex-col gap-2">
+            <Link
+              href={studentItemHref(item.itemId)}
+              className="flex items-center gap-3.5 rounded-[14px] border border-slate-200 px-4 py-3.5 text-slate-900 transition-colors hover:bg-slate-50"
+            >
+              <ClassIconTile item={item} />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-[15px] font-medium">{item.title}</span>
+                <span className="truncate text-[13px] text-slate-500">
+                  {[item.subject, item.teacherName].filter(Boolean).join(' · ')}
+                </span>
               </span>
-            </span>
-            <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${PILL[pill.tone]}`}>{pill.text}</span>
-          </Link>
+              <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${PILL[pill.tone]}`}>{pill.text}</span>
+            </Link>
+            {index === 0 && item.kind === 'assignment' && item.submissionMode === 'file' && (
+              <Link
+                href={studentItemHref(item.itemId)}
+                className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-[14px] bg-indigo-600 px-4 text-base font-semibold text-white transition-colors hover:bg-indigo-700 md:hidden"
+              >
+                <CameraIcon className="h-[22px] w-[22px]" aria-hidden="true" />
+                Take a photo &amp; turn in
+              </Link>
+            )}
+          </div>
         )
       })}
     </section>

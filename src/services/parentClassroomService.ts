@@ -8,8 +8,10 @@ import type { ParentClassroomSummary } from './types/parentClassroom';
 import type {
   ChildGrades,
   StudentClassCard,
+  StudentClasswork,
   StudentClassPage,
   StudentClassStream,
+  StudentItem,
   StudentPortalEnvelope,
 } from './types/studentPortal';
 
@@ -36,3 +38,15 @@ export const getLensGrades = (studentId: string, termId?: string) =>
   apiClient<StudentPortalEnvelope<ChildGrades>>(
     `${lens(studentId)}/grades${termId ? `?termId=${encodeURIComponent(termId)}` : ''}`,
   );
+
+/** The child's Classwork for one class: topics, items with the child's status, what is coming up. Read-only. */
+export const getLensClasswork = (studentId: string, classId: string) =>
+  apiClient<StudentPortalEnvelope<StudentClasswork>>(`${lens(studentId)}/classes/${encodeURIComponent(classId)}/classwork`);
+
+/** One piece of the child's work: the item, the child's files and typed answer, the grade. Nothing here can be changed. */
+export const getLensItem = (studentId: string, itemId: string) =>
+  apiClient<StudentPortalEnvelope<StudentItem>>(`${lens(studentId)}/items/${encodeURIComponent(itemId)}`);
+
+/** A link to one of the child's own files, good for an hour. */
+export const getLensFileUrl = (studentId: string, fileId: string) =>
+  apiClient<StudentPortalEnvelope<{ url: string }>>(`${lens(studentId)}/files/${encodeURIComponent(fileId)}/url`);

@@ -7,6 +7,10 @@ describe('student nav', () => {
     expect(STUDENT_NAV[0]).toMatchObject({ href: '/student', label: 'Home' })
   })
 
+  it('puts To-do right after Home, with its badge', () => {
+    expect(STUDENT_NAV[1]).toMatchObject({ href: '/student/todo', label: 'To-do', badgeKey: 'todo' })
+  })
+
   it('every entry is a student page', () => {
     for (const item of STUDENT_NAV) expect(item.href === '/student' || item.href.startsWith('/student/')).toBe(true)
   })
@@ -14,6 +18,12 @@ describe('student nav', () => {
   it('Home is active only on /student itself', () => {
     expect(isStudentNavActive('/student', '/student')).toBe(true)
     expect(isStudentNavActive('/student', '/student/todo')).toBe(false)
+  })
+
+  it('To-do is active on its own page and nowhere else', () => {
+    expect(isStudentNavActive('/student/todo', '/student/todo')).toBe(true)
+    expect(isStudentNavActive('/student/todo', '/student/items/i1')).toBe(false)
+    expect(isStudentNavActive('/student/todo', '/student/grades')).toBe(false)
   })
 
   it('other entries own their sub-pages', () => {

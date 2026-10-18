@@ -12,8 +12,8 @@ import { useParams } from 'next/navigation'
 import ClassBannerHeader from '@/components/classroom/ClassBannerHeader'
 import LoadError from '@/components/classroom/LoadError'
 import MessageTeacherButton from '@/components/classroom/MessageTeacherButton'
-import NothingHere from '@/components/classroom/NothingHere'
 import ClassTabs from '@/components/classes/page/ClassTabs'
+import StudentClassworkTab from '@/components/studentPortal/class/StudentClassworkTab'
 import StudentGradesTab from '@/components/studentPortal/class/StudentGradesTab'
 import StudentPeopleTab from '@/components/studentPortal/class/StudentPeopleTab'
 import StudentStreamTab from '@/components/studentPortal/class/StudentStreamTab'
@@ -109,7 +109,7 @@ function StudentClassContent() {
 
       <div className="pt-6">
         {tab === 'stream' && <StudentStreamTab key={classId} classId={classId} upcoming={page.data.upcoming} focusId={focusId} />}
-        {tab === 'classwork' && <NothingHere />}
+        {tab === 'classwork' && <StudentClassworkTab key={classId} classId={classId} identity={header.identity} />}
         {tab === 'grades' && <StudentGradesTab key={classId} header={header} />}
         {tab === 'people' && <StudentPeopleTab teachers={header.teachers} />}
       </div>

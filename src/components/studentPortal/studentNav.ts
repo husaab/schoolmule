@@ -1,9 +1,9 @@
 // src/components/studentPortal/studentNav.ts
 // The student portal's main navigation, shared by the desktop sidebar and the
-// phone tab bar. Home is first; later tasks append Grades, To-do and Messages.
+// phone tab bar. Home is first, then To-do; Messages arrives with the student inbox.
 
 import type { ComponentType, SVGProps } from 'react'
-import { ChartBarIcon, HomeIcon } from '@heroicons/react/24/outline'
+import { ChartBarIcon, ClipboardDocumentCheckIcon, HomeIcon } from '@heroicons/react/24/outline'
 
 export type StudentBadgeKey = 'todo' | 'messages'
 
@@ -17,6 +17,7 @@ export interface StudentNavItem {
 
 export const STUDENT_NAV: StudentNavItem[] = [
   { href: '/student', label: 'Home', icon: HomeIcon },
+  { href: '/student/todo', label: 'To-do', icon: ClipboardDocumentCheckIcon, badgeKey: 'todo' },
   { href: '/student/grades', label: 'Grades', icon: ChartBarIcon },
 ]
 

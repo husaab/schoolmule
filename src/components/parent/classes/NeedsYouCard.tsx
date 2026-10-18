@@ -1,13 +1,15 @@
 // src/components/parent/classes/NeedsYouCard.tsx
 // "Needs you" at the top of the parent's Classes page (Parent-Classes board):
 // posts that ask for a "Got it", and work a child has missing with a link to
-// ask the teacher. Hidden when nothing needs the parent. On a phone only the
-// chosen child's rows show.
+// ask the teacher (the title opens the child's work, read-only). Hidden when
+// nothing needs the parent. On a phone only the chosen child's rows show.
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Avatar from '@/components/avatar/Avatar'
 import { firstNameOf, needsYouMissingSubline } from '@/lib/classroomText'
+import { parentItemHref } from '@/lib/portalRoutes'
 import type { ChildClassroomSummary, NeedsYouAck, NeedsYouItem, NeedsYouMissing } from '@/services/types/parentClassroom'
 
 interface NeedsYouCardProps {
@@ -87,7 +89,13 @@ export default function NeedsYouCard({ items, kids, onGotIt, onAsk, phoneChildId
             <span className="flex min-w-0 items-center gap-3">
               <Avatar name={kid?.name ?? 'Child'} avatar={kid?.avatar ?? null} size={28} />
               <span className="flex min-w-0 flex-col">
-                <span className="text-[15px] font-medium text-slate-900">Missing: {item.title}</span>
+                {item.itemId ? (
+                  <Link href={parentItemHref(item.studentId, item.itemId)} className="text-[15px] font-medium text-slate-900 hover:underline">
+                    Missing: {item.title}
+                  </Link>
+                ) : (
+                  <span className="text-[15px] font-medium text-slate-900">Missing: {item.title}</span>
+                )}
                 <span className="text-[13px] text-rose-800">{needsYouMissingSubline(item, now)}</span>
               </span>
             </span>
