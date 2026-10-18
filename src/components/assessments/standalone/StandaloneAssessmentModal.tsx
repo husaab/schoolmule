@@ -159,7 +159,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
             <PublishStateBadge summary={summary} variant="chip" />
             {column && (
               <Link
-                href={`${classItemHref(classId, column.itemId)}?from=grades`}
+                href={classItemHref(classId, column.itemId, undefined, { from: 'grades' })}
                 onClick={() => void autosave.flush()}
                 className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
               >

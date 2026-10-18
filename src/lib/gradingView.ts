@@ -166,9 +166,29 @@ export function turnedInLine(row: GradingRow): { text: string; tone: TurnedInTon
   return { text: 'Not turned in yet', tone: 'muted' }
 }
 
-/** The line under the grade box. */
-export const gradeHint = (published: boolean): string =>
-  published ? 'Published. Changes go live as they save.' : 'Draft, saved automatically. Only you see it until you publish.'
+const DRAFT_HINT = 'Draft, saved automatically. Only you see it until you publish.'
+const LIVE_HINT = 'Published. Changes go live as they save.'
+
+/**
+ * The line under the grade box, for this student (D3: a draft always reads
+ * as a draft). "Published" only once the student's own grade is released.
+ * Once the column is published (a first Publish for anyone), the server
+ * writes a newly typed score live (D17), while feedback alone stays with the
+ * draft: the hint says so for a student whose draft still waits. Without a
+ * gradebook column, the feedback itself is what is published.
+ */
+export function gradeHint(
+  row: Pick<GradingRow, 'needsPublish' | 'publishedAt' | 'publishedScore' | 'publishedStatus'>,
+  { linked, columnPublished, first }: { linked: boolean; columnPublished: boolean; first: string },
+): string {
+  if (!linked) return row.publishedAt && !row.needsPublish ? LIVE_HINT : DRAFT_HINT
+  if (!columnPublished) return DRAFT_HINT
+  if (row.needsPublish) {
+    return `Draft: ${first} doesn't see it yet. The column is published, so a new score goes live as it saves; Publish ${first}'s grade to show it as it is.`
+  }
+  if (row.publishedScore !== null || row.publishedStatus !== null) return LIVE_HINT
+  return `The column is published, so a score goes live for ${first} as it saves.`
+}
 
 export const publishOneLabel = (first: string, linked: boolean): string =>
   linked ? `Publish ${first}'s grade` : `Publish ${first}'s feedback`
@@ -243,8 +263,12 @@ export const GRADING_VIEW_CODES: readonly string[] = ['GRADED_WORK_EXISTS', 'DRA
 
 /** The 409 when a column also holds grades for students outside the item's audience. */
 export const OUTSIDE_AUDIENCE_CODE = 'OUTSIDE_AUDIENCE_GRADES'
-export const OUTSIDE_AUDIENCE_MESSAGE =
-  "Publish this column in Grades first — it has grades for students this assignment isn't assigned to."
+
+/** "assignment", "quiz": how the copy names the item. */
+export const kindWord = (kind: string): string => (kind === 'quiz' ? 'quiz' : 'assignment')
+
+export const outsideAudienceMessage = (kind: string): string =>
+  `Publish this column in Grades first — it has grades for students this ${kindWord(kind)} isn't assigned to.`
 
 /**
  * What a Publish (one student, or every draft) did, for the toast. An item

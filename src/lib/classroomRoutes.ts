@@ -105,9 +105,12 @@ export function legacyGradebookRedirect(pathname: string, search: string): strin
   return '/classes'
 }
 
-/** A classwork item's page (the grading view), or its edit form. */
-export const classItemHref = (classId: string, itemId: string, page?: 'edit'): string =>
-  `/classes/${encodeURIComponent(classId)}/items/${encodeURIComponent(itemId)}${page ? `/${page}` : ''}`
+/**
+ * A classwork item's page (the grading view), or its edit form. `from=grades`
+ * (a link from Grades) sends the page's Back / Close to Grades.
+ */
+export const classItemHref = (classId: string, itemId: string, page?: 'edit', params: { from?: 'grades' | null } = {}): string =>
+  `/classes/${encodeURIComponent(classId)}/items/${encodeURIComponent(itemId)}${page ? `/${page}` : ''}${params.from ? `?from=${params.from}` : ''}`
 
 export type ItemFormKind = 'assessment' | 'assignment' | 'quiz' | 'material'
 

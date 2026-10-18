@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { CheckCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, InformationCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
@@ -34,7 +34,9 @@ const Notification: React.FC = () => {
               relative overflow-hidden rounded-xl shadow-2xl backdrop-blur-sm
               ${type === 'success'
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                : 'bg-gradient-to-r from-red-500 to-rose-500'
+                : type === 'info'
+                  ? 'bg-gradient-to-r from-slate-600 to-slate-700'
+                  : 'bg-gradient-to-r from-red-500 to-rose-500'
               }
             `}
           >
@@ -54,6 +56,8 @@ const Notification: React.FC = () => {
               `}>
                 {type === 'success' ? (
                   <CheckCircleIcon className="w-6 h-6 text-white" />
+                ) : type === 'info' ? (
+                  <InformationCircleIcon className="w-6 h-6 text-white" />
                 ) : (
                   <XCircleIcon className="w-6 h-6 text-white" />
                 )}
@@ -62,7 +66,7 @@ const Notification: React.FC = () => {
               {/* Content */}
               <div className="flex-1 pt-0.5">
                 <p className="text-sm font-semibold text-white">
-                  {type === 'success' ? 'Success' : 'Error'}
+                  {type === 'success' ? 'Success' : type === 'info' ? 'Note' : 'Error'}
                 </p>
                 <p className="text-sm text-white/90 mt-0.5">
                   {message}

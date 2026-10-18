@@ -6,12 +6,20 @@
 // page or unmounting the view saves too. The rules live in
 // src/lib/debouncedSaver.ts (unit-tested).
 //
-//   const answer = useDebouncedSave({ save: (text) => saveText(itemId, text) })
+// Pass a `key` (e.g. "grading:{userId}:{itemId}", "answer:{userId}:{itemId}")
+// to keep the saver for the whole session, as the gradebook's autosave does
+// (src/lib/debouncedSaverRegistry.ts): a save still in flight or failed when
+// the view goes is not lost. It is shown again, failed and offered for Retry,
+// when the view comes back (`peek()` reseeds it), and a failure while no view
+// shows it raises a toast (`failedAway` words it). The key must stay set (or
+// unset) for the life of the component.
+//
+//   const answer = useDebouncedSave({ key: `answer:${userId}:${itemId}`, save: (text) => saveText(itemId, text) })
 //   <textarea onChange={(e) => answer.schedule(e.target.value)} onBlur={() => void answer.flush()} />
 //   <SavedPill status={answer.status} … />
 'use client'
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   createDebouncedSaver,
   DEBOUNCED_SAVE_MS,
@@ -20,6 +28,8 @@ import {
   type DebouncedSaver,
   type DebouncedSaverState,
 } from '@/lib/debouncedSaver'
+import { sessionDebouncedSaver, setFailedAway } from '@/lib/debouncedSaverRegistry'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 export type { DebouncedSaveStatus } from '@/lib/debouncedSaver'
 
@@ -40,21 +50,35 @@ export interface DebouncedSave<T> {
 const SERVER_STATE: DebouncedSaverState = { status: 'saved', error: null }
 const serverState = () => SERVER_STATE
 
+// A save that failed after its view left (session savers only).
+const notifyAway = (message: string) => useNotificationStore.getState().showNotification(message, 'error', 8000)
+
 export function useDebouncedSave<T>({
   save,
   delayMs = DEBOUNCED_SAVE_MS,
   merge,
+  key,
+  failedAway,
 }: {
   /** Saves one value; `opts.keepalive` is set when the page is going away. */
   save: (value: T, opts: DebouncedSaveOptions) => Promise<void>
   delayMs?: number
   /** Combines an older unsent value with a newer one (default: the newer wins). */
   merge?: (older: T, newer: T) => T
+  /** Keep the saver for the session under this key (see above). */
+  key?: string
+  /** The toast for a value that failed after the view left (session savers). */
+  failedAway?: (failed: T | null) => string
 }): DebouncedSave<T> {
-  const [saver] = useState<DebouncedSaver<T>>(() => createDebouncedSaver<T>({ save, merge, delayMs }))
+  const [local] = useState<DebouncedSaver<T> | null>(() => (key ? null : createDebouncedSaver<T>({ save, merge, delayMs })))
+  const saver = useMemo(
+    () => (key ? sessionDebouncedSaver<T>(key, { delayMs, notify: notifyAway }) : (local as DebouncedSaver<T>)),
+    [key, local, delayMs],
+  )
   // The latest callbacks, so the saver (made once) never calls a stale closure.
   useEffect(() => {
     saver.setHandlers({ save, merge })
+    if (key && failedAway) setFailedAway(key, (failed) => failedAway(failed as T | null))
   })
   const state = useSyncExternalStore(saver.subscribe, saver.getState, serverState)
   useEffect(() => saver.connect(window, document), [saver])

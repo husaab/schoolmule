@@ -41,7 +41,10 @@ const whenText = (iso: string): string =>
 
 export default function WorkThreadPanel({ itemId, studentId, first, includesParents, stub, disabled }: WorkThreadPanelProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
-  const [conversationId, setConversationId] = useState<string | null>(stub?.conversationId ?? null)
+  // The thread this panel shows: the one the submission names (it arrives
+  // after the panel opens), or the one the first message just created.
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const conversationId = createdId ?? stub?.conversationId ?? null
   const [sent, setSent] = useState<Message[] | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -59,7 +62,7 @@ export default function WorkThreadPanel({ itemId, studentId, first, includesPare
     setSending(true)
     try {
       const id = conversationId ?? (await ensureItemThread(itemId, studentId)).data.conversationId
-      setConversationId(id)
+      setCreatedId(id)
       const res = await postMessage(id, { body })
       if (res.status !== 'success' || !res.data) throw new Error(res.message || "The message didn't send.")
       setSent(res.data.messages)

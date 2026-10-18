@@ -4,9 +4,10 @@
 // submission until Publish copies them into the gradebook (spec D3); once a
 // column is published, a grade edit goes live as it saves (D17).
 //
-// The item-thread routes are Task 17's (shared contract). Until that backend
-// lands they answer 404, so the grading view keeps its thread panel inert
-// (ITEM_THREADS_ENABLED in src/lib/classroomFeatures.ts).
+// The item-thread route is Task 17's (shared contract). Until that backend
+// lands it answers 404, so the grading view keeps its thread panel inert
+// (ITEM_THREADS_ENABLED in src/lib/classroomFeatures.ts). The thread itself is
+// named by the submission (`SubmissionDetail.thread`), so there is no GET here.
 
 import apiClient from './apiClient'
 import type {
@@ -15,7 +16,6 @@ import type {
   GradingEnvelope,
   GradingList,
   GridOverlay,
-  ItemThreadStub,
   PublishGradesResult,
   SubmissionDetail,
 } from './types/grading'
@@ -68,10 +68,6 @@ export const excuseStudents = (itemId: string, studentIds: string[], excused: bo
 /** GET the gradebook grid's classwork layer: turn-in columns and their draft / turned-in / past-due cells. */
 export const getGridOverlay = (classId: string) =>
   apiClient<GradingEnvelope<GridOverlay>>(`/classroom/classes/${encodeURIComponent(classId)}/grid-overlay`)
-
-/** GET the private thread about one student's work (Task 17). */
-export const getItemThread = (itemId: string, studentId: string) =>
-  apiClient<GradingEnvelope<ItemThreadStub>>(`${itemPath(itemId)}/students/${encodeURIComponent(studentId)}/thread`)
 
 /** POST ensures that thread exists (Task 17); the teacher then posts through /api/messaging. */
 export const ensureItemThread = (itemId: string, studentId: string) =>

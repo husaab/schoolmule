@@ -79,6 +79,8 @@ describe('classItemHref', () => {
   it('opens an item, or its edit page', () => {
     expect(classItemHref('c1', 'i9')).toBe('/classes/c1/items/i9')
     expect(classItemHref('c1', 'i9', 'edit')).toBe('/classes/c1/items/i9/edit')
+    expect(classItemHref('c1', 'i9', undefined, { from: 'grades' })).toBe('/classes/c1/items/i9?from=grades')
+    expect(classItemHref('c1', 'i9', undefined, { from: null })).toBe('/classes/c1/items/i9')
   })
 })
 

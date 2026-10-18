@@ -247,7 +247,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           {column ? (
                             // A turn-in column's name opens the grading view, with the students' work.
                             <Link
-                              href={`${classItemHref(classId, column.itemId)}?from=grades`}
+                              href={classItemHref(classId, column.itemId, undefined, { from: 'grades' })}
                               onClick={() => void autosave.flush()}
                               title="Grade with the student's work"
                               className="rounded-lg px-1 hover:bg-cyan-50 [&_span:first-child]:text-cyan-700"

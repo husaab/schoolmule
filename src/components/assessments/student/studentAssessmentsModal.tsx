@@ -53,7 +53,18 @@ interface StudentAssessmentsModalProps {
   onOpenConversation?: (conversationId: string) => void
   /** Start a thread with this student's guardians about an assessment (undefined = let the teacher pick). */
   onMessageGuardians?: (assessmentId?: string) => void
+  /**
+   * Classwork drafts (spec D3), keyed "studentId|assessmentId": a turn-in
+   * column's grade waiting on the student's submission. Shown in the field
+   * (grey, italic, "Draft") so it is neither hidden nor cleared by mistake;
+   * never counted, as in the grid.
+   */
+  drafts?: Record<string, { score: number | null; status: ScoreStatus }>
+  /** A turn-in column not published yet: what is typed into it is a draft and doesn't count yet. */
+  keepsDrafts?: (assessmentId: string) => boolean
 }
+
+const noDrafts = () => false
 
 export default function StudentAssessmentsModal({
   isOpen,
@@ -67,6 +78,8 @@ export default function StudentAssessmentsModal({
   threadStubs = {},
   onOpenConversation,
   onMessageGuardians,
+  drafts = {},
+  keepsDrafts = noDrafts,
 }: StudentAssessmentsModalProps) {
   const [editedScores, setEditedScores] = useState<Record<string, string>>({})
   const [hasChanges, setHasChanges] = useState(false)
@@ -86,12 +99,15 @@ export default function StudentAssessmentsModal({
     await setCellStatus(studentId, assessmentId, next)
   }
 
-  // This student's saved rows, by assessment.
+  // This student's saved rows, by assessment: the gradebook's (what counts),
+  // and the draft a turn-in column holds instead, if any (what the field shows).
   const savedByAssessment: Record<string, StudentScore> = {}
   existingScores.forEach((score) => {
     if (score.studentId === student?.studentId) savedByAssessment[score.assessmentId] = score
   })
-  const statusFor = (assessmentId: string): ScoreStatus => savedByAssessment[assessmentId]?.status ?? 'graded'
+  const draftFor = (assessmentId: string) => (student ? drafts[`${student.studentId}|${assessmentId}`] : undefined)
+  const shownFor = (assessmentId: string) => draftFor(assessmentId) ?? savedByAssessment[assessmentId]
+  const statusFor = (assessmentId: string): ScoreStatus => shownFor(assessmentId)?.status ?? 'graded'
 
   // Per-row parent conversation action: open the existing thread or start one.
   const messageAction = (assessmentId: string) => {
@@ -137,6 +153,11 @@ export default function StudentAssessmentsModal({
           const key = `${score.studentId}|${score.assessmentId}`
           scoreMap[key] = score.score?.toString() || ''
         }
+      })
+
+      // A classwork draft shows instead of the (empty) gradebook cell
+      Object.entries(drafts).forEach(([key, draft]) => {
+        if (key.split('|')[0] === openFor) scoreMap[key] = draft.score?.toString() || ''
       })
 
       // Then, override with any values from the gradebook not saved yet
@@ -189,7 +210,7 @@ export default function StudentAssessmentsModal({
     Object.entries(editedScores).forEach(([key, value]) => {
       const [studentId, assessmentId] = key.split('|')
       if (studentId !== student.studentId) return
-      const saved = savedByAssessment[assessmentId]?.score ?? null
+      const saved = shownFor(assessmentId)?.score ?? null
       const numValue = value.trim() === '' ? null : parseFloat(value)
       if (typeof numValue === 'number' && !isNaN(numValue)) {
         if (numValue !== saved) toUpsert.push({ studentId, assessmentId, score: numValue })
@@ -238,7 +259,9 @@ export default function StudentAssessmentsModal({
   }
 
   // Per-assessment results come from the grade engine, with the modal's
-  // unsaved edits merged over the saved rows.
+  // unsaved edits merged over the saved rows. Drafts are not grades: a draft,
+  // or a value typed into a column that keeps drafts, never counts (the
+  // grid's rule), so the totals here match what is published.
   const engineAssessments: EngineAssessment[] = assessments.map((a) => ({
     assessment_id: a.assessmentId,
     weight_points: a.weightPoints || a.weightPercent || 0,
@@ -250,8 +273,9 @@ export default function StudentAssessmentsModal({
     ? assessments
         .filter((a) => !a.isParent)
         .map((a) => {
-          const raw = editedScores[`${student.studentId}|${a.assessmentId}`]
           const saved = savedByAssessment[a.assessmentId]
+          const countsAsSaved = Boolean(draftFor(a.assessmentId)) || keepsDrafts(a.assessmentId)
+          const raw = countsAsSaved ? undefined : editedScores[`${student.studentId}|${a.assessmentId}`]
           const parsed = raw === undefined ? saved?.score ?? null : raw.trim() === '' ? null : parseFloat(raw)
           return {
             assessment_id: a.assessmentId,
@@ -291,6 +315,7 @@ export default function StudentAssessmentsModal({
     const result = resultFor(assessment.assessmentId)
     const scoreValue = getScoreDisplay(assessment.assessmentId)
     const muted = status !== 'graded'
+    const isDraft = Boolean(draftFor(assessment.assessmentId)) || (keepsDrafts(assessment.assessmentId) && (scoreValue !== '' || muted))
     const label = `${student.name} score for ${assessment.name}`
 
     return (
@@ -319,12 +344,15 @@ export default function StudentAssessmentsModal({
           {status === 'missing' && (
             <div className="text-xs text-rose-600 mt-1">Missing — counts as 0 until a score is entered</div>
           )}
+          {isDraft && (
+            <div className="text-xs text-slate-500 mt-1">Draft — only you see it, and it counts once it is published</div>
+          )}
         </div>
 
         <div className={`flex items-center ${gap}`}>
           <div className="text-right">
             {status !== 'graded' ? (
-              <div className={`w-20 rounded-lg px-2 py-1 text-center text-xs font-semibold ring-1 ring-inset ${pillClass[status]}`}>
+              <div className={`w-20 rounded-lg px-2 py-1 text-center text-xs font-semibold ring-1 ring-inset ${pillClass[status]} ${isDraft ? 'italic' : ''}`}>
                 {status === 'missing' ? 'M' : 'Excused'}
               </div>
             ) : (
@@ -333,7 +361,9 @@ export default function StudentAssessmentsModal({
                 aria-label={label}
                 value={scoreValue}
                 onChange={(e) => handleScoreChange(assessment.assessmentId, e.target.value)}
-                className={`w-20 px-2 py-1 border rounded text-center ${scoreValue === '' ? 'border-dashed placeholder:text-slate-400' : ''}`}
+                className={`w-20 px-2 py-1 border rounded text-center ${scoreValue === '' ? 'border-dashed placeholder:text-slate-400' : ''} ${
+                  isDraft && scoreValue !== '' ? 'bg-slate-100 italic text-slate-500' : ''
+                }`}
                 placeholder="—"
                 title={scoreValue === '' ? 'Not yet graded — carries no weight' : undefined}
                 min="0"

@@ -9,6 +9,7 @@ import {
   isToGrade,
   mergeGradeEdits,
   neighbours,
+  outsideAudienceMessage,
   parseGradingFilter,
   publishAllLabel,
   publishAllPrompt,
@@ -147,8 +148,40 @@ describe('header and panel lines', () => {
   })
 
   it('the grade hint says whether a change is a draft or goes live', () => {
-    expect(gradeHint(false)).toBe('Draft, saved automatically. Only you see it until you publish.')
-    expect(gradeHint(true)).toBe('Published. Changes go live as they save.')
+    const linked = { linked: true, columnPublished: false, first: 'Ziad' }
+    expect(gradeHint(draft, linked)).toBe('Draft, saved automatically. Only you see it until you publish.')
+    expect(gradeHint(published, { ...linked, columnPublished: true, first: 'Omar' })).toBe('Published. Changes go live as they save.')
+  })
+
+  it('a draft reads as a draft even once the column is published (another student was published)', () => {
+    const hint = gradeHint(draft, { linked: true, columnPublished: true, first: 'Ziad' })
+    expect(hint).not.toMatch(/^Published/)
+    expect(hint).toBe(
+      "Draft: Ziad doesn't see it yet. The column is published, so a new score goes live as it saves; Publish Ziad's grade to show it as it is.",
+    )
+  })
+
+  it('on a published column, a student with nothing yet is told a score goes live', () => {
+    expect(gradeHint(turnedIn, { linked: true, columnPublished: true, first: 'Sami' })).toBe(
+      'The column is published, so a score goes live for Sami as it saves.',
+    )
+    // A confirmed Missing that was published is published.
+    expect(gradeHint(row({ publishedStatus: 'missing', publishedAt: 'x' }), { linked: true, columnPublished: true, first: 'Lina' })).toBe(
+      'Published. Changes go live as they save.',
+    )
+  })
+
+  it('without a gradebook column, published feedback is what is live', () => {
+    const opts = { linked: false, columnPublished: false, first: 'Amal' }
+    expect(gradeHint(row({ feedback: 'Nice', needsPublish: true }), opts)).toBe('Draft, saved automatically. Only you see it until you publish.')
+    expect(gradeHint(row({ feedback: 'Nice', publishedAt: '2026-10-16T10:00:00.000Z' }), opts)).toBe('Published. Changes go live as they save.')
+  })
+
+  it('names a quiz as a quiz in the outside-audience guidance', () => {
+    expect(outsideAudienceMessage('assignment')).toBe(
+      "Publish this column in Grades first — it has grades for students this assignment isn't assigned to.",
+    )
+    expect(outsideAudienceMessage('quiz')).toContain('this quiz isn')
   })
 
   it('names the student on the one-student Publish', () => {

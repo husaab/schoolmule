@@ -117,8 +117,9 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
-  // A refusal the grading view resolves (grades already on students' work): the banner links there.
-  const [bannerLink, setBannerLink] = useState<string | null>(null)
+  // A refusal the grading view resolves (grades already on students' work): the banner links there
+  // (or, for work not posted yet, which has no grading view, to its column in Grades).
+  const [bannerLink, setBannerLink] = useState<{ href: string; label: string } | null>(null)
   const [topicModalOpen, setTopicModalOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [autosave, setAutosave] = useState<AutosaveState>(item ? 'saved' : 'idle')
@@ -362,10 +363,16 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       setBanner(message)
       const id = itemIdRef.current
       const gradable = kind === 'assignment' || kind === 'quiz'
+      const column = savedRef.current?.gradebook?.assessmentId ?? null
+      const resolvable = isApiError(err) && Boolean(err.code) && GRADING_VIEW_CODES.includes(err.code as string) && Boolean(id) && gradable
       setBannerLink(
-        isApiError(err) && err.code && GRADING_VIEW_CODES.includes(err.code) && id && gradable && savedRef.current?.effectiveStatus === 'posted'
-          ? classItemHref(classId, id)
-          : null,
+        !resolvable
+          ? null
+          : savedRef.current?.effectiveStatus === 'posted'
+            ? { href: classItemHref(classId, id as string), label: 'Open the grading view' }
+            : column
+              ? { href: classHref(classId, 'grades', { focus: column }), label: 'Open its column in Grades' }
+              : null,
       )
       showNotification(message, 'error')
       finishFailed()
@@ -562,12 +569,12 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
                   {' '}
                   {/* A new tab, so this form (and what is typed in it) stays open. */}
                   <Link
-                    href={bannerLink}
+                    href={bannerLink.href}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium text-rose-900 underline underline-offset-2"
                   >
-                    Open the grading view
+                    {bannerLink.label}
                   </Link>
                 </>
               )}

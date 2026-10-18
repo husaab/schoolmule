@@ -64,6 +64,10 @@ export interface DebouncedSaver<T> {
   connect(win: LifecycleTarget, doc: VisibilityTarget): () => void
   /** Swap in newer save / merge functions (a React view re-renders with fresh closures). */
   setHandlers(handlers: { save?: SaveFn<T>; merge?: MergeFn<T> }): void
+  /** Called after a save fails (the failed value is already kept). */
+  onFailed(handler: (message: string) => void): () => void
+  /** Some view is showing this value (between connect and its disconnect). */
+  isConnected(): boolean
 }
 
 type SaveFn<T> = (value: T, opts: DebouncedSaveOptions) => Promise<void>
@@ -108,6 +112,7 @@ export function createDebouncedSaver<T>({
   let connections = 0
   let detach: (() => void) | null = null
   const listeners = new Set<() => void>()
+  const failedHandlers = new Set<(message: string) => void>()
 
   const combine = (older: T | null, newer: T | null): T | null =>
     older === null ? newer : newer === null ? older : merge(older, newer)
@@ -151,6 +156,14 @@ export function createDebouncedSaver<T>({
         pending = null
         inFlight = null
         changed()
+        const message = failed.message
+        failedHandlers.forEach((h) => {
+          try {
+            h(message)
+          } catch (handlerError) {
+            console.error('A save-failure handler failed:', handlerError)
+          }
+        })
         return
       }
     }
@@ -234,6 +247,13 @@ export function createDebouncedSaver<T>({
     },
     peek: () => combine(combine(failed?.value ?? null, inFlight), pending),
     hasFailures: () => failed !== null,
+    onFailed(handler) {
+      failedHandlers.add(handler)
+      return () => {
+        failedHandlers.delete(handler)
+      }
+    },
+    isConnected: () => connections > 0,
     setHandlers(handlers) {
       if (handlers.save) save = handlers.save
       if (handlers.merge) merge = handlers.merge

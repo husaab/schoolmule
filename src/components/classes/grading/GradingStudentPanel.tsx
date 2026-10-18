@@ -12,7 +12,7 @@
 // edit not saved yet over them).
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
 import {
@@ -51,6 +51,12 @@ interface GradingStudentPanelProps {
   busy: boolean
   /** This student's last grade or feedback change didn't save (kept for Retry). */
   failed: boolean
+  /**
+   * The teacher switched to this student (or the panel reopened after Mark
+   * missing / Excuse): focus moves to the grade box (the feedback box when
+   * there is none), so the keyboard flow carries on.
+   */
+  focusOnOpen: boolean
   /** Guardians read work threads (the school's setting). */
   includesParents: boolean
   prevName: string | null
@@ -82,6 +88,7 @@ export default function GradingStudentPanel({
   canEdit,
   busy,
   failed,
+  focusOnOpen,
   includesParents,
   prevName,
   nextName,
@@ -102,6 +109,23 @@ export default function GradingStudentPanel({
   const line = turnedInLine(row)
   const note = item.submissionMode === 'file' ? (detail?.textAnswer ?? '').trim() : ''
   const kind = item.kind === 'quiz' ? 'quiz' : 'assignment'
+  const hint = gradeHint(row, { linked, columnPublished, first })
+
+  // Opening a student moves focus into their grade (the previous panel, and
+  // the arrow that was pressed, are gone).
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (!focusOnOpen) return
+    const frame = window.requestAnimationFrame(() => {
+      const target = [document.getElementById('grading-score'), document.getElementById('grading-feedback')].find(
+        (el): el is HTMLInputElement | HTMLTextAreaElement =>
+          (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && !el.disabled,
+      )
+      if (target) target.focus()
+      else headingRef.current?.focus()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [focusOnOpen])
 
   const changeScore = (value: CellValue) => {
     setTouched(true)
@@ -127,7 +151,9 @@ export default function GradingStudentPanel({
           <div className="flex min-w-0 items-center gap-3.5">
             <Avatar name={row.name} avatar={row.avatar} size={52} />
             <div className="flex min-w-0 flex-col gap-0.5">
-              <h2 className="font-display truncate text-2xl font-semibold text-slate-900">{row.name}</h2>
+              <h2 ref={headingRef} tabIndex={-1} className="font-display truncate text-2xl font-semibold text-slate-900 outline-none">
+                {row.name}
+              </h2>
               <span className={`text-[13px] ${TURNED_IN_INK[line.tone]}`}>{line.text}</span>
             </div>
           </div>
@@ -137,6 +163,8 @@ export default function GradingStudentPanel({
               onClick={onPrev}
               disabled={!prevName}
               aria-label={prevName ? `Previous student: ${prevName}` : 'Previous student'}
+              aria-keyshortcuts="Alt+ArrowUp"
+              title="Previous student (Alt+↑)"
               className={arrowClass}
             >
               <ChevronLeftIcon className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -146,6 +174,8 @@ export default function GradingStudentPanel({
               onClick={onNext}
               disabled={!nextName}
               aria-label={nextName ? `Next student: ${nextName}` : 'Next student'}
+              aria-keyshortcuts="Alt+ArrowDown"
+              title="Next student (Alt+↓)"
               className={arrowClass}
             >
               <ChevronRightIcon className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -189,7 +219,7 @@ export default function GradingStudentPanel({
             initialScore={initial.score}
             status={status}
             maxScore={item.maxScore}
-            hint={gradeHint(columnPublished)}
+            hint={hint}
             disabled={!canEdit}
             busy={busy}
             onScore={changeScore}
@@ -207,7 +237,7 @@ export default function GradingStudentPanel({
             disabled={!canEdit}
             onChange={changeFeedback}
             onCommit={onCommit}
-            hint={linked ? null : gradeHint(Boolean(row.publishedAt))}
+            hint={linked ? null : hint}
           />
           <QuickCommentChips disabled={!canEdit} onAdd={(text) => changeFeedback(appendQuickComment(feedback, text))} />
         </div>

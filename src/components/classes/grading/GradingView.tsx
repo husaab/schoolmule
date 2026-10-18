@@ -12,7 +12,7 @@
 // live as it saves. Mark missing and Excuse are published at once.
 'use client'
 
-import { useCallback, useMemo, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ClipboardDocumentListIcon, ExclamationTriangleIcon, MegaphoneIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -33,7 +33,7 @@ import {
   mergeGradeEdits,
   neighbours,
   OUTSIDE_AUDIENCE_CODE,
-  OUTSIDE_AUDIENCE_MESSAGE,
+  outsideAudienceMessage,
   parseGradingFilter,
   publishAllPrompt,
   publishOutcome,
@@ -53,6 +53,7 @@ import {
 import type { ClassPageData } from '@/services/types/classroom'
 import type { GradePatch, GradingList, GradingRow, PublishGradesResult, SubmissionDetail } from '@/services/types/grading'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { useUserStore } from '@/store/useUserStore'
 import GradingHeader from './GradingHeader'
 import GradingStudentList from './GradingStudentList'
 import GradingStudentPanel from './GradingStudentPanel'
@@ -93,6 +94,7 @@ function Notice({ classId, children }: { classId: string; children: React.ReactN
 export default function GradingView({ classId, itemId, from = null }: GradingViewProps) {
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const userId = useUserStore((s) => s.user.id) ?? ''
   const { get, setParams } = useFilterParams({ remember: false })
   const filter = parseGradingFilter(get('filter'))
   const studentParam = get('student') || null
@@ -119,24 +121,37 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
     [patch],
   )
 
-  // One saver for the whole view: edits are kept per student, so a switch
-  // never loses (or mixes up) what is still saving.
+  // One saver for this item and teacher, kept for the whole session (as the
+  // gradebook's autosave is): edits are kept per student, so a switch never
+  // loses or mixes up what is still saving, and leaving the view (any link,
+  // browser Back) never loses a score or feedback. A save that fails after
+  // the teacher left is announced, and shown again with Retry on return.
+  const itemTitle = data?.list.item.title ?? 'this work'
   const saver = useDebouncedSave<GradeEdits>({
+    key: `grading:${userId}:${itemId}`,
+    failedAway: (failed) => {
+      const n = Object.keys(failed ?? {}).length
+      return `${n} grading change${n === 1 ? '' : 's'} on "${itemTitle}" didn't save. Open its grading view to retry.`
+    },
     merge: mergeGradeEdits,
     save: async (edits, opts) => {
+      // Students in parallel, so a page going away (keepalive) sends them all.
+      const entries = Object.entries(edits)
+      const results = await Promise.allSettled(entries.map(([studentId, change]) => updateSubmission(itemId, studentId, change, opts)))
       const failed: GradeEdits = {}
       let message = ''
-      for (const [studentId, change] of Object.entries(edits)) {
-        try {
-          const res = await updateSubmission(itemId, studentId, change, opts)
-          applyRow(res.data.row)
-        } catch (err) {
-          // A browser refusing a keepalive request: the saver resends it all as a plain request.
-          if (opts.keepalive && err instanceof TypeError) throw err
-          failed[studentId] = change
-          message = messageOf(err, "The grade didn't save.")
+      results.forEach((result, i) => {
+        const [studentId, change] = entries[i]
+        if (result.status === 'fulfilled') {
+          applyRow(result.value.data.row)
+          return
         }
-      }
+        failed[studentId] = change
+        message = messageOf(result.reason, "The grade didn't save.")
+      })
+      // A browser refusing a keepalive request: the saver resends it all as a plain request.
+      const refused = results.find((r) => r.status === 'rejected' && r.reason instanceof TypeError)
+      if (opts.keepalive && refused?.status === 'rejected') throw refused.reason
       if (Object.keys(failed).length > 0) throw new PartialDebouncedSaveError(failed, message)
     },
   })
@@ -151,12 +166,30 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
   const [busy, setBusy] = useState(false)
   const [confirmAll, setConfirmAll] = useState(false)
   const [outside, setOutside] = useState(false)
+  // After the first switch (or a reopen), each panel takes the keyboard focus.
+  const [focusPanel, setFocusPanel] = useState(false)
 
   const select = (studentId: string | null) => {
     if (!studentId) return
     void saver.flush()
+    setFocusPanel(true)
     setParams({ student: studentId })
   }
+
+  // Alt+↓ / Alt+↑: next / previous student, from anywhere in the view.
+  const prevId = around.prev
+  const nextId = around.next
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return
+      const target = e.key === 'ArrowDown' ? nextId : prevId
+      if (!target) return
+      e.preventDefault()
+      document.querySelector<HTMLButtonElement>(`button[aria-keyshortcuts="${e.key === 'ArrowDown' ? 'Alt+ArrowDown' : 'Alt+ArrowUp'}"]`)?.click()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [prevId, nextId])
   const setFilter = (next: GradingFilter) => setParams({ filter: next === 'all' ? null : next })
 
   const edit = (studentId: string, change: GradePatch) => saver.schedule({ [studentId]: change })
@@ -182,14 +215,18 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
       }
       const res = await run()
       setOutside(false)
-      showNotification(done(res.data).message, 'success')
+      const outcome = done(res.data)
+      showNotification(outcome.message, outcome.tone === 'success' ? 'success' : 'info')
       try {
         const fresh = await getGradingList(itemId)
         patch((d) => ({ ...d, list: fresh.data }))
       } catch {
         reload()
       }
-      if (remount) setResetKey((k) => k + 1)
+      if (remount) {
+        setFocusPanel(true)
+        setResetKey((k) => k + 1)
+      }
     } catch (err) {
       if (isApiError(err) && err.code === OUTSIDE_AUDIENCE_CODE) setOutside(true)
       else showNotification(messageOf(err, "That didn't work. Try again."), 'error')
@@ -269,9 +306,14 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
         onRetry={() => void saver.retry()}
         onDiscard={() => {
           saver.discard()
+          setFocusPanel(true)
           setResetKey((k) => k + 1)
         }}
-        onPublishAll={() => setConfirmAll(true)}
+        onPublishAll={async () => {
+          // Saved first, so the confirm names everyone a blur-save just added.
+          await saver.flush()
+          setConfirmAll(true)
+        }}
         publishing={busy && confirmAll}
         canEdit={canEdit}
       />
@@ -280,7 +322,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
         <div role="alert" className="mx-4 mt-4 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:mx-8">
           <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
           <p className="flex-1">
-            {OUTSIDE_AUDIENCE_MESSAGE}{' '}
+            {outsideAudienceMessage(item.kind)}{' '}
             <Link href={classHref(classId, 'grades', { focus: assessmentId })} className="font-medium text-amber-900 underline underline-offset-2">
               Open Grades
             </Link>
@@ -317,6 +359,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
             columnPublished={list.isAssessmentPublished}
             canEdit={canEdit}
             busy={busy}
+            focusOnOpen={focusPanel}
             failed={saver.status === 'error' && Boolean(saver.peek()?.[selectedRow.studentId])}
             includesParents={page.settings.parentsReadPrivateComments}
             prevName={around.prev ? nameOf(around.prev) : null}

@@ -72,7 +72,7 @@ import {
   type OverlayIndex,
 } from '@/lib/gridOverlay'
 import { classItemHref } from '@/lib/classroomRoutes'
-import { firstName, OUTSIDE_AUDIENCE_CODE, publishOutcome } from '@/lib/gradingView'
+import { firstName, kindWord, OUTSIDE_AUDIENCE_CODE, publishOutcome } from '@/lib/gradingView'
 import { isApiError } from '@/services/apiClient'
 import { getGridOverlay, publishGrades } from '@/services/gradingService'
 import { getClasswork } from '@/services/classworkService'
@@ -109,11 +109,10 @@ interface GradebookWorkspaceProps {
   onFocusHandled?: () => void
 }
 
-/** A turn-in column's "Publish N": publishes its drafts after a confirm. */
+/** A turn-in column's "Publish N": publishes its drafts after a confirm (the count is read live). */
 interface DraftPublish {
   assessment: AssessmentPayload
   itemId: string
-  count: number
   /** The column also holds grades for students the item isn't for: publish it whole instead. */
   outside: boolean
 }
@@ -145,10 +144,14 @@ export default function GradebookWorkspace({
   // The column the category window opens on (?focus= on an assessment inside a category).
   const [modalFocusId, setModalFocusId] = useState<string | null>(null)
 
+  // Reads can overlap (a save's re-read, a status change, a Publish): only
+  // the newest one is applied.
+  const overlayTicketRef = useRef(0)
   const loadOverlay = useCallback(async () => {
+    const ticket = ++overlayTicketRef.current
     try {
       const res = await getGridOverlay(classId)
-      setOverlay(indexOverlay(res.data))
+      if (ticket === overlayTicketRef.current) setOverlay(indexOverlay(res.data))
     } catch (err) {
       // The overlay is informational: grade entry goes on without it.
       console.error('Error loading the classwork overlay:', err)
@@ -449,28 +452,28 @@ export default function GradebookWorkspace({
   }, [classId, storedGrades, loading, error, students.length])
 
   // The per-student window re-reads its inputs whenever they change identity,
-  // so they are memoized: its saved scores (a draft shows as the cell's value,
-  // so it is neither hidden nor cleared by mistake), and the local values in
-  // its old shape ('' = cleared).
-  const studentModalScores = useMemo(() => {
-    const byKey = new Map(
-      scoresMatrix.map((score) => [
-        `${score.student_id}|${score.assessment_id}`,
-        { studentId: score.student_id, assessmentId: score.assessment_id, score: score.score, status: score.status },
-      ]),
-    )
+  // so they are memoized: its saved scores (the gradebook's, which is what
+  // counts), the classwork drafts it shows marked (never counted), and the
+  // local values in its old shape ('' = cleared).
+  const studentModalScores = useMemo(
+    () =>
+      scoresMatrix.map((score) => ({
+        studentId: score.student_id,
+        assessmentId: score.assessment_id,
+        score: score.score,
+        status: score.status,
+      })),
+    [scoresMatrix],
+  )
+  const studentModalDrafts = useMemo(() => {
+    const out: Record<string, { score: number | null; status: 'graded' | 'missing' | 'excused' }> = {}
     for (const cell of Object.values(overlay.cells)) {
       if (cell.state !== 'draft') continue
       const status = cell.draftStatus ?? 'graded'
-      byKey.set(`${cell.studentId}|${cell.assessmentId}`, {
-        studentId: cell.studentId,
-        assessmentId: cell.assessmentId,
-        score: status === 'missing' ? null : cell.draftScore,
-        status,
-      })
+      out[`${cell.studentId}|${cell.assessmentId}`] = { score: status === 'missing' ? null : cell.draftScore, status }
     }
-    return [...byKey.values()]
-  }, [scoresMatrix, overlay])
+    return out
+  }, [overlay])
   const studentModalLocal = useMemo(
     () =>
       Object.fromEntries(Object.entries(pendingMap()).map(([k, v]) => [k, v == null ? '' : v])) as Record<
@@ -613,13 +616,16 @@ export default function GradebookWorkspace({
   const studentFirst = (studentId: string) => firstName(students.find((s) => s.studentId === studentId)?.name) || 'the student'
 
   // "Publish N" on a turn-in column: asks first, then publishes every draft.
-  const openDraftPublish = (a: AssessmentPayload) => {
+  const openDraftPublish = async (a: AssessmentPayload) => {
     const column = overlay.columns[a.assessmentId]
-    const count = draftCount(overlay, a.assessmentId)
-    if (!column || count === 0) return
-    void autosave.flush()
-    setDraftPublish({ assessment: a, itemId: column.itemId, count, outside: false })
+    if (!column || draftCount(overlay, a.assessmentId) === 0) return
+    // What was just typed is saved first; its draft lands in the overlay, so
+    // the confirm's count (read as it renders) includes it.
+    await autosave.flush()
+    setDraftPublish({ assessment: a, itemId: column.itemId, outside: false })
   }
+  const draftPublishCount = draftPublish ? draftCount(overlay, draftPublish.assessment.assessmentId) : 0
+  const draftPublishWord = draftPublish ? kindWord(overlay.columns[draftPublish.assessment.assessmentId]?.kind ?? 'assignment') : 'assignment'
 
   const runDraftPublish = async () => {
     if (!draftPublish || publishingDrafts) return
@@ -631,7 +637,8 @@ export default function GradebookWorkspace({
         return
       }
       const res = await publishGrades(draftPublish.itemId, 'graded')
-      showNotification(publishOutcome(res.data, studentFirst).message, 'success')
+      const outcome = publishOutcome(res.data, studentFirst)
+      showNotification(outcome.message, outcome.tone === 'success' ? 'success' : 'info')
       setDraftPublish(null)
       await Promise.all([refreshScoresMatrix(), loadPublications()])
     } catch (err) {
@@ -819,7 +826,7 @@ export default function GradebookWorkspace({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation()
-                            openDraftPublish(a)
+                            void openDraftPublish(a)
                           }}
                           className="mt-1 cursor-pointer rounded-full bg-cyan-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-cyan-700"
                           title="Publish the drafts in this column"
@@ -835,7 +842,7 @@ export default function GradebookWorkspace({
                       )}
                       {!a.isParent && overlay.columns[a.assessmentId] && (
                         <Link
-                          href={`${classItemHref(classId, overlay.columns[a.assessmentId].itemId)}?from=grades`}
+                          href={classItemHref(classId, overlay.columns[a.assessmentId].itemId, undefined, { from: 'grades' })}
                           onClick={(e) => {
                             e.stopPropagation()
                             void autosave.flush()
@@ -1118,6 +1125,8 @@ export default function GradebookWorkspace({
         classId={classId}
         assessments={assessments}
         existingScores={studentModalScores}
+        drafts={studentModalDrafts}
+        keepsDrafts={keepsDrafts}
         currentEditedScores={studentModalLocal}
         onRefreshScores={refreshScoresMatrix}
         threadStubs={threadStubs}
@@ -1165,7 +1174,7 @@ export default function GradebookWorkspace({
               title={
                 draftPublish.outside
                   ? 'Publish the whole column'
-                  : `Publish ${draftPublish.count} draft${draftPublish.count === 1 ? '' : 's'}?`
+                  : `Publish ${draftPublishCount} draft${draftPublishCount === 1 ? '' : 's'}?`
               }
               subtitle={draftPublish.assessment.name}
               icon={MegaphoneIcon}
@@ -1173,7 +1182,7 @@ export default function GradebookWorkspace({
             <ModalBody>
               <ConfirmBody tone={draftPublish.outside ? 'warning' : 'brand'}>
                 {draftPublish.outside
-                  ? "This column also has grades for students the assignment isn't assigned to, so it is published as a whole: its Publish window shows those grades and every draft in it."
+                  ? `This column also has grades for students the ${draftPublishWord} isn't assigned to, so it is published as a whole: its Publish window shows those grades and every draft in it.`
                   : 'Students and parents will see these grades.'}
               </ConfirmBody>
             </ModalBody>
@@ -1195,7 +1204,12 @@ export default function GradebookWorkspace({
                   Open Publish…
                 </Button>
               ) : (
-                <Button type="button" loading={publishingDrafts} onClick={() => void runDraftPublish()}>
+                <Button
+                  type="button"
+                  loading={publishingDrafts}
+                  disabled={draftPublishCount === 0}
+                  onClick={() => void runDraftPublish()}
+                >
                   Publish
                 </Button>
               )}

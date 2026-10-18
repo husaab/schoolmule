@@ -8,12 +8,13 @@ interface User {
 
 interface NotificationState {
   message: string;
-  type: 'success' | 'error';
+  /** 'info' is neutral: something to know, neither a success nor a failure. */
+  type: 'success' | 'error' | 'info';
   duration?: number;
   isOpen: boolean;
   currentNotification: Notification | null;
   user: User;
-  showNotification: (message: string, type: 'success' | 'error', duration?: number) => void;
+  showNotification: (message: string, type: 'success' | 'error' | 'info', duration?: number) => void;
   closeNotification: () => void;
   setUser: (user: User) => void;
 }
