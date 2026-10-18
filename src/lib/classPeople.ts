@@ -86,10 +86,13 @@ export const STUDENT_MENU_LABELS: Record<StudentMenuAction, string> = {
  * everyone; resend while an invite is open; reset once the login is active;
  * a QR card when the grade and login allow one; and an avatar the teacher
  * picks for a child who has not got a working login to pick their own with.
+ * On a class that is read-only (a teacher looking at a past school year's class,
+ * `canEdit` false) the account actions are left out; viewing and messaging stay.
  */
-export function studentMenuActions(student: Pick<PeopleStudent, 'account'>): StudentMenuAction[] {
+export function studentMenuActions(student: Pick<PeopleStudent, 'account'>, canEdit = true): StudentMenuAction[] {
   const { status, qrEligible } = student.account
   const actions: StudentMenuAction[] = ['view', 'message']
+  if (!canEdit) return actions
   if (status === 'invited') actions.push('resend_invite')
   if (status === 'active') actions.push('reset_password')
   if (qrEligible) actions.push('print_qr')

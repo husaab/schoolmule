@@ -204,5 +204,7 @@ describe('who gets emails', () => {
     expect(emailCheckboxText({ students: 0, guardians: 31 })).toBe('Email parents · 31 parents')
     expect(emailCheckboxText({ students: 22, guardians: 0 })).toBe('Email students · 22 students')
     expect(emailCheckboxText({ students: 0, guardians: 0 })).toBe('Email students and parents · no one has an email on file yet')
+    // Nothing to count yet (no one picked, or the count is loading): no numbers, and no claim that no one has an email.
+    expect(emailCheckboxText(null)).toBe('Email students and parents')
   })
 })

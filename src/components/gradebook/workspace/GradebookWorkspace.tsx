@@ -637,7 +637,7 @@ export default function GradebookWorkspace({
         return
       }
       const res = await publishGrades(draftPublish.itemId, 'graded')
-      const outcome = publishOutcome(res.data, studentFirst)
+      const outcome = publishOutcome(res.data, studentFirst, true, draftPublishWord)
       showNotification(outcome.message, outcome.tone === 'success' ? 'success' : 'info')
       setDraftPublish(null)
       await Promise.all([refreshScoresMatrix(), loadPublications()])

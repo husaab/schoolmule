@@ -6,6 +6,7 @@ import {
   homeFor,
   landingFor,
   safeNextPath,
+  signInDetourFor,
   createLoopDetector,
   type RouteState,
   type RouteUser,
@@ -409,6 +410,43 @@ describe('landingFor / safeNextPath', () => {
         expect(new URL(safe, 'https://app.example').origin).toBe('https://app.example')
       }
     }
+  })
+})
+
+describe('an email\'s ?set= link opened signed out', () => {
+  const signedOut: RouteState = { hasToken: false, user: { id: null, role: null, isVerifiedEmail: false, isVerifiedSchool: false } }
+
+  it('goes to sign-in carrying the choice, which sign-in then applies', () => {
+    const detour = signInDetourFor('/parent/notifications', '?set=daily')
+    expect(detour).toBe('/login?next=%2Fparent%2Fnotifications%3Fset%3Ddaily')
+    expect(signInDetourFor('/parent/notifications', '?set=off')).toBe('/login?next=%2Fparent%2Fnotifications%3Fset%3Doff')
+    // The detour lands on a page a signed-out visitor may open (no loop), and the next it carries is honoured by sign-in.
+    expect(resolveRedirect('/login', signedOut)).toBeNull()
+    const next = new URL(detour!, 'https://app.example').searchParams.get('next')
+    expect(landingFor(parent(), next)).toBe('/parent/notifications?set=daily')
+  })
+
+  it('carries only the choice, not other parts of the address', () => {
+    expect(signInDetourFor('/parent/notifications', '?set=daily&utm=x&next=//evil.com')).toBe(
+      '/login?next=%2Fparent%2Fnotifications%3Fset%3Ddaily',
+    )
+  })
+
+  it('ignores a value it does not know, a missing value, and every other page', () => {
+    expect(signInDetourFor('/parent/notifications', '?set=weekly')).toBeNull()
+    expect(signInDetourFor('/parent/notifications', '')).toBeNull()
+    expect(signInDetourFor('/parent/dashboard', '?set=daily')).toBeNull()
+    expect(signInDetourFor('/dashboard', '?set=off')).toBeNull()
+  })
+
+  it('never takes a student to the page after sign-in', () => {
+    const student: RouteUser = { id: 's1', role: 'STUDENT', isVerifiedEmail: true, isVerifiedSchool: true }
+    expect(landingFor(student, '/parent/notifications?set=daily')).toBe('/student')
+  })
+
+  it('leaves every other guarded page going to the front page when signed out', () => {
+    expect(resolveRedirect('/parent/notifications', signedOut)).toBe('/')
+    expect(resolveRedirect('/dashboard', signedOut)).toBe('/')
   })
 })
 

@@ -14,6 +14,7 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 import { getToken, studentQrSignIn } from '@/services/authService'
 import { signOutLocally, startSession } from '@/services/sessionSync'
 import { landingFor } from '@/lib/authRouting'
+import { qrSignInMessage } from '@/lib/qrSignIn'
 import { useUserStore } from '@/store/useUserStore'
 import { studentTone } from '@/components/studentPortal/studentTone'
 
@@ -62,7 +63,8 @@ function QrSignInContent() {
         router.replace(landingFor(user, '/student'))
       })
       .catch((err: unknown) => {
-        setSignInError(err instanceof Error && err.message ? err.message : 'Sign-in failed. Please try again.')
+        // The server's words for a card it refused; a plain line when the connection dropped.
+        setSignInError(qrSignInMessage(err))
       })
   }, [cardToken, router])
 

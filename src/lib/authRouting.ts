@@ -21,6 +21,8 @@
 // is scanned on shared classroom devices, so the page itself swaps whatever
 // session it finds for the student's.
 
+import { parseSetParam } from '@/lib/notificationPrefs'
+
 export type RouteUser = {
   id: string | null
   /** The active view. A staff member in parent view is routed as a PARENT. */
@@ -140,6 +142,19 @@ export const resolveRedirect = (path: string, state: RouteState): string | null 
   if (ADMIN_ONLY_PREFIXES.some((p) => underPrefix(path, p)) && user.role !== 'ADMIN') return home
   if (user.role === 'PARENT' && !isParentPath(path)) return home
   return null
+}
+
+// The weekly email's one-click links ("Get it daily", "Turn it off") open the
+// parent's email preferences with ?set=. Opened signed out, such a link goes to
+// sign-in carrying the choice (?next=), so it is applied once the parent is in;
+// every other signed-out visitor to a guarded page still goes to '/'.
+const PARENT_PREFS_PATH = '/parent/notifications'
+export const signInDetourFor = (path: string, search: string): string | null => {
+  if (path !== PARENT_PREFS_PATH) return null
+  const set = parseSetParam(new URLSearchParams(search).get('set'))
+  if (!set) return null
+  const next = safeNextPath(`${PARENT_PREFS_PATH}?set=${set}`)
+  return next ? `/login?next=${encodeURIComponent(next)}` : null
 }
 
 // A same-origin path from ?next=, or null. Browsers drop tabs and newlines

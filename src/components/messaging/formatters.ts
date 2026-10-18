@@ -56,13 +56,35 @@ export const senderLabelOf = (m: Pick<Message, 'senderName' | 'senderRole' | 'se
 export const bubbleKind = (m: Pick<Message, 'senderRole'>): 'student' | 'parent' | 'other' =>
   m.senderRole === 'STUDENT' ? 'student' : m.senderRole === 'PARENT' ? 'parent' : 'other'
 
-/** One line naming who else is in the thread, for headers and the composer. */
-export const othersLabel = (participants: Participant[], myId: string | null) => {
-  const others = participants.filter((p) => p.userId !== myId)
-  if (others.length === 0) return ''
-  const names = others.map((p) => (p.role === 'PARENT' || p.role === 'STUDENT' ? p.name.split(' ')[0] : p.name))
+const firstNameOrFull = (p: Pick<Participant, 'role' | 'name'>) =>
+  p.role === 'PARENT' || p.role === 'STUDENT' ? p.name.split(' ')[0] : p.name
+
+/** "Amal and Mona", "Amal, Mona and 2 more": guardians and students by first name, staff in full. */
+const namesOf = (people: Pick<Participant, 'role' | 'name'>[]): string => {
+  const names = people.map(firstNameOrFull)
   if (names.length <= 2) return names.join(' and ')
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
+}
+
+/** One line naming who else is in the thread, for headers and the composer. */
+export const othersLabel = (participants: Participant[], myId: string | null) =>
+  namesOf(participants.filter((p) => p.userId !== myId))
+
+/**
+ * The composer's line about where a message goes. Only the others who get the
+ * email digest are "emailed": a student is not named there, because a student
+ * is emailed only when the school's student-email setting covers their grade
+ * and a thread does not say so. The student is told instead that they will see
+ * it in SchoolMule (which is always true: they are in the thread).
+ */
+export const recipientsLabel = (participants: Participant[], myId: string | null): string => {
+  const others = participants.filter((p) => p.userId !== myId)
+  const emailed = others.filter((p) => p.role !== 'STUDENT')
+  const students = others.filter((p) => p.role === 'STUDENT')
+  const parts: string[] = []
+  if (emailed.length > 0) parts.push(`${namesOf(emailed)} will be emailed`)
+  if (students.length > 0) parts.push(`${namesOf(students)} will see it in SchoolMule`)
+  return parts.join(' · ')
 }
 
 /** True when the family side of a thread is the student alone (no guardian account is in it). */

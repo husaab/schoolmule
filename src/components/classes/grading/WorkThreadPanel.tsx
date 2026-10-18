@@ -13,6 +13,9 @@
 //    instead of letting a message fail. A thread that already exists always
 //    takes replies.
 //  - The student's messages read in indigo, with "(Student)" beside the name.
+//    System lines ("{admin} joined the conversation", "marked this conversation
+//    resolved") are notices, a centred italic line like the full conversation,
+//    and the list opens on (and follows) the newest message.
 //  - Editing and removing a message, resolving the thread and muting it live in
 //    the full conversation, one link away.
 'use client'
@@ -94,6 +97,19 @@ export default function WorkThreadPanel({ itemId, studentId, first, includesPare
     void markRead(conversationId).then(() => bump(), () => {})
   }, [conversationId, thread.data, lastId, bump])
 
+  // Show the newest message when the thread opens and when one arrives, so a just-sent
+  // reply never sits below the fold of the short list.
+  const listRef = useRef<HTMLUListElement>(null)
+  const count = messages.length
+  const lastCount = useRef(0)
+  useEffect(() => {
+    if (count > lastCount.current) {
+      const el = listRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }
+    lastCount.current = count
+  }, [count])
+
   // A student may have written: look again while the tab is visible, and when it comes back.
   useEffect(() => {
     if (!conversationId) return
@@ -160,8 +176,15 @@ export default function WorkThreadPanel({ itemId, studentId, first, includesPare
           {cannotStart ? NOT_POSTED_NOTE : `No messages yet. Write to ${first} about this work here.`}
         </p>
       ) : (
-        <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto" aria-live="polite">
+        <ul ref={listRef} className="flex max-h-72 flex-col gap-2 overflow-y-auto" aria-live="polite">
           {messages.map((m) => {
+            if (m.kind === 'system') {
+              return (
+                <li key={m.messageId} className="text-center text-xs italic text-slate-500">
+                  {m.body}
+                </li>
+              )
+            }
             const mine = Boolean(userId) && m.senderId === userId
             return (
               <li key={m.messageId} className={`flex max-w-[90%] gap-2 ${mine ? 'flex-row-reverse self-end' : 'self-start'}`}>

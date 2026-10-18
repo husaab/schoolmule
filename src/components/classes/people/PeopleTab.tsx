@@ -15,6 +15,7 @@ import AvatarPickerModal from '@/components/avatar/AvatarPickerModal'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
 import StudentViewModal from '@/components/student/view/studentViewModal'
 import InviteStudentsModal from '@/components/studentAccounts/InviteStudentsModal'
+import PrintQrCardsModal from '@/components/studentAccounts/PrintQrCardsModal'
 import TabEmptyState from '@/components/classes/page/TabEmptyState'
 import type { ClassTabProps } from '@/components/classes/page/tabs'
 import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
@@ -58,12 +59,14 @@ interface InviteRun {
   settings: ClassroomSettings
 }
 
-const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
+const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
   const router = useRouter()
   const notify = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
   const role = useUserStore((s) => s.user.role)
   const { data, error, loading, reload, patchStudent } = useClassPeople(classId)
+  // False for a teacher looking at a past school year's class: it reads, it does not change accounts.
+  const canEdit = page.permissions.canEdit
 
   const filters = useFilterParams({ remember: false })
   const [search, setSearch] = useDebouncedParam(filters, 'q')
@@ -76,6 +79,8 @@ const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
   const [messageFor, setMessageFor] = useState<PeopleStudent | null>(null)
   const [viewing, setViewing] = useState<StudentPayload | null>(null)
   const [avatarFor, setAvatarFor] = useState<PeopleStudent | null>(null)
+  // Printing a card voids the older one: the student whose print is waiting on a yes.
+  const [printFor, setPrintFor] = useState<PeopleStudent | null>(null)
 
   if (loading) {
     return (
@@ -170,18 +175,22 @@ const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
           }
         })
       case 'print_qr':
-        return void withBusy(student, async () => {
-          try {
-            const { count } = await printClassQrCards(classId, [student.studentId], `qr-card-${student.name.replace(/\s+/g, '-').toLowerCase()}.pdf`)
-            notify(qrPrintedMessage(count), count > 0 ? 'error' : 'success')
-          } catch (err) {
-            notify(errorText(err, "The QR card couldn't be printed."), 'error')
-          }
-        })
+        // The roster does not say whether the student holds a card now, so it always asks first.
+        return setPrintFor(student)
       case 'change_avatar':
         return setAvatarFor(student)
     }
   }
+
+  const printQr = (student: PeopleStudent) =>
+    withBusy(student, async () => {
+      try {
+        const { count } = await printClassQrCards(classId, [student.studentId], `qr-card-${student.name.replace(/\s+/g, '-').toLowerCase()}.pdf`)
+        notify(qrPrintedMessage(count), count > 0 ? 'error' : 'success')
+      } catch (err) {
+        notify(errorText(err, "The QR card couldn't be printed."), 'error')
+      }
+    })
 
   const saveAvatar = async (avatar: AvatarSpec) => {
     if (!avatarFor) return
@@ -199,13 +208,15 @@ const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
             Students <span className="font-medium text-slate-500">{counts.all}</span>
           </h2>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={classHref(classId, 'stream', { compose: '1' })}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <ChatBubbleLeftRightIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
-              Message parents
-            </Link>
+            {canEdit && (
+              <Link
+                href={classHref(classId, 'stream', { compose: '1' })}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                Message parents
+              </Link>
+            )}
             {data.canInvite && candidates.length > 0 && (
               <button
                 type="button"
@@ -264,7 +275,7 @@ const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
               </button>
             </div>
 
-            <PeopleStudentsTable students={visible} busyId={busyId} onAction={act} />
+            <PeopleStudentsTable students={visible} busyId={busyId} onAction={act} canEdit={canEdit} />
 
             {filtering && (
               <p className="text-[13px] text-slate-500">
@@ -306,6 +317,16 @@ const PeopleTab: FC<ClassTabProps> = ({ classId }) => {
           router.push(`/messages?thread=${encodeURIComponent(thread.conversation.conversationId)}`)
         }}
       />
+
+      {printFor && (
+        <PrintQrCardsModal
+          isOpen
+          onClose={() => setPrintFor(null)}
+          names={[printFor.name]}
+          withCards={null}
+          onConfirm={() => printQr(printFor)}
+        />
+      )}
 
       {viewing && <StudentViewModal isOpen onClose={() => setViewing(null)} student={viewing} />}
 

@@ -29,7 +29,7 @@ import Composer from './Composer'
 import MessageBubble from './MessageBubble'
 import ThreadContextCard from './ThreadContextCard'
 import StudentContextCard from './StudentContextCard'
-import { displayName, formatDayLabel, othersLabel, parentsAbsent } from './formatters'
+import { displayName, formatDayLabel, othersLabel, parentsAbsent, recipientsLabel } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 interface ConversationThreadProps {
@@ -188,6 +188,8 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
   const rows = useMemo(() => (thread ? toRows(thread.messages) : []), [thread])
   const isStaff = role !== 'PARENT'
   const others = thread ? othersLabel(thread.participants, user.id || null) : ''
+  // Who the email digest reaches (a student is not promised an email: see recipientsLabel).
+  const sentTo = thread ? recipientsLabel(thread.participants, user.id || null) : ''
 
   const send = async ({ body, files }: { body: string; files: File[] }) => {
     const res = await postMessage(conversationId, { body, files })
@@ -424,7 +426,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
         <Composer
           tone={tone}
           placeholder={others ? `Reply to ${others}…` : 'Write a message…'}
-          recipientsLabel={others ? `${others} will be emailed` : undefined}
+          recipientsLabel={sentTo || undefined}
           onSend={send}
           compact
         />

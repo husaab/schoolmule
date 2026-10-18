@@ -10,6 +10,8 @@ import {
   inviteReadiness,
   lastSignedInText,
   longDateLine,
+  printNeedsConfirm,
+  printQrConfirm,
   qrCardText,
   readSkipped,
   rowActions,
@@ -202,5 +204,40 @@ describe('batching', () => {
     // Over 50 skipped: the server sends only the count.
     expect(readSkipped(new Headers({ 'X-Skipped-Count': '60' }))).toEqual({ count: 60, ids: [] })
     expect(readSkipped(new Headers())).toEqual({ count: 0, ids: [] })
+  })
+})
+
+describe('printing QR cards', () => {
+  it('asks first, unless none of the students holds a card', () => {
+    expect(printNeedsConfirm(1)).toBe(true)
+    expect(printNeedsConfirm(5)).toBe(true)
+    expect(printNeedsConfirm(null)).toBe(true) // the class People tab cannot tell
+    expect(printNeedsConfirm(0)).toBe(false) // a first card voids nothing
+  })
+
+  it('says plainly that the old card stops working, for one student', () => {
+    const c = printQrConfirm(['Amal Haddad'], 1)
+    expect(c.warning).toBe("Printing a new card replaces Amal Haddad's old one. The old card stops working.")
+    expect(c.title).toBe('Print a new QR card')
+    expect(c.confirmLabel).toBe('Print QR card')
+  })
+
+  it('does not claim a card exists when the page cannot tell', () => {
+    expect(printQrConfirm(['Amal Haddad'], null).warning).toBe(
+      'If Amal Haddad already has a card, printing a new one replaces it. The old card stops working.',
+    )
+  })
+
+  it('says it for several students, with how many hold a card', () => {
+    const c = printQrConfirm(['A', 'B', 'C'], 2)
+    expect(c.warning).toBe('Printing new cards replaces the old ones. The old cards stop working.')
+    expect(c.title).toBe('Print 3 QR cards')
+    expect(c.confirmLabel).toBe('Print 3 cards')
+    expect(c.consequences.items.join(' ')).toContain('2 of these 3 students have a card now')
+  })
+
+  it('always mentions that a device already signed in stays signed in for a while', () => {
+    expect(printQrConfirm(['A'], 1).consequences.items.join(' ')).toContain('at most 12 hours')
+    expect(printQrConfirm(['A', 'B'], null).consequences.items.join(' ')).toContain('at most 12 hours')
   })
 })

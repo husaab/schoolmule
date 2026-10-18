@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bubbleKind, displayName, generalKindLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, senderLabelOf, waitingOn } from './formatters'
+import { bubbleKind, displayName, generalKindLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
 import { toneClasses } from './tones'
 
 describe('who is who in a thread with a student', () => {
@@ -24,6 +24,26 @@ describe('who is who in a thread with a student', () => {
     ]
     expect(othersLabel(people, 'me')).toBe('Amal and Mona')
     expect(othersLabel(people.slice(0, 1), 'me')).toBe('')
+  })
+
+  it('promises an email only to the people who get one, never to the student', () => {
+    const person = (userId: string, name: string, role: 'TEACHER' | 'STUDENT' | 'PARENT') => ({ userId, name, role, relation: null, invitePending: false })
+    const teacher = person('me', 'Lina Farouk', 'TEACHER')
+    const student = person('s', 'Amal Haddad', 'STUDENT')
+    const mother = person('p', 'Mona Haddad', 'PARENT')
+    // A staff member writing in a student thread: the guardian is emailed, the student sees it in SchoolMule.
+    expect(recipientsLabel([teacher, student, mother], 'me')).toBe('Mona will be emailed · Amal will see it in SchoolMule')
+    // No guardian account: nobody is promised an email.
+    expect(recipientsLabel([teacher, student], 'me')).toBe('Amal will see it in SchoolMule')
+    // Threads without a student read as before.
+    expect(recipientsLabel([teacher, mother], 'me')).toBe('Mona will be emailed')
+    expect(recipientsLabel([teacher], 'me')).toBe('')
+    // A guardian writing: the teacher is emailed, the student sees it in SchoolMule.
+    expect(recipientsLabel([teacher, student, mother], 'p')).toBe('Lina Farouk will be emailed · Amal will see it in SchoolMule')
+    // A staff thread with several people still names them in full.
+    expect(recipientsLabel([teacher, person('t2', 'Omar Said', 'TEACHER'), person('t3', 'Sara Noor', 'TEACHER'), mother], 'me')).toBe(
+      'Omar Said, Sara Noor and 1 more will be emailed',
+    )
   })
 
   it('knows when no parent is in a thread', () => {

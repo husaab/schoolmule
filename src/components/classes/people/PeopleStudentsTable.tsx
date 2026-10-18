@@ -19,9 +19,11 @@ interface PeopleStudentsTableProps {
   /** The student with a request in flight. */
   busyId: string | null
   onAction: (action: StudentMenuAction, student: PeopleStudent) => void
+  /** False on a read-only class (a past school year): no account actions. */
+  canEdit: boolean
 }
 
-export default function PeopleStudentsTable({ students, busyId, onAction }: PeopleStudentsTableProps) {
+export default function PeopleStudentsTable({ students, busyId, onAction, canEdit }: PeopleStudentsTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200/70 bg-white">
       <div className="flex min-w-[820px] flex-col">
@@ -56,7 +58,7 @@ export default function PeopleStudentsTable({ students, busyId, onAction }: Peop
                   {student.missingCount}
                 </span>
                 <span className="text-slate-500">{lastSignedInText(student.account.lastSeenAt)}</span>
-                <StudentAccountRowMenu student={student} onSelect={onAction} busy={busyId === student.studentId} />
+                <StudentAccountRowMenu student={student} onSelect={onAction} busy={busyId === student.studentId} canEdit={canEdit} />
               </div>
             )
           })

@@ -119,6 +119,13 @@ describe('studentMenuActions', () => {
     expect(studentMenuActions(student('A', 'not_invited'))).toContain('change_avatar')
     expect(studentMenuActions(student('A', 'archived'))).toContain('change_avatar')
   })
+  it('leaves the account actions out of a read-only class (a past school year)', () => {
+    for (const status of ['invited', 'active', 'not_invited', 'not_eligible', 'archived'] as const) {
+      expect(studentMenuActions(student('A', status, { qr: true }), false)).toEqual(['view', 'message'])
+    }
+    // Editable is the default, so every other caller is unchanged.
+    expect(studentMenuActions(student('A', 'active', { qr: true }), true)).toEqual(studentMenuActions(student('A', 'active', { qr: true })))
+  })
 })
 
 describe('qrPrintedMessage', () => {

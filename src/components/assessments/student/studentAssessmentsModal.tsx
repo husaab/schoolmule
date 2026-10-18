@@ -16,6 +16,7 @@ import {
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import StatusControl from '@/components/assessments/scores/StatusControl'
 import { pillClass } from '@/components/assessments/scores/ScoreCell'
+import { rowNote, type RowNoteTone } from './rowNotes'
 
 interface Assessment {
   assessmentId: string
@@ -65,6 +66,8 @@ interface StudentAssessmentsModalProps {
 }
 
 const noDrafts = () => false
+
+const NOTE_TONE: Record<RowNoteTone, string> = { rose: 'text-rose-600', gray: 'text-gray-500', slate: 'text-slate-500' }
 
 export default function StudentAssessmentsModal({
   isOpen,
@@ -317,6 +320,7 @@ export default function StudentAssessmentsModal({
     const muted = status !== 'graded'
     const isDraft = Boolean(draftFor(assessment.assessmentId)) || (keepsDrafts(assessment.assessmentId) && (scoreValue !== '' || muted))
     const label = `${student.name} score for ${assessment.name}`
+    const note = rowNote(status, isDraft)
 
     return (
       <div
@@ -338,15 +342,7 @@ export default function StudentAssessmentsModal({
           {assessment.date && (
             <div className="text-xs text-gray-500">Date: {new Date(assessment.date).toLocaleDateString()}</div>
           )}
-          {status === 'excused' && (
-            <div className="text-xs text-gray-500 mt-1">Excused — this assessment never counts toward the grade</div>
-          )}
-          {status === 'missing' && (
-            <div className="text-xs text-rose-600 mt-1">Missing — counts as 0 until a score is entered</div>
-          )}
-          {isDraft && (
-            <div className="text-xs text-slate-500 mt-1">Draft — only you see it, and it counts once it is published</div>
-          )}
+          {note && <div className={`text-xs ${NOTE_TONE[note.tone]} mt-1`}>{note.text}</div>}
         </div>
 
         <div className={`flex items-center ${gap}`}>

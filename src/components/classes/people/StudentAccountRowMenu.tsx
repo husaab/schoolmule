@@ -32,10 +32,12 @@ interface StudentAccountRowMenuProps {
   onSelect: (action: StudentMenuAction, student: PeopleStudent) => void
   /** A request for this student is in flight. */
   busy?: boolean
+  /** False on a read-only class: the account actions are not offered. */
+  canEdit?: boolean
 }
 
-export default function StudentAccountRowMenu({ student, onSelect, busy = false }: StudentAccountRowMenuProps) {
-  const items: KebabItem[] = studentMenuActions(student).map((action, index) => ({
+export default function StudentAccountRowMenu({ student, onSelect, busy = false, canEdit = true }: StudentAccountRowMenuProps) {
+  const items: KebabItem[] = studentMenuActions(student, canEdit).map((action, index) => ({
     key: action,
     label: STUDENT_MENU_LABELS[action],
     icon: ICONS[action],

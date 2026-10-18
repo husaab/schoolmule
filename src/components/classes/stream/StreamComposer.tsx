@@ -43,9 +43,9 @@ interface StreamComposerProps {
   onPosted: (detail: AnnouncementDetail) => void
 }
 
-const audienceOfPreview = (preview: AudiencePreview | null): StreamAudience => ({
-  students: preview?.studentsWithAccount ?? 0,
-  guardians: (preview?.guardiansWithAccount ?? 0) + (preview?.guardiansInvitePending ?? 0) + (preview?.guardiansEmailOnly ?? 0),
+const audienceOfPreview = (preview: AudiencePreview): StreamAudience => ({
+  students: preview.studentsWithAccount ?? 0,
+  guardians: (preview.guardiansWithAccount ?? 0) + (preview.guardiansInvitePending ?? 0) + (preview.guardiansEmailOnly ?? 0),
 })
 
 export default function StreamComposer({
@@ -69,7 +69,8 @@ export default function StreamComposer({
   const [mode, setMode] = useState<Audience>('all')
   const [studentIds, setStudentIds] = useState<string[]>([])
   const [roster, setRoster] = useState<PickableStudent[] | null>(null)
-  const [preview, setPreview] = useState<AudiencePreview | null>(null)
+  // The /preview answer, with the pick it answered for (a different pick has no answer yet).
+  const [preview, setPreview] = useState<{ key: string; audience: AudiencePreview | null } | null>(null)
   // null follows the class option until the teacher decides for this post.
   const [emailChoice, setEmailChoice] = useState<boolean | null>(null)
   const [ackRequested, setAckRequested] = useState(false)
@@ -115,8 +116,8 @@ export default function StreamComposer({
     let cancelled = false
     const timer = setTimeout(() => {
       previewAudience({ scope: 'custom', studentIds }).then(
-        (res) => !cancelled && setPreview(res.data ?? null),
-        () => !cancelled && setPreview(null),
+        (res) => !cancelled && setPreview({ key: pickedKey, audience: res.data ?? null }),
+        () => !cancelled && setPreview({ key: pickedKey, audience: null }),
       )
     }, 300)
     return () => {
@@ -127,7 +128,11 @@ export default function StreamComposer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, pickedKey])
 
-  const chosenAudience = useMemo(() => (studentIds.length > 0 ? audienceOfPreview(preview) : { students: 0, guardians: 0 }), [preview, studentIds.length])
+  // No counts for a pick that is empty, still loading, or whose count could not be read: the checkbox stays neutral.
+  const chosenAudience = useMemo(
+    () => (studentIds.length > 0 && preview?.key === pickedKey && preview.audience ? audienceOfPreview(preview.audience) : null),
+    [preview, pickedKey, studentIds.length],
+  )
   const reach = mode === 'all' ? audience : chosenAudience
 
   const ready =

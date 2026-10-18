@@ -165,8 +165,13 @@ export const emailAudienceKind = (audience: StreamAudience): EmailAudienceKind =
   return 'none'
 }
 
-/** The composer's email checkbox: "Email students and parents · 22 students, 31 parents". */
-export function emailCheckboxText(audience: StreamAudience): string {
+/**
+ * The composer's email checkbox: "Email students and parents · 22 students, 31 parents".
+ * With no count to give yet (null: students are still being picked, or the count is on its way),
+ * it says no numbers rather than a "no one has an email" it does not know.
+ */
+export function emailCheckboxText(audience: StreamAudience | null): string {
+  if (audience === null) return 'Email students and parents'
   switch (emailAudienceKind(audience)) {
     case 'both':
       return `Email students and parents · ${plural(audience.students, 'student', 'students')}, ${plural(audience.guardians, 'parent', 'parents')}`

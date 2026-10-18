@@ -19,6 +19,7 @@ import ClassroomSettingsModal from '@/components/studentAccounts/ClassroomSettin
 import ArchiveStudentAccountModal from '@/components/studentAccounts/ArchiveStudentAccountModal'
 import DeleteStudentAccountModal from '@/components/studentAccounts/DeleteStudentAccountModal'
 import LinkStudentAccountModal from '@/components/studentAccounts/LinkStudentAccountModal'
+import PrintQrCardsModal from '@/components/studentAccounts/PrintQrCardsModal'
 import VoidQrCardsModal from '@/components/studentAccounts/VoidQrCardsModal'
 import ViewAsStudentModal from '@/components/studentAccounts/ViewAsStudentModal'
 import {
@@ -42,6 +43,7 @@ import {
   filterRows,
   gradeLabel,
   isAccountStatus,
+  printNeedsConfirm,
   settingsSummary,
   type RowAction,
 } from '@/lib/studentAccounts'
@@ -61,6 +63,7 @@ type ModalState =
   | { kind: 'email'; row: StudentAccountRow }
   | { kind: 'invite'; rows: StudentAccountRow[] }
   | { kind: 'void'; rows: StudentAccountRow[] }
+  | { kind: 'print'; targets: StudentAccountRow[]; bulk: boolean }
   | { kind: 'view_as'; row: StudentAccountRow }
   | { kind: 'link'; row: StudentAccountRow; mode: 'link' | 'unlink' }
   | { kind: 'archive'; row: StudentAccountRow; mode: 'archive' | 'unarchive' }
@@ -175,6 +178,25 @@ const StudentAccountsContent = () => {
     }
   }
 
+  // Printing issues new cards and voids the old ones, so it asks first whenever any of these students
+  // holds a card now. A first card, or nobody who can get one (print() says why), needs no question.
+  const askToPrint = (targets: StudentAccountRow[], bulk: boolean) => {
+    const eligible = targets.filter((r) => r.qrEligible)
+    const withCards = eligible.filter((r) => r.account?.qr.active).length
+    if (eligible.length === 0 || !printNeedsConfirm(withCards)) return void runPrint(targets, bulk)
+    setModal({ kind: 'print', targets, bulk })
+  }
+
+  const runPrint = async (targets: StudentAccountRow[], bulk: boolean) => {
+    if (!bulk && targets.length === 1) return withBusy(targets[0].studentId, () => print(targets))
+    setPrinting(true)
+    try {
+      await print(targets)
+    } finally {
+      setPrinting(false)
+    }
+  }
+
   const onAction = (row: StudentAccountRow, action: RowAction) => {
     const email = row.account?.email ?? row.studentEmail ?? ''
     switch (action) {
@@ -201,7 +223,7 @@ const StudentAccountsContent = () => {
           }
         })
       case 'print_qr':
-        return void withBusy(row.studentId, () => print([row]))
+        return askToPrint([row], false)
       case 'void_qr':
         return setModal({ kind: 'void', rows: [row] })
       case 'view_as':
@@ -227,14 +249,7 @@ const StudentAccountsContent = () => {
 
   const toggleAll = (checked: boolean) => setSelected(checked ? new Set(shown.map((r) => r.studentId)) : new Set())
 
-  const bulkPrint = async () => {
-    setPrinting(true)
-    try {
-      await print(selectedRows)
-    } finally {
-      setPrinting(false)
-    }
-  }
+  const bulkPrint = () => askToPrint(selectedRows, true)
 
   const bulkVoid = () => {
     const withCards = selectedRows.filter((r) => r.account?.qr.active)
@@ -356,7 +371,7 @@ const StudentAccountsContent = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void bulkPrint()}
+                  onClick={bulkPrint}
                   disabled={printing}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
                 >
@@ -465,6 +480,15 @@ const StudentAccountsContent = () => {
       )}
       {modal?.kind === 'void' && (
         <VoidQrCardsModal isOpen onClose={closeModal} rows={modal.rows} onDone={() => void load()} />
+      )}
+      {modal?.kind === 'print' && (
+        <PrintQrCardsModal
+          isOpen
+          onClose={closeModal}
+          names={modal.targets.filter((r) => r.qrEligible).map((r) => r.name)}
+          withCards={modal.targets.filter((r) => r.qrEligible && r.account?.qr.active).length}
+          onConfirm={() => runPrint(modal.targets, modal.bulk)}
+        />
       )}
       {modal?.kind === 'view_as' && <ViewAsStudentModal isOpen onClose={closeModal} row={modal.row} />}
       {modal?.kind === 'link' && (

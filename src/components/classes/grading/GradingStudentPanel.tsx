@@ -164,7 +164,7 @@ export default function GradingStudentPanel({
               disabled={!prevName}
               aria-label={prevName ? `Previous student: ${prevName}` : 'Previous student'}
               aria-keyshortcuts="Alt+ArrowUp"
-              title="Previous student (Alt+↑)"
+              title="Previous student (Alt+↑, except in the feedback box)"
               className={arrowClass}
             >
               <ChevronLeftIcon className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -175,7 +175,7 @@ export default function GradingStudentPanel({
               disabled={!nextName}
               aria-label={nextName ? `Next student: ${nextName}` : 'Next student'}
               aria-keyshortcuts="Alt+ArrowDown"
-              title="Next student (Alt+↓)"
+              title="Next student (Alt+↓, except in the feedback box)"
               className={arrowClass}
             >
               <ChevronRightIcon className="h-[18px] w-[18px]" strokeWidth={2} />

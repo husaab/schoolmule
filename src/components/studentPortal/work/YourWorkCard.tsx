@@ -25,7 +25,7 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
-import { classifyAnswerSaveError, forgetRefusedAnswer, recallRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
+import { classifyAnswerSaveError, forgetRefusedAnswer, recallUsableRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
 import { downscaleImage } from '@/lib/imageDownscale'
 import { closedNote, isFeedbackOnly, itemStatusOf, lateNote, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
@@ -112,15 +112,9 @@ export default function YourWorkCard({
   // Set when a save was refused for good, so Turn in does not go on after it.
   const refusal = useRef<string | null>(null)
   // Words kept from an earlier visit are dropped when the work is already turned in or graded: they have no use now.
-  const [refused, setRefused] = useState<Refused | null>(() => {
-    const kept = answerKey ? recallRefusedAnswer(answerKey) : null
-    if (!kept || !answerKey) return null
-    if (item.grade !== null || item.submission?.turnedInAt) {
-      forgetRefusedAnswer(answerKey)
-      return null
-    }
-    return kept
-  })
+  const [refused, setRefused] = useState<Refused | null>(() =>
+    answerKey ? recallUsableRefusedAnswer(answerKey, item.grade !== null || Boolean(item.submission?.turnedInAt)) : null,
+  )
   const answer = useDebouncedSave<string>({
     key: answerKey,
     save: async (value, opts) => {

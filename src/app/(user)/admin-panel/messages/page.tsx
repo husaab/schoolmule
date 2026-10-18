@@ -161,6 +161,8 @@ const ConversationsOversight: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {filtered.map((c) => {
                 const waiting = waitingOnTeacher(c)
+                // Who an open thread is waiting on, worked out once for the row.
+                const waitingOnWho = !waiting && c.status === 'open' ? waitingOn(c.lastMessage, c.includesStudent) : null
                 return (
                   <tr key={c.conversationId} className="hover:bg-slate-50/60">
                     <td className="px-4 py-3">
@@ -172,15 +174,19 @@ const ConversationsOversight: React.FC = () => {
                         {c.classworkItemId ? ' · about an assignment' : c.includesStudent ? ' · student message' : ''}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{c.leadTeacherName ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {c.leadTeacherName ?? '—'}
+                      {/* Known limit: this list names the class's lead teacher, and a student can write to any of
+                          their teachers (a co-teacher, the homeroom teacher, a teaching admin). The list payload has
+                          no addressee name yet, so a student thread on a class says whose name this is. */}
+                      {c.includesStudent && c.classId && c.leadTeacherName && <p className="text-xs text-slate-400">Class lead</p>}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="text-slate-700">
                         {c.lastMessage ? `${lastSenderWord(c.lastMessage.senderRole)} · ${formatListStamp(c.lastMessageAt)}` : '—'}
                       </p>
                       {waiting && <p className="text-xs text-amber-700">Waiting on teacher · {Math.floor(hoursSince(c.lastMessageAt))}h</p>}
-                      {!waiting && c.status === 'open' && waitingOn(c.lastMessage, c.includesStudent) !== null && (
-                        <p className="text-xs text-slate-400">Waiting on {waitingOn(c.lastMessage, c.includesStudent)}</p>
-                      )}
+                      {waitingOnWho !== null && <p className="text-xs text-slate-400">Waiting on {waitingOnWho}</p>}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex flex-wrap gap-1">

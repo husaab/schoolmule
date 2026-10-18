@@ -16,6 +16,7 @@ import {
   publishOneHint,
   publishOneLabel,
   publishOutcome,
+  studentShortcutFree,
   rowScore,
   turnedInLine,
 } from './gradingView'
@@ -250,6 +251,16 @@ describe('Publish to N students', () => {
     ).toBe("Published Amal's grade. 1 email didn't send.")
   })
 
+  it('says "quiz" for a quiz that is not assigned to the student, "assignment" otherwise', () => {
+    const skipped = { publishedStudentIds: [], skipped: [{ studentId: 's1', reason: 'not_in_audience' as const }], assessmentPublished: false }
+    const nameOf = () => 'Amal'
+    expect(publishOutcome(skipped, nameOf, true, 'quiz')).toEqual({ tone: 'info', message: "This quiz isn't for that student." })
+    expect(publishOutcome(skipped, nameOf, true, 'assignment').message).toBe("This assignment isn't for that student.")
+    expect(publishOutcome(skipped, nameOf, true, 'material').message).toBe("This assignment isn't for that student.")
+    // No kind given (older callers): the assignment wording it always had.
+    expect(publishOutcome(skipped, nameOf).message).toBe("This assignment isn't for that student.")
+  })
+
   it('an item with no gradebook column publishes feedback', () => {
     const nameOf = () => 'Amal'
     expect(publishOutcome({ publishedStudentIds: ['s1'], skipped: [], assessmentPublished: false }, nameOf, false).message).toBe(
@@ -292,5 +303,20 @@ describe('the open student', () => {
       feedback: 'Late but good',
     })
     expect(editedGrade(draft, { draftStatus: null })).toEqual({ score: 8, status: null, feedback: '' })
+  })
+})
+
+describe('Alt+arrow student switching', () => {
+  it('works from anywhere in the view, including the one-line grade box', () => {
+    expect(studentShortcutFree(null)).toBe(true)
+    expect(studentShortcutFree({ tagName: 'BODY' })).toBe(true)
+    expect(studentShortcutFree({ tagName: 'INPUT' })).toBe(true)
+    expect(studentShortcutFree({ tagName: 'BUTTON' })).toBe(true)
+  })
+
+  it('leaves Option+arrows to the feedback box, where they move by paragraph', () => {
+    expect(studentShortcutFree({ tagName: 'TEXTAREA' })).toBe(false)
+    expect(studentShortcutFree({ tagName: 'textarea' })).toBe(false)
+    expect(studentShortcutFree({ tagName: 'DIV', isContentEditable: true })).toBe(false)
   })
 })

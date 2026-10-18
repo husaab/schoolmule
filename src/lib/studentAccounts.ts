@@ -272,6 +272,57 @@ export const chunk = <T>(items: readonly T[], size: number): T[][] => {
   return out
 }
 
+// ---------------------------------------------------------------------------
+// Printing QR cards
+
+/**
+ * Whether printing needs a confirm first. Printing always issues a new card and
+ * voids the student's older one, so it asks unless the page knows none of these
+ * students holds a card (`withCards` 0). `null` means the page cannot tell
+ * (the class People tab), which asks too.
+ */
+export const printNeedsConfirm = (withCards: number | null): boolean => withCards !== 0
+
+export interface PrintQrConfirm {
+  title: string
+  /** The plain warning: printing replaces the old cards and they stop working. */
+  warning: string
+  consequences: { title: string; items: string[] }
+  confirmLabel: string
+}
+
+/**
+ * The words of the confirm before QR cards are printed. `names` are the students
+ * whose cards will print; `withCards` is how many of them hold a card now, or
+ * null when the page cannot tell.
+ */
+export function printQrConfirm(names: readonly string[], withCards: number | null): PrintQrConfirm {
+  const n = names.length
+  const single = n === 1 ? names[0] : null
+  const warning = single
+    ? withCards === null
+      ? `If ${single} already has a card, printing a new one replaces it. The old card stops working.`
+      : `Printing a new card replaces ${single}'s old one. The old card stops working.`
+    : withCards === null
+      ? 'Printing new cards replaces any old ones. The old cards stop working.'
+      : 'Printing new cards replaces the old ones. The old cards stop working.'
+  const items = [
+    single ? 'The new card works as soon as it prints' : 'The new cards work as soon as they print',
+    withCards !== null && withCards > 0 && n > 1
+      ? `${withCards} of these ${n} students have a card now; those cards stop working right away`
+      : single
+        ? 'Take back the old card, if it was handed out'
+        : 'Take back the old cards, if they were handed out',
+    'A device already signed in with an old card stays signed in until that session ends (at most 12 hours)',
+  ]
+  return {
+    title: single ? 'Print a new QR card' : `Print ${n} QR cards`,
+    warning,
+    consequences: { title: 'What happens:', items },
+    confirmLabel: single ? 'Print QR card' : `Print ${n} cards`,
+  }
+}
+
 /** X-Skipped-Count / X-Skipped-Students from a cards PDF response. */
 export const readSkipped = (headers: Pick<Headers, 'get'>): { count: number; ids: string[] } => {
   const ids = (headers.get('X-Skipped-Students') ?? '')

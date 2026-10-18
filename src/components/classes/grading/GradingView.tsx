@@ -37,6 +37,7 @@ import {
   parseGradingFilter,
   publishAllPrompt,
   publishOutcome,
+  studentShortcutFree,
   type GradeEdits,
   type GradingFilter,
 } from '@/lib/gradingView'
@@ -176,12 +177,14 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
     setParams({ student: studentId })
   }
 
-  // Alt+↓ / Alt+↑: next / previous student, from anywhere in the view.
+  // Alt+↓ / Alt+↑: next / previous student, from anywhere in the view except the feedback box
+  // (where Option+↑/↓ moves the caret by paragraph).
   const prevId = around.prev
   const nextId = around.next
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return
+      if (!studentShortcutFree(e.target as HTMLElement | null)) return
       const target = e.key === 'ArrowDown' ? nextId : prevId
       if (!target) return
       e.preventDefault()
@@ -389,7 +392,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
                 true,
               )
             }
-            onPublish={() => void act(() => publishGrades(itemId, [selectedRow.studentId]), (r) => publishOutcome(r, nameOf, linked))}
+            onPublish={() => void act(() => publishGrades(itemId, [selectedRow.studentId]), (r) => publishOutcome(r, nameOf, linked, item.kind))}
           />
         ) : (
           <div className="flex flex-[999_1_760px] items-center justify-center p-10 text-sm text-slate-500">
@@ -411,7 +414,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
             type="button"
             loading={busy}
             onClick={async () => {
-              await act(() => publishGrades(itemId, 'graded'), (r) => publishOutcome(r, nameOf, linked))
+              await act(() => publishGrades(itemId, 'graded'), (r) => publishOutcome(r, nameOf, linked, item.kind))
               setConfirmAll(false)
             }}
           >

@@ -5,17 +5,18 @@
 // and `compose` with `teacher` and `class` (the last three are transient, set
 // by a class page's "Message {teacher}" link). Below xl only one side shows at a
 // time. The list looks again every 30 s while the tab is visible and when it
-// comes back; the open thread polls itself.
+// comes back; the open thread polls itself. The Messages badge in the nav takes
+// its number from this list while the page is open.
 'use client'
 
 import { useCallback, useEffect } from 'react'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import LoadError from '@/components/classroom/LoadError'
-import { refreshMessagesBadge } from '@/components/studentPortal/useStudentBadges'
+import { refreshMessagesBadge, useMessagesBadgeFromList } from '@/components/studentPortal/useStudentBadges'
 import { useStudentClasses } from '@/components/studentPortal/useStudentClasses'
 import type { FilterParams } from '@/hooks/useFilterParams'
 import { useLoad } from '@/hooks/useLoad'
-import { composePatch } from '@/lib/studentMessages'
+import { composePatch, isUnread } from '@/lib/studentMessages'
 import { listStudentConversations, getStudentMessageTargets } from '@/services/studentMessagingService'
 import type { Thread } from '@/services/types/messaging'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -24,6 +25,8 @@ import StudentThread from './StudentThread'
 import StudentThreadList from './StudentThreadList'
 
 const LIST_REFRESH_MS = 30_000
+/** The list holds at most this many rows; a full page may be only part of the inbox, so the badge is not counted from it. */
+const LIST_LIMIT = 100
 
 interface StudentInboxProps {
   filters: FilterParams
@@ -38,9 +41,12 @@ export default function StudentInbox({ filters, userId, previewing }: StudentInb
   const threadId = get('thread') || null
   const composing = get('compose') === '1'
 
-  const list = useLoad(`student-threads:${userId}:${yearId ?? ''}`, () => listStudentConversations({ limit: 100 }).then((r) => r.data.items))
+  const list = useLoad(`student-threads:${userId}:${yearId ?? ''}`, () => listStudentConversations({ limit: LIST_LIMIT }).then((r) => r.data.items))
   const targets = useLoad(`student-targets:${userId}:${yearId ?? ''}`, () => getStudentMessageTargets().then((r) => r.data))
   const reloadList = list.reload
+  const rows = list.data
+  // The sidebar's Messages badge follows this list while the page is open (no request of its own).
+  useMessagesBadgeFromList(userId, rows && rows.length < LIST_LIMIT ? rows.filter(isUnread).length : null)
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -59,7 +65,12 @@ export default function StudentInbox({ filters, userId, previewing }: StudentInb
   const openThread = useCallback((id: string) => setParams({ thread: id, compose: null, teacher: null, class: null }), [setParams])
   const closePane = useCallback(() => setParams({ thread: null, compose: null, teacher: null, class: null }), [setParams])
   const onChanged = useCallback(() => reloadList(), [reloadList])
-  const onRead = useCallback(() => void refreshMessagesBadge(userId), [userId])
+  // A thread being read is followed by a list reload, which moves the badge; only a full page
+  // (too many rows to count from) needs the badge to ask for itself.
+  const listIsFull = (rows?.length ?? 0) >= LIST_LIMIT
+  const onRead = useCallback(() => {
+    if (listIsFull) void refreshMessagesBadge(userId)
+  }, [userId, listIsFull])
 
   const onSent = (thread: Thread) => {
     reloadList()

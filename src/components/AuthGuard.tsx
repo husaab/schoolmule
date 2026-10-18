@@ -9,7 +9,7 @@ import { reportClientEvent, flushClientEvents } from '@/services/clientErrors'
 import { getUnreadPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
-import { resolveRedirect, landingFor, createLoopDetector } from '@/lib/authRouting'
+import { resolveRedirect, landingFor, createLoopDetector, signInDetourFor } from '@/lib/authRouting'
 import PatchNotesModal from '@/components/patchNotes/PatchNotesModal'
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
@@ -117,6 +117,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       lastHop.current = null
       return
     }
+
+    // An email's one-click link opened signed out: sign in first, carrying the choice through.
+    if (!state.hasToken && target === '/') target = signInDetourFor(path, window.location.search) ?? target
 
     // Leaving /login after sign-in: honour ?next= exactly as the login form
     // does, so the two navigations agree.

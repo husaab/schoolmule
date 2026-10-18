@@ -267,17 +267,31 @@ export const OUTSIDE_AUDIENCE_CODE = 'OUTSIDE_AUDIENCE_GRADES'
 /** "assignment", "quiz": how the copy names the item. */
 export const kindWord = (kind: string): string => (kind === 'quiz' ? 'quiz' : 'assignment')
 
+/**
+ * Whether Alt+↑/↓ may switch students from where the key was pressed. A
+ * multi-line box (the feedback) keeps it: on macOS Option+↑/↓ moves the caret by
+ * paragraph there, and a teacher writing several paragraphs would lose that.
+ * The one-line grade box and everywhere else in the view pass it through.
+ */
+export function studentShortcutFree(target: { tagName?: string; isContentEditable?: boolean } | null): boolean {
+  if (!target) return true
+  if (target.isContentEditable) return false
+  return target.tagName?.toUpperCase() !== 'TEXTAREA'
+}
+
 export const outsideAudienceMessage = (kind: string): string =>
   `Publish this column in Grades first — it has grades for students this ${kindWord(kind)} isn't assigned to.`
 
 /**
  * What a Publish (one student, or every draft) did, for the toast. An item
  * with no gradebook column (`linked` false) publishes feedback, not grades.
+ * `kind` ('quiz' or anything else for an assignment) words the not-assigned toast.
  */
 export function publishOutcome(
   result: PublishGradesResult,
   nameOf: (studentId: string) => string,
   linked = true,
+  kind = 'assignment',
 ): { tone: 'success' | 'info'; message: string } {
   const published = result.publishedStudentIds
   const failedEmails = result.emailSummary?.failed ?? 0
@@ -294,7 +308,7 @@ export function publishOutcome(
     return { tone: 'info', message: `${only} already published, and nothing changed since.` }
   }
   if (reasons.has('not_in_audience') && reasons.size === 1) {
-    return { tone: 'info', message: "This assignment isn't for that student." }
+    return { tone: 'info', message: `This ${kindWord(kind)} isn't for that student.` }
   }
   return { tone: 'info', message: 'Nothing to publish yet. Grade the work first.' }
 }

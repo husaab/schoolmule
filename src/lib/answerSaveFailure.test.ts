@@ -4,6 +4,7 @@ import {
   clearRefusedAnswers,
   forgetRefusedAnswer,
   recallRefusedAnswer,
+  recallUsableRefusedAnswer,
   rememberRefusedAnswer,
   setRefusedAnswerStorage,
 } from './answerSaveFailure'
@@ -73,6 +74,49 @@ describe('refused answers', () => {
   it('does not keep a blank answer: there is nothing to rescue', () => {
     rememberRefusedAnswer('answer:u1:i1', '   ', 'x')
     expect(recallRefusedAnswer('answer:u1:i1')).toBeNull()
+  })
+})
+
+describe('putting refused words back when the work page opens', () => {
+  const makeStorage = () => {
+    const data = new Map<string, string>()
+    return {
+      data,
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    }
+  }
+
+  it('gives the words back for work still open, and keeps them for the next visit', () => {
+    const storage = makeStorage()
+    setRefusedAnswerStorage(storage)
+    rememberRefusedAnswer('answer:u1:i1', 'Plant cells have a wall.', 'Closed.')
+    expect(recallUsableRefusedAnswer('answer:u1:i1', false)).toEqual({ text: 'Plant cells have a wall.', message: 'Closed.' })
+    expect(recallRefusedAnswer('answer:u1:i1')).not.toBeNull()
+  })
+
+  it('drops them when the work is already turned in or graded: they have no use, and nothing is left in storage', () => {
+    const storage = makeStorage()
+    setRefusedAnswerStorage(storage)
+    rememberRefusedAnswer('answer:u1:i1', 'Plant cells have a wall.', 'Closed.')
+    expect(recallUsableRefusedAnswer('answer:u1:i1', true)).toBeNull()
+    expect(recallRefusedAnswer('answer:u1:i1')).toBeNull()
+    expect(storage.data.size).toBe(0)
+  })
+
+  it('has nothing to give when nothing was kept, for open or settled work', () => {
+    setRefusedAnswerStorage(null)
+    expect(recallUsableRefusedAnswer('answer:u1:i1', false)).toBeNull()
+    expect(recallUsableRefusedAnswer('answer:u1:i1', true)).toBeNull()
+  })
+
+  it('leaves another item\'s words alone when it drops one', () => {
+    setRefusedAnswerStorage(null)
+    rememberRefusedAnswer('answer:u1:i1', 'a', 'x')
+    rememberRefusedAnswer('answer:u1:i2', 'b', 'y')
+    expect(recallUsableRefusedAnswer('answer:u1:i1', true)).toBeNull()
+    expect(recallUsableRefusedAnswer('answer:u1:i2', false)).toEqual({ text: 'b', message: 'y' })
   })
 })
 

@@ -95,6 +95,21 @@ export function forgetRefusedAnswer(key: string): void {
 }
 
 /**
+ * The words to put back when a work page opens: what an earlier refused save
+ * left behind, unless the work is already turned in or graded. Then they have
+ * no use any more, so they are forgotten here (and null is returned).
+ */
+export function recallUsableRefusedAnswer(key: string, workIsSettled: boolean): RefusedAnswer | null {
+  const kept = recallRefusedAnswer(key)
+  if (!kept) return null
+  if (workIsSettled) {
+    forgetRefusedAnswer(key)
+    return null
+  }
+  return kept
+}
+
+/**
  * Forget every refused answer, whoever's: called when a session ends (every
  * sign-out path ends in clearUser), so a student's unsent words never outlive
  * their sign-in on a shared device.
