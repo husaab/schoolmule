@@ -21,7 +21,7 @@ import { listConversations } from '@/services/messagingService'
 import type { ConversationItem } from '@/services/types/messaging'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
-import { formatListStamp } from '@/components/messaging/formatters'
+import { formatListStamp, isFamilyRole, lastSenderWord, waitingOn } from '@/components/messaging/formatters'
 
 type StatusFilter = 'open' | 'waiting' | 'resolved'
 const WAITING_HOURS = 48
@@ -65,7 +65,7 @@ const ConversationsOversight: React.FC = () => {
   const subjects = useMemo(() => [...new Set(items.map((i) => i.classSubject))].sort(), [items])
 
   const waitingOnTeacher = (c: ConversationItem) =>
-    c.status === 'open' && c.lastMessage?.senderRole === 'PARENT' && hoursSince(c.lastMessageAt) >= WAITING_HOURS
+    c.status === 'open' && isFamilyRole(c.lastMessage?.senderRole) && hoursSince(c.lastMessageAt) >= WAITING_HOURS
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -167,16 +167,20 @@ const ConversationsOversight: React.FC = () => {
                       <p className="font-medium text-slate-900">
                         {c.studentName} · {c.title}
                       </p>
-                      <p className="text-xs text-slate-400">{c.classSubject}</p>
+                      <p className="text-xs text-slate-400">
+                        {c.classSubject}
+                        {c.classworkItemId ? ' · about an assignment' : c.includesStudent ? ' · student message' : ''}
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{c.leadTeacherName ?? '—'}</td>
                     <td className="px-4 py-3">
                       <p className="text-slate-700">
-                        {c.lastMessage ? `${c.lastMessage.senderRole === 'PARENT' ? 'Parent' : 'Staff'} · ${formatListStamp(c.lastMessageAt)}` : '—'}
+                        {c.lastMessage ? `${lastSenderWord(c.lastMessage.senderRole)} · ${formatListStamp(c.lastMessageAt)}` : '—'}
                       </p>
                       {waiting && <p className="text-xs text-amber-700">Waiting on teacher · {Math.floor(hoursSince(c.lastMessageAt))}h</p>}
-                      {!waiting && c.lastMessage?.senderRole === 'PARENT' && c.status === 'open' && <p className="text-xs text-slate-400">Waiting on teacher</p>}
-                      {c.lastMessage && c.lastMessage.senderRole !== 'PARENT' && c.status === 'open' && <p className="text-xs text-slate-400">Waiting on parent</p>}
+                      {!waiting && c.status === 'open' && waitingOn(c.lastMessage, c.includesStudent) !== null && (
+                        <p className="text-xs text-slate-400">Waiting on {waitingOn(c.lastMessage, c.includesStudent)}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex flex-wrap gap-1">

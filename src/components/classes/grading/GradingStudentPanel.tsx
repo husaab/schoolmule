@@ -247,6 +247,7 @@ export default function GradingStudentPanel({
           studentId={row.studentId}
           first={first}
           includesParents={includesParents}
+          itemLive={item.effectiveStatus === 'posted'}
           stub={detail?.thread ?? null}
           disabled={!canEdit}
         />

@@ -11,6 +11,15 @@ describe('student nav', () => {
     expect(STUDENT_NAV[1]).toMatchObject({ href: '/student/todo', label: 'To-do', badgeKey: 'todo' })
   })
 
+  it('ends with Messages, with its badge', () => {
+    expect(STUDENT_NAV[STUDENT_NAV.length - 1]).toMatchObject({ href: '/student/messages', label: 'Messages', badgeKey: 'messages' })
+  })
+
+  it('Messages owns its page, and a thread opened from it', () => {
+    expect(isStudentNavActive('/student/messages', '/student/messages')).toBe(true)
+    expect(isStudentNavActive('/student/messages', '/student/todo')).toBe(false)
+  })
+
   it('every entry is a student page', () => {
     for (const item of STUDENT_NAV) expect(item.href === '/student' || item.href.startsWith('/student/')).toBe(true)
   })

@@ -1,5 +1,6 @@
 import { create, StateCreator } from 'zustand';
 import { createJSONStorage, persist, PersistOptions } from 'zustand/middleware';
+import { clearRefusedAnswers } from '@/lib/answerSaveFailure';
 import { clearFilterMemory, getFilterMemoryStorage } from '@/lib/filterMemory';
 import type { AvatarSpec } from '@/services/types/profile';
 
@@ -64,6 +65,8 @@ export const useUserStore = create<UserStore>(
                 import('@/store/useMessagingStore').then((m) => m.useMessagingStore.getState().clear()).catch(() => {})
                 // So do the remembered page filters (every sign-out path ends here).
                 clearFilterMemory(getFilterMemoryStorage())
+                // And a student's typed words an assignment refused to save (kept in this tab for them to copy).
+                clearRefusedAnswers()
                 set({
                     user: {
                         id: null,

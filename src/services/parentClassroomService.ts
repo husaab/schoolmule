@@ -4,7 +4,7 @@
 // reach another family's child.
 
 import apiClient from './apiClient';
-import type { ParentClassroomSummary } from './types/parentClassroom';
+import type { NotificationPrefs, NotificationPrefsChange, ParentClassroomSummary } from './types/parentClassroom';
 import type {
   ChildGrades,
   StudentClassCard,
@@ -50,3 +50,14 @@ export const getLensItem = (studentId: string, itemId: string) =>
 /** A link to one of the child's own files, good for an hour. */
 export const getLensFileUrl = (studentId: string, fileId: string) =>
   apiClient<StudentPortalEnvelope<{ url: string }>>(`${lens(studentId)}/files/${encodeURIComponent(fileId)}/url`);
+
+/** GET /parent-portal/notification-prefs: the weekly (or daily) summary and missing-work alert choices. */
+export const getNotificationPrefs = () =>
+  apiClient<StudentPortalEnvelope<NotificationPrefs>>('/parent-portal/notification-prefs');
+
+/** PUT /parent-portal/notification-prefs: any of the keys (the rest keep their value). Answers with the saved choices. */
+export const saveNotificationPrefs = (change: NotificationPrefsChange) =>
+  apiClient<StudentPortalEnvelope<NotificationPrefs>, NotificationPrefsChange>('/parent-portal/notification-prefs', {
+    method: 'PUT',
+    body: change,
+  });

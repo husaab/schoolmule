@@ -4,7 +4,7 @@ import React from 'react'
 import { ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import type { ConversationItem, SenderRole } from '@/services/types/messaging'
 import Avatar from '@/components/avatar/Avatar'
-import { formatListStamp } from './formatters'
+import { formatListStamp, generalKindLabel, previewPrefix } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 export type ListView = 'open' | 'needsReply' | 'resolved'
@@ -45,15 +45,18 @@ const Row: React.FC<{
   // staff read it as "this student, these guardians".
   const general = item.kind === 'general'
   const headline = isParent ? item.title : `${item.studentName} · ${item.title}`
+  // A thread the student is in (they wrote it, or it is about their work) says so.
+  const withStudent = item.includesStudent
+  const onWork = Boolean(item.classworkItemId)
   const meta = isParent
-    ? [item.studentName.split(' ')[0], general ? item.leadTeacherName : item.classSubject, general ? item.classSubject : item.leadTeacherName].filter(Boolean).join(' · ')
-    : [general ? 'General' : item.classSubject, item.lastMessage?.senderRole === 'PARENT' ? item.lastMessage.senderName : null].filter(Boolean).join(' · ')
+    ? [item.studentName.split(' ')[0], general ? item.leadTeacherName : item.classSubject, general ? item.classSubject : item.leadTeacherName, onWork ? 'about an assignment' : null].filter(Boolean).join(' · ')
+    : [general ? generalKindLabel(item) : item.classSubject, general && withStudent ? item.classSubject : null, item.lastMessage?.senderRole === 'PARENT' ? item.lastMessage.senderName : null].filter(Boolean).join(' · ')
   const snippet = item.lastMessage
     ? item.lastMessage.deleted
       ? 'Message removed'
       : item.lastMessage.kind === 'system'
         ? item.lastMessage.body ?? ''
-        : `${item.lastMessage.senderRole === role && item.lastMessage.senderRole !== 'PARENT' ? 'You: ' : ''}${item.lastMessage.body ?? ''}`
+        : `${previewPrefix(item.lastMessage, role)}${item.lastMessage.body ?? ''}`
     : ''
 
   return (
@@ -81,6 +84,11 @@ const Row: React.FC<{
           {item.needsReply && item.status === 'open' && (
             <span className={`flex-shrink-0 rounded-full border px-1.5 py-px text-[10px] font-medium ${t.chipActive}`}>
               Needs reply
+            </span>
+          )}
+          {withStudent && (
+            <span className="flex-shrink-0 rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-px text-[10px] font-medium text-indigo-700">
+              {isParent ? `With ${item.studentName.split(' ')[0]}` : 'Student'}
             </span>
           )}
           {item.status === 'resolved' && (

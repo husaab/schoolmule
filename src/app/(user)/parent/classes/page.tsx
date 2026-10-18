@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { AcademicCapIcon } from '@heroicons/react/24/outline'
 import ParentChildLens from '@/components/parent/classes/ParentChildLens'
 import ParentClassesOverview from '@/components/parent/classes/ParentClassesOverview'
+import EmailPreferencesLink from '@/components/parent/EmailPreferencesLink'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import { markParentClassesSeen } from '@/lib/parentClassesSeen'
 import { parentClassesHref } from '@/lib/portalRoutes'
@@ -32,8 +33,9 @@ function ParentClassesContent() {
   // The sidebar loads the children; until it has, a remembered child is not yet known.
   const waitingForChildren = selectedChildId !== ALL_CHILDREN && !child && kids.length === 0
 
+  // The overview carries its own "Email preferences" link beside its heading; the lens has none, so the page does.
   return (
-    <ParentPageShell title="Classes" badge={{ icon: AcademicCapIcon, label: 'Parent' }}>
+    <ParentPageShell title="Classes" badge={{ icon: AcademicCapIcon, label: 'Parent' }} actions={child ? <EmailPreferencesLink /> : undefined}>
       {!hydrated || waitingForChildren ? (
         <div className="h-64 animate-pulse rounded-[18px] bg-stone-100" aria-label="Loading" />
       ) : child ? (

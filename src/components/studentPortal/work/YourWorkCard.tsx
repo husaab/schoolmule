@@ -13,7 +13,10 @@
 //    on return). Turn in saves first. A save the server refuses for good (409
 //    ITEM_CLOSED / ALREADY_SUBMITTED) is not retried: the student is told why,
 //    the page reloads to show the true state, and the refused words stay on
-//    screen to copy (RefusedAnswer).
+//    screen to copy (RefusedAnswer). A blank answer has nothing to rescue, so it
+//    opens no box. The words are forgotten once they have no use: on a
+//    successful Turn in, when put back, or when the student comes back to work
+//    that is already turned in or graded.
 //  - Turn in / Unsubmit are explicit buttons; the server decides who may.
 //  - Read-only is structural: the card changes nothing unless it is handed
 //    `actions`. A parent's page, and an admin's preview, pass none.
@@ -24,7 +27,7 @@ import Link from 'next/link'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { classifyAnswerSaveError, forgetRefusedAnswer, recallRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
 import { downscaleImage } from '@/lib/imageDownscale'
-import { closedNote, itemStatusOf, lateNote, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
+import { closedNote, isFeedbackOnly, itemStatusOf, lateNote, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import { batchesOf, checkSubmissionFiles, UPLOAD_BATCH, withMimeType } from '@/lib/submissionFiles'
 import { displayStatus, workStatusLabel } from '@/lib/workStatusLabels'
@@ -108,7 +111,16 @@ export default function YourWorkCard({
   const answerKey = userId && actions ? `answer:${userId}:${item.itemId}` : undefined
   // Set when a save was refused for good, so Turn in does not go on after it.
   const refusal = useRef<string | null>(null)
-  const [refused, setRefused] = useState<Refused | null>(() => (answerKey ? recallRefusedAnswer(answerKey) : null))
+  // Words kept from an earlier visit are dropped when the work is already turned in or graded: they have no use now.
+  const [refused, setRefused] = useState<Refused | null>(() => {
+    const kept = answerKey ? recallRefusedAnswer(answerKey) : null
+    if (!kept || !answerKey) return null
+    if (item.grade !== null || item.submission?.turnedInAt) {
+      forgetRefusedAnswer(answerKey)
+      return null
+    }
+    return kept
+  })
   const answer = useDebouncedSave<string>({
     key: answerKey,
     save: async (value, opts) => {
@@ -121,8 +133,11 @@ export default function YourWorkCard({
         // The server will never take this answer: not a failure to retry. Say why, keep the words, show the true state.
         refusal.current = settled.message
         setTyped(null)
-        if (answerKey) rememberRefusedAnswer(answerKey, value, settled.message)
-        setRefused({ text: value, message: settled.message })
+        // A blank answer has nothing to rescue: say why (the toast), but open no box.
+        if (value.trim()) {
+          if (answerKey) rememberRefusedAnswer(answerKey, value, settled.message)
+          setRefused({ text: value, message: settled.message })
+        }
         notify(settled.message, 'error', 9000)
         onReload()
       }
@@ -226,6 +241,9 @@ export default function YourWorkCard({
         }
       }
       onItem(await actions.turnIn())
+      // The work is in: words an earlier save was refused for are no use now.
+      if (answerKey) forgetRefusedAnswer(answerKey)
+      setRefused(null)
       notify(mode === 'done' ? 'Marked as done.' : `Turned in. ${teacherName ?? 'Your teacher'} can see it now.`, 'success')
       onCountsChanged?.()
     } catch (err) {
@@ -257,13 +275,15 @@ export default function YourWorkCard({
   // "Mark as done" work has nothing to add, so it is never "Ready to turn in" (the button already says what to do).
   const pill = workStatusLabel(displayStatus(status, canChange && hasWork && mode !== 'done'), sub?.isLate ?? false)
   const graded = item.grade !== null
+  // Only a feedback-only block means "feedback has come": a Missing mark is a grade block too, but the teacher has not marked the work.
+  const feedbackSent = isFeedbackOnly(item.grade)
   // Work handed in after the teacher marked it missing still reads Missing (the server's rule), but it is in.
   const turnedIn = !!sub?.turnedInAt && status !== 'graded' && status !== 'excused'
 
   let bar: TurnInBarView | null = null
   if (actions && sub && item.kind !== 'quiz') {
     if (turnedIn) {
-      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed, feedback: graded }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
+      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed, feedback: feedbackSent }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
     } else if (sub.canEdit) {
       const blocked = uploading || hasFailedUpload
       const canTurnIn = hasWork && !blocked

@@ -1,7 +1,8 @@
 // src/components/classes/items/EmailOptionsField.tsx
-// Who is emailed about an item. An assessment: "Email students and parents
-// now" (a line in its side card). An assignment or quiz: the Emails card with
-// the post email and the evening-before reminder. A material: the post email.
+// Who is emailed about an item. An assessment: "Email students now" (a line in
+// its side card; only students are emailed when it is posted, parents see it in
+// the weekly summary). An assignment or quiz: the Emails card with the post
+// email and the evening-before reminder. A material: the post email.
 'use client'
 
 import type { ItemFormValues } from '@/lib/itemForm'
@@ -19,7 +20,7 @@ export default function EmailOptionsField({ variant, values, set, studentCount, 
   if (variant === 'assessment') {
     return (
       <CheckboxRow checked={values.emailStudents} onChange={(emailStudents) => set({ emailStudents })} disabled={disabled}>
-        Email students and parents now
+        Email students now
       </CheckboxRow>
     )
   }

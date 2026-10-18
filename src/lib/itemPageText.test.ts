@@ -14,6 +14,7 @@ import {
   turnInHint,
   turnInLabel,
   turnedInNote,
+  isFeedbackOnly,
   workHeading,
   workMessagesSubtitle,
   workSavedLabel,
@@ -130,6 +131,16 @@ describe('the Turn in bar', () => {
       'Lina Farouk has sent feedback. You can still unsubmit to change your work.',
     )
     expect(turnedInNote({ teacher: null, canUnsubmit: false, closed: false, feedback: true })).toBe('Your teacher has sent feedback.')
+  })
+
+  it('counts only a feedback-only block as feedback sent', () => {
+    expect(isFeedbackOnly({ status: 'graded', score: null })).toBe(true)
+    expect(isFeedbackOnly({ status: 'graded', score: 8 })).toBe(false)
+    // Work handed in late on an item the teacher marked Missing is not "waiting for feedback" nor "feedback sent".
+    expect(isFeedbackOnly({ status: 'missing', score: null })).toBe(false)
+    expect(isFeedbackOnly({ status: 'excused', score: null })).toBe(false)
+    expect(isFeedbackOnly(null)).toBe(false)
+    expect(isFeedbackOnly(undefined)).toBe(false)
   })
 
   it('explains a turned-in item', () => {

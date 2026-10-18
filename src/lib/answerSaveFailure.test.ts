@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   classifyAnswerSaveError,
+  clearRefusedAnswers,
   forgetRefusedAnswer,
   recallRefusedAnswer,
   rememberRefusedAnswer,
@@ -111,6 +112,50 @@ describe('refused answers in the tab\'s storage', () => {
     })
     rememberRefusedAnswer('answer:u1:i1', 'kept in memory', 'x')
     expect(recallRefusedAnswer('answer:u1:i1')).toEqual({ text: 'kept in memory', message: 'x' })
+  })
+
+  it('is all removed when a session ends, for every student and item, and nothing else is touched', () => {
+    const data = new Map<string, string>()
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+      key: (i: number) => [...data.keys()][i] ?? null,
+      get length() {
+        return data.size
+      },
+    }
+    setRefusedAnswerStorage(storage)
+    storage.setItem('sm.filters.v1:u1:none:/student/todo', 'tab=missing')
+    rememberRefusedAnswer('answer:u1:i1', 'a', 'x')
+    rememberRefusedAnswer('answer:u2:i9', 'b', 'y')
+    // Written by an earlier page load, so this module's memory never saw it.
+    storage.setItem('sm.refusedAnswer.v1:answer:u3:i3', JSON.stringify({ text: 'c', message: 'z' }))
+
+    clearRefusedAnswers()
+
+    expect(recallRefusedAnswer('answer:u1:i1')).toBeNull()
+    expect(recallRefusedAnswer('answer:u2:i9')).toBeNull()
+    expect(recallRefusedAnswer('answer:u3:i3')).toBeNull()
+    expect([...data.keys()]).toEqual(['sm.filters.v1:u1:none:/student/todo'])
+  })
+
+  it('clears the in-memory copies too when the storage cannot be listed', () => {
+    setRefusedAnswerStorage(null)
+    rememberRefusedAnswer('answer:u1:i1', 'a', 'x')
+    clearRefusedAnswers()
+    expect(recallRefusedAnswer('answer:u1:i1')).toBeNull()
+  })
+
+  it('does not throw when storage is blocked', () => {
+    setRefusedAnswerStorage({
+      getItem: () => { throw new Error('blocked') },
+      setItem: () => { throw new Error('blocked') },
+      removeItem: () => { throw new Error('blocked') },
+    })
+    rememberRefusedAnswer('answer:u1:i1', 'kept in memory', 'x')
+    expect(() => clearRefusedAnswers()).not.toThrow()
+    expect(recallRefusedAnswer('answer:u1:i1')).toBeNull()
   })
 
   it('ignores a damaged entry', () => {

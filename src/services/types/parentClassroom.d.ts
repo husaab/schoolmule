@@ -59,3 +59,26 @@ export interface ParentClassroomSummary {
   needsYou: NeedsYouItem[];
   children: ChildClassroomSummary[];
 }
+
+export type SummaryFrequency = 'weekly' | 'daily';
+
+/** A day of the week, 0 (Sunday) to 6 (Saturday). */
+export type SummaryDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * GET and PUT /api/parent-portal/notification-prefs: the parent's own email
+ * choices. `summaryDow` is the effective day (theirs, else the school's);
+ * `schoolDefaultDow` is the school's.
+ */
+export interface NotificationPrefs {
+  weeklySummary: boolean;
+  summaryFrequency: SummaryFrequency;
+  summaryDow: SummaryDay;
+  missingAlerts: boolean;
+  schoolDefaultDow: SummaryDay;
+}
+
+/** What a PUT may carry: any of these; the rest keep their saved value. `summaryDow: null` follows the school's day. */
+export type NotificationPrefsChange = Partial<Pick<NotificationPrefs, 'weeklySummary' | 'summaryFrequency' | 'missingAlerts'>> & {
+  summaryDow?: SummaryDay | null;
+};

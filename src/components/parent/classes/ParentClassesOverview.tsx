@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import Avatar from '@/components/avatar/Avatar'
 import LoadError from '@/components/classroom/LoadError'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
+import EmailPreferencesLink from '@/components/parent/EmailPreferencesLink'
 import ChildClassroomCard from '@/components/parent/classes/ChildClassroomCard'
 import NeedsYouCard from '@/components/parent/classes/NeedsYouCard'
 import { useLoad } from '@/hooks/useLoad'
@@ -73,9 +74,12 @@ export default function ParentClassesOverview({ onOpenChild }: ParentClassesOver
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="font-display text-[26px] font-semibold text-slate-900 sm:text-3xl">This week in class</h2>
-        <p className="text-[15px] text-stone-600">What your children&apos;s teachers posted, and what needs you.</p>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="font-display text-[26px] font-semibold text-slate-900 sm:text-3xl">This week in class</h2>
+          <p className="text-[15px] text-stone-600">What your children&apos;s teachers posted, and what needs you.</p>
+        </div>
+        <EmailPreferencesLink />
       </div>
 
       {!data ? (

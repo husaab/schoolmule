@@ -9,6 +9,7 @@ import {
   CheckCircleIcon,
   EllipsisHorizontalIcon,
 } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 import type { Message, SenderRole, Thread } from '@/services/types/messaging'
 import {
   deleteMessage,
@@ -19,6 +20,8 @@ import {
   setMuted,
   setStatus,
 } from '@/services/messagingService'
+import { classItemHref } from '@/lib/classroomRoutes'
+import { parentItemHref } from '@/lib/portalRoutes'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -26,7 +29,7 @@ import Composer from './Composer'
 import MessageBubble from './MessageBubble'
 import ThreadContextCard from './ThreadContextCard'
 import StudentContextCard from './StudentContextCard'
-import { displayName, formatDayLabel, othersLabel } from './formatters'
+import { displayName, formatDayLabel, othersLabel, parentsAbsent } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 interface ConversationThreadProps {
@@ -291,8 +294,14 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
             >
               {resolved ? 'Resolved' : 'Open'}
             </span>
-            {general && (
-              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-px text-[10px] font-medium text-slate-600">General</span>
+            {conversation.classworkItemId ? (
+              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-px text-[10px] font-medium text-indigo-700">About an assignment</span>
+            ) : conversation.includesStudent ? (
+              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-px text-[10px] font-medium text-indigo-700">Student</span>
+            ) : (
+              general && (
+                <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-px text-[10px] font-medium text-slate-600">General</span>
+              )
             )}
           </div>
           <p className="truncate text-xs text-slate-500">
@@ -301,7 +310,17 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
               .filter((p) => p.userId !== user.id)
               .map((p) => (p.invitePending ? `${displayName(p)} · invited` : displayName(p)))
               .join(', ') || 'no one else yet'}
+            {/* A student's thread the school keeps from parents (or whose parents have no account yet). */}
+            {isStaff && conversation.includesStudent && parentsAbsent(participants) && ' · parents are not in this conversation'}
           </p>
+          {conversation.classworkItemId && (isStaff ? conversation.classId : true) && (
+            <Link
+              href={isStaff ? classItemHref(conversation.classId as string, conversation.classworkItemId) : parentItemHref(conversation.studentId, conversation.classworkItemId)}
+              className={`text-xs font-medium ${t.accentText} hover:underline`}
+            >
+              {isStaff ? 'Open the work and grading' : 'Open the assignment'}
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {isStaff && (

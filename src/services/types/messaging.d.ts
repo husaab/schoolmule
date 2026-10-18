@@ -50,6 +50,10 @@ export interface ConversationItem {
   lastMessage: LastMessage | null;
   /** Admin lists only: a digest email for this thread failed after retries. */
   emailFailed?: boolean;
+  /** The student is in this thread (they wrote it, or it is about their work); their guardians are in it too unless it is hidden from them. */
+  includesStudent: boolean;
+  /** Set on a thread about one piece of classwork ("Messages about this work"); null otherwise. */
+  classworkItemId: string | null;
 }
 
 export interface Attachment {
@@ -132,6 +136,28 @@ export interface Thread {
   muted: boolean;
   /** Returned on create/reply when guardians were invited or linked. */
   invites?: InviteResult[];
+}
+
+/** A teacher the student may write to (GET /student/conversations/targets). */
+export interface StudentTargetTeacher {
+  userId: string;
+  name: string;
+  avatar: import('./profile').AvatarSpec | null;
+  /** The student's classes this person teaches (none for a homeroom teacher with no class). */
+  classes: { classId: string; subject: string }[];
+}
+
+/** The people a student's new thread reaches: their teachers, and always their guardians. */
+export interface StudentMessageTargets {
+  teachers: StudentTargetTeacher[];
+  /** Linked guardian accounts: the people who will be in every thread. */
+  guardians: { name: string; relation: string | null }[];
+}
+
+/** The student's own number for the Messages badge. */
+export interface StudentUnreadSummary {
+  unreadConversations: number;
+  unreadMessages: number;
 }
 
 export interface UnreadSummary {

@@ -125,7 +125,7 @@ const StaffMessagesPage: React.FC = () => {
                 <ChatBubbleLeftRightIcon className="h-7 w-7 text-cyan-600" /> Messages
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Conversations with parents and announcements to your classes.
+                Conversations with students and parents, and announcements to your classes.
                 {summary.needsReply > 0 && ` ${summary.needsReply} ${summary.needsReply === 1 ? 'needs' : 'need'} a reply.`}
               </p>
             </div>

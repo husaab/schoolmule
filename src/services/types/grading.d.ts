@@ -2,7 +2,7 @@
 // Grading turned-in work (/api/classroom, staff): the grading view's list and
 // one student's submission, draft grades and feedback, per-student Publish,
 // Mark missing and Excuse, and the gradebook grid's classwork layer. The
-// shapes are the backend's (Task 16) verbatim; `thread` arrives with Task 17.
+// shapes are the backend's (Tasks 16 and 17) verbatim.
 //
 // The words: a Draft only the teacher sees, Publish (the teacher's release),
 // Published. Students and parents see "Graded".
@@ -41,7 +41,7 @@ export interface GradingRow {
   feedback: string | null
   /** Counted by "Publish to N students". */
   needsPublish: boolean
-  /** A thread about this work exists (Task 17; false until then). */
+  /** A thread about this work exists (the chat icon beside the student). */
   hasThread: boolean
   label: GradingLabel
 }
@@ -81,7 +81,7 @@ export interface SubmissionFile {
   url: string | null
 }
 
-/** The private thread about this work (Task 17). */
+/** The private thread about this work (null `conversationId`: nobody has written yet). */
 export interface ItemThreadStub {
   conversationId: string | null
   messageCount: number
@@ -94,7 +94,7 @@ export interface SubmissionDetail {
   files: SubmissionFile[]
   /** Task 23. */
   quiz: null
-  /** Task 17; null until then. */
+  /** The private thread about this work; null until someone writes. */
   thread: ItemThreadStub | null
 }
 

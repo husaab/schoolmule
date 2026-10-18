@@ -5,7 +5,7 @@ import { EllipsisHorizontalIcon, PencilSquareIcon, TrashIcon } from '@heroicons/
 import type { Message } from '@/services/types/messaging'
 import AttachmentChip from './AttachmentChip'
 import Avatar from '@/components/avatar/Avatar'
-import { formatTime } from './formatters'
+import { bubbleKind, formatTime, senderLabelOf } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 interface MessageBubbleProps {
@@ -20,9 +20,11 @@ interface MessageBubbleProps {
 
 /**
  * One message. The caller's own messages sit on the right in the tone's
- * accent; everyone else's on the left with an avatar. A removed message
- * keeps its place as a quiet "Message removed" line so the conversation
- * still reads in order.
+ * accent; everyone else's on the left with an avatar. A student's message
+ * reads "(Student)" and sits in indigo for the staff and parents who read it;
+ * for a student, their parents' messages are amber. A removed message keeps
+ * its place as a quiet "Message removed" line so the conversation still
+ * reads in order.
  */
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canEdit, canDelete, onEdit, onDelete }) => {
   const t = toneClasses(tone)
@@ -42,7 +44,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
   }, [menuOpen])
 
   const removed = Boolean(message.deletedAt)
-  const senderLabel = message.senderRelation ? `${message.senderName} (${message.senderRelation})` : message.senderName
+  const senderLabel = senderLabelOf(message)
+  const theirs = { student: t.bubbleStudent, parent: t.bubbleParent, other: t.bubbleTheirs }[bubbleKind(message)]
 
   const saveEdit = async () => {
     const text = draft.trim()
@@ -64,7 +67,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
       Message removed
     </div>
   ) : editing ? (
-    <div className={`rounded-2xl border p-2 ${mine ? t.bubbleMine : t.bubbleTheirs}`}>
+    <div className={`rounded-2xl border p-2 ${mine ? t.bubbleMine : theirs}`}>
       <textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
@@ -96,7 +99,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
   ) : (
     <div
       className={`whitespace-pre-wrap break-words px-3.5 py-2.5 text-sm leading-relaxed ${
-        mine ? `${t.bubbleMine} rounded-2xl rounded-br-md` : `${t.bubbleTheirs} rounded-2xl rounded-bl-md`
+        mine ? `${t.bubbleMine} rounded-2xl rounded-br-md` : `${theirs} rounded-2xl rounded-bl-md`
       }`}
     >
       {message.body}

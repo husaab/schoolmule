@@ -99,6 +99,13 @@ export function turnInHint(opts: { mode: string | null | undefined; canTurnIn: b
 }
 
 /**
+ * True when the visible grade block is feedback alone: published comments and no score. A Missing mark (or an
+ * Excused one) is a grade block too, but it is not feedback: the teacher has not marked the work.
+ */
+export const isFeedbackOnly = (grade: Pick<NonNullable<StudentItem['grade']>, 'status' | 'score'> | null | undefined): boolean =>
+  grade?.status === 'graded' && grade.score == null
+
+/**
  * What a turned-in item says: who grades it and whether it can still be changed. Once the teacher has published
  * feedback (an item with no gradebook column) it is no longer "waiting to be graded".
  */

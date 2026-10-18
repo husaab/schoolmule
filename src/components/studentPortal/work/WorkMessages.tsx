@@ -13,6 +13,7 @@ import Avatar from '@/components/avatar/Avatar'
 import { useLoad } from '@/hooks/useLoad'
 import { postedAtLabel } from '@/lib/classroomText'
 import { workMessagesSubtitle } from '@/lib/itemPageText'
+import { MESSAGE_EDIT_WINDOW_MS } from '@/lib/studentMessages'
 import {
   deleteStudentMessage,
   editStudentMessage,
@@ -22,9 +23,6 @@ import {
 import type { Message, Thread } from '@/services/types/messaging'
 import type { ItemThreadInfo } from '@/services/types/studentPortal'
 import { useNotificationStore } from '@/store/useNotificationStore'
-
-/** A student may change or take back their own message for this long. */
-export const MESSAGE_EDIT_WINDOW_MS = 15 * 60 * 1000
 
 interface WorkMessagesProps {
   itemId: string

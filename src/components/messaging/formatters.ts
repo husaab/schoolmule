@@ -1,4 +1,4 @@
-import type { Participant, SenderRole } from '@/services/types/messaging'
+import type { LastMessage, Message, Participant, SenderRole } from '@/services/types/messaging'
 
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -44,17 +44,47 @@ export const formatBytes = (n: number) => {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** "Layla Test (Mother)" for guardians, plain name for staff. */
+/** "Layla Test (Mother)" for guardians, "Amal Haddad (Student)" for a student, plain name for staff. */
 export const displayName = (p: { name: string; role: SenderRole; relation?: string | null }) =>
-  p.role === 'PARENT' && p.relation ? `${p.name} (${p.relation})` : p.name
+  p.role === 'STUDENT' ? `${p.name} (Student)` : p.role === 'PARENT' && p.relation ? `${p.name} (${p.relation})` : p.name
+
+/** Who a message is from, as written under it: the same labels as displayName. */
+export const senderLabelOf = (m: Pick<Message, 'senderName' | 'senderRole' | 'senderRelation'>): string =>
+  displayName({ name: m.senderName, role: m.senderRole, relation: m.senderRelation })
+
+/** Which bubble colour a message from someone else gets: the student's, a parent's, or the plain one. */
+export const bubbleKind = (m: Pick<Message, 'senderRole'>): 'student' | 'parent' | 'other' =>
+  m.senderRole === 'STUDENT' ? 'student' : m.senderRole === 'PARENT' ? 'parent' : 'other'
 
 /** One line naming who else is in the thread, for headers and the composer. */
 export const othersLabel = (participants: Participant[], myId: string | null) => {
   const others = participants.filter((p) => p.userId !== myId)
   if (others.length === 0) return ''
-  const names = others.map((p) => (p.role === 'PARENT' ? p.name.split(' ')[0] : p.name))
+  const names = others.map((p) => (p.role === 'PARENT' || p.role === 'STUDENT' ? p.name.split(' ')[0] : p.name))
   if (names.length <= 2) return names.join(' and ')
   return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
+}
+
+/** True when the family side of a thread is the student alone (no guardian account is in it). */
+export const parentsAbsent = (participants: Pick<Participant, 'role'>[]): boolean =>
+  !participants.some((p) => p.role === 'PARENT')
+
+/**
+ * What a list row's second line says about the thread: the class for an
+ * assessment thread; for a general one, who it is with and what it is about
+ * ("General", "About an assignment", or the student's own message).
+ */
+export const generalKindLabel = (item: { classworkItemId?: string | null; includesStudent?: boolean }): string =>
+  item.classworkItemId ? 'About an assignment' : item.includesStudent ? 'Student message' : 'General'
+
+/**
+ * The words before a list row's preview: "You: " for the viewer's own side
+ * (staff), "Amal: " when the student wrote (staff and parents read whose it
+ * is), nothing otherwise.
+ */
+export const previewPrefix = (last: Pick<LastMessage, 'senderRole' | 'senderName'>, viewerRole: SenderRole): string => {
+  if (last.senderRole === 'STUDENT') return viewerRole === 'STUDENT' ? 'You: ' : `${last.senderName.split(' ')[0]}: `
+  return last.senderRole === viewerRole && last.senderRole !== 'PARENT' ? 'You: ' : ''
 }
 
 export const isImage = (mimeType: string) => mimeType.startsWith('image/')
@@ -85,3 +115,19 @@ export const fileProblem = (file: File): string | null => {
   if (file.size > MAX_FILE_BYTES) return `${file.name} is larger than 10 MB`
   return null
 }
+
+/** The family side of a thread: a guardian or the student. */
+export const isFamilyRole = (role: SenderRole | null | undefined): boolean => role === 'PARENT' || role === 'STUDENT'
+
+/** Who wrote last, in one word for the admin's table: "Parent", "Student" or "Staff". */
+export const lastSenderWord = (role: SenderRole): 'Parent' | 'Student' | 'Staff' =>
+  role === 'PARENT' ? 'Parent' : role === 'STUDENT' ? 'Student' : 'Staff'
+
+/**
+ * Whose turn it is in an open thread, for the admin's table: a family
+ * member (parent or student) wrote last, so the school owes an answer
+ * ("teacher"); staff wrote last, so the family does ("student" when the
+ * student is in the thread, else "parent").
+ */
+export const waitingOn = (last: Pick<LastMessage, 'senderRole'> | null, withStudent: boolean): 'teacher' | 'parent' | 'student' | null =>
+  !last ? null : isFamilyRole(last.senderRole) ? 'teacher' : withStudent ? 'student' : 'parent'

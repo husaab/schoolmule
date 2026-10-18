@@ -40,7 +40,7 @@ export interface RefusedAnswer {
 
 // The words a refused save left behind, by saver key ("answer:{user}:{item}"). Kept in this browser tab's
 // sessionStorage so they survive the page reloading, with a plain Map when storage is not available.
-type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> & Partial<Pick<Storage, 'key' | 'length'>>
 const PREFIX = 'sm.refusedAnswer.v1:'
 const fallback = new Map<string, RefusedAnswer>()
 let override: Store | null | undefined
@@ -91,5 +91,29 @@ export function forgetRefusedAnswer(key: string): void {
     storage()?.removeItem(PREFIX + key)
   } catch {
     // Nothing more to do.
+  }
+}
+
+/**
+ * Forget every refused answer, whoever's: called when a session ends (every
+ * sign-out path ends in clearUser), so a student's unsent words never outlive
+ * their sign-in on a shared device.
+ */
+export function clearRefusedAnswers(): void {
+  const known = [...fallback.keys()]
+  fallback.clear()
+  try {
+    const store = storage()
+    if (!store) return
+    const doomed: string[] = known.map((k) => PREFIX + k)
+    if (typeof store.key === 'function' && typeof store.length === 'number') {
+      for (let i = 0; i < store.length; i++) {
+        const name = store.key(i)
+        if (name && name.startsWith(PREFIX)) doomed.push(name)
+      }
+    }
+    for (const name of doomed) store.removeItem(name)
+  } catch {
+    // Storage is blocked: the in-memory copies are already gone.
   }
 }
