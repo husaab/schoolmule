@@ -10,7 +10,10 @@
 //  - Typed answer: autosaves through useDebouncedSave (D17). The saver lives
 //    for the session under "answer:{user}:{item}", so an answer still saving
 //    or failed when the student leaves is not lost (it is shown again, failed,
-//    on return). Turn in saves first.
+//    on return). Turn in saves first. A save the server refuses for good (409
+//    ITEM_CLOSED / ALREADY_SUBMITTED) is not retried: the student is told why,
+//    the page reloads to show the true state, and the refused words stay on
+//    screen to copy (RefusedAnswer).
 //  - Turn in / Unsubmit are explicit buttons; the server decides who may.
 //  - Read-only is structural: the card changes nothing unless it is handed
 //    `actions`. A parent's page, and an admin's preview, pass none.
@@ -19,6 +22,7 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
+import { classifyAnswerSaveError, forgetRefusedAnswer, recallRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
 import { downscaleImage } from '@/lib/imageDownscale'
 import { closedNote, itemStatusOf, lateNote, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
@@ -30,6 +34,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import FileRow from './FileRow'
 import FileUploadButtons from './FileUploadButtons'
 import GradeBlock from './GradeBlock'
+import RefusedAnswer from './RefusedAnswer'
 import TurnInBar, { type TurnInBarView } from './TurnInBar'
 import TypedAnswerBox from './TypedAnswerBox'
 import WorkStatusPill from './WorkStatusPill'
@@ -100,16 +105,35 @@ export default function YourWorkCard({
   const kindWord = item.kind === 'quiz' ? 'quiz' : 'assignment'
 
   // The typed answer. The key is set for a student only and never changes for this component's life.
+  const answerKey = userId && actions ? `answer:${userId}:${item.itemId}` : undefined
+  // Set when a save was refused for good, so Turn in does not go on after it.
+  const refusal = useRef<string | null>(null)
+  const [refused, setRefused] = useState<Refused | null>(() => (answerKey ? recallRefusedAnswer(answerKey) : null))
   const answer = useDebouncedSave<string>({
-    key: userId && actions ? `answer:${userId}:${item.itemId}` : undefined,
+    key: answerKey,
     save: async (value, opts) => {
       if (!actions) throw new Error('This can’t be changed here.')
-      await actions.saveAnswer(value, opts)
+      try {
+        await actions.saveAnswer(value, opts)
+      } catch (err) {
+        const settled = classifyAnswerSaveError(err)
+        if (!settled) throw err // a server error or no connection: a failed save the student can retry
+        // The server will never take this answer: not a failure to retry. Say why, keep the words, show the true state.
+        refusal.current = settled.message
+        setTyped(null)
+        if (answerKey) rememberRefusedAnswer(answerKey, value, settled.message)
+        setRefused({ text: value, message: settled.message })
+        notify(settled.message, 'error', 9000)
+        onReload()
+      }
     },
     failedAway: () => `Your answer on "${item.title}" didn't save. Open it again to retry.`,
   })
-  // Whatever the saver still holds (an answer that failed before the student left) wins over the server's copy.
-  const [text, setText] = useState(() => answer.peek() ?? sub?.textAnswer ?? '')
+  // The words typed here and not yet confirmed by the server (an answer that failed before the student left is
+  // picked up again); null shows the server's copy. A refused save resets it to null, so the box never shows
+  // words the server did not take as if it had.
+  const [typed, setTyped] = useState<string | null>(() => answer.peek())
+  const text = typed ?? sub?.textAnswer ?? ''
 
   const [pending, setPending] = useState<PendingUpload[]>([])
   const [preparing, setPreparing] = useState(0)
@@ -118,8 +142,10 @@ export default function YourWorkCard({
 
   const files = sub?.files ?? []
   const canChange = !!actions && !!sub?.canEdit
-  const uploading = pending.some((p) => p.status === 'uploading') || preparing > 0
-  const hasFailedUpload = pending.some((p) => p.status === 'failed')
+  // Once the work cannot change (it closed, or was turned in elsewhere) a failed upload has nowhere to go: no Retry.
+  const shownPending = canChange ? pending : []
+  const uploading = shownPending.some((p) => p.status === 'uploading') || preparing > 0
+  const hasFailedUpload = shownPending.some((p) => p.status === 'failed')
 
   const hasWork =
     mode === 'file' ? files.length > 0 : mode === 'text' ? text.trim().length > 0 : mode === 'done' ? true : false
@@ -145,11 +171,16 @@ export default function YourWorkCard({
   const addFiles = async (picked: File[]) => {
     if (!actions || !canChange) return
     setPreparing((n) => n + picked.length)
-    let prepared: File[]
+    // One photo at a time: a 12 MP photo is about 48 MB decoded, and a gallery pick can be 20 of them.
+    const prepared: File[] = []
     try {
-      prepared = await Promise.all(picked.map((f) => downscaleImage(withMimeType(f))))
+      for (const f of picked) {
+        prepared.push(await downscaleImage(withMimeType(f)))
+        setPreparing((n) => n - 1)
+      }
     } finally {
-      setPreparing((n) => n - picked.length)
+      // Whatever was not prepared (an error part-way) is no longer waited for.
+      setPreparing((n) => n - (picked.length - prepared.length))
     }
     const { ok, problems } = checkSubmissionFiles(prepared, files.length + pending.length)
     if (problems.length > 0) notify(problems.join(' '), 'error', 6000)
@@ -185,7 +216,10 @@ export default function YourWorkCard({
     setBusy('turnIn')
     try {
       if (mode === 'text') {
+        refusal.current = null
         await answer.flush()
+        // The server just refused the answer for good: it has said why and the page is reloading. Do not go on.
+        if (refusal.current) return
         if (answer.hasFailures()) {
           notify("Your answer didn't save yet. Try Turn in again in a moment.", 'error')
           return
@@ -220,7 +254,8 @@ export default function YourWorkCard({
   // ── What to show ────────────────────────────────────────────────────────
 
   const status = itemStatusOf(item)
-  const pill = workStatusLabel(displayStatus(status, canChange && hasWork), sub?.isLate ?? false)
+  // "Mark as done" work has nothing to add, so it is never "Ready to turn in" (the button already says what to do).
+  const pill = workStatusLabel(displayStatus(status, canChange && hasWork && mode !== 'done'), sub?.isLate ?? false)
   const graded = item.grade !== null
   // Work handed in after the teacher marked it missing still reads Missing (the server's rule), but it is in.
   const turnedIn = !!sub?.turnedInAt && status !== 'graded' && status !== 'excused'
@@ -228,7 +263,7 @@ export default function YourWorkCard({
   let bar: TurnInBarView | null = null
   if (actions && sub && item.kind !== 'quiz') {
     if (turnedIn) {
-      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
+      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed, feedback: graded }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
     } else if (sub.canEdit) {
       const blocked = uploading || hasFailedUpload
       const canTurnIn = hasWork && !blocked
@@ -263,6 +298,27 @@ export default function YourWorkCard({
 
       {item.grade && <GradeBlock grade={item.grade} teacherName={teacherName} owner={owner} now={now} />}
 
+      {refused && (
+        <RefusedAnswer
+          text={refused.text}
+          message={refused.message}
+          onUse={
+            canChange && mode === 'text'
+              ? () => {
+                  setTyped(refused.text)
+                  answer.schedule(refused.text)
+                  if (answerKey) forgetRefusedAnswer(answerKey)
+                  setRefused(null)
+                }
+              : undefined
+          }
+          onDismiss={() => {
+            if (answerKey) forgetRefusedAnswer(answerKey)
+            setRefused(null)
+          }}
+        />
+      )}
+
       {!sub ? (
         // Nothing to turn in online: a plain assessment, or work done in class.
         !graded && (
@@ -278,7 +334,7 @@ export default function YourWorkCard({
         <div className="h-24 animate-pulse rounded-[14px] bg-slate-100" aria-label="Loading" />
       ) : mode === 'file' ? (
         <div className="flex flex-col gap-3">
-          {(files.length > 0 || pending.length > 0 || preparing > 0) && (
+          {(files.length > 0 || shownPending.length > 0 || preparing > 0) && (
             <ul className="flex flex-col gap-2.5">
               {files.map((file) => (
                 <FileRow
@@ -288,7 +344,7 @@ export default function YourWorkCard({
                   onRemove={canChange ? () => void removeFile(file) : undefined}
                 />
               ))}
-              {pending.map((p) => (
+              {shownPending.map((p) => (
                 <FileRow
                   key={`pending-${p.key}`}
                   file={{ fileName: p.file.name, mimeType: p.file.type, sizeBytes: p.file.size }}
@@ -301,16 +357,16 @@ export default function YourWorkCard({
               )}
             </ul>
           )}
-          {files.length === 0 && pending.length === 0 && preparing === 0 && !canChange && (
+          {files.length === 0 && shownPending.length === 0 && preparing === 0 && !canChange && (
             <p className="text-sm text-slate-500">No files were added.</p>
           )}
-          {canChange && <FileUploadButtons onPick={(picked) => void addFiles(picked)} compact={files.length + pending.length > 0} />}
+          {canChange && <FileUploadButtons onPick={(picked) => void addFiles(picked)} compact={files.length + shownPending.length > 0} />}
         </div>
       ) : mode === 'text' ? (
         <TypedAnswerBox
           value={text}
           onChange={(value) => {
-            setText(value)
+            setTyped(value)
             answer.schedule(value)
           }}
           onBlur={() => void answer.flush()}

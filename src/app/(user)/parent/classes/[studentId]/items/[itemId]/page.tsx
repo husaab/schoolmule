@@ -108,7 +108,7 @@ function ParentItemContent() {
                 <aside className="flex min-w-0 flex-1 basis-full flex-col gap-4 lg:basis-[300px]">
                   <YourWorkCard
                     item={data}
-                    owner={{ name: name || 'Your child' }}
+                    owner={{ name }}
                     userId={null}
                     actions={null}
                     readOnlyNote={`Only ${first || 'your child'} can turn work in. You can see what ${first || 'your child'} added.`}
@@ -120,7 +120,7 @@ function ParentItemContent() {
                   />
                   {data.thread && data.thread.messageCount > 0 && (
                     <p className="rounded-2xl border border-stone-200 bg-white px-[18px] py-3.5 text-[13px] leading-relaxed text-stone-600">
-                      {parentCommentsLine(name || 'Your child', data.teacher?.name ?? null, data.thread.messageCount)} ·{' '}
+                      {parentCommentsLine(name, data.teacher?.name ?? null, data.thread.messageCount)} ·{' '}
                       <Link
                         href={`/parent/messages?tab=conversations&thread=${encodeURIComponent(data.thread.conversationId)}`}
                         className="font-medium text-amber-800 underline-offset-2 hover:underline"

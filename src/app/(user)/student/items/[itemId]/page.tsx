@@ -22,7 +22,7 @@ import WorkMessages from '@/components/studentPortal/work/WorkMessages'
 import YourWorkCard, { type WorkActions } from '@/components/studentPortal/work/YourWorkCard'
 import BackLink from '@/components/shared/BackLink'
 import { useLoad } from '@/hooks/useLoad'
-import { studentClassHref } from '@/lib/portalRoutes'
+import { studentClassHref, studentTodoHref } from '@/lib/portalRoutes'
 import { isApiError } from '@/services/apiClient'
 import {
   deleteStudentFile,
@@ -91,7 +91,7 @@ function StudentItemContent() {
   const back = (
     <div>
       {fromTodo ? (
-        <BackLink to="/student/todo" className="inline-flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-[15px] font-medium text-slate-700 hover:text-indigo-700">
+        <BackLink to={studentTodoHref()} className="inline-flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-[15px] font-medium text-slate-700 hover:text-indigo-700">
           <ArrowLeftIcon className="h-5 w-5" aria-hidden="true" />
           Back to To-do
         </BackLink>
@@ -121,7 +121,7 @@ function StudentItemContent() {
           message={missing ? "It may have been taken down, or it isn't yours." : item.error.message}
           onRetry={missing ? undefined : reload}
         >
-          <Link href="/student/todo" className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${studentTone.primary}`}>
+          <Link href={studentTodoHref()} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${studentTone.primary}`}>
             Go to To-do
           </Link>
         </LoadError>

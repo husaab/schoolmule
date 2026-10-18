@@ -98,9 +98,13 @@ export function turnInHint(opts: { mode: string | null | undefined; canTurnIn: b
   return `${teacherOr(opts.teacher)} sees it right away.`
 }
 
-/** What a turned-in item says: who grades it and whether it can still be changed. */
-export function turnedInNote(opts: { teacher: string | null; canUnsubmit: boolean; closed: boolean }): string {
+/**
+ * What a turned-in item says: who grades it and whether it can still be changed. Once the teacher has published
+ * feedback (an item with no gradebook column) it is no longer "waiting to be graded".
+ */
+export function turnedInNote(opts: { teacher: string | null; canUnsubmit: boolean; closed: boolean; feedback?: boolean }): string {
   const who = teacherOr(opts.teacher)
+  if (opts.feedback) return opts.canUnsubmit ? `${who} has sent feedback. You can still unsubmit to change your work.` : `${who} has sent feedback.`
   if (opts.canUnsubmit) return `${who} will grade it. You can unsubmit to change it until then.`
   if (opts.closed) return `${who} will grade it. It can't be changed after the due date.`
   return `${who} will grade it.`
@@ -133,7 +137,13 @@ export function gradedLine(teacher: string | null, publishedAt: string | null, n
 
 export type Owner = { you: true } | { name: string }
 
-const possessive = (owner: Owner): string => ('you' in owner ? 'your' : `${firstNameOf(owner.name)}'s`)
+/** "your" for the student, "Amal's" for a parent, "your child's" while the child's name is not known yet. */
+const possessive = (owner: Owner): string => {
+  if ('you' in owner) return 'your'
+  const first = firstNameOf(owner.name)
+  return first ? `${first}'s` : "your child's"
+}
+
 
 export interface GradeBlockCopy {
   tone: 'graded' | 'feedback' | 'missing' | 'excused'
@@ -169,7 +179,7 @@ export function gradeBlockCopy(
   if (grade.score == null) return { tone: 'feedback', label: 'Feedback', score: null, message: null, quote, line }
   return {
     tone: 'graded',
-    label: 'you' in owner ? 'Your grade' : `${firstNameOf(owner.name)}'s grade`,
+    label: cap(`${possessive(owner)} grade`),
     score: { value: formatMark(grade.score), max: grade.maxScore != null ? `/${formatMark(grade.maxScore)}` : '' },
     message: null,
     quote,
@@ -181,7 +191,7 @@ export function gradeBlockCopy(
 // Whose work, messages, and the parent's notes
 
 /** "Your work" for the student, "Amal's work" for a parent. */
-export const workHeading = (owner: Owner): string => ('you' in owner ? 'Your work' : `${firstNameOf(owner.name)}'s work`)
+export const workHeading = (owner: Owner): string => cap(`${possessive(owner)} work`)
 
 /** The student's messages about a piece of work always include their parents. */
 export const workMessagesSubtitle = (teacher: string | null): string => `${teacher ?? 'your teacher'} and your parents`
@@ -195,4 +205,4 @@ export function lensClassworkNote(childName: string, teacher: string | null): st
 
 /** "Private comments between Amal and Lina Farouk: 2" (the link "read" follows it). */
 export const parentCommentsLine = (childName: string, teacher: string | null, count: number): string =>
-  `Private comments between ${firstNameOf(childName)} and ${teacher ?? 'the teacher'}: ${count}`
+  `Private comments between ${firstNameOf(childName) || 'your child'} and ${teacher ?? 'the teacher'}: ${count}`

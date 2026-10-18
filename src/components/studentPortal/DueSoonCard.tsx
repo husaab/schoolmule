@@ -10,7 +10,7 @@
 import Link from 'next/link'
 import { CameraIcon } from '@heroicons/react/24/outline'
 import { duePill, missingSubline } from '@/lib/classroomText'
-import { studentItemHref } from '@/lib/portalRoutes'
+import { studentItemHref, studentTodoHref } from '@/lib/portalRoutes'
 import type { TodoItem } from '@/services/types/studentPortal'
 
 interface DueSoonCardProps {
@@ -38,7 +38,7 @@ export default function DueSoonCard({ missing, dueSoon, now = new Date() }: DueS
     <section className="flex flex-[999_1_520px] basis-full flex-col gap-3.5 rounded-[18px] border border-slate-200/70 bg-white p-[22px] md:basis-[520px]">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-display text-xl font-semibold text-slate-900">Due soon</h3>
-        <Link href="/student/todo" className="text-sm font-medium text-indigo-700 hover:text-indigo-900">
+        <Link href={studentTodoHref()} className="text-sm font-medium text-indigo-700 hover:text-indigo-900">
           See all to-do
         </Link>
       </div>

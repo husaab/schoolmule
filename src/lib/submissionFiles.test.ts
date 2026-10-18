@@ -39,6 +39,11 @@ describe('checkSubmissionFile', () => {
     expect(checkSubmissionFile(file('notes.txt', ''))).toBe('"notes.txt" can\'t be turned in. Use a photo, PDF, Word or PowerPoint file.')
   })
 
+  it('refuses .heif, which the server does not take (only .heic)', () => {
+    expect(SUBMISSION_ACCEPT.split(',')).not.toContain('.heif')
+    expect(checkSubmissionFile(file('IMG_1.heif', 'image/heif'))).toContain("can't be turned in")
+  })
+
   it('refuses a video, a spreadsheet and the like', () => {
     expect(checkSubmissionFile(file('clip.mp4', 'video/mp4'))).toBe('"clip.mp4" can\'t be turned in. Use a photo, PDF, Word or PowerPoint file.')
     expect(checkSubmissionFile(file('sheet.xlsx', 'application/vnd.ms-excel'))).toContain("can't be turned in")

@@ -10,14 +10,13 @@ export const MAX_SUBMISSION_FILES = 20
 /** Files per upload request (the server's multer limit). */
 export const UPLOAD_BATCH = 5
 
-const EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.pdf', '.doc', '.docx', '.ppt', '.pptx']
+const EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.pdf', '.doc', '.docx', '.ppt', '.pptx']
 /** The file picker's `accept` for "Upload a file". */
 export const SUBMISSION_ACCEPT = EXTENSIONS.join(',')
 
-/** The types the server matches each extension against; HEIC is the one a browser may send without a type. */
+/** The type the server matches HEIC against; it is the one a browser may send without a type. */
 const MIME_BY_EXTENSION: Record<string, string> = {
   '.heic': 'image/heic',
-  '.heif': 'image/heif',
 }
 
 const extensionOf = (name: string): string => {

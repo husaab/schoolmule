@@ -28,8 +28,7 @@ export function useSubmissionMode(
   loadClasswork: (classId: string) => Promise<StudentClasswork>,
 ): SubmissionModeState {
   // From the item itself, else from the list the student came from.
-  const fromItem = item ? inferSubmissionMode(item) : undefined
-  const inferred = fromItem !== undefined ? fromItem : item ? recallSubmissionMode(item.itemId) : undefined
+  const inferred = item ? inferSubmissionMode(item, recallSubmissionMode(item.itemId)) : undefined
 
   // The last mode known for this item. Set while rendering (the "derive state" pattern), so there is no flash.
   const [known, setKnown] = useState<{ itemId: string; mode: SubmissionMode | null } | null>(null)

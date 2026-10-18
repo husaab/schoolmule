@@ -51,6 +51,27 @@ describe('inferSubmissionMode', () => {
     expect(inferSubmissionMode(item({ submission: submission({ textAnswer: 'My answer' }) }))).toBe('text')
   })
 
+  it('trusts the list the student came from over what the work holds', () => {
+    // A teacher switched the assignment to a typed answer after the student had uploaded a file.
+    const files = [{ fileId: 'f1', fileName: 'a.jpg', mimeType: 'image/jpeg', sizeBytes: 10 }]
+    expect(inferSubmissionMode(item({ submission: submission({ files }) }), 'text')).toBe('text')
+    expect(inferSubmissionMode(item({ submission: submission({ textAnswer: 'Words' }) }), 'file')).toBe('file')
+  })
+
+  it("still prefers the server's own field over the list", () => {
+    expect(inferSubmissionMode(item({ submissionMode: 'done' }), 'file')).toBe('done')
+  })
+
+  it('has nothing to turn in for a quiz or a missing submission whatever the list said', () => {
+    expect(inferSubmissionMode(item({ kind: 'quiz' }), 'file')).toBeNull()
+    expect(inferSubmissionMode(item({ submission: null }), 'file')).toBeNull()
+  })
+
+  it("falls back to the work's contents when no list was seen", () => {
+    const files = [{ fileId: 'f1', fileName: 'a.jpg', mimeType: 'image/jpeg', sizeBytes: 10 }]
+    expect(inferSubmissionMode(item({ submission: submission({ files }) }), undefined)).toBe('file')
+  })
+
   it('cannot tell when nothing has been added yet', () => {
     expect(inferSubmissionMode(item())).toBeUndefined()
     expect(inferSubmissionMode(item({ submission: submission({ textAnswer: '' }) }))).toBeUndefined()

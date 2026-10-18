@@ -3,7 +3,8 @@
 // title, "Science · Ms. Siddiqui", and on the right when it is due ("Fri 3:30
 // pm", amber when it is today or tomorrow; "Anytime" in slate) with what kind
 // of work it is ("Assignment · photo or file"). The whole row opens the
-// assignment.
+// assignment. On a phone the kind line moves under the title, so the title
+// keeps the width.
 'use client'
 
 import Link from 'next/link'
@@ -42,10 +43,11 @@ export default function TodoRow({ item, tab, group, now = new Date() }: TodoRowP
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-base font-medium">{item.title}</span>
         <span className="truncate text-[13px] text-slate-500">{todoMeta(item)}</span>
+        <span className="truncate text-xs text-slate-500 sm:hidden">{todoKindLine(item)}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1 text-right">
         <span className={`text-sm font-medium ${WHEN_INK[when.tone]}`}>{when.text}</span>
-        <span className="text-xs text-slate-500">{todoKindLine(item)}</span>
+        <span className="hidden text-xs text-slate-500 sm:block">{todoKindLine(item)}</span>
       </span>
     </Link>
   )

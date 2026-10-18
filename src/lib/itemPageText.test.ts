@@ -125,6 +125,13 @@ describe('the Turn in bar', () => {
     expect(turnInHint({ mode: 'done', canTurnIn: true, teacher: null })).toBe('Your teacher sees it right away.')
   })
 
+  it('says feedback has come, not that the work is waiting to be graded', () => {
+    expect(turnedInNote({ teacher: 'Lina Farouk', canUnsubmit: true, closed: false, feedback: true })).toBe(
+      'Lina Farouk has sent feedback. You can still unsubmit to change your work.',
+    )
+    expect(turnedInNote({ teacher: null, canUnsubmit: false, closed: false, feedback: true })).toBe('Your teacher has sent feedback.')
+  })
+
   it('explains a turned-in item', () => {
     expect(turnedInNote({ teacher: 'Lina Farouk', canUnsubmit: true, closed: false })).toBe('Lina Farouk will grade it. You can unsubmit to change it until then.')
     expect(turnedInNote({ teacher: 'Lina Farouk', canUnsubmit: false, closed: true })).toBe("Lina Farouk will grade it. It can't be changed after the due date.")
@@ -198,6 +205,14 @@ describe('whose work it is', () => {
   it('headings the card for the student and for a parent', () => {
     expect(workHeading({ you: true })).toBe('Your work')
     expect(workHeading({ name: 'Amal Haddad' })).toBe("Amal's work")
+  })
+
+  it("reads \"Your child's\" while the child's name is not known yet, never \"Your's\"", () => {
+    expect(workHeading({ name: '' })).toBe("Your child's work")
+    const grade = { score: 8, maxScore: 10, status: 'graded' as const, feedback: null, publishedAt: null }
+    expect(gradeBlockCopy(grade, 'Lina Farouk', { name: '' }, NOW).label).toBe("Your child's grade")
+    expect(gradeBlockCopy({ ...grade, score: null, status: 'excused' }, null, { name: '' }, NOW).message).toBe("This one doesn't count toward your child's grade.")
+    expect(parentCommentsLine('', 'Lina Farouk', 2)).toBe('Private comments between your child and Lina Farouk: 2')
   })
 
   it('names the teacher and the parents in the messages heading', () => {
