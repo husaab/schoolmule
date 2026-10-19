@@ -17,6 +17,7 @@ import type { GradeValue } from '@/lib/schoolUtils'
 import { getGradeDisplayName } from '@/lib/schoolUtils'
 import { filterClasses, type ClassListFilterValues } from '@/lib/classListFilters'
 import { torontoDateKey } from '@/lib/studentAccounts'
+import { gradeKey, sectionLabel } from '@/lib/classGradeSections'
 
 const TZ = 'America/Toronto'
 
@@ -54,12 +55,14 @@ export const headerMeta = (
 export const cardMeta = (card: Pick<ClassCard, 'grade' | 'studentCount'>): string =>
   `${gradeShort(card.grade)} · ${plural(card.studentCount, 'student', 'students')}`
 
-/** "Term 1 · 4 classes · 87 students" (students summed across the classes shown). */
-export const homeSummary = (term: string, cards: Pick<ClassCard, 'studentCount'>[]): string => {
-  const students = cards.reduce((sum, c) => sum + (c.studentCount || 0), 0)
-  return [term, plural(cards.length, 'class', 'classes'), plural(students, 'student', 'students')]
-    .filter(Boolean)
-    .join(' · ')
+/**
+ * "Term 1 · 4 classes · 3 grades", or "· Grade 5" when they share one. Not a
+ * student total: the same children sit in each of a grade's classes.
+ */
+export const homeSummary = (term: string, cards: { grade: string | number | null | undefined }[]): string => {
+  const grades = [...new Set(cards.map((c) => gradeKey(c.grade)))].filter((k) => k !== 'none')
+  const gradePart = grades.length === 1 ? sectionLabel(grades[0]) : grades.length > 1 ? plural(grades.length, 'grade', 'grades') : ''
+  return [term, plural(cards.length, 'class', 'classes'), gradePart].filter(Boolean).join(' · ')
 }
 
 /** The header's name for the `term` filter ('active' | 'all' | a term name). */

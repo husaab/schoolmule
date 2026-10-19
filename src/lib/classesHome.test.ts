@@ -56,12 +56,14 @@ describe('labels', () => {
     expect(cardMeta(card({ grade: 'SK', studentCount: 1 }))).toBe('SK · 1 student')
   })
 
-  it('sums the header line', () => {
-    expect(homeSummary('Term 1', [card(), card({ studentCount: 19 }), card({ studentCount: 24 }), card()])).toBe(
-      'Term 1 · 4 classes · 87 students',
+  it('sums the header line in classes and grades', () => {
+    expect(homeSummary('Term 1', [card({ grade: '4' }), card(), card({ grade: '6' }), card({ grade: '6' })])).toBe(
+      'Term 1 · 4 classes · 3 grades',
     )
-    expect(homeSummary('Term 1', [card({ studentCount: 1 })])).toBe('Term 1 · 1 class · 1 student')
-    expect(homeSummary('', [])).toBe('0 classes · 0 students')
+    expect(homeSummary('Term 1', [card(), card(), card()])).toBe('Term 1 · 3 classes · Grade 5')
+    expect(homeSummary('Term 1', [card({ grade: 'JK' })])).toBe('Term 1 · 1 class · Junior Kindergarten')
+    expect(homeSummary('Term 1', [])).toBe('Term 1 · 0 classes')
+    expect(homeSummary('', [])).toBe('0 classes')
   })
 
   it('titles a class the way the server labels it', () => {
