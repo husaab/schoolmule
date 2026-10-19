@@ -2,8 +2,10 @@
 // The grading view's student list (Teacher-Grading board): filters "All n",
 // "To grade n", "Missing n" (URL ?filter=), then one row per student with
 // their avatar, name, status ("Graded · draft" blue, "Turned in" green,
-// "Turned in · late" amber, "Missing" rose, "Not turned in yet" slate) and
-// score (a draft grey italic, published solid, missing "0" in rose).
+// "Turned in · late" amber, "Missing" rose, "Not turned in yet" slate, and
+// "Graded earlier — check the new work" amber when new work came in after the
+// draft, Fable I1) and score (a draft grey italic, published solid, missing
+// "0" in rose).
 'use client'
 
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
@@ -11,8 +13,8 @@ import Avatar from '@/components/avatar/Avatar'
 import {
   GRADING_FILTER_LABELS,
   GRADING_FILTERS,
-  LABEL_INK,
   rowScore,
+  rowStatus,
   SCORE_INK,
   type GradingFilter,
 } from '@/lib/gradingView'
@@ -65,6 +67,7 @@ export default function GradingStudentList({ rows, counts, filter, onFilter, sel
         ) : (
           rows.map((row) => {
             const score = rowScore(row, linked)
+            const statusLine = rowStatus(row)
             const selected = row.studentId === selectedId
             return (
               <button
@@ -84,7 +87,7 @@ export default function GradingStudentList({ rows, counts, filter, onFilter, sel
                       <ChatBubbleLeftRightIcon className="h-3.5 w-3.5 shrink-0 text-cyan-600" aria-label="Has messages about this work" />
                     )}
                   </span>
-                  <span className={`text-xs ${LABEL_INK[row.label]}`}>{row.label}</span>
+                  <span className={`text-xs ${statusLine.ink}`}>{statusLine.text}</span>
                 </span>
                 {score.text && <span className={`text-sm tabular-nums ${SCORE_INK[score.tone]}`}>{score.text}</span>}
               </button>

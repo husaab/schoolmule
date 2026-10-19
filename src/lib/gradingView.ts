@@ -49,11 +49,30 @@ export const hasDraft = (row: Pick<GradingRow, 'draftScore' | 'draftStatus'>): b
 const gradeVisible = (row: GradingRow): boolean => row.publishedScore !== null || row.publishedStatus !== null
 
 /**
- * Waiting for the teacher: turned in, no draft yet and nothing published.
- * Without a gradebook column (`linked` false) published feedback is the grade.
+ * Fable I1: the student turned the work in again after the teacher's draft
+ * was made (a draft is invisible to them, so they may unsubmit and hand in
+ * new work while it waits for Publish). The server flags the row
+ * (`draftPredatesWork`). It is back in "To grade", and "Publish to N
+ * students" leaves it out until the teacher saves the score or feedback
+ * again, so a grade for the old work is never published for the new.
+ * An older server never sends the flag: nothing is flagged.
+ */
+export const gradedEarlier = (row: Pick<GradingRow, 'draftPredatesWork'>): boolean => row.draftPredatesWork === true
+
+export const GRADED_EARLIER_NOTE = 'Graded earlier — check the new work'
+
+/** What "Publish to N students" publishes: drafts waiting, minus the ones made before the newest work came in. */
+export const inPublishAll = (row: Pick<GradingRow, 'needsPublish' | 'draftPredatesWork'>): boolean =>
+  row.needsPublish && !gradedEarlier(row)
+
+/**
+ * Waiting for the teacher: turned in, no draft yet and nothing published, or
+ * a draft made before the newest work came in (graded earlier). Without a
+ * gradebook column (`linked` false) published feedback is the grade.
  */
 export function isToGrade(row: GradingRow, linked: boolean): boolean {
   if (!row.turnedInAt) return false
+  if (gradedEarlier(row)) return true
   if (!linked) return !row.publishedAt
   return !hasDraft(row) && !gradeVisible(row)
 }
@@ -71,7 +90,7 @@ export function gradingCounts(rows: GradingRow[], linked: boolean): GradingCount
     turnedIn: rows.filter((r) => r.turnedInAt).length,
     toGrade: rows.filter((r) => isToGrade(r, linked)).length,
     missing: rows.filter((r) => r.status === 'missing').length,
-    drafts: rows.filter((r) => r.needsPublish).length,
+    drafts: rows.filter(inPublishAll).length,
     published: rows.filter((r) => r.publishedAt).length,
   }
 }
@@ -87,6 +106,12 @@ export const LABEL_INK: Record<GradingLabel, string> = {
   Excused: 'text-slate-500',
 }
 
+/** The status line under a student's name: the server's label, or the graded-earlier note in amber. */
+export function rowStatus(row: Pick<GradingRow, 'label' | 'draftPredatesWork'>): { text: string; ink: string } {
+  if (gradedEarlier(row)) return { text: GRADED_EARLIER_NOTE, ink: 'text-amber-800' }
+  return { text: row.label, ink: LABEL_INK[row.label] ?? 'text-slate-600' }
+}
+
 export type ScoreTone = 'draft' | 'published' | 'missing' | 'muted' | 'none'
 
 export const SCORE_INK: Record<ScoreTone, string> = {
@@ -100,7 +125,7 @@ export const SCORE_INK: Record<ScoreTone, string> = {
 /** The score at the end of a row: a draft grey italic, published solid, missing "0" in rose. */
 export function rowScore(row: GradingRow, linked: boolean): { text: string; tone: ScoreTone } {
   if (!linked) return { text: '', tone: 'none' }
-  if (row.label === 'Graded · draft') {
+  if (row.label === 'Graded · draft' || (gradedEarlier(row) && hasDraft(row))) {
     if (row.draftStatus === 'missing') return { text: '0', tone: 'missing' }
     if (row.draftStatus === 'excused') return { text: 'Excused', tone: 'draft' }
     if (row.draftScore !== null) return { text: formatScore(row.draftScore), tone: 'draft' }
@@ -205,6 +230,42 @@ export const publishOneHint = (first: string, linked: boolean, signsIn?: boolean
   return `${shows}. ${first} gets an email if they sign in to SchoolMule.`
 }
 
+/** The panel's note for a student graded before their newest work came in (Fable I1), and its Keep button. */
+export function gradedEarlierLines(first: string, linked: boolean, columnPublished: boolean): { title: string; body: string; keep: string } {
+  if (!linked) {
+    return {
+      title: GRADED_EARLIER_NOTE,
+      body: `${first} turned in new work after you wrote feedback. Your draft feedback is kept, but it won't be published until you save it again: change it, or keep it as it is.`,
+      keep: 'Keep this feedback',
+    }
+  }
+  const live = columnPublished ? ` The column is published, so keeping the grade shows it to ${first} at once.` : ''
+  return {
+    title: GRADED_EARLIER_NOTE,
+    body: `${first} turned in new work after you graded it. Your draft grade and feedback are kept, but they won't be published until you save them again: change them, or keep them as they are.${live}`,
+    keep: 'Keep this grade',
+  }
+}
+
+/**
+ * "Keep this grade": the draft as the panel holds it, saved again unchanged,
+ * which tells the server the teacher has seen the new work. Null when there
+ * is nothing to keep.
+ */
+export function keepDraftPatch(
+  current: { score: number | null; status: GradeStatus | null; feedback: string },
+  linked: boolean,
+): GradePatch | null {
+  const patch: GradePatch = {}
+  if (linked) {
+    if (current.status === 'excused' || current.status === 'missing') patch.draftStatus = current.status
+    else if (current.score !== null) patch.draftScore = current.score
+    else if (current.status !== null) patch.draftStatus = current.status
+  }
+  if (current.feedback.trim() !== '') patch.feedback = current.feedback
+  return Object.keys(patch).length > 0 ? patch : null
+}
+
 /** What the panel shows: the saved grade, with an edit not saved yet over it. */
 export function editedGrade(
   row: GradingRow,
@@ -268,8 +329,16 @@ const nameList = (names: string[], max = 6): string =>
  * server) the email is promised only to those who sign in.
  */
 export function publishAllPrompt(rows: GradingRow[], linked: boolean): { title: string; body: string } {
-  const waiting = rows.filter((r) => r.needsPublish)
+  const waiting = rows.filter(inPublishAll)
   const names = waiting.map((r) => firstName(r.name))
+  // Graded before the newest work came in (Fable I1): left out, and said so.
+  const earlier = rows.filter(gradedEarlier).map((r) => firstName(r.name))
+  const leftOut =
+    earlier.length === 0
+      ? ''
+      : earlier.length === 1
+        ? ` ${earlier[0]} isn't included: new work came in after you graded it. Check it, then save the ${linked ? 'grade' : 'feedback'} again to publish it.`
+        : ` ${earlier.length} students aren't included (${nameList(earlier)}): new work came in after you graded them. Check it, then save their ${linked ? 'grades' : 'feedback'} again to publish them.`
   const what = linked ? 'grade and feedback' : 'feedback'
   const known = waiting.every((r) => typeof r.signsIn === 'boolean')
   const emailed = waiting.filter((r) => r.signsIn === true).length
@@ -283,12 +352,12 @@ export function publishAllPrompt(rows: GradingRow[], linked: boolean): { title: 
   if (names.length === 1) {
     return {
       title: linked ? 'Publish 1 grade?' : 'Publish feedback for 1 student?',
-      body: `${names[0]} and parents see the ${what}${email(true)}`,
+      body: `${names[0]} and parents see the ${what}${email(true)}${leftOut}`,
     }
   }
   return {
     title: linked ? `Publish ${names.length} grades?` : `Publish feedback for ${names.length} students?`,
-    body: `${nameList(names)} and parents see their ${what}${email(false)}`,
+    body: `${nameList(names)} and parents see their ${what}${email(false)}${leftOut}`,
   }
 }
 
@@ -324,21 +393,32 @@ export const outsideAudienceMessage = (kind: string): string =>
  * What a Publish (one student, or every draft) did, for the toast. An item
  * with no gradebook column (`linked` false) publishes feedback, not grades.
  * `kind` ('quiz' or anything else for an assignment) words the not-assigned toast.
+ * `earlier`: the students graded before their newest work came in (Fable I1),
+ * whom a Publish leaves out; the toast says so.
  */
 export function publishOutcome(
   result: PublishGradesResult,
   nameOf: (studentId: string) => string,
   linked = true,
   kind = 'assignment',
+  earlier: ReadonlySet<string> = new Set(),
 ): { tone: 'success' | 'info'; message: string } {
   const published = result.publishedStudentIds
   const failedEmails = result.emailSummary?.failed ?? 0
   const emailNote = failedEmails > 0 ? ` ${plural(failedEmails, "email didn't send", "emails didn't send")}.` : ''
   const noun = linked ? 'grade' : 'feedback'
-  if (published.length === 1) return { tone: 'success', message: `Published ${nameOf(published[0])}'s ${noun}.${emailNote}` }
+  const leftOut = result.skipped.filter((s) => earlier.has(s.studentId))
+  const leftOutNote =
+    leftOut.length === 0
+      ? ''
+      : ` ${leftOut.length === 1 ? `${nameOf(leftOut[0].studentId)}'s` : leftOut.length} ${leftOut.length === 1 ? "wasn't" : "weren't"}: new work came in after you graded it.`
+  if (published.length === 1) return { tone: 'success', message: `Published ${nameOf(published[0])}'s ${noun}.${leftOutNote}${emailNote}` }
   if (published.length > 1) {
     const what = linked ? `${published.length} grades` : `feedback for ${published.length} students`
-    return { tone: 'success', message: `Published ${what}.${emailNote}` }
+    return { tone: 'success', message: `Published ${what}.${leftOutNote}${emailNote}` }
+  }
+  if (leftOut.length > 0 && leftOut.length === result.skipped.length) {
+    return { tone: 'info', message: `Nothing published: new work came in after you graded it. Check it, then save the ${noun} again.` }
   }
   const reasons = new Set(result.skipped.map((s) => s.reason))
   if (reasons.size === 1 && reasons.has('unchanged')) {

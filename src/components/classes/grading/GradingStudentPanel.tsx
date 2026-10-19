@@ -16,6 +16,11 @@
 // wins over the quiz's points ("Score set by teacher", with "Use auto-score").
 // When points on an answer save, the grade box shows the score the server now
 // holds.
+//
+// A student who turned in new work after the teacher's draft (Fable I1) gets
+// a note above the grade box, "Graded earlier — check the new work", with
+// "Keep this grade" (the draft saved again as it is). Until the score or
+// feedback is saved again, that draft can't be published.
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -23,7 +28,10 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
 import {
   firstName,
+  gradedEarlier,
+  gradedEarlierLines,
   gradeHint,
+  keepDraftPatch,
   publishOneHint,
   publishOneLabel,
   TURNED_IN_INK,
@@ -172,7 +180,23 @@ export default function GradingStudentPanel({
     onClearMissing()
   }
 
-  const canPublish = canEdit && !busy && (row.needsPublish || touched)
+  // Graded before the newest work came in: shown until the teacher saves the score or feedback again.
+  const earlier = gradedEarlier(row) && !touched
+  const earlierLines = gradedEarlierLines(first, linked, columnPublished)
+  const keepPatch = keepDraftPatch({ score, status, feedback }, linked)
+  const keep = () => {
+    if (!keepPatch) return
+    setTouched(true)
+    onEdit(keepPatch)
+    onCommit()
+  }
+
+  const canPublish = canEdit && !busy && (touched || (row.needsPublish && !gradedEarlier(row)))
+  const publishTitle = canPublish
+    ? undefined
+    : earlier
+      ? `Check ${first}'s new work, then save the ${linked ? 'grade' : 'feedback'} again to publish it.`
+      : `Nothing new to publish for ${first}.`
 
   return (
     <div className="flex min-w-0 flex-[999_1_760px] flex-wrap items-stretch">
@@ -275,6 +299,22 @@ export default function GradingStudentPanel({
             This class is from a past school year, so its grades are read-only.
           </p>
         )}
+        {earlier && (
+          <div role="status" className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-900">
+            <p className="font-medium">{earlierLines.title}</p>
+            <p className="leading-normal">{earlierLines.body}</p>
+            {canEdit && keepPatch && (
+              <button
+                type="button"
+                onClick={keep}
+                disabled={busy}
+                className="cursor-pointer self-start rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {earlierLines.keep}
+              </button>
+            )}
+          </div>
+        )}
 
         {linked && (
           <GradeInput
@@ -321,7 +361,7 @@ export default function GradingStudentPanel({
             type="button"
             onClick={onPublish}
             disabled={!canPublish}
-            title={canPublish ? undefined : `Nothing new to publish for ${first}.`}
+            title={publishTitle}
             className="cursor-pointer rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-[11px] text-[15px] font-medium text-cyan-800 transition-colors hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {publishOneLabel(first, linked)}

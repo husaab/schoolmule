@@ -32,6 +32,7 @@ import {
   editedGrade,
   filterGradingRows,
   firstName,
+  gradedEarlier,
   gradingCounts,
   gradingSubline,
   mergeGradeEdits,
@@ -115,6 +116,8 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
   const linked = Boolean(data?.list.item.gradebook)
   const rows = useMemo(() => data?.list.students ?? [], [data])
   const counts = useMemo(() => gradingCounts(rows, linked), [rows, linked])
+  // Graded before their newest work came in (Fable I1): back in To grade, and left out of Publish to N.
+  const earlierIds = useMemo(() => new Set(rows.filter(gradedEarlier).map((r) => r.studentId)), [rows])
   const shown = useMemo(() => filterGradingRows(rows, filter, linked), [rows, filter, linked])
   const selectedId =
     studentParam && rows.some((r) => r.studentId === studentParam) ? studentParam : (shown[0]?.studentId ?? rows[0]?.studentId ?? null)
@@ -379,6 +382,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
         publishing={busy && confirmAll}
         canEdit={canEdit}
         questionsHref={item.kind === 'quiz' && canEdit ? classItemHref(classId, itemId, 'quiz', { from: 'grading' }) : null}
+        gradedEarlierCount={earlierIds.size}
       />
 
       {outside && (
@@ -452,7 +456,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
                 true,
               )
             }
-            onPublish={() => void act(() => publishGrades(itemId, [selectedRow.studentId]), (r) => publishOutcome(r, nameOf, linked, item.kind))}
+            onPublish={() => void act(() => publishGrades(itemId, [selectedRow.studentId]), (r) => publishOutcome(r, nameOf, linked, item.kind, earlierIds))}
             quiz={
               item.kind === 'quiz'
                 ? {
@@ -484,7 +488,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
             type="button"
             loading={busy}
             onClick={async () => {
-              await act(() => publishGrades(itemId, 'graded'), (r) => publishOutcome(r, nameOf, linked, item.kind))
+              await act(() => publishGrades(itemId, 'graded'), (r) => publishOutcome(r, nameOf, linked, item.kind, earlierIds))
               setConfirmAll(false)
             }}
           >

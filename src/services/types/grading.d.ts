@@ -55,6 +55,13 @@ export interface GradingRow {
    * send it, and then the copy promises the email only to students who sign in.
    */
   signsIn?: boolean
+  /**
+   * Fable I1: the draft grade or feedback was made before the student's newest turn-in (they unsubmitted and
+   * handed in new work while the draft waited). Back in "To grade", flagged "Graded earlier — check the new work",
+   * and left out of "Publish to N students" until the teacher saves the score or feedback again. Optional: older
+   * servers don't send it, and then nothing is flagged.
+   */
+  draftPredatesWork?: boolean
 }
 
 export interface GradingCounts {
@@ -165,6 +172,8 @@ export interface GridOverlayCell {
    * Publish skips as unchanged). Optional: older servers don't send it, and then every draft counts.
    */
   needsPublish?: boolean
+  /** Fable I1: a draft made before the student's newest turn-in; the column's Publish leaves it out. Optional. */
+  draftPredatesWork?: boolean
 }
 
 /** GET /classes/:classId/grid-overlay */

@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { GradingRow } from '@/services/types/grading'
 import {
+  GRADED_EARLIER_NOTE,
   editedGrade,
   filterGradingRows,
   gradeHint,
+  gradedEarlier,
+  gradedEarlierLines,
+  keepDraftPatch,
+  rowStatus,
   gradingCounts,
   gradingSubline,
   isToGrade,
@@ -347,5 +352,144 @@ describe('splitGradeEdits (final review M1)', () => {
       sami: { draftScore: 4 },
     })
     expect(splitGradeEdits({ ali: { draftScore: 9 } }, { ali: { draftScore: null } })).toBeNull()
+  })
+})
+
+// Fable I1: work turned in again after the teacher's draft is back in "To grade", flagged, and left out of
+// "Publish to N students" until the teacher saves the score or feedback again.
+describe('graded earlier: new work came in after the draft', () => {
+  const ali = row({
+    studentId: 'ali',
+    name: 'Ali Haddad',
+    status: 'turned_in',
+    turnedInAt: '2026-10-18T14:00:00.000Z',
+    draftScore: 6,
+    draftStatus: 'graded',
+    feedback: 'Redo question 3',
+    needsPublish: true,
+    label: 'Graded · draft',
+    draftPredatesWork: true,
+    signsIn: true,
+  })
+  const ziad = { ...draft, signsIn: true }
+
+  it('reads the server flag (absent on older servers: never flagged)', () => {
+    expect(gradedEarlier(ali)).toBe(true)
+    expect(gradedEarlier(draft)).toBe(false)
+    expect(gradedEarlier(row({ draftPredatesWork: false }))).toBe(false)
+  })
+
+  it('is back in To grade, linked or not', () => {
+    expect(isToGrade(ali, true)).toBe(true)
+    expect(isToGrade({ ...ali, draftScore: null, draftStatus: null }, false)).toBe(true)
+    // Only work that is turned in waits for grading.
+    expect(isToGrade({ ...ali, turnedInAt: null }, true)).toBe(false)
+    expect(filterGradingRows([ali, ziad, turnedIn], 'to-grade', true).map((r) => r.studentId)).toEqual(['ali', 's2'])
+  })
+
+  it('is counted in To grade and left out of the drafts "Publish to N" publishes', () => {
+    const counts = gradingCounts([ali, ziad, turnedIn], true)
+    expect(counts.toGrade).toBe(2)
+    expect(counts.drafts).toBe(1)
+    // A server that already leaves it out of needsPublish counts the same.
+    expect(gradingCounts([{ ...ali, needsPublish: false }, ziad], true).drafts).toBe(1)
+  })
+
+  it('says so on the row, and still shows the draft score', () => {
+    expect(rowStatus(ali)).toEqual({ text: GRADED_EARLIER_NOTE, ink: 'text-amber-800' })
+    expect(GRADED_EARLIER_NOTE).toBe('Graded earlier — check the new work')
+    expect(rowStatus(draft)).toEqual({ text: 'Graded · draft', ink: 'text-blue-700' })
+    expect(rowScore(ali, true)).toEqual({ text: '6', tone: 'draft' })
+    // A label this build doesn't know yet still gets an ink.
+    expect(rowStatus(row({ label: 'Resubmitted · draft' as GradingRow['label'] })).ink).toBe('text-slate-600')
+    expect(rowScore({ ...ali, label: 'Turned in' }, true)).toEqual({ text: '6', tone: 'draft' })
+  })
+
+  it('the confirm leaves them out and says how many, who and why', () => {
+    const one = publishAllPrompt([ali, ziad], true)
+    expect(one.title).toBe('Publish 1 grade?')
+    expect(one.body).toBe(
+      "Ziad and parents see the grade and feedback, and Ziad gets an email. Ali isn't included: new work came in after you graded it. Check it, then save the grade again to publish it.",
+    )
+    const sara = { ...ali, studentId: 'sara', name: 'Sara Kareem' }
+    const two = publishAllPrompt([ali, sara, ziad, { ...ziad, studentId: 'z2', name: 'Huda Amin' }], true)
+    expect(two.title).toBe('Publish 2 grades?')
+    expect(two.body).toBe(
+      "Ziad, Huda and parents see their grade and feedback, and each student gets an email. 2 students aren't included (Ali, Sara): new work came in after you graded them. Check it, then save their grades again to publish them.",
+    )
+    // Feedback only (no gradebook column).
+    expect(publishAllPrompt([ali, ziad], false).body).toContain('Check it, then save the feedback again to publish it.')
+    // Nobody flagged: the prompt is as before.
+    expect(publishAllPrompt([ziad], true).body).toBe('Ziad and parents see the grade and feedback, and Ziad gets an email.')
+  })
+
+  it("the toast says who was left out, and why", () => {
+    const nameOf = (id: string) => ({ ali: 'Ali', sara: 'Sara', s4: 'Ziad' })[id] ?? 'the student'
+    const earlier = new Set(['ali', 'sara'])
+    expect(
+      publishOutcome(
+        { publishedStudentIds: ['s4'], skipped: [{ studentId: 'ali', reason: 'no_draft' }], assessmentPublished: true },
+        nameOf,
+        true,
+        'assignment',
+        earlier,
+      ).message,
+    ).toBe("Published Ziad's grade. Ali's wasn't: new work came in after you graded it.")
+    expect(
+      publishOutcome(
+        {
+          publishedStudentIds: ['s4', 'x'],
+          skipped: [
+            { studentId: 'ali', reason: 'no_draft' },
+            { studentId: 'sara', reason: 'no_draft' },
+          ],
+          assessmentPublished: true,
+        },
+        nameOf,
+        true,
+        'assignment',
+        earlier,
+      ).message,
+    ).toBe("Published 2 grades. 2 weren't: new work came in after you graded it.")
+    expect(
+      publishOutcome(
+        { publishedStudentIds: [], skipped: [{ studentId: 'ali', reason: 'no_draft' }], assessmentPublished: false },
+        nameOf,
+        true,
+        'assignment',
+        earlier,
+      ),
+    ).toEqual({ tone: 'info', message: "Nothing published: new work came in after you graded it. Check it, then save the grade again." })
+    // Not flagged: the old words.
+    expect(
+      publishOutcome({ publishedStudentIds: [], skipped: [{ studentId: 's4', reason: 'no_draft' }], assessmentPublished: false }, nameOf, true, 'assignment', earlier)
+        .message,
+    ).toBe('Nothing to publish yet. Grade the work first.')
+  })
+
+  it("the panel's note, and what Keep sends", () => {
+    expect(gradedEarlierLines('Ali', true, false)).toEqual({
+      title: GRADED_EARLIER_NOTE,
+      body: "Ali turned in new work after you graded it. Your draft grade and feedback are kept, but they won't be published until you save them again: change them, or keep them as they are.",
+      keep: 'Keep this grade',
+    })
+    expect(gradedEarlierLines('Ali', true, true).body).toContain('The column is published, so keeping the grade shows it to Ali at once.')
+    expect(gradedEarlierLines('Ali', false, false)).toEqual({
+      title: GRADED_EARLIER_NOTE,
+      body: "Ali turned in new work after you wrote feedback. Your draft feedback is kept, but it won't be published until you save it again: change it, or keep it as it is.",
+      keep: 'Keep this feedback',
+    })
+    expect(keepDraftPatch({ score: 6, status: 'graded', feedback: 'Redo question 3' }, true)).toEqual({
+      draftScore: 6,
+      feedback: 'Redo question 3',
+    })
+    expect(keepDraftPatch({ score: null, status: 'excused', feedback: '' }, true)).toEqual({ draftStatus: 'excused' })
+    expect(keepDraftPatch({ score: 6, status: 'graded', feedback: 'Good' }, false)).toEqual({ feedback: 'Good' })
+    expect(keepDraftPatch({ score: null, status: null, feedback: '  ' }, true)).toBeNull()
+  })
+
+  it('a draft made after the newest work is not flagged and behaves as before', () => {
+    expect(isToGrade(draft, true)).toBe(false)
+    expect(publishOneHint('Ziad', true, true)).toBe('Publishing shows the grade and feedback to Ziad and parents, and emails Ziad.')
   })
 })

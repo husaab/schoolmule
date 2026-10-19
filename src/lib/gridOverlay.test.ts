@@ -59,6 +59,21 @@ describe('indexOverlay', () => {
     expect(draftCount(flagged, 'hw1')).toBe(2)
     expect(draftCounts(flagged)).toEqual({ hw1: 2 })
   })
+
+  it('leaves out a draft made before the newest turn-in until it is saved again (Fable I1)', () => {
+    const cells: GridOverlay['cells'] = [
+      { studentId: 's1', assessmentId: 'hw1', state: 'draft', draftScore: 6, draftStatus: 'graded', isLate: false, needsPublish: true, draftPredatesWork: true },
+      { studentId: 's2', assessmentId: 'hw1', state: 'draft', draftScore: 8, draftStatus: 'graded', isLate: false, needsPublish: true, draftPredatesWork: false },
+    ]
+    const stale = indexOverlay({ items: data.items, cells })
+    expect(draftCount(stale, 'hw1')).toBe(1)
+    // The teacher types the score again in the grid: the fresh draft counts.
+    const resaved = applySavedScores(stale, {
+      data: [],
+      drafts: [{ student_id: 's1', assessment_id: 'hw1', draft_score: '6.00', draft_status: 'graded' }],
+    })
+    expect(draftCount(resaved, 'hw1')).toBe(2)
+  })
 })
 
 describe('overlayCell', () => {

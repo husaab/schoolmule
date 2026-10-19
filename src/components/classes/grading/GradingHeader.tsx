@@ -31,6 +31,8 @@ interface GradingHeaderProps {
   canEdit: boolean
   /** A quiz: its questions in the builder. */
   questionsHref?: string | null
+  /** Drafts left out of "Publish to N students": new work came in after them (Fable I1). */
+  gradedEarlierCount?: number
 }
 
 function Stat({ value, label, tone = 'text-slate-900' }: { value: number; label: string; tone?: string }) {
@@ -57,7 +59,14 @@ export default function GradingHeader({
   publishing,
   canEdit,
   questionsHref = null,
+  gradedEarlierCount = 0,
 }: GradingHeaderProps) {
+  const publishTitle =
+    counts.drafts > 0
+      ? undefined
+      : gradedEarlierCount > 0
+        ? `${gradedEarlierCount === 1 ? '1 draft waits' : `${gradedEarlierCount} drafts wait`} for you to check new work and save the grade again.`
+        : 'No drafts are waiting to be published.'
   return (
     <header className="z-20 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8 lg:sticky lg:top-0">
       <div className="flex min-w-0 items-center gap-3.5">
@@ -95,7 +104,7 @@ export default function GradingHeader({
           type="button"
           onClick={onPublishAll}
           disabled={!canEdit || counts.drafts === 0 || publishing}
-          title={counts.drafts === 0 ? 'No drafts are waiting to be published.' : undefined}
+          title={publishTitle}
           className="cursor-pointer rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-[18px] py-[11px] text-[15px] font-medium text-white shadow-sm transition-colors hover:from-cyan-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {publishing ? 'Publishing…' : publishAllLabel(counts.drafts)}

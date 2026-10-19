@@ -51,9 +51,12 @@ export const isTurnInColumn = (index: OverlayIndex, assessmentId: string): boole
  * cell (`needsPublish`): a draft equal to what students already see is
  * skipped as unchanged, so it isn't counted. Before the server sent the flag
  * (or for a draft just typed, until the overlay is read again) every draft
- * counts.
+ * counts. A draft made before the student's newest turn-in
+ * (`draftPredatesWork`, Fable I1) waits for the teacher to save it again, so
+ * it isn't counted either; saving it in the grid writes a fresh cell.
  */
-export const awaitsPublish = (c: GridOverlayCell): boolean => c.state === 'draft' && c.needsPublish !== false
+export const awaitsPublish = (c: GridOverlayCell): boolean =>
+  c.state === 'draft' && c.needsPublish !== false && c.draftPredatesWork !== true
 
 /** Drafts waiting on one column: what its "Publish N" publishes. */
 export const draftCount = (index: OverlayIndex, assessmentId: string): number =>
