@@ -84,7 +84,7 @@ const StudentsCard: React.FC<StudentsCardProps> = ({ classId, classGrade, readOn
           <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
             <UserGroupIcon className="w-5 h-5" />
           </div>
-          <span className="text-lg font-semibold">Manage Students</span>
+          <span className="text-lg font-semibold">Students</span>
           <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
             {enrolledStudents.length} enrolled
           </span>

@@ -14,7 +14,7 @@ import EmailPreferencesLink from '@/components/parent/EmailPreferencesLink'
 import ChildClassroomCard from '@/components/parent/classes/ChildClassroomCard'
 import NeedsYouCard from '@/components/parent/classes/NeedsYouCard'
 import { useLoad } from '@/hooks/useLoad'
-import { firstNameOf } from '@/lib/classroomText'
+import { childrenForClassesPage, firstNameOf } from '@/lib/classroomText'
 import { acknowledgeAnnouncement } from '@/services/announcementService'
 import { getClassroomSummary } from '@/services/parentClassroomService'
 import type { NeedsYouAck, NeedsYouMissing } from '@/services/types/parentClassroom'
@@ -41,7 +41,8 @@ export default function ParentClassesOverview({ onOpenChild }: ParentClassesOver
   const [phoneChild, setPhoneChild] = useState<string | null>(null)
 
   const data = summary.data
-  const kids = data?.children ?? []
+  // Children who sign in first (Parent-Classes board): their week is the one to read.
+  const kids = useMemo(() => childrenForClassesPage(data?.children ?? []), [data])
   // The phone shows one child at a time; the first until another chip is tapped.
   const phoneChildId = kids.find((k) => k.studentId === phoneChild)?.studentId ?? kids[0]?.studentId ?? null
 

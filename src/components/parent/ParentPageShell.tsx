@@ -3,6 +3,7 @@
 import React from 'react'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
+import ParentBottomNav from '@/components/parent/ParentBottomNav'
 
 interface ParentPageShellProps {
   title: string
@@ -13,30 +14,35 @@ interface ParentPageShellProps {
   }
   /** Right-aligned header controls, e.g. a term picker */
   actions?: React.ReactNode
+  /** 'bar': a small title, for a page whose content leads with its own big heading (Parent-Classes board). */
+  titleSize?: 'page' | 'bar'
   children: React.ReactNode
 }
 
 /**
  * Standard scaffold for every parent-portal page: navbar + sidebar + a warm
- * stone background with a friendly page header.
+ * stone background with a friendly page header, and the phone tab bar below
+ * lg (Parent-Phone board).
  */
 const ParentPageShell: React.FC<ParentPageShellProps> = ({
   title,
   subtitle,
   badge,
   actions,
+  titleSize = 'page',
   children,
 }) => {
   return (
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-72 pt-20 min-h-screen bg-stone-50">
+      {/* pb-24: room for the phone tab bar below lg. */}
+      <main className="lg:ml-72 pt-20 pb-24 lg:pb-0 min-h-screen bg-stone-50">
         <div className="p-6 lg:p-8 max-w-5xl mx-auto">
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">{title}</h1>
+                <h1 className={titleSize === 'bar' ? 'text-lg font-semibold text-slate-900' : 'text-2xl lg:text-3xl font-bold text-slate-900'}>{title}</h1>
                 {subtitle && <p className="text-slate-500 mt-1">{subtitle}</p>}
               </div>
               <div className="flex items-center gap-3">
@@ -55,6 +61,7 @@ const ParentPageShell: React.FC<ParentPageShellProps> = ({
           {children}
         </div>
       </main>
+      <ParentBottomNav />
     </>
   )
 }

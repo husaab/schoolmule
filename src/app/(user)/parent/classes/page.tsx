@@ -35,7 +35,13 @@ function ParentClassesContent() {
 
   // The overview carries its own "Email preferences" link beside its heading; the lens has none, so the page does.
   return (
-    <ParentPageShell title="Classes" badge={{ icon: AcademicCapIcon, label: 'Parent' }} actions={child ? <EmailPreferencesLink /> : undefined}>
+    // The overview leads with its own "This week in class" heading: the page title stays small (smoke S12).
+    <ParentPageShell
+      title="Classes"
+      titleSize={child ? 'page' : 'bar'}
+      badge={{ icon: AcademicCapIcon, label: 'Parent' }}
+      actions={child ? <EmailPreferencesLink /> : undefined}
+    >
       {!hydrated || waitingForChildren ? (
         <div className="h-64 animate-pulse rounded-[18px] bg-stone-100" aria-label="Loading" />
       ) : child ? (

@@ -49,8 +49,16 @@ export const notSigningNote = (name: string, homeroomTeacher: string | null): st
 }
 
 /** "See Amal's classes" for a child with several classes or a login, "See Noor's class" for a single homeroom. */
-export const openChildLabel = (child: Pick<ChildClassroomSummary, 'name' | 'signsIn' | 'classCount'>): string =>
-  `See ${firstNameOf(child.name)}'s ${child.signsIn || child.classCount > 1 ? 'classes' : 'class'}`
+/** "Open Yusuf's 8 classes" (Parent-Phone board), "Open Noor's class". */
+export const openChildLabel = (child: Pick<ChildClassroomSummary, 'name' | 'signsIn' | 'classCount'>): string => {
+  const first = firstNameOf(child.name)
+  if (child.classCount === 1) return `Open ${first}'s class`
+  return child.classCount > 1 ? `Open ${first}'s ${child.classCount} classes` : `Open ${first}'s classes`
+}
+
+/** The parent's children in the order the Classes page shows them: those who sign in first (their week is there), each group as the server sent it. */
+export const childrenForClassesPage = <T extends Pick<ChildClassroomSummary, 'signsIn'>>(kids: T[]): T[] =>
+  [...kids].sort((a, b) => Number(b.signsIn) - Number(a.signsIn))
 
 /** The one teacher shared by every class, or null when the classes have different leads (or none). */
 export function commonTeacher<T extends { userId: string | null }>(classes: { teacher: T | null }[]): T | null {
@@ -213,6 +221,71 @@ export function homeDueLine(dueSoon: { dueAt: string | null; date?: string | nul
   const thisWeek = dueSoon.filter((i) => isDueThisWeek(i, now)).length
   if (thisWeek > 0) return thingsDueThisWeek(thisWeek)
   return thingsDueThisWeek(dueSoon.length, 'next week')
+}
+
+// ---------------------------------------------------------------------------
+// Home on a phone (Student-Phone board, smoke S11)
+
+/** "today", "tomorrow", "Wed" (this week or next), else "Oct 30". */
+const dayWord = (key: string, now: Date): string => {
+  const days = daysFromToday(key, now)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  if (days > 1 && days < 7) return weekday(key, 'short')
+  return dayKeyLabel(key)
+}
+
+/** What a due item asks for, in a few words: "4 questions", "mark as done", "turn in a photo". */
+export function workAsk(item: Pick<TodoItem, 'kind' | 'submissionMode' | 'questionCount'>): string {
+  if (item.kind === 'quiz') return item.questionCount ? `${item.questionCount} ${item.questionCount === 1 ? 'question' : 'questions'}` : 'quiz'
+  switch (item.submissionMode) {
+    case 'file':
+      return 'turn in a photo or file'
+    case 'text':
+      return 'type your answer'
+    case 'done':
+      return 'mark as done'
+    default:
+      return 'in class'
+  }
+}
+
+/** "Mon · mark as done" under a due row on the phone's Home. */
+export function phoneDueSubline(item: Pick<TodoItem, 'kind' | 'submissionMode' | 'questionCount' | 'dueAt' | 'date'>, now: Date = new Date()): string {
+  const key = dayKeyOf(item)
+  return [key ? dayWord(key, now) : null, workAsk(item)].filter(Boolean).join(' · ')
+}
+
+/** "Due tomorrow, 3:30 pm" on the phone's "Take a photo & turn in" card. */
+export function photoDueLine(item: Pick<TodoItem, 'dueAt' | 'date'>, now: Date = new Date()): string {
+  const key = dayKeyOf(item)
+  if (!key) return ''
+  const word = dayWord(key, now)
+  const day = word === 'Today' || word === 'Tomorrow' ? word.toLowerCase() : word
+  return item.dueAt ? `Due ${day}, ${timeText(item.dueAt)}` : `Due ${day}`
+}
+
+export interface PhoneHomePlan {
+  /** Missing work, each a rose banner (at most two). */
+  missing: TodoItem[]
+  /** Missing work beyond those two ("N more missing"). */
+  moreMissing: number
+  /** The next thing turned in with a photo: its own card with "Take a photo & turn in". */
+  photo: TodoItem | null
+  /** The rest of what is due, under the To-do's own week headings. */
+  groups: { label: 'This week' | 'Next week'; items: TodoItem[] }[]
+}
+
+/** How the phone's Home lays out what is due and missing (Student-Phone board). */
+export function phoneHomePlan(missing: TodoItem[], dueSoon: TodoItem[], now: Date = new Date()): PhoneHomePlan {
+  const photo = dueSoon.find((i) => i.kind === 'assignment' && i.submissionMode === 'file') ?? null
+  const rest = dueSoon.filter((i) => i !== photo)
+  const thisWeek = rest.filter((i) => isDueThisWeek(i, now))
+  const nextWeek = rest.filter((i) => !isDueThisWeek(i, now))
+  const groups: PhoneHomePlan['groups'] = []
+  if (thisWeek.length) groups.push({ label: 'This week', items: thisWeek })
+  if (nextWeek.length) groups.push({ label: 'Next week', items: nextWeek })
+  return { missing: missing.slice(0, 2), moreMissing: Math.max(0, missing.length - 2), photo, groups }
 }
 
 export interface DuePill {

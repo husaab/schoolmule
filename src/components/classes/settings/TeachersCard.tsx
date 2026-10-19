@@ -86,9 +86,9 @@ const TeachersCard: React.FC<TeachersCardProps> = ({
             <UserGroupIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Additional Teachers</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Teachers</h2>
             <p className="text-xs text-slate-500">
-              Teachers who can also view and edit this class
+              The lead teacher is set in Details. Co-teachers here can also view and edit this class.
             </p>
           </div>
         </div>

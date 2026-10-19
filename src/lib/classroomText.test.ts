@@ -21,6 +21,7 @@ import {
   needsYouMissingSubline,
   noMarksNote,
   openChildLabel,
+  childrenForClassesPage,
   otherTermFor,
   notSigningNote,
   pctText,
@@ -33,10 +34,15 @@ import {
   thingsDueThisWeek,
   homeDueLine,
   pickGradesClass,
+  phoneDueSubline,
+  phoneHomePlan,
+  photoDueLine,
+  workAsk,
   isDueThisWeek,
   upcomingLabel,
   wasDue,
 } from './classroomText'
+import type { TodoItem } from '@/services/types/studentPortal'
 
 // Thursday, Oct 15 2026, 2:10 pm in Toronto (EDT, UTC-4).
 const NOW = new Date('2026-10-15T18:10:00Z')
@@ -329,9 +335,10 @@ describe('missing work on the parent side', () => {
 
 describe('minor wording and lookups', () => {
   it('writes the open button: plural unless a single homeroom class', () => {
-    expect(openChildLabel({ name: 'Amal Haddad', signsIn: true, classCount: 8 })).toBe("See Amal's classes")
-    expect(openChildLabel({ name: 'Noor Haddad', signsIn: false, classCount: 1 })).toBe("See Noor's class")
-    expect(openChildLabel({ name: 'Sami Kareem', signsIn: false, classCount: 8 })).toBe("See Sami's classes")
+    expect(openChildLabel({ name: 'Amal Haddad', signsIn: true, classCount: 8 })).toBe("Open Amal's 8 classes")
+    expect(openChildLabel({ name: 'Noor Haddad', signsIn: false, classCount: 1 })).toBe("Open Noor's class")
+    expect(openChildLabel({ name: 'Sami Kareem', signsIn: false, classCount: 8 })).toBe("Open Sami's 8 classes")
+    expect(openChildLabel({ name: 'Sami Kareem', signsIn: true, classCount: 0 })).toBe("Open Sami's classes")
   })
 
   it('finds the one teacher every class shares', () => {
@@ -376,5 +383,69 @@ describe('pickGradesClass (smoke S8)', () => {
   it('falls back to the first class when nothing is graded', () => {
     expect(pickGradesClass([math, { classId: 'art', latestPublishedAt: null }], 'gone')).toBe(math)
     expect(pickGradesClass([], null)).toBeNull()
+  })
+})
+
+describe('Home on a phone (Student-Phone board, smoke S11)', () => {
+  const todo = (over: Partial<TodoItem>): TodoItem => ({
+    itemId: 'i',
+    classId: 'c',
+    subject: 'Science',
+    teacherName: 'Layla Saleh',
+    iconUrl: '/x.svg',
+    title: 'Work',
+    kind: 'assignment',
+    submissionMode: 'done',
+    dueAt: null,
+    date: null,
+    status: 'assigned',
+    isLate: false,
+    questionCount: null,
+    turnedInAt: null,
+    publishedAt: null,
+    ...over,
+  })
+  // NOW is Thursday Oct 15, 2:10 pm Toronto.
+  const plant = todo({ itemId: 'plant', title: 'Plant cell diagram', submissionMode: 'file', dueAt: '2026-10-16T19:30:00Z' })
+  const decimals = todo({ itemId: 'dec', title: 'Decimals worksheet', dueAt: '2026-10-19T19:30:00Z' })
+  const quiz = todo({ itemId: 'quiz', title: 'Cells quiz', kind: 'quiz', submissionMode: 'none', questionCount: 4, dueAt: '2026-10-21T19:30:00Z' })
+  const spelling = todo({ itemId: 'sp', title: 'Spelling list 4', status: 'missing', subject: 'English' })
+
+  it('says what each item asks for', () => {
+    expect(workAsk(quiz)).toBe('4 questions')
+    expect(workAsk(decimals)).toBe('mark as done')
+    expect(workAsk(plant)).toBe('turn in a photo or file')
+    expect(workAsk(todo({ submissionMode: 'text' }))).toBe('type your answer')
+  })
+
+  it('writes the rows and the photo card like the board', () => {
+    expect(phoneDueSubline(decimals, NOW)).toBe('Mon · mark as done')
+    expect(phoneDueSubline(quiz, NOW)).toBe('Wed · 4 questions')
+    expect(photoDueLine(plant, NOW)).toBe('Due tomorrow, 3:30 pm')
+  })
+
+  it('leads with missing work, then the next photo turn-in, then the rest by To-do week', () => {
+    const plan = phoneHomePlan([spelling], [decimals, plant, quiz], NOW)
+    expect(plan.missing.map((i) => i.itemId)).toEqual(['sp'])
+    expect(plan.moreMissing).toBe(0)
+    expect(plan.photo?.itemId).toBe('plant')
+    expect(plan.groups).toEqual([{ label: 'Next week', items: [decimals, quiz] }])
+  })
+
+  it('keeps two missing banners and counts the rest', () => {
+    const plan = phoneHomePlan([spelling, { ...spelling, itemId: 'b' }, { ...spelling, itemId: 'c' }], [], NOW)
+    expect(plan.missing).toHaveLength(2)
+    expect(plan.moreMissing).toBe(1)
+    expect(plan.photo).toBeNull()
+    expect(plan.groups).toEqual([])
+  })
+})
+
+describe('childrenForClassesPage (smoke S12: the SK child came first)', () => {
+  it('puts children who sign in first, keeping the order within each group', () => {
+    const maryam = { name: 'Maryam', signsIn: false }
+    const yusuf = { name: 'Yusuf', signsIn: true }
+    const adam = { name: 'Adam', signsIn: true }
+    expect(childrenForClassesPage([maryam, yusuf, adam]).map((k) => k.name)).toEqual(['Yusuf', 'Adam', 'Maryam'])
   })
 })

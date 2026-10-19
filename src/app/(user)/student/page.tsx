@@ -2,7 +2,10 @@
 
 // The student's home (Student-Home and Student-Phone boards): a greeting, a
 // nudge to pick an avatar until they have, what is due soon and missing, the
-// latest published grades, and a card for each of their classes.
+// latest published grades, and a card for each of their classes. Below md the
+// due and missing work is laid out as the phone board has it (PhoneHome), and
+// the avatar beside the greeting opens the picker (the sidebar's Change
+// avatar is desktop-only).
 
 import { useState } from 'react'
 import Avatar from '@/components/avatar/Avatar'
@@ -12,6 +15,7 @@ import ClassCardsGrid from '@/components/classroom/ClassCardsGrid'
 import LoadError from '@/components/classroom/LoadError'
 import NewGradesCard from '@/components/classroom/NewGradesCard'
 import DueSoonCard from '@/components/studentPortal/DueSoonCard'
+import PhoneHome from '@/components/studentPortal/PhoneHome'
 import StudentShell from '@/components/studentPortal/StudentShell'
 import { shareClassesFromHome } from '@/components/studentPortal/useStudentClasses'
 import { useStudentMe } from '@/components/studentPortal/useStudentMe'
@@ -85,13 +89,23 @@ export default function StudentHomePage() {
                 {[longDateLine(now), homeDueLine(data.dueSoon, now)].filter(Boolean).join(' · ')}
               </p>
             </div>
-            <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} className="md:hidden" />
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              disabled={!me}
+              aria-label="Change your avatar"
+              className="shrink-0 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-default md:hidden"
+            >
+              <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} />
+            </button>
           </div>
 
           {showPick && <PickAvatarCard onPick={() => setPickerOpen(true)} />}
 
+          <PhoneHome missing={data.missing} dueSoon={data.dueSoon} newGrades={data.newGrades} now={now} />
+
           {(data.missing.length > 0 || data.dueSoon.length > 0 || data.newGrades.length > 0) && (
-            <div className="flex flex-wrap items-stretch gap-5">
+            <div className="hidden flex-wrap items-stretch gap-5 md:flex">
               <DueSoonCard missing={data.missing} dueSoon={data.dueSoon} now={now} />
               <NewGradesCard
                 grades={data.newGrades}

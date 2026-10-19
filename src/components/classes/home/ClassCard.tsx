@@ -42,7 +42,7 @@ export default function ClassCard({ card, canWrite, onChangeBanner, onCopy, onAr
         aria-label={`Open ${card.subject}, ${meta}`}
         className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[box-shadow,border-color] hover:border-slate-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
       >
-        <ClassBanner identity={card.identity} subject={card.subject} meta={meta} className="h-28 shrink-0" />
+        <ClassBanner identity={card.identity} subject={card.subject} meta={meta} metaBackdrop className="h-28 shrink-0" />
         <span className="relative -mt-6 flex px-5">
           <ClassIcon
             identity={card.identity}

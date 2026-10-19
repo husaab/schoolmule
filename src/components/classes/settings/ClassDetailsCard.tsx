@@ -44,7 +44,7 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
   const [editTeacherId, setEditTeacherId] = useState<string>('')
   const [editTermId, setEditTermId] = useState<string>('')
 
-  const { subject, grade, teacherName, termName, school, createdAt, lastModifiedAt } = classData
+  const { subject, grade, teacherName, termName } = classData
 
   // The form starts from the class as saved each time Edit is pressed.
   const startEditing = () => {
@@ -123,7 +123,7 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">
             <AcademicCapIcon className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">Class Details</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Details</h2>
         </div>
         {readOnly ? null : !isEditing ? (
           <button
@@ -167,10 +167,6 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Teacher</p>
               <p className="text-slate-900 font-medium">{teacherName || '-'}</p>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">School</p>
-              <p className="text-slate-900 font-medium">{school}</p>
-            </div>
             <div className="p-4 bg-slate-50 rounded-xl md:col-span-2">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Term</p>
               <div className="flex items-center gap-2">
@@ -189,14 +185,6 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
                   </span>
                 )}
               </div>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Created</p>
-              <p className="text-slate-900 font-medium">{new Date(createdAt).toLocaleDateString()}</p>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Last Modified</p>
-              <p className="text-slate-900 font-medium">{lastModifiedAt ? new Date(lastModifiedAt).toLocaleDateString() : '-'}</p>
             </div>
           </div>
         ) : (

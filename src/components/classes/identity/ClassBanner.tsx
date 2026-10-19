@@ -17,11 +17,13 @@ interface ClassBannerProps {
   meta?: ReactNode
   /** Show the class icon beside the subject (the header and preview layout). */
   withIcon?: boolean
+  /** A narrow card, where the banner's art can run under the meta line: give the line a soft backdrop (smoke S12). */
+  metaBackdrop?: boolean
   className?: string
   children?: ReactNode
 }
 
-export default function ClassBanner({ identity, subject, meta, withIcon = false, className = '', children }: ClassBannerProps) {
+export default function ClassBanner({ identity, subject, meta, withIcon = false, metaBackdrop = false, className = '', children }: ClassBannerProps) {
   const color = CLASS_COLORS[identity.color] ?? CLASS_COLORS.slate
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const showImage = identity.bannerUrl && identity.bannerUrl !== failedUrl
@@ -49,7 +51,11 @@ export default function ClassBanner({ identity, subject, meta, withIcon = false,
         )}
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-display text-[22px] font-semibold leading-tight">{subject}</span>
-          {meta && <span className="truncate text-sm">{meta}</span>}
+          {meta && (
+            <span className={`truncate text-sm ${metaBackdrop && showImage ? '-ml-1.5 self-start rounded-md bg-white/75 px-1.5 py-px' : ''}`}>
+              {meta}
+            </span>
+          )}
         </div>
       </div>
       {children}

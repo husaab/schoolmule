@@ -237,7 +237,8 @@ function PostCard({ post, isNew, focused, tone, now, onOpenAttachment, onAck, on
 
 function NoticeRow({ notice, href, tone, now }: { notice: ClassNotice; href: string | null; tone: 'student' | 'parent'; now: Date }) {
   const t = TONE[tone]
-  const Icon = notice.kind === 'material' ? BookmarkIcon : ClipboardDocumentListIcon
+  // The same icons as the Classwork list: an assignment and a quiz look different (smoke S12).
+  const Icon = notice.kind === 'material' ? BookmarkIcon : notice.kind === 'quiz' ? ClipboardDocumentListIcon : DocumentTextIcon
   const meta = [shortDate(notice.postedAt, now), notice.dueAt ? dueLine(notice.dueAt, now) : null].filter(Boolean).join(' · ')
   const body = (
     <>
