@@ -38,7 +38,7 @@ export default function AvatarPickerModal({
   photosAllowed = false,
   onUsePhoto,
 }: AvatarPickerModalProps) {
-  const start = (): AvatarSpec => (isAvatarSpec(value) ? value : name ? drawnAvatar(name) : DEFAULT_AVATAR)
+  const start = (): AvatarSpec => (isAvatarSpec(value) ? value : drawnAvatar(name) ?? DEFAULT_AVATAR)
   const [draft, setDraft] = useState<AvatarSpec>(start)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

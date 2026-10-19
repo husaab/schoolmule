@@ -1,8 +1,8 @@
 // src/components/avatar/Avatar.tsx
 // The one way a person is pictured in SchoolMule: their photo when they have
 // one, otherwise the illustrated avatar they picked (style, skin tone,
-// background), otherwise one drawn from their name (lib/studentAvatar). Never
-// initials. `neutral` shows the blank avatar instead of a drawn one.
+// background), otherwise one drawn from their name (lib/studentAvatar), else
+// the neutral one. Never initials. `neutral` forces the neutral avatar.
 'use client'
 
 import { createElement, useState } from 'react'
