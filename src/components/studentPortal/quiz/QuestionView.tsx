@@ -7,7 +7,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { answerText, questionLine } from '@/lib/quizPlayer'
+import { answerText, questionLine, rejectedLine } from '@/lib/quizPlayer'
 import type { QuizAnswerValue, StudentQuestion } from '@/services/types/quiz'
 import QuizDots from './QuizDots'
 
@@ -17,6 +17,12 @@ interface QuestionViewProps {
   count: number
   answer: QuizAnswerValue | null | undefined
   answered: boolean[]
+  /** Questions whose answer the quiz refused (a rose dot). */
+  problems?: boolean[]
+  /** This question's answer was refused for good: the server's words. */
+  rejected?: string | null
+  /** "Clear my answer". */
+  onClear?: () => void
   nextLabel: string
   /** Nothing can change (a preview of answers already in). */
   readOnly?: boolean
@@ -42,6 +48,9 @@ export default function QuestionView({
   count,
   answer,
   answered,
+  problems,
+  rejected = null,
+  onClear,
   nextLabel,
   readOnly = false,
   focusOnMount = false,
@@ -145,6 +154,21 @@ export default function QuestionView({
 
       {readOnly && !answerText(question, answer) && <p className="text-sm text-slate-500">Not answered.</p>}
 
+      {rejected && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-[15px] text-rose-900">
+          <span className="min-w-[200px] flex-1">{rejectedLine(rejected)}</span>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="min-h-11 cursor-pointer rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-800 hover:bg-rose-100"
+            >
+              Clear my answer
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-between gap-3 pt-2">
         <button
           type="button"
@@ -162,7 +186,7 @@ export default function QuestionView({
           {nextLabel}
         </button>
       </div>
-      <QuizDots count={count} current={index} answered={answered} onGo={onGo} />
+      <QuizDots count={count} current={index} answered={answered} problems={problems} onGo={onGo} />
     </div>
   )
 }

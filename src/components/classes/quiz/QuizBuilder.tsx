@@ -17,12 +17,20 @@
 // Once a student has turned the quiz in, saved questions can be changed but
 // not removed, nor change type (the server's QUIZ_TAKEN rule): those buttons
 // are off, with the reason.
+//
+// Work that can't be saved yet is never dropped (fix round 1): an unfinished
+// question (or a quiz emptied of every question, which the server refuses)
+// keeps the pill at "Not saved yet", is kept for the session so leaving and
+// coming back brings it back (keepUnfinished), and every way out (Close, Edit
+// details, Open grading, closing the tab) warns first, naming the questions.
 'use client'
 
-import { useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EyeIcon, ExclamationTriangleIcon, InformationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import Modal from '@/components/shared/modal'
+import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
 import SaveStatusPill from '@/components/classroom/SaveStatusPill'
 import DeleteItemModal from '@/components/classes/classwork/DeleteItemModal'
 import { KindTile } from '@/components/classes/classwork/ItemRow'
@@ -37,9 +45,14 @@ import {
   builderSaveProblem,
   builderSubline,
   draftFromQuestion,
+  hasIssues,
+  keepUnfinished,
+  keptUnfinished,
   moveInList,
   newQuestion,
+  notSavedLabel,
   totalPoints,
+  unsavedQuestions,
   validateQuestions,
   waitingLine,
   type DraftQuestion,
@@ -99,6 +112,8 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
   const [settings, setSettings] = useState<QuizSettings>(initialItem.quiz ?? data.settings)
   const [hasSubmissions, setHasSubmissions] = useState(data.hasSubmissions)
   const savedRef = useRef(savedMap(data.questions))
+  // How many questions the server holds (an emptied quiz keeps its last one).
+  const [savedCount, setSavedCount] = useState(data.questions.length)
   const [ids] = useState(() => idsFor(itemId))
   // What fixes the last refused save (see builderSaveProblem).
   const [problemFix, setProblemFix] = useState<'saved' | 'grading' | null>(null)
@@ -126,8 +141,11 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     },
   })
 
-  // A change that failed (or was still saving) when the teacher last left is picked up again.
-  const [questions, setQuestions] = useState<DraftQuestion[]>(() => saver.peek() ?? data.questions.map(draftFromQuestion))
+  // A change that failed (or was still saving) when the teacher last left is picked up again, and so is a list
+  // with a question that couldn't be saved yet (kept for the session).
+  const [questions, setQuestions] = useState<DraftQuestion[]>(
+    () => saver.peek() ?? keptUnfinished(itemId) ?? data.questions.map(draftFromQuestion),
+  )
   // The list as it stands, for handlers between renders.
   const latest = useRef(questions)
   const [selected, setSelected] = useState<string | null>(questions[0]?.key ?? null)
@@ -139,6 +157,8 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
   const [busy, setBusy] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [preview, setPreview] = useState<{ open: boolean; run: number }>({ open: false, run: 0 })
+  // Where a way out goes once the teacher confirms leaving questions that aren't saved yet.
+  const [leaveTarget, setLeaveTarget] = useState<string | null>(null)
 
   /** A save came back: new questions get their ids, and the saved versions are kept for the next one. */
   function applySaved(keys: string[], res: QuizBuilderData) {
@@ -147,6 +167,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
       if (saved) ids.set(key, saved.questionId)
     })
     savedRef.current = savedMap(res.questions)
+    setSavedCount(res.questions.length)
     setHasSubmissions(res.hasSubmissions)
     const withIds = latest.current.map((q) => (q.questionId || !ids.has(q.key) ? q : { ...q, questionId: ids.get(q.key) ?? null }))
     latest.current = withIds
@@ -155,6 +176,23 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
 
   const issues = useMemo(() => validateQuestions(questions), [questions])
   const waiting = waitingLine(questions, Object.keys(issues.questions))
+  const unsaved = useMemo(() => unsavedQuestions(questions, savedCount), [questions, savedCount])
+
+  // Unsaved work stays for the session, so leaving and coming back brings it back.
+  useEffect(() => {
+    keepUnfinished(itemId, questions, { savedCount })
+  }, [itemId, questions, savedCount])
+  // Closing or reloading the tab would lose it: the browser asks first.
+  const hasUnsaved = unsaved.length > 0
+  useEffect(() => {
+    if (!hasUnsaved) return
+    const ask = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', ask)
+    return () => window.removeEventListener('beforeunload', ask)
+  }, [hasUnsaved])
   const total = totalPoints(questions)
   const classLabel = classTitle(page.class.grade, page.class.subject)
   const writtenOff = settings.release === 'on_submit'
@@ -228,6 +266,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     try {
       const res = await getQuestions(itemId)
       savedRef.current = savedMap(res.data.questions)
+      setSavedCount(res.data.questions.length)
       setHasSubmissions(res.data.hasSubmissions)
       const fresh = res.data.questions.map(draftFromQuestion)
       latest.current = fresh
@@ -274,6 +313,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
       return false
     }
     const now = validateQuestions(latest.current)
+    if (!hasIssues(now)) return true
     if (now.quiz) {
       notify(now.quiz, 'error')
       return false
@@ -293,8 +333,13 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     if (busy) return
     setBusy(true)
     try {
-      if (patch.status === 'draft') await saver.flush()
-      else if (!(await ready())) return
+      if (patch.status === 'draft') {
+        await saver.flush()
+        if (saver.hasFailures()) {
+          notify("The questions' last changes didn't save. Retry them first.", 'error')
+          return
+        }
+      } else if (!(await ready())) return
       const res = await updateItem(itemId, patch)
       setItem(res.data)
       notify(message, 'success')
@@ -314,6 +359,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     action = (
       <Link
         href={classItemHref(classId, itemId)}
+        onClick={(e) => void leave(e, classItemHref(classId, itemId))}
         className="rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-5 py-2.5 text-[15px] font-medium text-white shadow-sm hover:from-cyan-600 hover:to-teal-600"
       >
         Open grading
@@ -343,7 +389,11 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     )
   }
 
-  const onClose = async (e: MouseEvent<HTMLAnchorElement>) => {
+  /**
+   * Every way out (Close, Edit details, Open grading): what is typed saves
+   * first; a failed save stops it; questions that can't be saved yet ask first.
+   */
+  const leave = async (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
     e.preventDefault()
     await saver.flush()
@@ -351,7 +401,11 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
       notify("Some changes didn't save. Retry them, or go back to what's saved, before you leave.", 'error')
       return
     }
-    router.push(backHref)
+    if (unsavedQuestions(latest.current, savedCount).length > 0) {
+      setLeaveTarget(href)
+      return
+    }
+    router.push(href)
   }
 
   const selectedIndex = questions.findIndex((q) => q.key === selected)
@@ -364,7 +418,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
         <div className="flex min-w-0 items-center gap-3.5">
           <Link
             href={backHref}
-            onClick={(e) => void onClose(e)}
+            onClick={(e) => void leave(e, backHref)}
             aria-label="Close"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200"
           >
@@ -377,7 +431,11 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <SaveStatusPill status={saver.status} onRetry={() => void saver.retry()} />
+          <SaveStatusPill
+            status={saver.status}
+            onRetry={() => void saver.retry()}
+            notSaved={notSavedLabel(unsaved)}
+          />
           <button
             type="button"
             onClick={() => setPreview((p) => ({ open: true, run: p.run + 1 }))}
@@ -431,8 +489,14 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
             </p>
           )}
           {issues.quiz && questions.length === 0 && (
-            <p className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600">
-              No questions yet. Add the first one below.
+            <p
+              className={`rounded-2xl border px-4 py-6 text-center text-sm ${
+                savedCount > 0 ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              {savedCount > 0
+                ? 'A quiz needs at least one question, so the last saved one stays until you add another.'
+                : 'No questions yet. Add the first one below.'}
             </p>
           )}
           {waiting && <p className="text-[13px] text-amber-800">{waiting}</p>}
@@ -455,7 +519,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
               reservedOptionIds={q.questionId ? (savedRef.current.get(q.questionId)?.options.map((o) => o.id) ?? []) : []}
               imageBusy={uploading.has(q.key)}
               onPickImage={() => pickImage(q.key)}
-              disabled={false}
+              disabled={busy}
             />
           ))}
 
@@ -465,7 +529,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
             onImage={imageKey ? () => pickImage(imageKey) : null}
             imageTarget={imageLabel}
             writtenOff={writtenOff}
-            disabled={false}
+            disabled={busy}
           />
           <input
             ref={imageInput}
@@ -484,9 +548,10 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
           questions={questions}
           totalPoints={total}
           editHref={classItemHref(classId, itemId, 'edit')}
+          onLeave={(e, href) => void leave(e, href)}
           busy={settingBusy}
           error={settingError}
-          disabled={false}
+          disabled={busy}
           onChange={(patch) => void changeSetting(patch)}
         />
       </main>
@@ -508,9 +573,34 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
         onDeleted={() => {
           setDiscardOpen(false)
           saver.discard()
+          keepUnfinished(itemId, [])
           router.push(classHref(classId, 'classwork'))
         }}
       />
+      <Modal isOpen={leaveTarget !== null} onClose={() => setLeaveTarget(null)} size="md">
+        <ModalHeader title="Some questions aren't saved yet" icon={ExclamationTriangleIcon} tone="warning" />
+        <ModalBody>
+          <ConfirmBody tone="warning" consequences={{ title: 'Still needed', items: unsaved.map((u) => (u.n > 0 ? `Question ${u.n}: ${u.needs.join(' ')}` : u.needs.join(' '))) }}>
+            They stay here while this tab is open, so you can finish them when you come back. Closing the tab loses them.
+          </ConfirmBody>
+        </ModalBody>
+        <ModalFooter>
+          <Button type="button" variant="secondary" onClick={() => setLeaveTarget(null)}>
+            Keep editing
+          </Button>
+          <Button
+            type="button"
+            variant="warning"
+            onClick={() => {
+              const to = leaveTarget
+              setLeaveTarget(null)
+              if (to) router.push(to)
+            }}
+          >
+            Leave anyway
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

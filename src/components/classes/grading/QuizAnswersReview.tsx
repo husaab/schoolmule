@@ -79,6 +79,8 @@ interface Typed {
   points: string
   note: string
   error: string | null
+  /** The last points the box held that the server takes: a note typed while the box is wrong saves with these. */
+  good: number | null
 }
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100)
@@ -177,7 +179,7 @@ function ReviewBody({
       if (!a.answerId) continue
       const edit = unsaved[a.answerId]
       const points = edit ? edit.teacherPoints : a.teacherPoints
-      out[a.answerId] = { points: points === null ? '' : fmt(points), note: (edit ? edit.teacherNote : a.teacherNote) ?? '', error: null }
+      out[a.answerId] = { points: points === null ? '' : fmt(points), note: (edit ? edit.teacherNote : a.teacherNote) ?? '', error: null, good: points }
     }
     return out
   })
@@ -199,12 +201,14 @@ function ReviewBody({
   const change = (a: TeacherQuizAnswer, patch: Partial<Typed>) => {
     if (!a.answerId) return
     const answerId = a.answerId
-    const next: Typed = { ...(typed[answerId] ?? { points: '', note: '', error: null }), ...patch }
+    const next: Typed = { ...(typed[answerId] ?? { points: '', note: '', error: null, good: a.teacherPoints }), ...patch }
     const parsed = parseOverride(next.points, a.points)
     next.error = 'error' in parsed ? parsed.error : null
+    if ('value' in parsed) next.good = parsed.value
     setTyped((all) => ({ ...all, [answerId]: next }))
-    if ('value' in parsed) {
-      saver.schedule({ [answerId]: { studentId, teacherPoints: parsed.value, teacherNote: next.note.trim() ? next.note : null } })
+    // A wrong points box holds only the points back: a note typed meanwhile still saves, with the last good points.
+    if ('value' in parsed || patch.note !== undefined) {
+      saver.schedule({ [answerId]: { studentId, teacherPoints: next.good, teacherNote: next.note.trim() ? next.note : null } })
     }
   }
 

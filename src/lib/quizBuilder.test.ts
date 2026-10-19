@@ -7,10 +7,14 @@ import {
   changeKind,
   draftFromQuestion,
   hasIssues,
+  keepUnfinished,
+  keptUnfinished,
   moveInList,
   newQuestion,
+  notSavedLabel,
   nextOptionId,
   parsePointsText,
+  pointsTextFor,
   pointsUnit,
   previewQuestions,
   quizGradebookLine,
@@ -19,6 +23,7 @@ import {
   toggleCorrect,
   toQuestionInput,
   totalPoints,
+  unsavedQuestions,
   validateQuestions,
   waitingLine,
   writtenHint,
@@ -370,5 +375,53 @@ describe('a save the server refuses', () => {
   it("keeps any other refusal in the server's words", () => {
     expect(builderSaveProblem(apiError('Question 3: mark the right answer', null))).toEqual({ message: 'Question 3: mark the right answer', fix: null })
     expect(builderSaveProblem(new TypeError(''))).toEqual({ message: "The questions didn't save.", fix: null })
+  })
+})
+
+describe('fix round 1: the points box follows the question', () => {
+  it('keeps what is typed while it means the same number', () => {
+    expect(pointsTextFor('1.', 1)).toBe('1.')
+    expect(pointsTextFor('', null)).toBe('')
+    expect(pointsTextFor('2.50', 2.5)).toBe('2.50')
+  })
+
+  it('shows the saved points again after "Go back to what\'s saved" (the box held a refused 1)', () => {
+    expect(pointsTextFor('1', 2)).toBe('2')
+    expect(pointsTextFor('1', null)).toBe('')
+    expect(pointsTextFor('', 3)).toBe('3')
+  })
+})
+
+describe("fix round 1: unfinished questions are kept for the session, never dropped", () => {
+  it('keeps the whole list while a question is unfinished, and forgets it once everything saves', () => {
+    const unfinished = newQuestion('one', 'k-new')
+    keepUnfinished('item-1', [one({ key: 'k1', questionId: ID1 }), unfinished])
+    expect(keptUnfinished('item-1')?.map((q) => q.key)).toEqual(['k1', 'k-new'])
+    keepUnfinished('item-1', [one({ key: 'k1', questionId: ID1 })])
+    expect(keptUnfinished('item-1')).toBeNull()
+  })
+
+  it('keeps a quiz emptied of every question (the server keeps the last one)', () => {
+    keepUnfinished('item-2', [], { savedCount: 1 })
+    expect(keptUnfinished('item-2')).toEqual([])
+    keepUnfinished('item-2', [], { savedCount: 0 })
+    expect(keptUnfinished('item-2')).toBeNull()
+  })
+
+  it('lists what is not saved yet, for the leave warning and the pill', () => {
+    const list = [one({ key: 'k1' }), { ...newQuestion('one', 'k2'), prompt: 'Which?' }, { ...newQuestion('short', 'k3'), prompt: 'What?' }]
+    expect(unsavedQuestions(list, 0)).toEqual([
+      { n: 2, needs: ['Give it at least 2 choices.', 'Mark the right answer.'] },
+      { n: 3, needs: ['Type at least one accepted answer.'] },
+    ])
+    expect(unsavedQuestions([], 2)).toEqual([{ n: 0, needs: ['A quiz needs at least one question, so the last saved one stays until you add another.'] }])
+    expect(unsavedQuestions([], 0)).toEqual([])
+  })
+
+  it('never lets the pill say "Saved" while something is not saved', () => {
+    expect(notSavedLabel([])).toBeNull()
+    expect(notSavedLabel([{ n: 3 }])).toBe('Question 3 not saved yet')
+    expect(notSavedLabel([{ n: 2 }, { n: 3 }])).toBe('2 questions not saved yet')
+    expect(notSavedLabel([{ n: 0 }])).toBe('Not saved yet')
   })
 })

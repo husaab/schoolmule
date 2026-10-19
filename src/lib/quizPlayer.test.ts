@@ -7,6 +7,7 @@ import {
   doneCopy,
   initPlayer,
   isAnswered,
+  isRejectedSave,
   nextLabel,
   playerSubline,
   pointsWord,
@@ -15,9 +16,13 @@ import {
   quizIntroState,
   quizReducer,
   quizSaveVerdict,
+  reconcileRejected,
+  rejectedLine,
   resultRows,
   resultsScoreLine,
+  saveOneByOne,
   toAnswerPayload,
+  turnInBlock,
   type PlayerState,
 } from './quizPlayer'
 import type { StudentQuestion, StudentQuiz } from '@/services/types/quiz'
@@ -342,5 +347,72 @@ describe('the results', () => {
     expect(answerText(QUESTIONS[3], undefined)).toBeNull()
     expect(correctText(QUESTIONS[2], ['cytoplasm', 'the cytoplasm'])).toBe('cytoplasm, the cytoplasm')
     expect(correctText(QUESTIONS[0], undefined)).toBeNull()
+  })
+})
+
+describe('fix round 1: an answer the quiz no longer takes (400)', () => {
+  it('tells a refusal for good (400) from one to retry', () => {
+    expect(isRejectedSave({ status: 400, message: "Some of these questions aren't in this quiz." })).toBe(true)
+    expect(isRejectedSave({ status: 500, message: 'Error saving your answers' })).toBe(false)
+    expect(isRejectedSave({ status: 409, code: 'ALREADY_SUBMITTED' })).toBe(false)
+    expect(isRejectedSave(new TypeError('Failed to fetch'))).toBe(false)
+  })
+
+  it('sends the answers one by one to find the refused one; the others save', async () => {
+    const sent: string[] = []
+    const send = async (questionId: string) => {
+      sent.push(questionId)
+      if (questionId === Q2) throw Object.assign(new Error("One of your answers couldn't be saved."), { status: 400 })
+      if (questionId === Q3) throw Object.assign(new Error('Server down'), { status: 500 })
+    }
+    const out = await saveOneByOne({ [Q1]: { choice: 'b' }, [Q2]: { choices: ['z'] }, [Q3]: { text: 'x' } }, send)
+    expect(sent).toEqual([Q1, Q2, Q3])
+    expect(out.saved).toEqual([Q1])
+    expect(out.rejected).toEqual({ [Q2]: "One of your answers couldn't be saved." })
+    expect(out.failed).toEqual({ [Q3]: { text: 'x' } })
+    expect(out.message).toBe('Server down')
+  })
+
+  it('stops at a settled refusal (turned in elsewhere, closed)', async () => {
+    const send = async () => {
+      throw Object.assign(new Error("You've already turned in this quiz."), { status: 409, code: 'ALREADY_SUBMITTED' })
+    }
+    const out = await saveOneByOne({ [Q1]: { choice: 'b' }, [Q2]: { choices: ['a'] } }, send)
+    expect(out.settled?.message).toBe("You've already turned in this quiz. Your last answers were not saved.")
+  })
+
+  it('takes the quiz as it now stands: answers to removed questions and choices go', () => {
+    let s = initPlayer(QUESTIONS, { [Q1]: { choice: 'c' }, [Q2]: { choices: ['a', 'c'] }, [Q4]: { text: 'Firm.' } })
+    s = quizReducer(s, { type: 'go', index: 3 })
+    const fewer = [{ ...QUESTIONS[0], options: QUESTIONS[0].options.filter((o) => o.id !== 'c') }, QUESTIONS[1]]
+    s = quizReducer(s, { type: 'questions', questions: fewer })
+    expect(s.questions).toHaveLength(2)
+    expect(s.index).toBe(1)
+    expect(s.answers[Q1]).toBeNull()
+    expect(s.answers[Q2]).toEqual({ choices: ['a', 'c'] })
+    expect(s.answers[Q4]).toBeUndefined()
+  })
+
+  it('clears an answer', () => {
+    const s = quizReducer(initPlayer(QUESTIONS, { [Q3]: { text: 'x' } }), { type: 'clear', questionId: Q3 })
+    expect(s.answers[Q3]).toBeNull()
+  })
+
+  it("words a refused answer on its question: the server's words, then what to do", () => {
+    expect(rejectedLine("One of your answers couldn't be saved.")).toBe(
+      "This answer didn't save: One of your answers couldn't be saved. Your teacher may have changed this question since the quiz opened. Change your answer, or clear it.",
+    )
+  })
+
+  it('keeps refusals only for questions still in the quiz', () => {
+    expect(reconcileRejected({ [Q1]: 'a', [Q4]: 'b' }, QUESTIONS.slice(0, 2))).toEqual({ [Q1]: 'a' })
+  })
+
+  it('blocks Turn in while an answer is refused, naming the question', () => {
+    expect(turnInBlock({}, QUESTIONS)).toBeNull()
+    expect(turnInBlock({ [Q3]: 'Keep a short answer to 300 characters.' }, QUESTIONS)).toEqual({
+      index: 2,
+      message: "Question 3's answer didn't save: Keep a short answer to 300 characters. Change it or clear it, then turn in.",
+    })
   })
 })

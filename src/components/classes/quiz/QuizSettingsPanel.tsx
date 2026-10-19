@@ -7,6 +7,7 @@
 // item's PATCH; a refusal is said under its card.
 'use client'
 
+import type { MouseEvent } from 'react'
 import Link from 'next/link'
 import { canReleaseOnSubmit, quizGradebookLine, quizWhenLines, writtenHint } from '@/lib/quizBuilder'
 import type { Item } from '@/services/types/classwork'
@@ -19,6 +20,8 @@ interface QuizSettingsPanelProps {
   totalPoints: number
   /** The item's details (title, due, gradebook) are edited in the item form. */
   editHref: string | null
+  /** Leaving for the item form: the builder saves first and warns about questions not saved yet. */
+  onLeave?: (e: MouseEvent<HTMLAnchorElement>, href: string) => void
   /** A setting is saving: which one. */
   busy: keyof QuizSettings | null
   error: string | null
@@ -35,6 +38,7 @@ export default function QuizSettingsPanel({
   questions,
   totalPoints,
   editHref,
+  onLeave,
   busy,
   error,
   disabled,
@@ -50,7 +54,7 @@ export default function QuizSettingsPanel({
         <div className="flex items-baseline justify-between gap-2">
           <h2 className={TITLE}>When</h2>
           {editHref && (
-            <Link href={editHref} className="text-[13px] font-medium text-cyan-700 hover:text-cyan-800">
+            <Link href={editHref} onClick={(e) => onLeave?.(e, editHref)} className="text-[13px] font-medium text-cyan-700 hover:text-cyan-800">
               Edit details
             </Link>
           )}

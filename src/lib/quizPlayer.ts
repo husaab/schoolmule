@@ -82,6 +82,10 @@ export type PlayerAction =
   | { type: 'back' }
   | { type: 'review' }
   | { type: 'submitted' }
+  /** The quiz as it now stands (a reload after a refused answer): answers to removed questions or choices go. */
+  | { type: 'questions'; questions: StudentQuestion[] }
+  /** "Clear my answer". */
+  | { type: 'clear'; questionId: string }
 
 export const initPlayer = (questions: StudentQuestion[], answers: AnswerMap = {}): PlayerState => ({
   questions,
@@ -128,9 +132,38 @@ export function quizReducer(state: PlayerState, action: PlayerAction): PlayerSta
       return { ...state, stage: 'review' }
     case 'submitted':
       return { ...state, stage: 'done' }
+    case 'clear':
+      if (!state.questions.some((x) => x.questionId === action.questionId)) return state
+      return { ...state, answers: { ...state.answers, [action.questionId]: null } }
+    case 'questions': {
+      const byId = new Map(action.questions.map((q) => [q.questionId, q]))
+      const answers: AnswerMap = {}
+      for (const [questionId, answer] of Object.entries(state.answers)) {
+        const q = byId.get(questionId)
+        if (!q) continue
+        answers[questionId] = keptAnswer(q, answer)
+      }
+      const count = action.questions.length
+      return { ...state, questions: action.questions, answers, index: count === 0 ? 0 : clamp(state.index, count) }
+    }
     default:
       return state
   }
+}
+
+/** An answer against the question as it now stands: a pick of a choice that is gone is dropped. */
+function keptAnswer(q: StudentQuestion, answer: QuizAnswerValue | null): QuizAnswerValue | null {
+  if (!answer) return answer
+  const ids = new Set(q.options.map((o) => o.id))
+  const choice = field(answer, 'choice')
+  if (q.kind === 'one') return typeof choice === 'string' && ids.has(choice) ? { choice } : null
+  const choices = field(answer, 'choices')
+  if (q.kind === 'many') {
+    if (!Array.isArray(choices)) return null
+    const kept = (choices as string[]).filter((c) => ids.has(c))
+    return kept.length === choices.length ? answer : { choices: kept }
+  }
+  return typeof field(answer, 'text') === 'string' ? answer : null
 }
 
 /** The bar under the header: question by question, full on the review. */
@@ -229,6 +262,76 @@ export function quizSaveVerdict(err: unknown): { message: string } | null {
   const said = field(err, 'message')
   const reason = typeof said === 'string' && said.trim() ? said.trim() : code === 'ITEM_CLOSED' ? CLOSED_FALLBACK : SUBMITTED_FALLBACK
   return { message: `${reason} ${NOT_SAVED}` }
+}
+
+/**
+ * A 400 on an answer: the quiz will never take it as it is (a question or a
+ * choice the teacher removed, a type that changed, an answer too long).
+ * Retrying it can't help; the student changes it or clears it.
+ */
+export const isRejectedSave = (err: unknown): boolean => field(err, 'status') === 400
+
+export interface OneByOne {
+  /** Saved. */
+  saved: string[]
+  /** Refused for good (400), by question, with the server's words. */
+  rejected: Record<string, string>
+  /** Failed for another reason (no connection, a server error): kept for Retry. */
+  failed: AnswerMap
+  message: string
+  /** Turned in elsewhere or closed: nothing more can be saved. */
+  settled: { message: string } | null
+}
+
+/**
+ * A save of several answers was refused with a 400: send them one at a time
+ * to find the one the quiz won't take, so the others still save and only that
+ * one is shown to the student.
+ */
+export async function saveOneByOne(
+  answers: AnswerMap,
+  send: (questionId: string, answer: QuizAnswerValue | null) => Promise<unknown>,
+): Promise<OneByOne> {
+  const out: OneByOne = { saved: [], rejected: {}, failed: {}, message: '', settled: null }
+  for (const [questionId, answer] of Object.entries(answers)) {
+    try {
+      await send(questionId, answer)
+      out.saved.push(questionId)
+    } catch (err) {
+      const settled = quizSaveVerdict(err)
+      if (settled) {
+        out.settled = settled
+        break
+      }
+      const message = err instanceof Error && err.message ? err.message : "This answer couldn't be saved."
+      if (isRejectedSave(err)) out.rejected[questionId] = message
+      else {
+        out.failed[questionId] = answer
+        out.message = message
+      }
+    }
+  }
+  return out
+}
+
+/** What the question says under a refused answer: the server's words, then what to do. */
+export const rejectedLine = (message: string): string =>
+  `This answer didn't save: ${message} Your teacher may have changed this question since the quiz opened. Change your answer, or clear it.`
+
+/** Refusals for questions still in the quiz (a removed question's refusal goes with it). */
+export function reconcileRejected(rejected: Record<string, string>, questions: Pick<StudentQuestion, 'questionId'>[]): Record<string, string> {
+  const ids = new Set(questions.map((q) => q.questionId))
+  return Object.fromEntries(Object.entries(rejected).filter(([id]) => ids.has(id)))
+}
+
+/** Turn in waits while an answer is refused: the first such question, and what to do. Null when nothing blocks. */
+export function turnInBlock(rejected: Record<string, string>, questions: Pick<StudentQuestion, 'questionId'>[]): { index: number; message: string } | null {
+  const index = questions.findIndex((q) => rejected[q.questionId] !== undefined)
+  if (index < 0) return null
+  return {
+    index,
+    message: `Question ${index + 1}'s answer didn't save: ${rejected[questions[index].questionId]} Change it or clear it, then turn in.`,
+  }
 }
 
 // ---------------------------------------------------------------------------

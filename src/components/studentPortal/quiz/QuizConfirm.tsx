@@ -12,11 +12,14 @@ interface QuizConfirmProps {
   busy: boolean
   /** Why Turn in is off (a preview); null when it is on. */
   disabledReason?: string | null
+  /** A refused answer: Turn in waits until it is changed or cleared. */
+  block?: { index: number; message: string } | null
+  onGoTo?: (index: number) => void
   onCheck: () => void
   onTurnIn: () => void
 }
 
-export default function QuizConfirm({ answered, count, busy, disabledReason = null, onCheck, onTurnIn }: QuizConfirmProps) {
+export default function QuizConfirm({ answered, count, busy, disabledReason = null, block = null, onGoTo, onCheck, onTurnIn }: QuizConfirmProps) {
   return (
     <section
       aria-labelledby="quiz-confirm-title"
@@ -29,6 +32,20 @@ export default function QuizConfirm({ answered, count, busy, disabledReason = nu
         You answered <strong>{confirmCounts(answered, count)}</strong>. You only get one try, so you can&apos;t change your answers
         after this.
       </p>
+      {block && (
+        <div role="alert" className="flex max-w-[560px] flex-col items-center gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-[15px] text-rose-900">
+          <p className="m-0">{block.message}</p>
+          {onGoTo && (
+            <button
+              type="button"
+              onClick={() => onGoTo(block.index)}
+              className="min-h-11 cursor-pointer rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-800 hover:bg-rose-100"
+            >
+              Go to question {block.index + 1}
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
@@ -41,7 +58,7 @@ export default function QuizConfirm({ answered, count, busy, disabledReason = nu
         <button
           type="button"
           onClick={onTurnIn}
-          disabled={busy || Boolean(disabledReason)}
+          disabled={busy || Boolean(disabledReason) || Boolean(block)}
           className="inline-flex min-h-[52px] cursor-pointer items-center gap-2 rounded-[14px] bg-indigo-600 px-[26px] py-3.5 text-[17px] font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />}

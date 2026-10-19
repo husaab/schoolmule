@@ -10,7 +10,12 @@
 // keepalive, and a later visit shows them again). Next, Back, a dot and
 // leaving a text box save at once; Turn in saves first, then submits. A save
 // the server refuses for good (turned in elsewhere, closed) is not retried:
-// the student is told why and the page shows where the quiz stands.
+// the student is told why and the page shows where the quiz stands. An answer
+// the quiz will never take (a 400: the teacher removed the question or a
+// choice since the quiz opened) is found by sending the answers one by one:
+// the others save, that one is shown on its question with the server's words
+// and "Clear my answer", the quiz is read again, and Turn in waits only until
+// it is changed or cleared. Nothing strands the student.
 //
 // A quiz that can't be taken (closed, excused, turned in, no questions) says
 // why with a way back. An admin's "View as" sees the quiz read-only: nothing
@@ -29,7 +34,19 @@ import { useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { useLoad } from '@/hooks/useLoad'
 import { studentItemHref } from '@/lib/portalRoutes'
-import { doneCopy, playerSubline, quizIntroState, quizSaveVerdict, toAnswerPayload, type AnswerMap } from '@/lib/quizPlayer'
+import { PartialDebouncedSaveError } from '@/lib/debouncedSaver'
+import {
+  doneCopy,
+  isRejectedSave,
+  playerSubline,
+  quizIntroState,
+  quizSaveVerdict,
+  reconcileRejected,
+  saveOneByOne,
+  toAnswerPayload,
+  turnInBlock,
+  type AnswerMap,
+} from '@/lib/quizPlayer'
 import { isApiError } from '@/services/apiClient'
 import { getStudentQuiz, saveStudentQuizAnswers, startStudentQuiz, submitStudentQuiz } from '@/services/quizService'
 import { getStudentItem } from '@/services/studentPortalService'
@@ -83,6 +100,22 @@ function PlayerScreen({ itemId, userId, item, quiz, previewing, first, onReload 
   const [refused, setRefused] = useState<string | null>(null)
   // The quiz as the submit came back: results only when it releases them right after submit.
   const [submitted, setSubmitted] = useState<StudentQuiz | null>(null)
+  // Answers the quiz refused for good (400), by question, with the server's words; read now by Turn in.
+  const [rejected, setRejectedState] = useState<Record<string, string>>({})
+  const rejectedNow = useRef<Record<string, string>>({})
+  const setRejected = (change: (r: Record<string, string>) => Record<string, string>) => {
+    rejectedNow.current = change(rejectedNow.current)
+    setRejectedState(rejectedNow.current)
+  }
+  const without = (r: Record<string, string>, ids: string[]) => Object.fromEntries(Object.entries(r).filter(([id]) => !ids.includes(id)))
+
+  /** A refusal for good (turned in elsewhere, closed): say why and show the quiz as it stands. */
+  const settle = (message: string) => {
+    refusal.current = message
+    setRefused(message)
+    notify(message, 'error', 9000)
+    onReload()
+  }
 
   const saver = useDebouncedSave<AnswerMap>({
     key: previewing ? undefined : `quiz:${userId}:${itemId}`,
@@ -92,15 +125,22 @@ function PlayerScreen({ itemId, userId, item, quiz, previewing, first, onReload 
       if (previewing) return
       try {
         await saveStudentQuizAnswers(itemId, toAnswerPayload(value), opts)
+        setRejected((r) => without(r, Object.keys(value)))
       } catch (err) {
         // A browser refusing a keepalive request: the saver sends it again as a plain one.
         if (opts.keepalive && err instanceof TypeError) throw err
         const verdict = quizSaveVerdict(err)
-        if (!verdict) throw err // a server error or no connection: a failed save to retry
-        refusal.current = verdict.message
-        setRefused(verdict.message)
-        notify(verdict.message, 'error', 9000)
-        onReload()
+        if (verdict) return settle(verdict.message)
+        if (!isRejectedSave(err)) throw err // a server error or no connection: a failed save to retry
+        // One of these answers will never be taken: find it, save the rest, show it on its question.
+        const out = await saveOneByOne(value, (questionId, answer) =>
+          saveStudentQuizAnswers(itemId, toAnswerPayload({ [questionId]: answer }), opts),
+        )
+        setRejected((r) => ({ ...without(r, out.saved), ...out.rejected }))
+        if (out.settled) return settle(out.settled.message)
+        // The teacher may have changed the quiz: read it again (removed questions and choices drop out).
+        if (Object.keys(out.rejected).length > 0) onReload()
+        if (Object.keys(out.failed).length > 0) throw new PartialDebouncedSaveError(out.failed, out.message)
       }
     },
   })
@@ -108,6 +148,8 @@ function PlayerScreen({ itemId, userId, item, quiz, previewing, first, onReload 
   // The saved answers, with anything from an earlier visit that has not reached the server yet.
   const [initialAnswers] = useState<AnswerMap>(() => ({ ...(quiz.attempt?.answers ?? {}), ...(saver.peek() ?? {}) }))
   const written = quiz.questions.filter((q) => q.kind === 'long').length
+  // A refusal goes with its question when the teacher removed it.
+  const shownRejected = reconcileRejected(rejected, quiz.questions)
   const teacher = quiz.quiz.teacher?.name ?? item.teacher?.name ?? null
 
   const turnIn = async (): Promise<boolean> => {
@@ -118,6 +160,11 @@ function PlayerScreen({ itemId, userId, item, quiz, previewing, first, onReload 
     if (refusal.current) return false
     if (saver.hasFailures()) {
       notify("Your answers didn't save yet. Try Turn in again in a moment.", 'error')
+      return false
+    }
+    const block = turnInBlock(reconcileRejected(rejectedNow.current, quiz.questions), quiz.questions)
+    if (block) {
+      notify(block.message, 'error')
       return false
     }
     try {
@@ -145,6 +192,8 @@ function PlayerScreen({ itemId, userId, item, quiz, previewing, first, onReload 
       onTurnIn={turnIn}
       turnInDisabledReason={previewing ? "This is a preview, so it can't be turned in." : null}
       finishLater={{ label: 'Finish later', href: studentItemHref(itemId) }}
+      rejected={shownRejected}
+      turnInBlock={turnInBlock(shownRejected, quiz.questions)}
       notice={
         previewing ? (
           <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">

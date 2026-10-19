@@ -13,6 +13,7 @@ import { ArrowDownIcon, ArrowUpIcon, PhotoIcon, TrashIcon, XMarkIcon } from '@he
 import {
   changeKind,
   parsePointsText,
+  pointsTextFor,
   pointsUnit,
   PROMPT_MAX,
   QUESTION_KIND_LABELS,
@@ -53,9 +54,13 @@ const fmt = (n: number) => String(Math.round(n * 100) / 100)
 const ICON_BUTTON =
   'flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent'
 
-/** The points box: it keeps what is typed ("1." on the way to "1.5") and hands up a number, or null when empty. */
+/**
+ * The points box: it keeps what is typed ("1." on the way to "1.5") and hands up a number, or null when empty.
+ * When the points change from outside ("Go back to what's saved"), it shows them (pointsTextFor).
+ */
 function PointsInput({ value, label, disabled, onChange }: { value: number | null; label: string; disabled: boolean; onChange: (v: number | null) => void }) {
-  const [text, setText] = useState(value === null ? '' : fmt(value))
+  const [typed, setText] = useState(value === null ? '' : fmt(value))
+  const text = pointsTextFor(typed, value)
   return (
     <label className="flex items-center gap-1.5 text-[13px] text-slate-600">
       <input

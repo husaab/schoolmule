@@ -9,9 +9,15 @@
 // a dot, leaving a text box) asks for an immediate save (`onFlush`). The
 // teacher's "Preview as a student" runs this same player with neither, so
 // nothing is saved and nothing reaches the server.
+//
+// An answer the quiz will never take (a 400: the teacher removed the question
+// or a choice) is shown on its question with the server's words and "Clear my
+// answer" (`rejected`); Turn in waits until it is changed or cleared
+// (`turnInBlock`). When the page reads the quiz again, the player takes the
+// questions as they now stand.
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import SaveStatusPill from '@/components/classroom/SaveStatusPill'
@@ -55,6 +61,10 @@ interface QuizPlayerProps {
   notice?: ReactNode
   /** Inside a modal: the player fills the box instead of the page. */
   embedded?: boolean
+  /** Answers the quiz refused for good, by question: shown on the question until changed or cleared. */
+  rejected?: Record<string, string>
+  /** Turn in waits for this question (a refused answer). */
+  turnInBlock?: { index: number; message: string } | null
 }
 
 const FINISH =
@@ -75,10 +85,21 @@ export default function QuizPlayer({
   finishLater,
   notice,
   embedded = false,
+  rejected = {},
+  turnInBlock = null,
 }: QuizPlayerProps) {
   const [state, setState] = useState(() => initPlayer(questions, initialAnswers))
+  // The quiz read again (after a refused answer): take the questions as they now stand.
+  const [shownQuestions, setShownQuestions] = useState(questions)
+  if (questions !== shownQuestions) {
+    setShownQuestions(questions)
+    setState((s) => quizReducer(s, { type: 'questions', questions }))
+  }
   // The latest state, for event handlers between renders (a pick is saved with the answer it made).
   const latest = useRef(state)
+  useEffect(() => {
+    latest.current = state
+  })
   const [busy, setBusy] = useState(false)
   // After the first move, each question takes the focus as it opens.
   const [moved, setMoved] = useState(false)
@@ -88,9 +109,9 @@ export default function QuizPlayer({
     if (next === latest.current) return
     latest.current = next
     setState(next)
-    if (action.type === 'pick' || action.type === 'text') {
+    if (action.type === 'pick' || action.type === 'text' || action.type === 'clear') {
       onChange?.({ [action.questionId]: next.answers[action.questionId] ?? null })
-    } else if (action.type !== 'submitted') {
+    } else if (action.type !== 'submitted' && action.type !== 'questions') {
       setMoved(true)
       onFlush?.()
     }
@@ -161,6 +182,8 @@ export default function QuizPlayer({
               count={count}
               busy={busy}
               disabledReason={turnInDisabledReason}
+              block={turnInBlock}
+              onGoTo={(index) => step({ type: 'go', index })}
               onCheck={() => step({ type: 'go', index: 0 })}
               onTurnIn={() => void turnIn()}
             />
@@ -172,6 +195,9 @@ export default function QuizPlayer({
               count={count}
               answer={state.answers[question.questionId]}
               answered={answered}
+              problems={state.questions.map((q) => rejected[q.questionId] !== undefined)}
+              rejected={rejected[question.questionId] ?? null}
+              onClear={() => step({ type: 'clear', questionId: question.questionId })}
               nextLabel={nextLabel(state)}
               focusOnMount={moved}
               onPick={(optionId) => step({ type: 'pick', questionId: question.questionId, optionId })}

@@ -210,6 +210,17 @@ export function parsePointsText(text: string): { value: number | null } | null {
   return Number.isFinite(n) ? { value: n } : null
 }
 
+/**
+ * What a points box shows: what was typed while it still means the question's
+ * points ("1." on the way to "1.5"), else the points themselves, e.g. after
+ * "Go back to what's saved" put the saved points back.
+ */
+export function pointsTextFor(text: string, value: number | null): string {
+  const parsed = parsePointsText(text)
+  if (parsed && parsed.value === value) return text
+  return value === null ? '' : formatPoints(value)
+}
+
 // ---------------------------------------------------------------------------
 // Editing
 
@@ -400,3 +411,38 @@ export function builderSaveProblem(err: unknown): SaveProblem {
   if (code === 'DRAFT_ABOVE_MAX') return { message: `${said || ABOVE_FALLBACK} Or put the points back as they were.`, fix: 'grading' }
   return { message: said || "The questions didn't save.", fix: null }
 }
+
+// ---------------------------------------------------------------------------
+// Work that can't be saved yet is never dropped
+
+const EMPTY_QUIZ = 'A quiz needs at least one question, so the last saved one stays until you add another.'
+
+/** What isn't saved yet, by question number (0: the quiz as a whole): for the Saved pill and the leave warning. */
+export function unsavedQuestions(questions: DraftQuestion[], savedCount: number): { n: number; needs: string[] }[] {
+  if (questions.length === 0) return savedCount > 0 ? [{ n: 0, needs: [EMPTY_QUIZ] }] : []
+  return questions.flatMap((q, i) => {
+    const needs = questionIssues(q)
+    return needs.length > 0 ? [{ n: i + 1, needs }] : []
+  })
+}
+
+/** The Saved pill while something can't be saved yet: "Question 3 not saved yet", "2 questions not saved yet". */
+export function notSavedLabel(unsaved: { n: number }[]): string | null {
+  if (unsaved.length === 0) return null
+  if (unsaved[0].n === 0) return 'Not saved yet'
+  return unsaved.length === 1 ? `Question ${unsaved[0].n} not saved yet` : `${unsaved.length} questions not saved yet`
+}
+
+// The builder's list, per quiz, for the rest of the session, while something in
+// it can't be saved yet (an unfinished question, or every question deleted):
+// leaving the builder and coming back brings it back as it was.
+const keptLists = new Map<string, DraftQuestion[]>()
+
+/** Keep the list while something in it isn't saved yet; forget it once everything is. */
+export function keepUnfinished(itemId: string, questions: DraftQuestion[], opts: { savedCount?: number } = {}): void {
+  if (unsavedQuestions(questions, opts.savedCount ?? 0).length > 0) keptLists.set(itemId, questions)
+  else keptLists.delete(itemId)
+}
+
+/** The list kept for this quiz (see keepUnfinished), or null. */
+export const keptUnfinished = (itemId: string): DraftQuestion[] | null => keptLists.get(itemId) ?? null
