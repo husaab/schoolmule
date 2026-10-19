@@ -281,7 +281,7 @@ export default function YourWorkCard({
   let bar: TurnInBarView | null = null
   if (actions && sub && item.kind !== 'quiz') {
     if (turnedIn) {
-      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed, feedback: feedbackSent }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
+      bar = { kind: 'turnedIn', note: turnedInNote({ teacher: teacherName, canUnsubmit: sub.canUnsubmit, closed: sub.closed, feedback: feedbackSent, ungraded: item.points == null }), canUnsubmit: sub.canUnsubmit, busy: busy === 'unsubmit', onUnsubmit: unsubmit }
     } else if (sub.canEdit) {
       const blocked = uploading || hasFailedUpload
       const canTurnIn = hasWork && !blocked

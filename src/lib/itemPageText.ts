@@ -117,11 +117,17 @@ export const isFeedbackOnly = (grade: Pick<NonNullable<StudentItem['grade']>, 's
 
 /**
  * What a turned-in item says: who grades it and whether it can still be changed. Once the teacher has published
- * feedback (an item with no gradebook column) it is no longer "waiting to be graded".
+ * feedback (an item with no gradebook column) it is no longer "waiting to be graded". Work with no points
+ * (`ungraded`) is never promised a grade.
  */
-export function turnedInNote(opts: { teacher: string | null; canUnsubmit: boolean; closed: boolean; feedback?: boolean }): string {
+export function turnedInNote(opts: { teacher: string | null; canUnsubmit: boolean; closed: boolean; feedback?: boolean; ungraded?: boolean }): string {
   const who = teacherOr(opts.teacher)
   if (opts.feedback) return opts.canUnsubmit ? `${who} has sent feedback. You can still unsubmit to change your work.` : `${who} has sent feedback.`
+  if (opts.ungraded) {
+    if (opts.canUnsubmit) return `${who} can see it now. You can unsubmit to change it.`
+    if (opts.closed) return `${who} can see it now. It can't be changed after the due date.`
+    return `${who} can see it now.`
+  }
   if (opts.canUnsubmit) return `${who} will grade it. You can unsubmit to change it until then.`
   if (opts.closed) return `${who} will grade it. It can't be changed after the due date.`
   return `${who} will grade it.`

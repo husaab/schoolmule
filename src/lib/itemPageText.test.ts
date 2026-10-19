@@ -151,6 +151,12 @@ describe('the Turn in bar', () => {
     expect(turnedInNote({ teacher: null, canUnsubmit: false, closed: false })).toBe('Your teacher will grade it.')
   })
 
+  it('never promises a grade for work that is not graded', () => {
+    expect(turnedInNote({ teacher: 'Lina Farouk', canUnsubmit: true, closed: false, ungraded: true })).toBe('Lina Farouk can see it now. You can unsubmit to change it.')
+    expect(turnedInNote({ teacher: 'Lina Farouk', canUnsubmit: false, closed: true, ungraded: true })).toBe("Lina Farouk can see it now. It can't be changed after the due date.")
+    expect(turnedInNote({ teacher: null, canUnsubmit: false, closed: false, ungraded: true })).toBe('Your teacher can see it now.')
+  })
+
   it('says a closed item is closed', () => {
     expect(closedNote('assignment')).toBe('This assignment is closed. Ask your teacher.')
     expect(closedNote('quiz')).toBe('This quiz is closed. Ask your teacher.')
