@@ -5,7 +5,8 @@ import { AcademicCapIcon, ArchiveBoxIcon, BuildingLibraryIcon, ChatBubbleLeftRig
 import MenuButton, { type MenuItem } from '@/components/shared/MenuButton'
 import { getGradeDisplayName, getSchoolName } from '@/lib/schoolUtils'
 import { PROFILE_TABS, formatStamp, type ProfileTab } from '@/lib/studentProfile'
-import { initials } from '@/components/messaging/formatters'
+import Avatar from '@/components/avatar/Avatar'
+import { studentAvatar } from '@/lib/studentAvatar'
 import { clean } from './contact'
 import type { StudentProfileStudent } from '@/services/types/studentProfile'
 
@@ -23,6 +24,7 @@ interface ProfileHeaderProps {
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabBadges = {}, onMessage, onEdit, menuItems }) => {
   const archived = Boolean(student.isArchived)
   const gradeLabel = student.grade ? getGradeDisplayName(student.grade) : 'No grade'
+  const avatar = studentAvatar(student)
 
   // The identity block scrolls away with the content. Once it has, a slim bar
   // with the student's name takes its place, pinned above the tab bar. The
@@ -49,9 +51,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
             condensed ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
           }`}
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-xs font-semibold text-white">
-            {initials(student.name)}
-          </div>
+          <Avatar name={student.name} avatar={avatar} size={32} />
           <p className="truncate font-semibold text-slate-900">{student.name}</p>
           <span className="hidden flex-shrink-0 rounded-md bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-700 sm:inline">{gradeLabel}</span>
           {archived && <span className="flex-shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">Archived</span>}
@@ -61,9 +61,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
       <div className="relative flex flex-col gap-5 border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-6 pl-5 pr-14 sm:pl-6 md:flex-row md:items-center md:justify-between md:pr-16">
         <div ref={sentinel} className="pointer-events-none absolute inset-x-0 bottom-14 h-px" />
         <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-xl font-semibold tracking-wide text-white shadow-sm">
-            {initials(student.name)}
-          </div>
+          <Avatar name={student.name} avatar={avatar} size={64} className="shadow-sm ring-4 ring-white" />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-bold text-slate-900">{student.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">

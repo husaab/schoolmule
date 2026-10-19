@@ -15,6 +15,8 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import StudentNameLink from '@/components/student/profile/StudentNameLink';
+import Avatar from '@/components/avatar/Avatar';
+import { studentAvatar } from '@/lib/studentAvatar';
 import { useStudentProfile } from '@/hooks/useStudentProfile';
 import { useStudentProfileStore } from '@/store/useStudentProfileStore';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
@@ -282,9 +284,7 @@ const StudentsContent = () => {
                                                 >
                                                     <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                                                <UserIcon className="h-4 w-4 text-cyan-600" />
-                                                            </div>
+                                                            <Avatar name={student.name} avatar={studentAvatar(student)} size={32} />
                                                             <div>
                                                                 <StudentNameLink
                                                                     studentId={student.studentId}

@@ -1,0 +1,79 @@
+{
+  "skins": [["#f1c9a5", "Light"], ["#d9a77c", "Medium light"], ["#b5835a", "Medium"], ["#8d5a3b", "Medium dark"], ["#6b4226", "Dark"]],
+  "bgs": [["#ccfbf1", "#0f766e", "Mint"], ["#dbeafe", "#1d4ed8", "Blue"], ["#fce7f3", "#be185d", "Pink"], ["#fef3c7", "#b45309", "Sun"], ["#ecfccb", "#4d7c0f", "Lime"], ["#e0e7ff", "#4338ca", "Indigo"], ["#ffedd5", "#c2410c", "Peach"], ["#e2e8f0", "#334155", "Slate"]],
+  "styles": [
+    {
+      "id": "short", "label": "Short hair",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "rect", "attrs": {"x": "41", "y": "54", "width": "14", "height": "14", "rx": "4", "fill": "{skin}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "42", "rx": "17", "ry": "20", "fill": "{skin}"}},
+        {"tag": "path", "attrs": {"d": "M31 40c-1-16 9-22 18-22 11 0 18 8 16 22-3-8-9-12-17-11-8 0-14 4-17 11z", "fill": "#2b211c"}}
+      ]
+    },
+    {
+      "id": "long", "label": "Long hair",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "path", "attrs": {"d": "M29 46C27 25 37 17 48 17s21 8 19 29l2 20c-7-5-12-7-21-7s-14 2-21 7z", "fill": "#2b211c"}},
+        {"tag": "rect", "attrs": {"x": "42", "y": "54", "width": "12", "height": "14", "rx": "4", "fill": "{skin}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "43", "rx": "15", "ry": "18", "fill": "{skin}"}},
+        {"tag": "path", "attrs": {"d": "M33 38c2-11 8-16 15-16s13 5 15 16c-6-5-10-7-15-7s-9 2-15 7z", "fill": "#2b211c"}}
+      ]
+    },
+    {
+      "id": "hijab", "label": "Hijab",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "path", "attrs": {"d": "M48 15C33 15 25 28 25 44c0 13 4 22-5 36 13-7 20-9 28-9s15 2 28 9c-9-14-5-23-5-36 0-16-8-29-23-29z", "fill": "{ink}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "44", "rx": "14", "ry": "17", "fill": "{skin}"}}
+      ]
+    },
+    {
+      "id": "kufi", "label": "Kufi",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "rect", "attrs": {"x": "41", "y": "54", "width": "14", "height": "14", "rx": "4", "fill": "{skin}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "42", "rx": "17", "ry": "20", "fill": "{skin}"}},
+        {"tag": "path", "attrs": {"d": "M31 36c0-11 8-17 17-17s17 6 17 17z", "fill": "#ffffff", "stroke": "#cbd5e1", "stroke-width": "1.5"}},
+        {"tag": "path", "attrs": {"d": "M33 31h30", "stroke": "#cbd5e1", "stroke-width": "1.5"}}
+      ]
+    },
+    {
+      "id": "beard", "label": "Beard",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "rect", "attrs": {"x": "41", "y": "54", "width": "14", "height": "14", "rx": "4", "fill": "{skin}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "42", "rx": "17", "ry": "20", "fill": "{skin}"}},
+        {"tag": "path", "attrs": {"d": "M31 40c-1-16 9-22 18-22 11 0 18 8 16 22-3-8-9-12-17-11-8 0-14 4-17 11z", "fill": "#2b211c"}},
+        {"tag": "path", "attrs": {"d": "M32 44c1 14 8 19 16 19s15-5 16-19c-5 8-9 10-16 10s-11-2-16-10z", "fill": "#2b211c"}}
+      ]
+    },
+    {
+      "id": "curly", "label": "Curly",
+      "shapes": [
+        {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "{bg}"}},
+        {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "{ink}"}},
+        {"tag": "circle", "attrs": {"cx": "34", "cy": "30", "r": "9", "fill": "#2b211c"}},
+        {"tag": "circle", "attrs": {"cx": "43", "cy": "23", "r": "10", "fill": "#2b211c"}},
+        {"tag": "circle", "attrs": {"cx": "54", "cy": "23", "r": "10", "fill": "#2b211c"}},
+        {"tag": "circle", "attrs": {"cx": "63", "cy": "30", "r": "9", "fill": "#2b211c"}},
+        {"tag": "circle", "attrs": {"cx": "30", "cy": "40", "r": "7", "fill": "#2b211c"}},
+        {"tag": "circle", "attrs": {"cx": "66", "cy": "40", "r": "7", "fill": "#2b211c"}},
+        {"tag": "rect", "attrs": {"x": "41", "y": "54", "width": "14", "height": "14", "rx": "4", "fill": "{skin}"}},
+        {"tag": "ellipse", "attrs": {"cx": "48", "cy": "44", "rx": "16", "ry": "18", "fill": "{skin}"}}
+      ]
+    }
+  ],
+  "neutral": [
+    {"tag": "rect", "attrs": {"width": "96", "height": "96", "fill": "#f1f5f9"}},
+    {"tag": "path", "attrs": {"d": "M14 96C16 74 32 66 48 66s32 8 34 30z", "fill": "#cbd5e1"}},
+    {"tag": "rect", "attrs": {"x": "41", "y": "54", "width": "14", "height": "14", "rx": "4", "fill": "#e2e8f0"}},
+    {"tag": "ellipse", "attrs": {"cx": "48", "cy": "42", "rx": "17", "ry": "20", "fill": "#e2e8f0"}}
+  ]
+}
