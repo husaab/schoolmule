@@ -65,7 +65,7 @@ export default function GradingHeader({
     counts.drafts > 0
       ? undefined
       : gradedEarlierCount > 0
-        ? `${gradedEarlierCount === 1 ? '1 draft waits' : `${gradedEarlierCount} drafts wait`} for you to check new work and save the grade again.`
+        ? `${gradedEarlierCount === 1 ? '1 draft waits' : `${gradedEarlierCount} drafts wait`}: the work changed after you graded it. Save the grade again to publish it.`
         : 'No drafts are waiting to be published.'
   return (
     <header className="z-20 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8 lg:sticky lg:top-0">

@@ -62,10 +62,10 @@ export interface GradingRow {
    */
   getsEmail?: boolean
   /**
-   * Fable I1: the draft grade or feedback was made before the student's newest turn-in (they unsubmitted and
-   * handed in new work while the draft waited). Back in "To grade", flagged "Graded earlier — check the new work",
-   * and left out of "Publish to N students" until the teacher saves the score or feedback again. Optional: older
-   * servers don't send it, and then nothing is flagged.
+   * Fable I1: the draft grade or feedback was made before the student took the work back or turned it in again
+   * (a draft is invisible to them). Turned in again: back in "To grade", flagged "Graded earlier — check the new
+   * work". No Publish takes it (the server sends needsPublish false) until the teacher saves the score, status or
+   * feedback again, which clears it. Optional: older servers don't send it, and then nothing is flagged.
    */
   draftPredatesWork?: boolean
 }
@@ -135,7 +135,8 @@ export interface GradePatchResult {
   live: boolean
 }
 
-export type PublishSkipReason = 'no_draft' | 'not_in_audience' | 'unchanged'
+/** 'draft_predates_work' (Fable I1): a draft made before the student took the work back or turned it in again. */
+export type PublishSkipReason = 'no_draft' | 'not_in_audience' | 'unchanged' | 'draft_predates_work'
 
 export interface GradingEmailSummary {
   attempted: number

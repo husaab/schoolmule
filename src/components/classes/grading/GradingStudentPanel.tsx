@@ -182,7 +182,7 @@ export default function GradingStudentPanel({
 
   // Graded before the newest work came in: shown until the teacher saves the score or feedback again.
   const earlier = gradedEarlier(row) && !touched
-  const earlierLines = gradedEarlierLines(first, linked, columnPublished)
+  const earlierLines = gradedEarlierLines(first, linked, columnPublished, Boolean(row.turnedInAt))
   const keepPatch = keepDraftPatch({ score, status, feedback }, linked)
   const keep = () => {
     if (!keepPatch) return
@@ -195,7 +195,7 @@ export default function GradingStudentPanel({
   const publishTitle = canPublish
     ? undefined
     : earlier
-      ? `Check ${first}'s new work, then save the ${linked ? 'grade' : 'feedback'} again to publish it.`
+      ? `${first}'s work changed after you graded it: save the ${linked ? 'grade' : 'feedback'} again to publish it.`
       : `Nothing new to publish for ${first}.`
 
   return (

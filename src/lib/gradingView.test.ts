@@ -441,13 +441,13 @@ describe('graded earlier: new work came in after the draft', () => {
     const one = publishAllPrompt([ali, ziad], true)
     expect(one.title).toBe('Publish 1 grade?')
     expect(one.body).toBe(
-      "Ziad and parents see the grade and feedback, and Ziad gets an email. Ali isn't included: new work came in after you graded it. Check it, then save the grade again to publish it.",
+      "Ziad and parents see the grade and feedback, and Ziad gets an email. Ali isn't included: the work changed after you graded it. Check it, then save the grade again to publish it.",
     )
     const sara = { ...ali, studentId: 'sara', name: 'Sara Kareem' }
     const two = publishAllPrompt([ali, sara, ziad, { ...ziad, studentId: 'z2', name: 'Huda Amin' }], true)
     expect(two.title).toBe('Publish 2 grades?')
     expect(two.body).toBe(
-      "Ziad, Huda and parents see their grade and feedback, and each student gets an email. 2 students aren't included (Ali, Sara): new work came in after you graded them. Check it, then save their grades again to publish them.",
+      "Ziad, Huda and parents see their grade and feedback, and each student gets an email. 2 students aren't included (Ali, Sara): their work changed after you graded it. Check it, then save their grades again to publish them.",
     )
     // Feedback only (no gradebook column).
     expect(publishAllPrompt([ali, ziad], false).body).toContain('Check it, then save the feedback again to publish it.')
@@ -466,7 +466,7 @@ describe('graded earlier: new work came in after the draft', () => {
         'assignment',
         earlier,
       ).message,
-    ).toBe("Published Ziad's grade. Ali's wasn't: new work came in after you graded it.")
+    ).toBe("Published Ziad's grade. Ali's wasn't: the work changed after you graded it.")
     expect(
       publishOutcome(
         {
@@ -482,7 +482,7 @@ describe('graded earlier: new work came in after the draft', () => {
         'assignment',
         earlier,
       ).message,
-    ).toBe("Published 2 grades. 2 weren't: new work came in after you graded it.")
+    ).toBe("Published 2 grades. 2 weren't: the work changed after you graded it.")
     expect(
       publishOutcome(
         { publishedStudentIds: [], skipped: [{ studentId: 'ali', reason: 'no_draft' }], assessmentPublished: false },
@@ -491,12 +491,29 @@ describe('graded earlier: new work came in after the draft', () => {
         'assignment',
         earlier,
       ),
-    ).toEqual({ tone: 'info', message: "Nothing published: new work came in after you graded it. Check it, then save the grade again." })
+    ).toEqual({ tone: 'info', message: 'Nothing published: the work changed after you graded it. Check it, then save the grade again.' })
+    // The server's own reason (the grid's Publish N has no rows to look at).
+    expect(
+      publishOutcome(
+        { publishedStudentIds: ['s4'], skipped: [{ studentId: 'ali', reason: 'draft_predates_work' }], assessmentPublished: true },
+        nameOf,
+      ).message,
+    ).toBe("Published Ziad's grade. Ali's wasn't: the work changed after you graded it.")
     // Not flagged: the old words.
     expect(
       publishOutcome({ publishedStudentIds: [], skipped: [{ studentId: 's4', reason: 'no_draft' }], assessmentPublished: false }, nameOf, true, 'assignment', earlier)
         .message,
     ).toBe('Nothing to publish yet. Grade the work first.')
+  })
+
+  it('a student who took the work back (nothing turned in again yet) is not to grade, and says so', () => {
+    const tookBack = { ...ali, turnedInAt: null, status: 'assigned' as const }
+    expect(isToGrade(tookBack, true)).toBe(false)
+    expect(rowStatus(tookBack)).toEqual({ text: 'Graded earlier — work taken back', ink: 'text-amber-800' })
+    expect(gradedEarlierLines('Ali', true, false, false).body).toBe(
+      "Ali took the work back after you graded it. Your draft grade and feedback are kept, but they won't be published until you save them again: change them, or keep them as they are.",
+    )
+    expect(gradedEarlierLines('Ali', true, false, false).title).toBe('Graded earlier — work taken back')
   })
 
   it("the panel's note, and what Keep sends", () => {
