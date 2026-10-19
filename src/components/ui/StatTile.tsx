@@ -27,6 +27,8 @@ interface StatTileProps {
   tone?: StatTone
   /** Smaller, denser variant for secondary figures. */
   compact?: boolean
+  /** Shorter card that can sit beside a page title. */
+  dense?: boolean
   /** Makes the whole tile a link to where the number comes from. */
   href?: string
   /** Change against a previous period, shown under the value. */
@@ -67,6 +69,7 @@ const StatTile: React.FC<StatTileProps> = ({
   value,
   tone = 'neutral',
   compact = false,
+  dense = false,
   href,
   delta,
   sub,
@@ -85,15 +88,18 @@ const StatTile: React.FC<StatTileProps> = ({
 
   const body = (
     <div
-      className={`relative h-full bg-white rounded-2xl border ${t.ring} pl-5 pr-4 py-4 overflow-hidden transition-colors ${
+      className={`relative h-full bg-white rounded-2xl border ${t.ring} ${dense ? 'pl-4 pr-3.5 py-2.5' : 'pl-5 pr-4 py-4'} overflow-hidden transition-colors ${
         href ? 'group-hover:border-cyan-300 group-hover:bg-cyan-50/30' : ''
       }`}
     >
       <span className={`absolute left-0 top-0 bottom-0 w-1 ${t.bar}`} aria-hidden />
       {loading ? (
-        <span className="block h-8 w-20 rounded-lg bg-slate-100 animate-pulse" aria-label="Loading" />
+        <span
+          className={`block rounded-lg bg-slate-100 animate-pulse ${dense ? 'h-7 w-12' : 'h-8 w-20'}`}
+          aria-label="Loading"
+        />
       ) : (
-        <p className={`tabular-nums text-2xl font-semibold ${t.value}`}>{value}</p>
+        <p className={`tabular-nums font-semibold ${dense ? 'text-xl' : 'text-2xl'} ${t.value}`}>{value}</p>
       )}
       <p className="text-xs text-slate-500 mt-0.5">{label}</p>
       {delta && (
