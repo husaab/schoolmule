@@ -20,6 +20,7 @@ export const QR_NO_CONNECTION = "We couldn't reach SchoolMule. Check the interne
 export const QR_SERVER_TROUBLE = 'SchoolMule had a problem signing you in. Wait a moment and scan your card again.'
 export const QR_RATE_LIMITED = 'Too many tries for now. Wait a few minutes, then scan your card again, or ask your teacher.'
 export const QR_NOT_A_CARD = "That code isn't a SchoolMule sign-in card. Hold up the code on your card."
+export const QR_READER_UNAVAILABLE = "SchoolMule couldn't load the card reader. Check the internet connection, then scan your card again."
 
 /** What a card's QR code says before its token. */
 export const QR_PAYLOAD_PREFIX = 'SCHOOLMULE-QR:'
@@ -113,4 +114,64 @@ export async function signInWithCard<R, U>(
   const res = await steps.request(token)
   if (steps.hasSession()) steps.signOut()
   return steps.start(res)
+}
+
+/** Reads one frame: the text of a QR code in it, or null. */
+export type FrameReader<S> = (source: S) => Promise<string | null>
+
+/** The card reader (jsQR, loaded on demand) couldn't be loaded: say so instead of showing a camera that reads nothing. */
+export class QrReaderLoadError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error && cause.message ? cause.message : 'The card reader did not load')
+    this.name = 'QrReaderLoadError'
+  }
+}
+
+/**
+ * The scanner's frame reader (FE re-review N3): the browser's own
+ * BarcodeDetector where there is one (`primary`), else jsQR, loaded on
+ * demand (`loadFallback`, a lazy chunk). A detector whose detect() fails
+ * `maxErrors` frames in a row is dropped for jsQR. A jsQR load that fails
+ * (flaky classroom wifi) rejects `ready()` or `read()` with a
+ * QrReaderLoadError, so the scanner can say so; the next try loads again. A
+ * single frame that can't be read is just no code (null).
+ */
+export function fallbackReader<S>({
+  primary,
+  loadFallback,
+  maxErrors = 5,
+}: {
+  primary: FrameReader<S> | null
+  loadFallback: () => Promise<FrameReader<S>>
+  maxErrors?: number
+}): { ready: () => Promise<void>; read: FrameReader<S> } {
+  let current: FrameReader<S> | null = primary
+  let errorsInARow = 0
+  let loading: Promise<FrameReader<S>> | null = null
+
+  const fallback = async (): Promise<FrameReader<S>> => {
+    loading ??= loadFallback().catch((err: unknown) => {
+      loading = null
+      throw new QrReaderLoadError(err)
+    })
+    current = await loading
+    return current
+  }
+
+  return {
+    async ready() {
+      if (!current) await fallback()
+    },
+    async read(source) {
+      const reader = current ?? (await fallback())
+      try {
+        const text = await reader(source)
+        if (reader === primary) errorsInARow = 0
+        return text
+      } catch {
+        if (reader === primary && ++errorsInARow >= maxErrors) current = null
+        return null
+      }
+    },
+  }
 }

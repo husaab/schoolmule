@@ -3,6 +3,9 @@ import {
   QR_NO_CONNECTION,
   QR_PAYLOAD_PREFIX,
   QR_RATE_LIMITED,
+  QR_READER_UNAVAILABLE,
+  QrReaderLoadError,
+  fallbackReader,
   QR_SERVER_TROUBLE,
   cameraProblem,
   parseCardPayload,
@@ -152,5 +155,106 @@ describe('signInWithCard', () => {
     const { calls, steps: s } = steps(async () => 'session', false)
     await signInWithCard('tok', s)
     expect(calls).toEqual(['request:tok', 'start:session'])
+  })
+})
+
+// FE re-review N3: a failed jsQR chunk load is said, not a silent camera; a BarcodeDetector that keeps
+// throwing gives way to jsQR.
+describe('fallbackReader', () => {
+  it("reads with the browser's own detector while it works, and never loads jsQR", async () => {
+    let loads = 0
+    const reader = fallbackReader<string>({
+      primary: async (frame) => (frame === 'card' ? 'SCHOOLMULE-QR:x' : null),
+      loadFallback: async () => {
+        loads++
+        return async () => null
+      },
+    })
+    await reader.ready()
+    expect(await reader.read('blank')).toBeNull()
+    expect(await reader.read('card')).toBe('SCHOOLMULE-QR:x')
+    expect(loads).toBe(0)
+  })
+
+  it('loads jsQR up front when there is no detector', async () => {
+    const reader = fallbackReader<string>({ primary: null, loadFallback: async () => async (frame) => `jsqr:${frame}` })
+    await reader.ready()
+    expect(await reader.read('f1')).toBe('jsqr:f1')
+  })
+
+  it('a failed load is an error the scanner can explain (and a retry loads again)', async () => {
+    let tries = 0
+    const reader = fallbackReader<string>({
+      primary: null,
+      loadFallback: async () => {
+        tries++
+        if (tries === 1) throw new Error('Loading chunk 2844 failed.')
+        return async () => 'ok'
+      },
+    })
+    await expect(reader.ready()).rejects.toBeInstanceOf(QrReaderLoadError)
+    await expect(reader.read('f')).resolves.toBe('ok')
+    expect(tries).toBe(2)
+    expect(QR_READER_UNAVAILABLE).toMatch(/internet connection/)
+  })
+
+  it('a detector that keeps throwing gives way to jsQR after a few frames in a row', async () => {
+    let detectorCalls = 0
+    const reader = fallbackReader<string>({
+      primary: async () => {
+        detectorCalls++
+        throw new Error('detect failed')
+      },
+      loadFallback: async () => async () => 'from-jsqr',
+      maxErrors: 3,
+    })
+    expect(await reader.read('f')).toBeNull()
+    expect(await reader.read('f')).toBeNull()
+    expect(await reader.read('f')).toBeNull()
+    expect(await reader.read('f')).toBe('from-jsqr')
+    expect(detectorCalls).toBe(3)
+  })
+
+  it('an odd failed frame does not count against the detector once it reads again', async () => {
+    let n = 0
+    let loads = 0
+    const reader = fallbackReader<string>({
+      primary: async () => {
+        n++
+        if (n % 2 === 1) throw new Error('one bad frame')
+        return null
+      },
+      loadFallback: async () => {
+        loads++
+        return async () => null
+      },
+      maxErrors: 2,
+    })
+    for (let i = 0; i < 6; i++) await reader.read('f')
+    expect(loads).toBe(0)
+  })
+
+  it('a failed jsQR load after the detector gave up is an error too', async () => {
+    const reader = fallbackReader<string>({
+      primary: async () => {
+        throw new Error('detect failed')
+      },
+      loadFallback: async () => {
+        throw new Error('Loading chunk failed')
+      },
+      maxErrors: 1,
+    })
+    expect(await reader.read('f')).toBeNull()
+    await expect(reader.read('f')).rejects.toBeInstanceOf(QrReaderLoadError)
+  })
+
+  it('a frame jsQR cannot read is just no code', async () => {
+    const reader = fallbackReader<string>({
+      primary: null,
+      loadFallback: async () => async () => {
+        throw new Error('bad frame')
+      },
+    })
+    await expect(reader.read('f')).resolves.toBeNull()
   })
 })

@@ -6,19 +6,30 @@
 // It opens the back camera, and every ~200 ms reads one frame: with the
 // browser's own BarcodeDetector where there is one (Chrome, Android), else
 // with jsQR (Safari and iPad have no BarcodeDetector; jsQR is loaded only
-// then). The first SchoolMule card it sees is handed to `onToken` and the
-// camera stops; any other QR code gets a short "That isn't a sign-in card".
-// It pauses while the tab is hidden and always releases the camera when it
-// goes away.
+// then, and also when a detector keeps failing). If jsQR can't be loaded
+// (flaky classroom wifi), the camera stops and the page says so instead of
+// showing a camera that reads nothing (fallbackReader, FE re-review N3).
+// The first SchoolMule card it sees is handed to `onToken` and the camera
+// stops; any other QR code gets a short "That isn't a sign-in card". It
+// pauses while the tab is hidden and always releases the camera when it goes
+// away.
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { QR_NOT_A_CARD, cameraProblem, parseCardPayload } from '@/lib/qrSignIn'
+import {
+  QR_NOT_A_CARD,
+  QR_READER_UNAVAILABLE,
+  QrReaderLoadError,
+  cameraProblem,
+  fallbackReader,
+  parseCardPayload,
+  type FrameReader,
+} from '@/lib/qrSignIn'
 
 interface QrCardScannerProps {
   /** A card was read. The camera has already stopped. */
   onToken: (token: string) => void
-  /** The camera could not start (the words to show). */
+  /** The camera could not start, or the card reader could not load (the words to show). */
   onCameraError: (message: string) => void
 }
 
@@ -34,7 +45,7 @@ interface BarcodeDetectorClass {
   getSupportedFormats?: () => Promise<string[]>
 }
 
-type Reader = (video: HTMLVideoElement) => Promise<string | null>
+type Reader = FrameReader<HTMLVideoElement>
 
 const SCAN_EVERY_MS = 200
 // jsQR reads a frame this wide at most: plenty for a card held up to the camera, and quick on an old iPad.
@@ -127,14 +138,30 @@ export default function QrCardScanner({ onToken, onCameraError }: QrCardScannerP
       }
       setStarting(false)
 
-      const read = (await nativeReader()) ?? (await jsqrReader())
+      // The camera is no use without a reader: a failed load stops it and says why.
+      const unavailable = () => {
+        if (stopped) return
+        stop()
+        onErrorRef.current(QR_READER_UNAVAILABLE)
+      }
+      const reader = fallbackReader<HTMLVideoElement>({ primary: await nativeReader(), loadFallback: jsqrReader })
+      try {
+        await reader.ready()
+      } catch {
+        unavailable()
+        return
+      }
       const tick = async () => {
         if (stopped) return
         if (document.visibilityState === 'visible' && video.readyState >= 2) {
           let text: string | null = null
           try {
-            text = await read(video)
-          } catch {
+            text = await reader.read(video)
+          } catch (err) {
+            if (err instanceof QrReaderLoadError) {
+              unavailable()
+              return
+            }
             text = null
           }
           if (stopped) return
