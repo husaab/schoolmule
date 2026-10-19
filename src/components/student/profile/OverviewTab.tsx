@@ -26,7 +26,7 @@ import {
   termDelta,
   type ProfileTab,
 } from '@/lib/studentProfile'
-import { clean } from '@/components/student/view/studentViewModal'
+import { clean } from './contact'
 import type { StudentData } from '@/services/types/analytics'
 import type { ProfileTerm, StudentOverview } from '@/services/types/studentProfile'
 import { Card, ClassLinkList, EmptyState, GradeBar, linkClass, type GradebookLink } from './ui'

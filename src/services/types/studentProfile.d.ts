@@ -1,6 +1,6 @@
 // src/services/types/studentProfile.d.ts
 //
-// The staff student profile (/students/[id]). Mirrors
+// The staff student profile modal (components/student/profile). Mirrors
 // GET /api/students/:id/overview and GET /api/students/:id/grades.
 
 import type { StudentPayload } from './student'

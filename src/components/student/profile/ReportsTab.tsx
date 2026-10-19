@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { ArrowPathIcon, ChatBubbleBottomCenterTextIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon } from '@heroicons/react/24/outline'
-import ReportCardViewerModal from '@/components/report-cards/view/reportCardViewerModal'
+import Modal from '@/components/shared/modal'
 import { getSignedReportCardUrl } from '@/services/reportCardService'
 import { getSignedProgressReportUrl } from '@/services/progressReportService'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -152,7 +152,17 @@ const ReportsTab: React.FC<{ overview: StudentOverview }> = ({ overview }) => {
         )}
       </Card>
 
-      {viewingUrl && <ReportCardViewerModal url={viewingUrl} onClose={() => setViewingUrl(null)} />}
+      {/* On the shared Modal so it stacks above the profile, and Escape closes just the PDF. */}
+      <Modal
+        isOpen={viewingUrl != null}
+        onClose={() => setViewingUrl(null)}
+        closeOnEscape
+        ariaLabel="Report PDF"
+        style="w-full max-w-5xl h-[90vh]"
+        maxHeightClass="max-h-[90vh]"
+      >
+        {viewingUrl && <iframe src={viewingUrl} title="Report PDF" className="h-full w-full border-none" />}
+      </Modal>
     </div>
   )
 }

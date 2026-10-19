@@ -13,7 +13,7 @@ import MenuButton, { type MenuItem } from '@/components/shared/MenuButton'
 import { getGradeDisplayName, getSchoolName } from '@/lib/schoolUtils'
 import { PROFILE_TABS, formatStamp, type ProfileTab } from '@/lib/studentProfile'
 import { initials } from '@/components/messaging/formatters'
-import { clean } from '@/components/student/view/studentViewModal'
+import { clean } from './contact'
 import type { StudentProfileStudent } from '@/services/types/studentProfile'
 
 interface ProfileHeaderProps {
@@ -30,9 +30,11 @@ interface ProfileHeaderProps {
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabBadges = {}, onMessage, onEdit, menuItems }) => {
   const archived = Boolean(student.isArchived)
 
+  // Identity scrolls away with the content; the tab bar stays pinned to the
+  // top of the modal. Both leave room on the right for the modal's close button.
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 shadow-sm">
-      <div className="flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between">
+    <>
+      <div className="flex flex-col gap-5 border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-6 pl-5 pr-14 sm:pl-6 md:flex-row md:items-center md:justify-between md:pr-16">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-xl font-semibold tracking-wide text-white shadow-sm">
             {initials(student.name)}
@@ -93,7 +95,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
       </div>
 
       <nav
-        className="flex gap-1 overflow-x-auto border-t border-slate-100 bg-white/70 px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-slate-100 bg-white pl-3 pr-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Student profile sections"
       >
         {PROFILE_TABS.map((t) => {
@@ -118,7 +120,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
           )
         })}
       </nav>
-    </div>
+    </>
   )
 }
 

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import {
   ChartBarIcon,
@@ -18,6 +17,7 @@ import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import { computeAtRiskScore, coverageTitle, notYetGradedOf, shortCoverage } from '@/lib/analyticsUtils'
 import StatCard from '../StatCard'
 import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
+import { useStudentProfile } from '@/hooks/useStudentProfile'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 
 interface StudentViewProps {
@@ -121,19 +121,19 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
 
   const expanded = student.classes.find((c) => c.classId === expandedClass)
 
-  // The profile has every term, attendance, reports and guardians; carry the
-  // term across unless this view combines all terms.
-  const profileHref = `/students/${encodeURIComponent(student.studentId)}${
-    student.termId && student.termId !== 'all' ? `?tab=grades&term=${encodeURIComponent(student.termId)}` : ''
-  }`
+  // The profile modal has every term, attendance, reports and guardians; it
+  // opens over Analytics on this term, unless this view combines all terms.
+  const { open: openProfile } = useStudentProfile()
+  const openFullProfile = () =>
+    openProfile(student.studentId, { tab: 'grades', term: student.termId && student.termId !== 'all' ? student.termId : null })
 
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Link href={profileHref} className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700">
+        <button onClick={openFullProfile} className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700 cursor-pointer">
           <UserCircleIcon className="w-4 h-4" />
-          Full student profile →
-        </Link>
+          Full student profile
+        </button>
       </div>
 
       {/* Risk banner */}

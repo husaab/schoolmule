@@ -1,4 +1,4 @@
-// Pure helpers for the staff student profile (/students/[id]). Everything
+// Pure helpers for the staff student profile modal. Everything
 // here derives display data from the API payloads; nothing re-computes a
 // grade, which only ever comes from the backend's one grade engine.
 

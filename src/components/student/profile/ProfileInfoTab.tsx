@@ -11,7 +11,7 @@ import {
   PencilIcon,
   UserIcon,
 } from '@heroicons/react/24/outline'
-import { GuardianCard, SectionLabel, clean } from '@/components/student/view/studentViewModal'
+import { GuardianCard, SectionLabel, clean } from './contact'
 import { formatDay, formatStamp, relationLabel } from '@/lib/studentProfile'
 import type { GuardianAccount, StudentOverview } from '@/services/types/studentProfile'
 import { Card } from './ui'

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import Link from 'next/link'
+import StudentNameLink from '@/components/student/profile/StudentNameLink'
 import type { StudentContext } from '@/services/types/messaging'
 import { initials } from './formatters'
 import { toneClasses, type Tone } from './tones'
@@ -29,9 +29,9 @@ const StudentContextCard: React.FC<{ student: StudentContext; tone: Tone }> = ({
         <p className="truncate text-sm font-medium text-slate-900">{student.name}</p>
         <p className="truncate text-xs text-slate-500">{meta.join(' · ')}</p>
       </div>
-      <Link href={`/students/${encodeURIComponent(student.studentId)}`} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}>
+      <StudentNameLink studentId={student.studentId} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}>
         Student profile
-      </Link>
+      </StudentNameLink>
     </div>
   )
 }

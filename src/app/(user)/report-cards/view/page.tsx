@@ -19,6 +19,7 @@ import { TermPayload } from '@/services/types/term';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams } from '@/hooks/useFilterParams';
+import StudentNameLink from '@/components/student/profile/StudentNameLink';
 
 type ReportCardRow = {
   student_id: string;
@@ -439,7 +440,7 @@ function ViewReportCardsPageContent() {
                                   className="h-4 w-4 mr-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
                                 />
                                 <div className="flex-1">
-                                  <p className="font-medium text-gray-800">{student.student_name}</p>
+                                  <p className="font-medium text-gray-800"><StudentNameLink studentId={student.student_id}>{student.student_name}</StudentNameLink></p>
                                   <p className="text-gray-600 text-sm">
                                     Generated: {new Date(student.generated_at).toLocaleDateString('en-US', {
                                       month: 'short',
