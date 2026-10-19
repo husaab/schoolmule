@@ -177,6 +177,29 @@ describe('createDebouncedSaver', () => {
     expect(saver.peek()).toBeNull()
   })
 
+  it('cancel forgets what waits and what failed, and lets a save in flight land', async () => {
+    const { calls, saver } = setup<string>()
+    saver.schedule('first')
+    const flushed = saver.flush()
+    saver.schedule('second')
+    saver.cancel()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(calls).toHaveLength(1)
+    calls[0].resolve()
+    await flushed
+    expect(calls).toHaveLength(1)
+    expect(saver.getState().status).toBe('saved')
+    expect(saver.peek()).toBeNull()
+
+    saver.schedule('bad')
+    const again = saver.flush()
+    calls[1].reject(new Error('500'))
+    await again
+    saver.cancel()
+    expect(saver.getState().status).toBe('saved')
+    expect(saver.peek()).toBeNull()
+  })
+
   it('peek shows failed < in flight < pending, merged', async () => {
     const { calls, saver } = setup<Edits>(mergeEdits)
     saver.schedule({ s1: { score: 1 } })

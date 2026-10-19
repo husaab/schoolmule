@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { resetSessionSavers, sessionDebouncedSaver, setFailedAway } from './debouncedSaverRegistry'
+import {
+  peekSessionSaver,
+  rekeySessionSaver,
+  resetSessionSavers,
+  sessionDebouncedSaver,
+  setFailedAway,
+  setFailedAwayFor,
+} from './debouncedSaverRegistry'
 import type { DebouncedSaveOptions } from './debouncedSaver'
 
 type Edits = Record<string, { draftScore?: number | null; feedback?: string }>
@@ -126,5 +133,56 @@ describe('leaving never loses a score or feedback', () => {
     saver.schedule({ s1: { feedback: 'Neat.' } })
     view.win.dispatchEvent(new Event('pagehide'))
     expect(calls[0].opts).toEqual({ keepalive: true })
+  })
+})
+
+describe('a new draft gets its id (the classwork form, final review I1)', () => {
+  type Form = { title: string }
+
+  it('moves to its item key, so the edit page finds it and the next New form starts clean', () => {
+    const notify = vi.fn()
+    const draft = sessionDebouncedSaver<Form>('item-form:u1:new:c1:assignment', { notify })
+    rekeySessionSaver('item-form:u1:new:c1:assignment', 'item-form:u1:i9')
+    expect(sessionDebouncedSaver<Form>('item-form:u1:i9', { notify })).toBe(draft)
+    expect(sessionDebouncedSaver<Form>('item-form:u1:new:c1:assignment', { notify })).not.toBe(draft)
+  })
+
+  it('keeps its toast words after the move', async () => {
+    const notify = vi.fn()
+    const { calls, save } = server()
+    const draft = sessionDebouncedSaver<Edits>('item-form:u1:new:c1:assignment', { notify })
+    draft.setHandlers({ save })
+    setFailedAwayFor(draft, () => 'Your last changes to "Plant cells" didn\'t save.')
+    const view = page()
+    const disconnect = draft.connect(view.win, view.doc)
+    rekeySessionSaver('item-form:u1:new:c1:assignment', 'item-form:u1:i9')
+    draft.schedule({ s1: { feedback: 'x' } })
+    disconnect()
+    calls[0].reject(new Error('offline'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(notify).toHaveBeenCalledWith('Your last changes to "Plant cells" didn\'t save.')
+    expect(peekSessionSaver('item-form:u1:i9')).toEqual({ s1: { feedback: 'x' } })
+  })
+
+  it('peeks without making a saver', () => {
+    expect(peekSessionSaver('item-form:u1:nothing')).toBeNull()
+    const notify = vi.fn()
+    expect(sessionDebouncedSaver('item-form:u1:nothing', { notify }).peek()).toBeNull()
+  })
+
+  it('a failed first save stays under the New key, so the next New form gets it back', async () => {
+    const notify = vi.fn()
+    const { calls, save } = server()
+    const draft = sessionDebouncedSaver<Edits>('item-form:u1:new:c1:assignment', { notify })
+    draft.setHandlers({ save })
+    setFailedAway('item-form:u1:new:c1:assignment', () => 'Your new assignment didn\'t save.')
+    const view = page()
+    const disconnect = draft.connect(view.win, view.doc)
+    draft.schedule({ s1: { feedback: 'typed' } })
+    disconnect()
+    calls[0].reject(new Error('offline'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(notify).toHaveBeenCalledWith("Your new assignment didn't save.")
+    expect(peekSessionSaver('item-form:u1:new:c1:assignment')).toEqual({ s1: { feedback: 'typed' } })
   })
 })

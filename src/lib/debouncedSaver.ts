@@ -56,6 +56,8 @@ export interface DebouncedSaver<T> {
   retry(): Promise<void>
   /** Forget what failed. */
   discard(): void
+  /** Forget what is waiting to be sent and what failed (a draft being thrown away); a save in flight still lands. */
+  cancel(): void
   /** Everything not confirmed by the server yet (failed < in flight < pending), or null. */
   peek(): T | null
   /** Whether a save has failed, read now. */
@@ -242,6 +244,13 @@ export function createDebouncedSaver<T>({
     },
     discard() {
       if (!failed) return
+      failed = null
+      changed()
+    },
+    cancel() {
+      clearTimer()
+      if (pending === null && !failed) return
+      pending = null
       failed = null
       changed()
     },

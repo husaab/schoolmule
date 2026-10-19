@@ -28,7 +28,7 @@ import {
   type DebouncedSaver,
   type DebouncedSaverState,
 } from '@/lib/debouncedSaver'
-import { sessionDebouncedSaver, setFailedAway } from '@/lib/debouncedSaverRegistry'
+import { sessionDebouncedSaver, setFailedAwayFor } from '@/lib/debouncedSaverRegistry'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
 export type { DebouncedSaveStatus } from '@/lib/debouncedSaver'
@@ -41,6 +41,8 @@ export interface DebouncedSave<T> {
   flush: (opts?: DebouncedSaveOptions) => Promise<void>
   retry: () => Promise<void>
   discard: () => void
+  /** Forget what is waiting and what failed (a draft being thrown away). */
+  cancel: () => void
   /** Everything not confirmed by the server yet, or null (to show unsaved edits when a view reopens). */
   peek: () => T | null
   /** Whether a save has failed, read now (after `await flush()`). */
@@ -78,7 +80,7 @@ export function useDebouncedSave<T>({
   // The latest callbacks, so the saver (made once) never calls a stale closure.
   useEffect(() => {
     saver.setHandlers({ save, merge })
-    if (key && failedAway) setFailedAway(key, (failed) => failedAway(failed as T | null))
+    if (key && failedAway) setFailedAwayFor(saver, failedAway)
   })
   const state = useSyncExternalStore(saver.subscribe, saver.getState, serverState)
   useEffect(() => saver.connect(window, document), [saver])
@@ -87,8 +89,9 @@ export function useDebouncedSave<T>({
   const flush = useCallback((opts?: DebouncedSaveOptions) => saver.flush(opts), [saver])
   const retry = useCallback(() => saver.retry(), [saver])
   const discard = useCallback(() => saver.discard(), [saver])
+  const cancel = useCallback(() => saver.cancel(), [saver])
   const peek = useCallback(() => saver.peek(), [saver])
   const hasFailures = useCallback(() => saver.hasFailures(), [saver])
 
-  return { status: state.status, error: state.error, schedule, flush, retry, discard, peek, hasFailures }
+  return { status: state.status, error: state.error, schedule, flush, retry, discard, cancel, peek, hasFailures }
 }
