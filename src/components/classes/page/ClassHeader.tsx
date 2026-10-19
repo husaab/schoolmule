@@ -6,6 +6,8 @@
 // on the banner itself. The tab bar goes in as children so
 // it sits at the bottom of the banner. `actions` is where the student and
 // parent variants put "Message {teacher}"; the teacher page passes none.
+// `compact` (the Grades tab) shrinks the banner to a slim bar so the grid
+// starts high on the page.
 'use client'
 
 import { useState, type ReactNode } from 'react'
@@ -24,6 +26,8 @@ interface ClassHeaderProps {
   /** The list the back link returns to (with its remembered filters). */
   backTo?: string
   backLabel?: string
+  /** A slim banner (smaller icon and title, no reading-width cap). */
+  compact?: boolean
 }
 
 export default function ClassHeader({
@@ -32,12 +36,14 @@ export default function ClassHeader({
   children,
   backTo = '/classes',
   backLabel = 'Classes',
+  compact = false,
 }: ClassHeaderProps) {
   const cls = data.class
   const { identity } = cls
   const color = CLASS_COLORS[identity.color] ?? CLASS_COLORS.slate
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  const showImage = !!identity.bannerUrl && identity.bannerUrl !== failedUrl
+  // The slim bar is the class colour alone: a photo behind a one-line title is hard to read.
+  const showImage = !compact && !!identity.bannerUrl && identity.bannerUrl !== failedUrl
   // A server-rendered <img> can fail before React attaches onError.
   const watch = (el: HTMLImageElement | null) => {
     if (el && el.complete && el.naturalWidth === 0) setFailedUrl(identity.bannerUrl)
@@ -65,17 +71,25 @@ export default function ClassHeader({
             onError={() => setFailedUrl(identity.bannerUrl)}
           />
         )}
-        <div className={`relative flex max-w-[1180px] flex-col gap-5 px-6 pt-7 lg:px-8 ${children ? '' : 'pb-7'}`}>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
+        <div
+          className={`relative flex flex-col px-6 lg:px-8 ${compact ? 'gap-3 pt-4' : 'max-w-[1180px] gap-5 pt-7'} ${
+            children ? '' : compact ? 'pb-4' : 'pb-7'
+          }`}
+        >
+          <div className={`flex flex-wrap justify-between gap-4 ${compact ? 'items-center' : 'items-start'}`}>
+            <div className={`flex min-w-0 items-center ${compact ? 'gap-3' : 'gap-4'}`}>
               <ClassIcon
                 identity={identity}
-                size={60}
-                className="border-[3px] border-white shadow-[0_2px_6px_rgba(15,23,42,0.08)]"
+                size={compact ? 40 : 60}
+                className={`${compact ? 'border-2' : 'border-[3px]'} border-white shadow-[0_2px_6px_rgba(15,23,42,0.08)]`}
               />
-              <div className="flex min-w-0 flex-col gap-1">
-                <h2 className="font-display text-[28px] font-semibold leading-tight sm:text-[34px]">{cls.subject}</h2>
-                <span className="text-[15px]">{headerMeta(cls, data.teachers)}</span>
+              <div className={`flex min-w-0 ${compact ? 'flex-wrap items-baseline gap-x-3 gap-y-0.5' : 'flex-col gap-1'}`}>
+                <h2
+                  className={`font-display font-semibold leading-tight ${compact ? 'text-[22px] sm:text-2xl' : 'text-[28px] sm:text-[34px]'}`}
+                >
+                  {cls.subject}
+                </h2>
+                <span className={compact ? 'text-sm' : 'text-[15px]'}>{headerMeta(cls, data.teachers)}</span>
               </div>
             </div>
             {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

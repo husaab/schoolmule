@@ -69,8 +69,10 @@ export interface ScoreCellMark {
 const BASE_TONE = { bg: 'bg-slate-50', text: 'text-slate-900', placeholder: 'placeholder:text-slate-400' }
 const DRAFT_TONE = { bg: 'bg-slate-100', text: 'text-slate-500 italic', placeholder: 'placeholder:text-slate-400' }
 const IN_TONE = { bg: 'bg-cyan-100', text: 'text-cyan-800', placeholder: 'placeholder:text-cyan-800' }
+// Scores read at a glance in a wide grid (UX review E1): a larger figure than the form inputs.
+const cellInputClass = inputClass.replace('text-sm', 'text-base font-medium')
 const toned = (tone: typeof BASE_TONE) =>
-  inputClass.replace(BASE_TONE.bg, tone.bg).replace(BASE_TONE.text, tone.text).replace(BASE_TONE.placeholder, tone.placeholder)
+  cellInputClass.replace(BASE_TONE.bg, tone.bg).replace(BASE_TONE.text, tone.text).replace(BASE_TONE.placeholder, tone.placeholder)
 
 export const pillClass: Record<Exclude<ScoreStatus, 'graded'>, string> = {
   missing: 'bg-rose-100 text-rose-700 ring-rose-200',
@@ -159,7 +161,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         </div>
       ) : (
         <div className="flex items-center justify-center gap-1">
-          <div className={`w-16 rounded-xl ${failed ? 'ring-2 ring-rose-400' : ''}`}>
+          <div className={`w-[4.5rem] rounded-xl ${failed ? 'ring-2 ring-rose-400' : ''}`}>
             <input
               id={inputId}
               type="number"
@@ -168,7 +170,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
               step="1"
               aria-label={isIn ? `${label} (turned in${mark?.late ? ' late' : ''}, not graded yet)` : isDraft && value != null ? `${label} (draft)` : label}
               aria-invalid={failed || undefined}
-              className={`${isIn ? toned(IN_TONE) : isDraft && value != null ? toned(DRAFT_TONE) : inputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+              className={`${isIn ? toned(IN_TONE) : isDraft && value != null ? toned(DRAFT_TONE) : cellInputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
                 value == null && !isIn ? 'border-dashed' : ''
               } ${failed ? 'border-rose-300' : ''}`}
               value={value ?? ''}
@@ -199,7 +201,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
               }
             />
           </div>
-          <span className="text-sm text-slate-400">/{maxScore}</span>
+          <span className="text-sm text-slate-500">/{maxScore}</span>
           {pastDue && (
             <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-rose-600" title="Past due, nothing turned in" aria-hidden="true" />
           )}

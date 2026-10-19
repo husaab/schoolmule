@@ -4,7 +4,8 @@
 // the URL and is not remembered: a bare /classes/{id} (a card, a row, a
 // Back link) always opens the Stream, so a link that needs another tab
 // passes it through classHref. An archived class still opens, with a note
-// and Unarchive for those who may edit it.
+// and Unarchive for those who may edit it. Grades uses the whole page width
+// under a slimmer header (UX review E1); the other tabs keep a reading width.
 'use client'
 
 import { Suspense, useState, type ComponentType } from 'react'
@@ -27,6 +28,7 @@ import SettingsTab from '@/components/classes/settings/SettingsTab'
 import { useFilterParams, type FilterPatch } from '@/hooks/useFilterParams'
 import { classHref, parseClassTab, type ClassTab } from '@/lib/classroomRoutes'
 import { classTitle, gradeShort } from '@/lib/classesHome'
+import { isFullWidthTab } from '@/lib/gradesLayout'
 import { unarchiveClass } from '@/services/classroomService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
@@ -116,6 +118,7 @@ function ClassPageContent() {
   const label = classTitle(cls.grade, cls.subject)
   const canEdit = data.permissions.canEdit
   const Body = TAB_BODIES[tab]
+  const fullWidth = isFullWidthTab(tab)
 
   const unarchive = async () => {
     setUnarchiving(true)
@@ -135,11 +138,11 @@ function ClassPageContent() {
 
   return (
     <Shell>
-      <ClassHeader data={data}>
+      <ClassHeader data={data} compact={fullWidth}>
         <ClassTabs active={tab} hrefFor={(t) => classHref(classId, t)} onSelect={selectTab} />
       </ClassHeader>
 
-      <div className="max-w-[1180px] px-6 pb-12 pt-7 lg:px-8">
+      <div className={`px-6 pb-12 lg:px-8 ${fullWidth ? 'pt-5' : 'max-w-[1180px] pt-7'}`}>
         {cls.archivedAt && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-[18px] py-3.5">
             <p className="flex items-center gap-2.5 text-sm text-amber-900">

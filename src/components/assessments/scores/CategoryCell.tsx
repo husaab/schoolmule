@@ -4,14 +4,16 @@
 // item inside is counted, "—" when nothing is graded yet, "Excused" when every
 // item is excused. Its "…" control applies a status to the whole category.
 // Clicking anywhere in the cell (or Enter on its button) opens the category
-// window, where the items inside are scored. A dot says what is inside
-// (D15): rose when anything is missing (flagged, or classwork past due), else
-// cyan when classwork inside is turned in or holds a draft, waiting for the
-// teacher.
+// window, where the items inside are scored. Words under the score say what
+// is inside (D15, UX review E1): "Missing work" when anything is missing
+// (flagged, or classwork past due), else "To grade" when classwork inside is
+// turned in or holds a draft, waiting for the teacher. The score is large and
+// coloured by band.
 
 import React from 'react'
 import type { AssessmentResult, CellState, ScoreStatus } from '@/lib/gradeEngine'
 import type { CategoryDot } from '@/lib/gridOverlay'
+import { categoryFlag, scoreTone } from '@/lib/gradesLayout'
 import StatusControl from './StatusControl'
 import { pillClass } from './ScoreCell'
 
@@ -33,11 +35,8 @@ interface CategoryCellProps {
   dot?: CategoryDot
   className?: string
   title?: string
-}
-
-const DOTS: Record<Exclude<CategoryDot, null>, { className: string; label: string }> = {
-  missing: { className: 'bg-rose-600', label: 'Something missing inside' },
-  waiting: { className: 'bg-cyan-500', label: 'Turned in or draft, waiting for you' },
+  /** Compact rows: the words sit beside the score instead of under it. */
+  dense?: boolean
 }
 
 /**
@@ -52,12 +51,6 @@ export const categoryStatus = (result: AssessmentResult, childStates: CellState[
   return 'graded'
 }
 
-export const formatCategoryScore = (result: AssessmentResult): string => {
-  if (!result.isCounted || result.pct == null) return '—'
-  const earned = (result.pct / 100) * result.weight
-  return `${earned.toFixed(1)}/${result.weight}`
-}
-
 const CategoryCell: React.FC<CategoryCellProps> = ({
   label,
   result,
@@ -70,34 +63,32 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   dot,
   className = '',
   title,
+  dense = false,
 }) => {
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
   // Something inside is flagged missing (counts as 0): the board's rose dot.
   const shownDot: CategoryDot = dot !== undefined ? dot : childStates.includes('missing') ? 'missing' : null
+  const flag = categoryFlag(shownDot)
+  const earned = result.isCounted && result.pct != null ? (result.pct / 100) * result.weight : null
   const score = excused ? (
     <span className={`inline-block rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${pillClass.excused}`}>
       Excused
     </span>
-  ) : result.isCounted ? (
-    <span className="inline-block rounded-lg bg-blue-100 px-2 py-1 text-sm font-medium tabular-nums text-blue-700">
-      {formatCategoryScore(result)}
+  ) : earned != null ? (
+    <span className="inline-flex items-baseline gap-1 tabular-nums">
+      <span className={`font-display text-lg font-semibold ${scoreTone(result.pct)}`}>{earned.toFixed(1)}</span>
+      <span className="text-sm text-slate-500">/ {result.weight}</span>
     </span>
   ) : (
-    <span className="inline-block px-2 py-1 text-sm text-slate-400" title="Nothing graded yet">
+    <span className="inline-block px-2 py-1 text-base text-slate-400" title="Nothing graded yet">
       —
     </span>
   )
   const value = (
-    <span className="inline-flex items-center gap-1.5">
+    <span className={`inline-flex items-center px-1 ${dense ? 'flex-row gap-2' : 'flex-col gap-0.5'}`}>
       {score}
-      {shownDot && (
-        <span
-          className={`h-[7px] w-[7px] shrink-0 rounded-full ${DOTS[shownDot].className}`}
-          title={DOTS[shownDot].label}
-          aria-label={DOTS[shownDot].label}
-        />
-      )}
+      {flag && <span className={`text-xs font-medium ${flag.className}`}>{flag.text}</span>}
     </span>
   )
   return (

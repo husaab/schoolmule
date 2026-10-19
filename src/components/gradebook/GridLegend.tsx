@@ -1,6 +1,6 @@
 // src/components/gradebook/GridLegend.tsx
 // The legend under the score grids (Teacher-Grades board). The class grid
-// explains its category dots; once the class has classwork with a gradebook
+// explains the words under a category score; once the class has classwork with a gradebook
 // column, both grids also show the cell marks: "8" Draft, "In" Turned in,
 // "M" Missing (counts as 0). The category window adds how it saves and that a
 // column name opens the grading view.
@@ -17,10 +17,6 @@ function Swatch({ className, children }: { className: string; children: React.Re
       {children}
     </span>
   )
-}
-
-function Dot({ className }: { className: string }) {
-  return <span className={`h-2 w-2 rounded-full ${className}`} aria-hidden="true" />
 }
 
 export default function GridLegend({ variant, classwork }: GridLegendProps) {
@@ -56,13 +52,13 @@ export default function GridLegend({ variant, classwork }: GridLegendProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-600">
       <span className="flex items-center gap-1.5">
-        <Dot className="bg-rose-600" />
-        Something missing inside
+        <span className="font-medium text-rose-700">Missing work</span>
+        something inside is missing or past due
       </span>
       {classwork && (
         <span className="flex items-center gap-1.5">
-          <Dot className="bg-cyan-500" />
-          Turned in or draft, waiting for you
+          <span className="font-medium text-cyan-700">To grade</span>
+          turned in or drafted, waiting for you
         </span>
       )}
       {swatches}

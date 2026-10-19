@@ -2,9 +2,10 @@
 // The class's Grades tab (D10, Teacher-Grades board): today's gradebook,
 // moved into the class. Sub-tabs in the URL (?sub=, Scores is the default):
 // Scores · Assessments & categories · Report card comments · Progress report
-// comments, with the toolbar beside them (the autosave pill, the class
-// average and "Create assessment"). Scores and both kinds of comments
-// autosave (D17); the pill shows all three, and a sub-tab switch saves first. JK and SK classes show their competency
+// comments, with the toolbar beside them (the autosave pill and "Create
+// assessment"; the class average sits in the grid's own stats line). Scores
+// and both kinds of comments autosave (D17); the pill shows all three, and a
+// sub-tab switch saves first. JK and SK classes show their competency
 // gradebook alone; their skill domains and subjects live in Settings.
 'use client'
 
@@ -104,7 +105,6 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
     reportComments.discard()
     progressComments.discard()
   }
-  const [classAverage, setClassAverage] = useState<number | null | undefined>(undefined)
 
   // JK and SK grading setup (skill domains, subjects) is in Settings: an old
   // #assessments link that landed on Grades → setup goes there.
@@ -208,18 +208,10 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <SavedPill status={pillStatus} failedCount={failedCount} onRetry={retryAll} onDiscard={discardAll} />
-          {classAverage !== undefined && (
-            <span className="flex flex-col items-end px-2">
-              <span className="text-xs text-slate-500">Class average</span>
-              <span className="font-display text-[22px] font-semibold leading-tight text-slate-900 tabular-nums">
-                {classAverage == null ? '—' : `${classAverage.toFixed(1)}%`}
-              </span>
-            </span>
-          )}
           <button
             type="button"
             onClick={() => void createAssessment()}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-medium text-cyan-800 transition-colors hover:bg-cyan-100"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-cyan-600 px-3.5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
           >
             <PlusIcon className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
             Create assessment
@@ -232,7 +224,6 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
           <GradebookWorkspace
             classId={classId}
             classData={classData}
-            onClassAverage={setClassAverage}
             focusAssessmentId={focusAssessmentId}
             onFocusHandled={clearFocus}
           />

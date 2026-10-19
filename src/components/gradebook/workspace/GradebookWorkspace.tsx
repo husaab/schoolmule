@@ -16,8 +16,13 @@
 // published, so the grid lays the classwork overlay
 // (GET /api/classroom/classes/:id/grid-overlay, re-read after saves) over the
 // score matrix: drafts grey and italic, "In" for work turned in with no grade
-// yet, a rose dot for work past due, dots on categories, and "Publish N" on a
-// column holding N drafts. Drafts never count in the totals.
+// yet, a rose dot for work past due, words under category scores, and
+// "Publish N" on a column holding N drafts. Drafts never count in the totals.
+//
+// Layout (UX review E1): the grid fills the page width; category scores and
+// the term total are large and coloured by band (scoreTone), a category says
+// "Missing work" / "To grade" in words, and each browser keeps its own
+// comfortable or compact rows.
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -90,9 +95,12 @@ import {
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
   MegaphoneIcon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import Avatar from '@/components/avatar/Avatar'
+import { readGridDensity, scoreTone, writeGridDensity, type GridDensity } from '@/lib/gradesLayout'
 
 interface GradebookWorkspaceProps {
   classId: string
@@ -123,7 +131,9 @@ const pointsOf = (a: AssessmentPayload) => a.weightPoints || a.weightPercent || 
 
 // Pinned at the far right of the grid, with a shadow over the columns that
 // scroll beneath it.
-const TOTAL_SHADOW = 'shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
+const TOTAL_SHADOW = 'sm:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
+// On a phone the term total scrolls with the row; pinned, it would leave no room for the scores.
+const TOTAL_PIN = 'sm:sticky sm:right-0'
 
 export default function GradebookWorkspace({
   classId,
@@ -436,6 +446,19 @@ export default function GradebookWorkspace({
     if (!loading && !error) onClassAverage?.(classAverage)
   }, [classAverage, loading, error, onClassAverage])
 
+  // Comfortable or compact rows, remembered for this browser (read after
+  // mount so the server render and the first client render agree).
+  const [density, setDensity] = useState<GridDensity>('comfortable')
+  useEffect(() => {
+    setDensity(readGridDensity(window.localStorage))
+  }, [])
+  const toggleDensity = () => {
+    const next: GridDensity = density === 'compact' ? 'comfortable' : 'compact'
+    setDensity(next)
+    writeGridDensity(window.localStorage, next)
+  }
+  const rowPad = density === 'compact' ? 'py-1.5' : 'py-3'
+
   // Hand each student's live grade (null = nothing graded yet) and coverage to
   // the report card and progress comment sub-tabs (bulkFeedbackGrades).
   const storedGrades = useMemo(() => {
@@ -554,8 +577,6 @@ export default function GradebookWorkspace({
     (rowsByStudent[studentId] || []).filter((r) => !r.is_parent && r.status === 'excused').length
   const openThreadsFor = (studentId: string) =>
     Object.values(threadStubs).filter((st) => st.studentId === studentId && st.status === 'open').length
-  const pctColor = (pct: number | null) =>
-    pct == null ? 'text-slate-400' : pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-slate-900' : 'text-rose-600'
 
   // A category is outlined when a score inside it failed to save.
   const failedCategoryFor = (studentId: string, categoryId: string) =>
@@ -724,8 +745,27 @@ export default function GradebookWorkspace({
           <span>
             {assessedPcts.length} of {students.length} students assessed
           </span>
+          <span className="flex items-baseline gap-1.5">
+            Class average
+            <strong className={`font-display text-lg font-semibold tabular-nums ${classAverage == null ? 'text-slate-400' : 'text-slate-900'}`}>
+              {classAverage == null ? '—' : `${classAverage.toFixed(1)}%`}
+            </strong>
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleDensity}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+            title={density === 'compact' ? 'Show taller rows' : 'Fit more students on the screen'}
+          >
+            {density === 'compact' ? (
+              <ArrowsPointingOutIcon className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ArrowsPointingInIcon className="h-4 w-4" aria-hidden="true" />
+            )}
+            {density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
+          </button>
           <button
             type="button"
             onClick={() => setMessagePreset({})}
@@ -761,7 +801,7 @@ export default function GradebookWorkspace({
           <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-slate-50">
-                <th className="sticky left-0 z-20 min-w-[200px] border-b border-slate-100 bg-slate-50 px-4 py-3 text-left text-[13px] font-semibold text-slate-700">
+                <th className="sticky left-0 z-20 min-w-[130px] border-b border-slate-100 bg-slate-50 px-4 py-3 text-left text-[13px] font-semibold text-slate-700 sm:min-w-[240px]">
                   Student
                 </th>
                 {displayedAssessments.map((a) => {
@@ -775,7 +815,7 @@ export default function GradebookWorkspace({
                       ref={(el) => {
                         thRefs.current[a.assessmentId] = el
                       }}
-                      className={`min-w-[150px] cursor-pointer border-b border-l border-slate-100 px-2 py-2 text-center align-top transition-colors duration-300 hover:bg-slate-100 ${
+                      className={`min-w-[150px] cursor-pointer border-b border-l border-slate-100 px-3 py-3 text-center align-top transition-colors duration-300 hover:bg-slate-100 ${
                         highlightedAssessmentId === a.assessmentId ? 'ring-2 ring-inset ring-cyan-400' : ''
                       }`}
                       onClick={() => openColumn(a)}
@@ -801,14 +841,14 @@ export default function GradebookWorkspace({
                           className="flex min-w-0 cursor-pointer flex-col items-center gap-0.5 rounded-lg px-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                         >
                           <span
-                            className={`flex max-w-[140px] items-center gap-1 text-[13px] font-semibold ${
-                              a.isParent ? 'text-cyan-700' : 'text-slate-700'
+                            className={`flex max-w-[220px] items-center gap-1 font-display text-[15px] font-semibold ${
+                              a.isParent ? 'text-cyan-700' : 'text-slate-800'
                             }`}
                           >
                             <span className="truncate">{a.name}</span>
                             {a.isParent && <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
                           </span>
-                          <span className="whitespace-nowrap text-[11px] font-normal text-slate-500">{detail}</span>
+                          <span className="whitespace-nowrap text-xs font-normal text-slate-500">{detail}</span>
                         </button>
                       </div>
                       {notPosted[a.assessmentId] && (
@@ -856,7 +896,7 @@ export default function GradebookWorkspace({
                   )
                 })}
                 <th
-                  className={`sticky right-0 z-20 min-w-[96px] border-b border-l-2 border-slate-100 border-l-emerald-100 bg-emerald-50 px-3 py-3 text-center text-[13px] font-semibold text-emerald-800 ${TOTAL_SHADOW}`}
+                  className={`${TOTAL_PIN} z-20 min-w-[110px] border-b border-l-2 border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 py-3 text-center font-display text-sm font-semibold text-emerald-800 ${TOTAL_SHADOW}`}
                 >
                   Term total
                 </th>
@@ -883,16 +923,19 @@ export default function GradebookWorkspace({
                   const grade = live.grade
                   return (
                     <tr key={stu.studentId} className="transition-colors hover:bg-slate-50/50">
-                      <td className="sticky left-0 z-10 border-r border-t border-slate-100 bg-white px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Avatar name={stu.name} avatar={stu.avatar ?? null} size={32} />
+                      <td className={`sticky left-0 z-10 border-r border-t border-slate-100 bg-white px-4 ${rowPad}`}>
+                        <div className="flex items-center gap-2.5">
+                          {/* No avatar on a phone: the name column stays narrow enough to leave room for scores. */}
+                          <span className="hidden shrink-0 sm:inline-flex">
+                            <Avatar name={stu.name} avatar={stu.avatar ?? null} size={density === 'compact' ? 24 : 30} />
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               void autosave.flush()
                               setSelectedStudent({ studentId: stu.studentId, name: stu.name })
                             }}
-                            className="cursor-pointer text-left font-medium text-slate-900 transition-colors hover:text-cyan-600"
+                            className="cursor-pointer text-left text-[15px] font-medium text-slate-900 transition-colors hover:text-cyan-600 sm:whitespace-nowrap"
                             title="View or edit every assessment for this student"
                           >
                             {stu.name}
@@ -956,8 +999,9 @@ export default function GradebookWorkspace({
                               onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
                               onClick={() => setSelectedParentAssessment(a)}
                               failed={failedCategoryFor(stu.studentId, a.assessmentId)}
-                              className={`border-l border-t border-slate-100 transition-colors hover:bg-cyan-50/60 ${highlight}`}
+                              className={`border-l border-t border-slate-100 transition-colors hover:bg-cyan-50/60 ${rowPad} ${highlight}`}
                               title="Open this category's assessments"
+                              dense={density === 'compact'}
                             />
                           )
                         }
@@ -980,7 +1024,7 @@ export default function GradebookWorkspace({
                             onCommit={() => void autosave.flush()}
                             onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
-                            className={`border-l border-t border-slate-100 py-2 ${highlight}`}
+                            className={`border-l border-t border-slate-100 ${rowPad} ${highlight}`}
                             corner={
                               threadStubs[key] && (
                                 <button
@@ -1008,14 +1052,17 @@ export default function GradebookWorkspace({
                       })}
 
                       <td
-                        className={`sticky right-0 z-10 border-l-2 border-t border-slate-100 border-l-emerald-100 bg-emerald-50 px-3 py-2 text-center ${TOTAL_SHADOW}`}
+                        className={`${TOTAL_PIN} z-10 border-l-2 border-t border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 text-center ${rowPad} ${TOTAL_SHADOW}`}
+                        title={density === 'compact' ? formatCoverage(grade.coverage) : undefined}
                       >
-                        <div className={`font-semibold tabular-nums ${pctColor(grade.pct)}`}>
+                        <div className={`font-display text-xl font-bold leading-tight tabular-nums ${scoreTone(grade.pct)}`}>
                           {grade.pct == null ? '—' : `${grade.pct.toFixed(1)}%`}
                         </div>
-                        <div className="whitespace-nowrap text-[10px] font-normal tabular-nums text-slate-400">
-                          {formatCoverage(grade.coverage)}
-                        </div>
+                        {density === 'comfortable' && (
+                          <div className="whitespace-nowrap text-[11px] font-normal tabular-nums text-slate-500">
+                            {formatCoverage(grade.coverage)}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )
