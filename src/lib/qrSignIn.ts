@@ -88,3 +88,29 @@ export function qrSignInMessage(err: unknown): string {
   if (said && (typeof code === 'string' && code !== '' ? true : status >= 400 && status < 500)) return said
   return QR_SERVER_TROUBLE
 }
+
+/**
+ * Signs a scanned card in (Fable M5). Cards are scanned on shared classroom
+ * devices, so the session already in this browser (a teacher on the classroom
+ * laptop, the last student) must not survive a scan, but it ends only once
+ * the server has accepted the card, right before the student's own session
+ * starts. A voided card, too many tries or a dropped connection leave it
+ * exactly as it was (the error is rethrown for the page to explain).
+ */
+export async function signInWithCard<R, U>(
+  token: string,
+  steps: {
+    /** The sign-in request (POST /auth/student-qr). */
+    request: (token: string) => Promise<R>
+    /** Someone is signed in to this browser now. */
+    hasSession: () => boolean
+    /** Ends that session here (token and every per-user store). */
+    signOut: () => void
+    /** Starts the student's session from the server's answer. */
+    start: (res: R) => U
+  },
+): Promise<U> {
+  const res = await steps.request(token)
+  if (steps.hasSession()) steps.signOut()
+  return steps.start(res)
+}

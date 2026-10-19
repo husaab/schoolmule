@@ -7,6 +7,7 @@ import {
   cameraProblem,
   parseCardPayload,
   qrSignInMessage,
+  signInWithCard,
 } from './qrSignIn'
 
 const apiError = (status: number, message: string, code: string | null = null) =>
@@ -98,5 +99,58 @@ describe('cameraProblem', () => {
   it('has a plain fallback, never the raw error', () => {
     expect(cameraProblem(new Error('getUserMedia exploded'))).toBe("The camera didn't start. Try again, or sign in with your email.")
     expect(cameraProblem(undefined)).not.toMatch(/undefined/)
+  })
+})
+
+// Fable M5: a scan never signs the current user out until the server has accepted the card.
+describe('signInWithCard', () => {
+  const steps = (request: (token: string) => Promise<string>, hasSession = true) => {
+    const calls: string[] = []
+    return {
+      calls,
+      steps: {
+        request: async (token: string) => {
+          calls.push(`request:${token}`)
+          return request(token)
+        },
+        hasSession: () => hasSession,
+        signOut: () => {
+          calls.push('signOut')
+        },
+        start: (res: string) => {
+          calls.push(`start:${res}`)
+          return `user:${res}`
+        },
+      },
+    }
+  }
+
+  it('asks the server first, then ends the old session right before the new one starts', async () => {
+    const { calls, steps: s } = steps(async () => 'session')
+    await expect(signInWithCard('tok', s)).resolves.toBe('user:session')
+    expect(calls).toEqual(['request:tok', 'signOut', 'start:session'])
+  })
+
+  it('leaves the session in this browser alone when the card is refused', async () => {
+    const refused = Object.assign(new Error("This card doesn't work any more."), { name: 'ApiError', status: 401, code: 'QR_INVALID' })
+    const { calls, steps: s } = steps(async () => {
+      throw refused
+    })
+    await expect(signInWithCard('tok', s)).rejects.toBe(refused)
+    expect(calls).toEqual(['request:tok'])
+  })
+
+  it('leaves it alone when the connection drops too', async () => {
+    const { calls, steps: s } = steps(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    await expect(signInWithCard('tok', s)).rejects.toThrow('Failed to fetch')
+    expect(calls).not.toContain('signOut')
+  })
+
+  it('has nothing to sign out on a device nobody is signed in to', async () => {
+    const { calls, steps: s } = steps(async () => 'session', false)
+    await signInWithCard('tok', s)
+    expect(calls).toEqual(['request:tok', 'start:session'])
   })
 })

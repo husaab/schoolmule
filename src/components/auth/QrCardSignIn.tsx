@@ -3,7 +3,9 @@
 // is signed in (on /qr, and in the window /login opens). The steps: a big
 // Scan my card button (the camera only opens when asked), the camera view,
 // "Signing you in…", then the student portal. Cards are scanned on shared
-// classroom devices, so whoever is signed in here is signed out first.
+// classroom devices, so whoever is signed in here is signed out, but only
+// once the server has accepted the card (Fable M5): a refused card or a
+// dropped connection leaves that session as it was.
 // Every failure has plain words and a way to try again: the camera refused
 // or missing, a code that isn't a card, a voided card, too many tries, no
 // connection (src/lib/qrSignIn.ts).
@@ -15,7 +17,7 @@ import { useRouter } from 'next/navigation'
 import { ExclamationCircleIcon, QrCodeIcon } from '@heroicons/react/24/outline'
 import QrCardScanner from '@/components/auth/QrCardScanner'
 import { landingFor } from '@/lib/authRouting'
-import { qrSignInMessage } from '@/lib/qrSignIn'
+import { qrSignInMessage, signInWithCard } from '@/lib/qrSignIn'
 import { getToken, studentQrSignIn } from '@/services/authService'
 import { signOutLocally, startSession } from '@/services/sessionSync'
 import { useUserStore } from '@/store/useUserStore'
@@ -37,11 +39,15 @@ export default function QrCardSignIn({ autoStart = false, emailFallback = 'link'
 
   const signIn = async (token: string) => {
     setStep({ kind: 'signing' })
-    // Someone else's session (a teacher on the classroom laptop, the last student) must not survive a card scan.
-    if (getToken() || useUserStore.getState().user.id) signOutLocally()
     try {
-      const res = await studentQrSignIn(token)
-      const user = startSession(res.data)
+      // Someone else's session (a teacher on the classroom laptop, the last student) must not survive a card
+      // scan, but it ends only once the card is accepted.
+      const user = await signInWithCard(token, {
+        request: studentQrSignIn,
+        hasSession: () => Boolean(getToken() || useUserStore.getState().user.id),
+        signOut: signOutLocally,
+        start: (res) => startSession(res.data),
+      })
       router.replace(landingFor(user, '/student'))
     } catch (err) {
       setStep({ kind: 'failed', message: qrSignInMessage(err) })
