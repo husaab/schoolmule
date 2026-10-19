@@ -1,7 +1,8 @@
 // src/components/studentAccounts/EditStudentEmailModal.tsx
 // Add, change or remove a student's own address. With a login, the address
-// is also what the student signs in with, so a change kills any invite or
-// password link already sent (the server deletes them).
+// is also what the student signs in with, so a change is a new sign-in: the
+// server resets the password and Google link, signs the student out
+// everywhere and kills any link already sent. The admin sends a new invite.
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -79,6 +80,9 @@ export default function EditStudentEmailModal({ isOpen, onClose, row, onSaved }:
   }
 
   const canRemove = !row.account && Boolean(row.studentEmail)
+  const first = row.name.trim().split(/\s+/)[0] || row.name
+  // Only a real change of a login's address resets its sign-in.
+  const resetsSignIn = Boolean(row.account) && value.trim().toLowerCase() !== (row.account?.email ?? '').toLowerCase()
 
   return (
     <Modal isOpen={isOpen} onClose={saving ? () => {} : onClose} style="w-full max-w-md">
@@ -144,9 +148,9 @@ export default function EditStudentEmailModal({ isOpen, onClose, row, onSaved }:
 
             {row.account && (
               <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
-                This also changes the address {row.name} signs in with. An invite or password link already sent to{' '}
-                <strong className="font-semibold">{row.account.email}</strong> stops working; send a new one with Resend
-                invite or Reset password.
+                <strong className="font-semibold">Changing the address signs {first} out.</strong> {first}&apos;s password
+                and Google sign-in stop working, and any link already sent to{' '}
+                <strong className="font-semibold">{row.account.email}</strong> stops working. Send a new invite after saving.
               </div>
             )}
           </ModalBody>
@@ -168,7 +172,7 @@ export default function EditStudentEmailModal({ isOpen, onClose, row, onSaved }:
               Cancel
             </Button>
             <Button type="submit" loading={saving}>
-              Save
+              {resetsSignIn ? `Save and sign ${first} out` : 'Save'}
             </Button>
           </ModalFooter>
         </form>

@@ -8,7 +8,9 @@ import type {
   AccountStatus,
   ClassroomSettings,
   GradeCode,
+  SignInMethod,
   StudentAccountRow,
+  StudentInvite,
 } from '@/services/types/studentAccount'
 
 export const GRADE_CODES: readonly GradeCode[] = ['JK', 'SK', '1', '2', '3', '4', '5', '6', '7', '8']
@@ -41,6 +43,11 @@ export const STATUS_ORDER: readonly AccountStatus[] = ['not_invited', 'invited',
 export const isAccountStatus = (value: string): value is AccountStatus =>
   (STATUS_ORDER as readonly string[]).includes(value)
 
+/** The status chips also filter on "Needs attention" (row.needsAttention). */
+export type StatusFilter = AccountStatus | 'needs_attention'
+export const NEEDS_ATTENTION_LABEL = 'Needs attention'
+export const isStatusFilter = (value: string): value is StatusFilter => value === 'needs_attention' || isAccountStatus(value)
+
 // One list of day names (M11): the parent's email preferences define it.
 export { DAY_NAMES } from './notificationPrefs'
 
@@ -66,6 +73,23 @@ export const settingsSummary = (settings: Pick<ClassroomSettings, 'loginFromGrad
   return qrRank < fromRank
     ? `Invite students with the email they already have. ${signIn}. ${qr}`
     : `Invite students with the email they already have. ${signIn}; ${qr}`
+}
+
+// ---------------------------------------------------------------------------
+// Classroom settings
+
+const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9-]+\.)+[a-z]{2,}$/
+
+/**
+ * "Students.Example.org, staff.example.org" → ['students.example.org',
+ * 'staff.example.org'] (the server's rule: domain names, at most 5).
+ */
+export const parseDomainList = (text: string): { domains: string[] } | { error: string } => {
+  const domains = [...new Set(text.split(/[\s,;]+/).map((d) => d.trim().toLowerCase().replace(/^@/, '')).filter(Boolean))]
+  const bad = domains.find((d) => !DOMAIN_RE.test(d))
+  if (bad) return { error: `"${bad}" isn't a domain name. Write it like students.example.org.` }
+  if (domains.length > 5) return { error: 'List up to 5 domains.' }
+  return { domains }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +166,84 @@ export const studentSubline = (row: StudentAccountRow): string =>
   row.homeroomTeacherName ? `${gradeLabel(row.grade)} · ${row.homeroomTeacherName}` : gradeLabel(row.grade)
 
 // ---------------------------------------------------------------------------
+// Invites and sign-in (the line under the SchoolMule status)
+
+const SIGN_IN_LABELS = { google: 'Google', password: 'Password', card: 'QR card' } as const
+
+/** "last signed in today", "last signed in Mon", "never signed in". */
+const lastSignedInPhrase = (iso: string | null | undefined, now: Date): string => {
+  if (!iso) return 'never signed in'
+  const text = lastSignedInText(iso, now)
+  return `last signed in ${text === 'Today' || text === 'Yesterday' ? text.toLowerCase() : text}`
+}
+
+/**
+ * Where a login's invite stands, or how an active student signs in:
+ * "Sent Oct 19 · expires Nov 2", "Email failed · Resend", "Expired Nov 2",
+ * "Google · last signed in today", "Card no longer works for Grade 4 · …".
+ * null when there is nothing to add (no login, archived).
+ */
+export const inviteSubline = (
+  row: StudentAccountRow,
+  settings: Pick<ClassroomSettings, 'qrUntilGrade'>,
+  now: Date = new Date(),
+): string | null => {
+  if (!row.account) return null
+  if (row.status === 'active') {
+    if (row.signInMethod === 'card' && row.needsAttention) {
+      return `Card no longer works for ${gradeLabel(row.grade)} · resend the invite`
+    }
+    const how = row.signInMethod ? SIGN_IN_LABELS[row.signInMethod] : 'Signed in'
+    return `${how} · ${lastSignedInPhrase(row.account.lastLoginAt, now)}`
+  }
+  if (row.status !== 'invited') return null
+  return row.invite ? invitedLine(row.invite, now) : 'No invite sent yet · Resend'
+}
+
+/** Where an invited login's latest invite stands. */
+const invitedLine = (invite: StudentInvite, now: Date): string => {
+  switch (invite.state) {
+    case 'pending':
+      return invite.sentAt
+        ? `Sent ${shortDate(invite.sentAt, now)} · expires ${shortDate(invite.expiresAt, now)}`
+        : `Expires ${shortDate(invite.expiresAt, now)}`
+    case 'failed':
+      return 'Email failed · Resend'
+    case 'expired':
+      return `Expired ${shortDate(invite.expiresAt, now)}`
+    case 'cancelled':
+      return 'Invite cancelled'
+    // Back to Invited after the address changed (the old sign-in was reset).
+    case 'accepted':
+    case 'email_changed':
+      return 'Address changed · send a new invite'
+    default:
+      return 'Resend the invite'
+  }
+}
+
+/**
+ * The class People tab's line under a student's status: the invite for an
+ * invited login, how an active one signs in, else null.
+ */
+export const peopleAccountLine = (
+  account: { status: AccountStatus; invite?: StudentInvite | null; signInMethod?: SignInMethod | null },
+  now: Date = new Date(),
+): string | null => {
+  if (account.status === 'invited') return account.invite ? invitedLine(account.invite, now) : null
+  if (account.status === 'active' && account.signInMethod) return SIGN_IN_LABELS[account.signInMethod]
+  return null
+}
+
+/** An invite that is still open (its link may work, or can be cancelled). */
+export const hasOpenInvite = (row: StudentAccountRow): boolean =>
+  Boolean(row.invite && ['pending', 'failed', 'expired'].includes(row.invite.state))
+
+/** A login that hasn't set up email sign-in yet (invited, or a card student): Resend applies. */
+export const canResendInvite = (row: StudentAccountRow): boolean =>
+  row.status === 'invited' || (row.status === 'active' && row.signInMethod === 'card')
+
+// ---------------------------------------------------------------------------
 // Invite readiness
 
 export type ReadinessKind = 'ready' | 'has_account' | 'not_eligible' | 'no_email' | 'conflict'
@@ -179,6 +281,7 @@ export type RowAction =
   | 'edit_email'
   | 'invite'
   | 'resend_invite'
+  | 'cancel_invite'
   | 'reset_password'
   | 'print_qr'
   | 'void_qr'
@@ -193,6 +296,7 @@ export const ROW_ACTION_LABELS: Record<RowAction, string> = {
   edit_email: 'Edit email',
   invite: 'Invite',
   resend_invite: 'Resend invite',
+  cancel_invite: 'Cancel invite',
   reset_password: 'Reset password',
   print_qr: 'Print QR card',
   void_qr: 'Void QR card',
@@ -204,14 +308,23 @@ export const ROW_ACTION_LABELS: Record<RowAction, string> = {
   delete: 'Delete account',
 }
 
-/** Only the actions the server would accept for this row, in menu order. */
-export const rowActions = (row: StudentAccountRow): RowAction[] => {
+/**
+ * Only the actions the server would accept for this row, in menu order. A
+ * Google-only school has no student passwords, so no Reset password.
+ */
+export const rowActions = (
+  row: StudentAccountRow,
+  settings: Pick<ClassroomSettings, 'studentSignIn'> = { studentSignIn: 'google_or_password' },
+): RowAction[] => {
   const live = row.status === 'invited' || row.status === 'active'
   const actions: RowAction[] = []
   actions.push('edit_email')
   if (row.status === 'not_invited' && row.studentEmail && !row.conflict) actions.push('invite')
-  if (row.status === 'invited') actions.push('resend_invite')
-  if (row.status === 'active') actions.push('reset_password')
+  if (canResendInvite(row)) actions.push('resend_invite')
+  if (live && hasOpenInvite(row)) actions.push('cancel_invite')
+  if (row.status === 'active' && row.signInMethod !== 'card' && settings.studentSignIn !== 'google_only') {
+    actions.push('reset_password')
+  }
   if (row.qrEligible) actions.push('print_qr')
   if (row.account?.qr.active) actions.push('void_qr')
   if (live) actions.push('view_as')
@@ -229,6 +342,7 @@ export const rowActions = (row: StudentAccountRow): RowAction[] => {
 
 export interface RowFilters {
   grade: string
+  /** An AccountStatus, 'needs_attention', or '' for all. */
   status: string
   q: string
 }
@@ -239,16 +353,21 @@ export const filterRows = (rows: StudentAccountRow[], { grade, status, q }: RowF
   return rows.filter(
     (r) =>
       (!grade || r.grade === grade) &&
-      (!status || r.status === status) &&
+      (!status || (status === 'needs_attention' ? Boolean(r.needsAttention) : r.status === status)) &&
       (!term ||
         [r.name, r.studentEmail, r.account?.email].some((v) => typeof v === 'string' && v.toLowerCase().includes(term))),
   )
 }
 
-/** How many rows have each status (the chips' counts). */
-export const countByStatus = (rows: StudentAccountRow[]): Record<AccountStatus, number> => {
-  const counts: Record<AccountStatus, number> = { not_invited: 0, invited: 0, active: 0, archived: 0, not_eligible: 0 }
-  for (const r of rows) counts[r.status] += 1
+/** How many rows have each status, and how many need attention (the chips' counts). */
+export const countByStatus = (rows: StudentAccountRow[]): Record<StatusFilter, number> => {
+  const counts: Record<StatusFilter, number> = {
+    not_invited: 0, invited: 0, active: 0, archived: 0, not_eligible: 0, needs_attention: 0,
+  }
+  for (const r of rows) {
+    counts[r.status] += 1
+    if (r.needsAttention) counts.needs_attention += 1
+  }
   return counts
 }
 

@@ -8,7 +8,7 @@
 import Avatar from '@/components/avatar/Avatar'
 import AccountStatusPill from '@/components/studentAccounts/AccountStatusPill'
 import { parentsText, type StudentMenuAction } from '@/lib/classPeople'
-import { lastSignedInText } from '@/lib/studentAccounts'
+import { lastSignedInText, peopleAccountLine } from '@/lib/studentAccounts'
 import type { PeopleStudent } from '@/services/types/classroom'
 import StudentAccountRowMenu from './StudentAccountRowMenu'
 
@@ -48,8 +48,12 @@ export default function PeopleStudentsTable({ students, busyId, onAction, canEdi
                   <Avatar name={student.name} avatar={student.avatar} photoUrl={student.photoUrl} size={38} />
                   <span className="truncate font-medium text-slate-900">{student.name}</span>
                 </span>
-                <span>
+                <span className="min-w-0">
                   <AccountStatusPill status={student.account.status} />
+                  {(() => {
+                    const line = peopleAccountLine(student.account)
+                    return line ? <span className="mt-1 block truncate text-xs text-slate-500">{line}</span> : null
+                  })()}
                 </span>
                 <span className={`min-w-0 truncate ${parents ? 'text-slate-600' : 'text-slate-400'}`} title={parents || undefined}>
                   {parents || 'None on file'}

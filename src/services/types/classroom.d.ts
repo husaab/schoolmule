@@ -229,6 +229,10 @@ export interface PeopleStudentAccount {
   lastSeenAt: string | null
   /** A QR card can be printed (invited or active, and in a QR grade). */
   qrEligible: boolean
+  /** The login's latest invite; optional, older servers don't send it. */
+  invite?: import('./studentAccount').StudentInvite | null
+  /** How the login signs in, or null before it does. */
+  signInMethod?: import('./studentAccount').SignInMethod | null
 }
 
 export interface PeopleStudent {

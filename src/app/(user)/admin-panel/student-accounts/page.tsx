@@ -22,32 +22,41 @@ import LinkStudentAccountModal from '@/components/studentAccounts/LinkStudentAcc
 import PrintQrCardsModal from '@/components/studentAccounts/PrintQrCardsModal'
 import VoidQrCardsModal from '@/components/studentAccounts/VoidQrCardsModal'
 import ViewAsStudentModal from '@/components/studentAccounts/ViewAsStudentModal'
+import CancelInviteModal from '@/components/studentAccounts/CancelInviteModal'
 import {
   getStudentAccounts,
   printQrCards,
   resendStudentInvite,
+  resendStudentInvites,
   resetStudentPassword,
 } from '@/services/studentAccountService'
+import { getAllClasses } from '@/services/classService'
+import type { ClassPayload } from '@/services/types/class'
 import type { ClassroomSettings, StudentAccountRow } from '@/services/types/studentAccount'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useUserStore } from '@/store/useUserStore'
 import {
   GRADE_CODES,
   GRADE_OPTIONS,
+  NEEDS_ATTENTION_LABEL,
   STATUS_LABELS,
   STATUS_ORDER,
   STUDENT_BATCH_LIMIT,
+  canResendInvite,
   chunk,
   countByStatus,
   filterRows,
   gradeLabel,
-  isAccountStatus,
+  isStatusFilter,
   printNeedsConfirm,
   settingsSummary,
   type RowAction,
+  type StatusFilter,
 } from '@/lib/studentAccounts'
 import {
+  ArrowPathIcon,
   Cog6ToothIcon,
   ExclamationTriangleIcon,
   KeyIcon,
@@ -68,12 +77,14 @@ type ModalState =
   | { kind: 'link'; row: StudentAccountRow; mode: 'link' | 'unlink' }
   | { kind: 'archive'; row: StudentAccountRow; mode: 'archive' | 'unarchive' }
   | { kind: 'delete'; row: StudentAccountRow }
+  | { kind: 'cancel_invite'; row: StudentAccountRow }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 const StudentAccountsContent = () => {
   const notify = useNotificationStore((s) => s.showNotification)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const school = useUserStore((s) => s.user.school)
 
   const filters = useFilterParams()
   const { get, setParams } = filters
@@ -81,8 +92,12 @@ const StudentAccountsContent = () => {
   const rawGrade = get('grade')
   const rawStatus = get('status')
   const grade = (GRADE_CODES as readonly string[]).includes(rawGrade) ? rawGrade : ''
-  const status = isAccountStatus(rawStatus) ? rawStatus : ''
+  const status: StatusFilter | '' = isStatusFilter(rawStatus) ? rawStatus : ''
   const q = get('q')
+  // One class's roster (the server filters it).
+  const classId = get('classId')
+  const [classes, setClasses] = useState<ClassPayload[]>([])
+  const [resending, setResending] = useState(false)
 
   const [rows, setRows] = useState<StudentAccountRow[]>([])
   const [settings, setSettings] = useState<ClassroomSettings | null>(null)
@@ -96,7 +111,7 @@ const StudentAccountsContent = () => {
   const load = useCallback(async () => {
     setError(null)
     try {
-      const res = await getStudentAccounts()
+      const res = await getStudentAccounts(classId || undefined)
       setRows(res.data.students)
       setSettings(res.data.settings)
     } catch (err) {
@@ -104,14 +119,31 @@ const StudentAccountsContent = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [classId])
 
-  // The list is per school year: reload (and drop the selection) on a switch.
+  // The list is per school year (and class): reload (and drop the selection) on a switch.
   useEffect(() => {
     setLoading(true)
     setSelected(new Set())
     void load()
   }, [load, selectedYearId])
+
+  // The class filter's choices: this year's classes, by grade then subject.
+  useEffect(() => {
+    if (!school) return
+    let cancelled = false
+    getAllClasses(school)
+      .then((res) => { if (!cancelled) setClasses(res.data ?? []) })
+      .catch(() => { if (!cancelled) setClasses([]) })
+    return () => { cancelled = true }
+  }, [school, selectedYearId])
+  const classOptions = useMemo(
+    () =>
+      [...classes]
+        .sort((a, b) => GRADE_CODES.indexOf(a.grade as never) - GRADE_CODES.indexOf(b.grade as never) || a.subject.localeCompare(b.subject))
+        .map((c) => ({ value: c.classId, label: `${gradeLabel(String(c.grade))} · ${c.subject}` })),
+    [classes],
+  )
 
   // Chip counts follow the grade and search filters, not the status filter.
   const scoped = useMemo(() => filterRows(rows, { grade, status: '', q }), [rows, grade, q])
@@ -209,10 +241,13 @@ const StudentAccountsContent = () => {
           try {
             await resendStudentInvite(row.studentId)
             notify(`Invite sent again to ${email}`, 'success')
+            void load()
           } catch (err) {
             notify(err instanceof Error ? err.message : "The invite couldn't be sent", 'error')
           }
         })
+      case 'cancel_invite':
+        return setModal({ kind: 'cancel_invite', row })
       case 'reset_password':
         return void withBusy(row.studentId, async () => {
           try {
@@ -251,6 +286,36 @@ const StudentAccountsContent = () => {
 
   const bulkPrint = () => askToPrint(selectedRows, true)
 
+  // Resend to every selected student whose login is waiting to be set up.
+  const bulkResend = async () => {
+    const targets = selectedRows.filter(canResendInvite)
+    if (targets.length === 0) {
+      notify('None of the selected students is waiting for an invite.', 'error')
+      return
+    }
+    setResending(true)
+    try {
+      let sent = 0
+      let notSent = 0
+      for (const batch of chunk(targets.map((r) => r.studentId), 10)) {
+        const res = await resendStudentInvites(batch)
+        for (const r of res.data.results) {
+          if (r.outcome === 'sent') sent += 1
+          else notSent += 1
+        }
+      }
+      notify(
+        `${plural(sent, 'invite', 'invites')} sent again.` + (notSent > 0 ? ` ${notSent} not sent; see each student's row.` : ''),
+        notSent > 0 && sent === 0 ? 'error' : 'success',
+      )
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "The invites couldn't be sent", 'error')
+    } finally {
+      setResending(false)
+      void load()
+    }
+  }
+
   const bulkVoid = () => {
     const withCards = selectedRows.filter((r) => r.account?.qr.active)
     if (withCards.length === 0) {
@@ -260,7 +325,7 @@ const StudentAccountsContent = () => {
     setModal({ kind: 'void', rows: withCards })
   }
 
-  const hasFilters = Boolean(grade || status || q)
+  const hasFilters = Boolean(grade || status || q || classId)
   const closeModal = () => setModal(null)
 
   return (
@@ -309,9 +374,19 @@ const StudentAccountsContent = () => {
             {/* Toolbar */}
             <div className="flex flex-col gap-3 border-b border-slate-100 p-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by account status">
-                {[{ value: '', label: 'All', count: scoped.length }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABELS[s], count: counts[s] }))].map(
+                {[
+                  { value: '', label: 'All', count: scoped.length },
+                  ...STATUS_ORDER.flatMap((s) => {
+                    const chip = { value: s as string, label: STATUS_LABELS[s], count: counts[s] }
+                    // Needs attention sits right after Invited.
+                    return s === 'invited'
+                      ? [chip, { value: 'needs_attention', label: NEEDS_ATTENTION_LABEL, count: counts.needs_attention }]
+                      : [chip]
+                  }),
+                ].map(
                   (chip) => {
                     const active = status === chip.value
+                    const attention = chip.value === 'needs_attention' && chip.count > 0
                     return (
                       <button
                         key={chip.value || 'all'}
@@ -322,7 +397,9 @@ const StudentAccountsContent = () => {
                         className={`rounded-full border px-3 py-1.5 text-sm transition-colors cursor-pointer ${
                           active
                             ? 'border-cyan-200 bg-cyan-50 font-medium text-cyan-800'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            : attention
+                              ? 'border-amber-200 bg-amber-50 font-medium text-amber-800 hover:bg-amber-100'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         {chip.label}
@@ -341,6 +418,15 @@ const StudentAccountsContent = () => {
                   allLabel="All grades"
                   ariaLabel="Filter by grade"
                   className="sm:w-40"
+                  triggerClassName="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 focus:ring-cyan-500"
+                />
+                <SearchableSelect
+                  value={classId}
+                  onChange={(v) => setParams({ classId: v || null })}
+                  options={classOptions}
+                  allLabel="All classes"
+                  ariaLabel="Filter by class"
+                  className="sm:w-52"
                   triggerClassName="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 focus:ring-cyan-500"
                 />
                 <div className="relative sm:w-64">
@@ -368,6 +454,15 @@ const StudentAccountsContent = () => {
                 >
                   <PaperAirplaneIcon className="h-4 w-4 text-slate-500" />
                   Invite
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void bulkResend()}
+                  disabled={resending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                >
+                  <ArrowPathIcon className="h-4 w-4 text-slate-500" />
+                  {resending ? 'Resending…' : 'Resend'}
                 </button>
                 <button
                   type="button"
@@ -428,7 +523,7 @@ const StudentAccountsContent = () => {
                 action={
                   hasFilters ? (
                     <button
-                      onClick={() => setParams({ q: null, grade: null, status: null })}
+                      onClick={() => setParams({ q: null, grade: null, status: null, classId: null })}
                       className="text-sm font-medium text-cyan-600 hover:text-cyan-700 cursor-pointer"
                     >
                       Clear filters
@@ -499,6 +594,9 @@ const StudentAccountsContent = () => {
       )}
       {modal?.kind === 'delete' && (
         <DeleteStudentAccountModal isOpen onClose={closeModal} row={modal.row} onDeleted={() => void load()} />
+      )}
+      {modal?.kind === 'cancel_invite' && (
+        <CancelInviteModal isOpen onClose={closeModal} row={modal.row} onSaved={replaceRow} />
       )}
     </>
   )

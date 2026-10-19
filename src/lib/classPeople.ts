@@ -90,11 +90,13 @@ export const STUDENT_MENU_LABELS: Record<StudentMenuAction, string> = {
  * `canEdit` false) the account actions are left out; viewing and messaging stay.
  */
 export function studentMenuActions(student: Pick<PeopleStudent, 'account'>, canEdit = true): StudentMenuAction[] {
-  const { status, qrEligible } = student.account
+  const { status, qrEligible, signInMethod } = student.account
   const actions: StudentMenuAction[] = ['view', 'message']
   if (!canEdit) return actions
-  if (status === 'invited') actions.push('resend_invite')
-  if (status === 'active') actions.push('reset_password')
+  // A student who only signs in with the QR card has no password yet: the invite is how they set one up.
+  const cardOnly = status === 'active' && signInMethod === 'card'
+  if (status === 'invited' || cardOnly) actions.push('resend_invite')
+  if (status === 'active' && !cardOnly) actions.push('reset_password')
   if (qrEligible) actions.push('print_qr')
   if (status !== 'active') actions.push('change_avatar')
   return actions

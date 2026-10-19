@@ -8,6 +8,7 @@ import type { ClassroomSettings, StudentAccountRow } from '@/services/types/stud
 import {
   consentText,
   displayEmail,
+  inviteSubline,
   lastSignedInText,
   qrCardText,
   studentSubline,
@@ -106,10 +107,26 @@ export default function StudentAccountsTable({ rows, settings, selected, onToggl
                       Add email
                     </button>
                   )}
-                  {row.conflict && <p className="mt-0.5 text-xs leading-snug text-rose-600">{row.conflict.message}</p>}
+                  {row.conflict ? (
+                    <p className="mt-0.5 text-xs leading-snug text-rose-600">{row.conflict.message}</p>
+                  ) : (
+                    row.warnings?.map((w) => (
+                      <p key={w.code} className="mt-0.5 text-xs leading-snug text-amber-700">
+                        {w.message}
+                      </p>
+                    ))
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   <AccountStatusPill status={row.status} />
+                  {(() => {
+                    const line = inviteSubline(row, settings, now)
+                    return line ? (
+                      <p className={`mt-1 whitespace-nowrap text-xs ${row.needsAttention ? 'font-medium text-amber-700' : 'text-slate-500'}`}>
+                        {line}
+                      </p>
+                    ) : null
+                  })()}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{consentText(row, now)}</td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{qrCardText(row, settings, now)}</td>
@@ -119,6 +136,7 @@ export default function StudentAccountsTable({ rows, settings, selected, onToggl
                 <td className="py-2.5 pr-3 text-right">
                   <StudentAccountActionsMenu
                     row={row}
+                    settings={settings}
                     busy={busyIds.has(row.studentId)}
                     onSelect={(action) => onAction(row, action)}
                   />

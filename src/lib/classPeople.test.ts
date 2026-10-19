@@ -147,3 +147,10 @@ describe('avatarPickerSubtitle', () => {
     )
   })
 })
+
+describe('studentMenuActions for a card student (student invitations)', () => {
+  it('a student who only signs in with the card is sent the invite again, not a password link', () => {
+    const card = { account: { status: 'active' as const, userId: 'u', lastSeenAt: null, qrEligible: true, signInMethod: 'card' as const } }
+    expect(studentMenuActions(card)).toEqual(['view', 'message', 'resend_invite', 'print_qr'])
+  })
+})

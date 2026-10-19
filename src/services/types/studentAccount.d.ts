@@ -19,14 +19,48 @@ export interface ClassroomSettings {
   summaryDow: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   studentPhotos: boolean;
   consentNoticeVersion: string;
+  /** The domains of the school's student addresses ([] = no domain checks). */
+  studentEmailDomains: string[];
+  /** 'google_only' turns password sign-in off for students. */
+  studentSignIn: StudentSignIn;
   /** null when the school never saved its settings (defaults). */
   updatedAt: string | null;
 }
 
+export type StudentSignIn = 'google_or_password' | 'google_only';
+
 /** PUT body: every field except updatedAt. */
 export type ClassroomSettingsInput = Omit<ClassroomSettings, 'updatedAt'>;
 
-export type ConflictKind = 'email_in_use' | 'family_address';
+export type ConflictKind = 'email_in_use' | 'family_address' | 'shared_with_student';
+
+/** The latest invite of a login: still open (pending / failed / expired) or how it ended. */
+export type InviteState =
+  | 'pending' | 'failed' | 'expired'
+  | 'accepted' | 'replaced' | 'cancelled' | 'email_changed' | 'archived';
+
+export interface StudentInvite {
+  state: InviteState;
+  sentAt: string | null;
+  expiresAt: string;
+  endedAt: string | null;
+  /** Why the email failed (state 'failed'). */
+  error: string | null;
+}
+
+export type SignInMethod = 'google' | 'password' | 'card';
+
+/** A problem with a student's address: blocking ones can't be saved or invited. */
+export interface EmailProblem {
+  code:
+    | 'invalid_email' | 'email_in_use' | 'family_address' | 'shared_with_student'
+    | 'has_login' | 'duplicate_in_list' | 'not_found'
+    | 'outside_domain' | 'name_mismatch' | 'replaces_existing';
+  blocking: boolean;
+  message: string;
+  /** replaces_existing: the import leaves the row unticked until the admin opts in. */
+  defaultUnticked?: boolean;
+}
 
 export interface StudentAccountLogin {
   userId: string;
@@ -52,8 +86,16 @@ export interface StudentAccountRow {
   account: StudentAccountLogin | null;
   /** Invited or active, and the grade is at or below qrUntilGrade. */
   qrEligible: boolean;
-  /** The address belongs to another account or to a parent on file. */
+  /** The address belongs to another account, a parent on file, or another student this year. */
   conflict: { kind: ConflictKind; message: string } | null;
+  /** Non-blocking: outside the school's student domain, or not mentioning the student. */
+  warnings?: { code: 'outside_domain' | 'name_mismatch'; message: string }[];
+  /** The login's latest invite (null without one). Optional: older servers don't send it. */
+  invite?: StudentInvite | null;
+  /** How the login signs in, or null before it does. */
+  signInMethod?: SignInMethod | null;
+  /** An invite that didn't go out, expired or was cancelled, or a card student past the card grades. */
+  needsAttention?: boolean;
 }
 
 export interface StudentAccountList {
@@ -66,6 +108,7 @@ export type InviteSkipReason =
   | 'invalid_email'
   | 'email_in_use'
   | 'family_address'
+  | 'shared_with_student'
   | 'already_has_account'
   | 'below_login_grade';
 
@@ -77,6 +120,47 @@ export interface InviteResult {
   userId?: string;
   /** false: the account was created but the email failed (Resend invite recovers it). */
   inviteSent?: boolean;
+  inviteId?: string;
+  sendStatus?: 'sent' | 'failed';
+}
+
+/** POST /invites/resend. */
+export interface ResendInvitesResponse {
+  results: { studentId: string; outcome: 'sent' | 'skipped' | 'failed'; message: string }[];
+}
+
+/** GET /invite-preview: the invite email as this student would get it. */
+export interface InvitePreview {
+  subject: string;
+  html: string;
+}
+
+// Import emails (/emails/parse, /emails/preview, /emails)
+
+export interface EmailImportParse {
+  sheets: string[];
+  sheet: string;
+  rows: string[][];
+}
+
+export interface EmailImportCandidate {
+  studentId: string;
+  name: string;
+  grade: GradeCode;
+  currentEmail: string | null;
+  problems: EmailProblem[];
+}
+
+export interface EmailImportPreviewLine {
+  /** The line's position in the request. */
+  index: number;
+  email: string;
+  match: { kind: 'matched' | 'check' | 'not_found'; candidates: EmailImportCandidate[] };
+}
+
+export interface EmailImportSaveResponse {
+  saved: number;
+  results: { studentId: string; outcome: 'saved' | 'refused'; problems: EmailProblem[] }[];
 }
 
 export interface InviteResponse {

@@ -20,7 +20,7 @@ import {
 import { saveClassroomSettings } from '@/services/classroomSettingsService'
 import type { ClassroomSettings, ClassroomSettingsInput, GradeCode } from '@/services/types/studentAccount'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { DAY_NAMES, GRADE_OPTIONS, gradeRank } from '@/lib/studentAccounts'
+import { DAY_NAMES, GRADE_OPTIONS, gradeRank, parseDomainList } from '@/lib/studentAccounts'
 import { Cog6ToothIcon } from '@heroicons/react/24/outline'
 
 interface Props {
@@ -39,6 +39,8 @@ const toInput = (s: ClassroomSettings): ClassroomSettingsInput => ({
   summaryDow: s.summaryDow,
   studentPhotos: s.studentPhotos,
   consentNoticeVersion: s.consentNoticeVersion,
+  studentEmailDomains: s.studentEmailDomains ?? [],
+  studentSignIn: s.studentSignIn ?? 'google_or_password',
 })
 
 function Toggle({
@@ -85,10 +87,14 @@ function Toggle({
 export default function ClassroomSettingsModal({ isOpen, onClose, settings, onSaved }: Props) {
   const notify = useNotificationStore((s) => s.showNotification)
   const [form, setForm] = useState<ClassroomSettingsInput>(() => toInput(settings))
+  // The domains as the admin types them ("students.example.org, staff.example.org").
+  const [domainsText, setDomainsText] = useState(() => (settings.studentEmailDomains ?? []).join(', '))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (isOpen) setForm(toInput(settings))
+    if (!isOpen) return
+    setForm(toInput(settings))
+    setDomainsText((settings.studentEmailDomains ?? []).join(', '))
   }, [isOpen, settings])
 
   const set = <K extends keyof ClassroomSettingsInput>(key: K, value: ClassroomSettingsInput[K]) =>
@@ -103,9 +109,14 @@ export default function ClassroomSettingsModal({ isOpen, onClose, settings, onSa
       notify('The consent notice version must be 1 to 40 characters', 'error')
       return
     }
+    const domains = parseDomainList(domainsText)
+    if ('error' in domains) {
+      notify(domains.error, 'error')
+      return
+    }
     setSaving(true)
     try {
-      const res = await saveClassroomSettings({ ...form, consentNoticeVersion: version })
+      const res = await saveClassroomSettings({ ...form, consentNoticeVersion: version, studentEmailDomains: domains.domains })
       notify('Classroom settings saved', 'success')
       onSaved(res.data)
       onClose()
@@ -171,6 +182,46 @@ export default function ClassroomSettingsModal({ isOpen, onClose, settings, onSa
               checked={form.studentPhotos}
               onChange={(v) => set('studentPhotos', v)}
             />
+            <fieldset>
+              <legend className="text-sm font-medium text-slate-700">Students sign in with</legend>
+              <div className="mt-2 space-y-2">
+                {(
+                  [
+                    ['google_or_password', 'Google or a password', 'Students choose when they set up their account.'],
+                    ['google_only', 'Google only', 'Turn this on after one student has signed in with Google successfully.'],
+                  ] as const
+                ).map(([value, label, hint]) => (
+                  <label key={value} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3 py-2.5 hover:bg-slate-50">
+                    <input
+                      type="radio"
+                      name="classroom-sign-in"
+                      value={value}
+                      checked={form.studentSignIn === value}
+                      onChange={() => set('studentSignIn', value)}
+                      className="mt-0.5 h-4 w-4 cursor-pointer border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-slate-800">{label}</span>
+                      <span className="block text-xs text-slate-500">{hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <Field
+              label="Student email domain"
+              htmlFor="classroom-email-domains"
+              hint="e.g. students.example.org. Addresses elsewhere are flagged. Separate several with commas; leave empty for none."
+            >
+              <input
+                id="classroom-email-domains"
+                value={domainsText}
+                onChange={(e) => setDomainsText(e.target.value)}
+                placeholder="students.example.org"
+                autoComplete="off"
+                className={inputClass}
+              />
+            </Field>
           </FormSection>
 
           <FormSection label="Email and parents">

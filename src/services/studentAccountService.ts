@@ -4,10 +4,17 @@
 // student of another school.
 
 import apiClient from './apiClient';
+import apiUpload from './apiUpload';
 import { postForPdf } from '@/lib/pdfDownload';
 import { readSkipped } from '@/lib/studentAccounts';
 import type {
+  EmailImportParse,
+  EmailImportPreviewLine,
+  EmailImportSaveResponse,
+  GradeCode,
+  InvitePreview,
   InviteResponse,
+  ResendInvitesResponse,
   StudentAccountEnvelope,
   StudentAccountList,
   StudentAccountRow,
@@ -16,8 +23,12 @@ import type {
 
 const BASE = '/admin/student-accounts';
 
-/** GET: the selected year's students with their login status, plus the classroom settings. */
-export const getStudentAccounts = () => apiClient<StudentAccountEnvelope<StudentAccountList>>(BASE);
+/**
+ * GET: the selected year's students with their login status, plus the
+ * classroom settings. `classId` keeps one class's roster.
+ */
+export const getStudentAccounts = (classId?: string) =>
+  apiClient<StudentAccountEnvelope<StudentAccountList>>(classId ? `${BASE}?classId=${encodeURIComponent(classId)}` : BASE);
 
 /**
  * PATCH the student's own address. With a login, the sign-in address changes
@@ -45,6 +56,48 @@ export const inviteStudents = (studentIds: string[], noticeVersion: string) =>
 
 export const resendStudentInvite = (studentId: string) =>
   apiClient<StudentAccountEnvelope<{ sent: true }>>(`${BASE}/${studentId}/resend-invite`, { method: 'POST' });
+
+/** Resend to each listed student who has a login waiting to be set up (1–200 ids); the rest are skipped. */
+export const resendStudentInvites = (studentIds: string[]) =>
+  apiClient<StudentAccountEnvelope<ResendInvitesResponse>, { studentIds: string[] }>(`${BASE}/invites/resend`, {
+    method: 'POST',
+    body: { studentIds },
+  });
+
+/**
+ * The open invite's link stops working. A login that was never used is
+ * deleted with it (the student reads Not invited again). Answers with the row.
+ */
+export const cancelStudentInvite = (studentId: string) =>
+  apiClient<StudentAccountEnvelope<StudentAccountRow>>(`${BASE}/${studentId}/invite/cancel`, { method: 'POST' });
+
+/** The invite email as this student would get it (placeholder link). */
+export const getInvitePreview = (studentId: string) =>
+  apiClient<StudentAccountEnvelope<InvitePreview>>(`${BASE}/invite-preview?studentId=${encodeURIComponent(studentId)}`);
+
+// Import emails (active school year only).
+
+/** Read an uploaded .csv or .xlsx (2 MB) into rows of text; `sheet` picks a workbook sheet. */
+export const parseEmailFile = (file: File, sheet?: string) => {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  if (sheet) form.append('sheet', sheet);
+  return apiUpload<StudentAccountEnvelope<EmailImportParse>>(`${BASE}/emails/parse`, form);
+};
+
+/** Match each line to this year's students by name (and grade); nothing is saved. */
+export const previewEmailImport = (lines: { name: string; email: string; grade: GradeCode | null }[]) =>
+  apiClient<StudentAccountEnvelope<{ lines: EmailImportPreviewLine[] }>, { lines: typeof lines }>(`${BASE}/emails/preview`, {
+    method: 'POST',
+    body: { lines },
+  });
+
+/** Save the confirmed addresses; blocking problems refuse that row only. */
+export const saveEmailImport = (items: { studentId: string; email: string }[]) =>
+  apiClient<StudentAccountEnvelope<EmailImportSaveResponse>, { items: typeof items }>(`${BASE}/emails`, {
+    method: 'POST',
+    body: { items },
+  });
 
 /** A fresh 7-day password link; older links stop working. */
 export const resetStudentPassword = (studentId: string) =>

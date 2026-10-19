@@ -20,14 +20,16 @@ import {
   PencilSquareIcon,
   PrinterIcon,
   TrashIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline'
-import type { StudentAccountRow } from '@/services/types/studentAccount'
+import type { ClassroomSettings, StudentAccountRow } from '@/services/types/studentAccount'
 import { ROW_ACTION_LABELS, rowActions, type RowAction } from '@/lib/studentAccounts'
 
 const ICONS: Record<RowAction, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   edit_email: PencilSquareIcon,
   invite: PaperAirplaneIcon,
   resend_invite: ArrowPathIcon,
+  cancel_invite: XCircleIcon,
   reset_password: KeyIcon,
   print_qr: PrinterIcon,
   void_qr: NoSymbolIcon,
@@ -41,7 +43,7 @@ const ICONS: Record<RowAction, React.ComponentType<React.SVGProps<SVGSVGElement>
 
 // Menu sections, separated by a rule.
 const GROUPS: RowAction[][] = [
-  ['edit_email', 'invite', 'resend_invite', 'reset_password'],
+  ['edit_email', 'invite', 'resend_invite', 'cancel_invite', 'reset_password'],
   ['print_qr', 'void_qr'],
   ['view_as'],
   ['link', 'unlink'],
@@ -49,6 +51,7 @@ const GROUPS: RowAction[][] = [
 ]
 
 const TONE: Partial<Record<RowAction, string>> = {
+  cancel_invite: 'text-amber-700 hover:bg-amber-50',
   void_qr: 'text-amber-700 hover:bg-amber-50',
   unlink: 'text-amber-700 hover:bg-amber-50',
   archive: 'text-amber-700 hover:bg-amber-50',
@@ -60,18 +63,20 @@ const MENU_WIDTH = 224
 
 interface Props {
   row: StudentAccountRow
+  /** The school's sign-in mode decides whether Reset password is offered. */
+  settings: Pick<ClassroomSettings, 'studentSignIn'>
   onSelect: (action: RowAction) => void
   /** Rows with a request in flight show a disabled trigger. */
   busy?: boolean
 }
 
-export default function StudentAccountActionsMenu({ row, onSelect, busy = false }: Props) {
+export default function StudentAccountActionsMenu({ row, settings, onSelect, busy = false }: Props) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const actions = rowActions(row)
+  const actions = rowActions(row, settings)
   const groups = GROUPS.map((group) => group.filter((a) => actions.includes(a))).filter((g) => g.length > 0)
 
   const close = useCallback((refocus = false) => {
