@@ -9,7 +9,8 @@
 // gives the automatic points back), through a session saver keyed
 // "quiz-review:{user}:{item}", so nothing typed is lost by switching student
 // or leaving. Each saved edit names its student, so a save that lands after a
-// switch updates the right student's row.
+// switch updates the right student's row. On a published column a change goes
+// live as it saves (D17, no email): "Published: changes go live when they save."
 //
 // The column's score: a score the teacher typed (the score box or the grid)
 // wins over the quiz's points (T23 fix round 1; the grading row's
@@ -62,6 +63,8 @@ interface QuizAnswersReviewProps {
   canEdit: boolean
   /** The item fills a gradebook column (a score to tell apart). */
   linked: boolean
+  /** The column is published: a point change or a typed score goes live as it saves (D17), with no email. */
+  columnPublished?: boolean
   /** The student's score in the column now, as the panel shows it, and the row's "typed by the teacher" flag. */
   current: { score: number | null; status: GradeStatus | null; setByTeacher?: boolean }
   /** Points saved for these students: read their rows again. */
@@ -121,6 +124,7 @@ function ReviewBody({
   questions,
   canEdit,
   linked,
+  columnPublished = false,
   current,
   onSaved,
   onUseAutoScore,
@@ -216,6 +220,12 @@ function ReviewBody({
         </div>
         {editable && <SaveStatusPill status={saver.status} onRetry={() => void saver.retry()} />}
       </div>
+
+      {editable && linked && columnPublished && (
+        <p className="rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-[13px] text-cyan-900">
+          Published: changes go live when they save.
+        </p>
+      )}
 
       {!submitted && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] text-amber-900">

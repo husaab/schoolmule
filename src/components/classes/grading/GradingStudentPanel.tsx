@@ -227,6 +227,7 @@ export default function GradingStudentPanel({
             questions={quiz.questions}
             canEdit={canEdit}
             linked={linked}
+            columnPublished={columnPublished}
             current={{ score, status, setByTeacher: row.scoreSetByTeacher }}
             restoring={restoring}
             onSaved={(ids) => {
