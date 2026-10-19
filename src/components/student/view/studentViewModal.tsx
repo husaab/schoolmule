@@ -6,6 +6,7 @@ import Modal from '../../shared/modal';
 import { StudentPayload } from '@/services/types/student';
 import { getTeacherById } from '@/services/teacherService';
 import { getGradeDisplayName, getSchoolName } from '@/lib/schoolUtils';
+import Link from 'next/link';
 import {
   AcademicCapIcon,
   ArchiveBoxIcon,
@@ -14,6 +15,7 @@ import {
   EnvelopeIcon,
   ExclamationTriangleIcon,
   PencilIcon,
+  ArrowRightIcon,
   PhoneIcon,
   UserIcon,
   CakeIcon,
@@ -29,10 +31,12 @@ interface StudentViewModalProps {
   student: StudentPayload;
   /** Optional: switch straight from viewing to editing this student. */
   onEdit?: () => void;
+  /** Optional: the student's full profile page. */
+  profileHref?: string;
 }
 
 /** Treat blanks and the literal "N/A" placeholder the roster uses as "no value". */
-const clean = (value: string | null | undefined): string | null => {
+export const clean = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim();
   if (!trimmed || trimmed.toLowerCase() === 'n/a') return null;
   return trimmed;
@@ -54,7 +58,7 @@ const formatDate = (value: string | null | undefined): string => {
 };
 
 /** Small uppercase section heading — the only structural device in the modal. */
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+export const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{children}</h3>
 );
 
@@ -62,7 +66,7 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
  * An email or phone number rendered as something you can actually act on:
  * a mailto:/tel: link with a copy button that confirms in place.
  */
-const ContactLine = ({
+export const ContactLine = ({
   kind,
   value,
 }: {
@@ -124,7 +128,7 @@ const ContactLine = ({
 };
 
 /** One guardian: who they are, and the two ways to reach them. */
-const GuardianCard = ({
+export const GuardianCard = ({
   role,
   person,
 }: {
@@ -149,7 +153,7 @@ const GuardianCard = ({
   );
 };
 
-const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, student, onEdit }) => {
+const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, student, onEdit, profileHref }) => {
   const [teacherName, setTeacherName] = useState<string | null>(null);
   const [teacherLoading, setTeacherLoading] = useState(false);
 
@@ -310,6 +314,15 @@ const StudentViewModal: React.FC<StudentViewModalProps> = ({ isOpen, onClose, st
           )}
         </div>
         <div className="flex items-center gap-2">
+          {profileHref && (
+            <Link
+              href={profileHref}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-50"
+            >
+              Full profile
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          )}
           {onEdit && (
             <button
               onClick={onEdit}

@@ -29,7 +29,7 @@ const StudentContextCard: React.FC<{ student: StudentContext; tone: Tone }> = ({
         <p className="truncate text-sm font-medium text-slate-900">{student.name}</p>
         <p className="truncate text-xs text-slate-500">{meta.join(' · ')}</p>
       </div>
-      <Link href={`/students?q=${encodeURIComponent(student.name)}`} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}>
+      <Link href={`/students/${encodeURIComponent(student.studentId)}`} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}>
         Student profile
       </Link>
     </div>
