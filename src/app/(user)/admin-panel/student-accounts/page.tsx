@@ -23,6 +23,7 @@ import PrintQrCardsModal from '@/components/studentAccounts/PrintQrCardsModal'
 import VoidQrCardsModal from '@/components/studentAccounts/VoidQrCardsModal'
 import ViewAsStudentModal from '@/components/studentAccounts/ViewAsStudentModal'
 import CancelInviteModal from '@/components/studentAccounts/CancelInviteModal'
+import ImportEmailsModal from '@/components/studentAccounts/ImportEmailsModal'
 import {
   getStudentAccounts,
   printQrCards,
@@ -35,7 +36,7 @@ import type { ClassPayload } from '@/services/types/class'
 import type { ClassroomSettings, StudentAccountRow } from '@/services/types/studentAccount'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
 import {
   GRADE_CODES,
@@ -58,6 +59,7 @@ import {
 import {
   ArrowPathIcon,
   Cog6ToothIcon,
+  InboxArrowDownIcon,
   ExclamationTriangleIcon,
   KeyIcon,
   MagnifyingGlassIcon,
@@ -78,12 +80,14 @@ type ModalState =
   | { kind: 'archive'; row: StudentAccountRow; mode: 'archive' | 'unarchive' }
   | { kind: 'delete'; row: StudentAccountRow }
   | { kind: 'cancel_invite'; row: StudentAccountRow }
+  | { kind: 'import' }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 const StudentAccountsContent = () => {
   const notify = useNotificationStore((s) => s.showNotification)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  const yearLabel = useSelectedYear()?.label ?? null
   const school = useUserStore((s) => s.user.school)
 
   const filters = useFilterParams()
@@ -326,6 +330,19 @@ const StudentAccountsContent = () => {
   }
 
   const hasFilters = Boolean(grade || status || q || classId)
+
+  // From the import's last step: the invite review for exactly the students just saved.
+  const inviteSaved = async (studentIds: string[]) => {
+    try {
+      const res = await getStudentAccounts(classId || undefined)
+      setRows(res.data.students)
+      setSettings(res.data.settings)
+      const ids = new Set(studentIds)
+      setModal({ kind: 'invite', rows: res.data.students.filter((r) => ids.has(r.studentId)) })
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Couldn't load student accounts", 'error')
+    }
+  }
   const closeModal = () => setModal(null)
 
   return (
@@ -342,15 +359,25 @@ const StudentAccountsContent = () => {
                 {settings ? settingsSummary(settings) : 'Invite students with the email they already have.'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => settings && setModal({ kind: 'settings' })}
-              disabled={!settings}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-            >
-              <Cog6ToothIcon className="h-5 w-5 text-slate-500" />
-              Classroom settings
-            </button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setModal({ kind: 'import' })}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-cyan-700 cursor-pointer"
+              >
+                <InboxArrowDownIcon className="h-5 w-5" />
+                Import emails
+              </button>
+              <button
+                type="button"
+                onClick={() => settings && setModal({ kind: 'settings' })}
+                disabled={!settings}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              >
+                <Cog6ToothIcon className="h-5 w-5 text-slate-500" />
+                Classroom settings
+              </button>
+            </div>
           </div>
 
           {settings && !settings.enabled && (
@@ -594,6 +621,15 @@ const StudentAccountsContent = () => {
       )}
       {modal?.kind === 'delete' && (
         <DeleteStudentAccountModal isOpen onClose={closeModal} row={modal.row} onDeleted={() => void load()} />
+      )}
+      {modal?.kind === 'import' && (
+        <ImportEmailsModal
+          isOpen
+          onClose={closeModal}
+          yearLabel={yearLabel}
+          onSaved={() => void load()}
+          onInvite={(ids) => void inviteSaved(ids)}
+        />
       )}
       {modal?.kind === 'cancel_invite' && (
         <CancelInviteModal isOpen onClose={closeModal} row={modal.row} onSaved={replaceRow} />

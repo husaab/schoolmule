@@ -274,6 +274,40 @@ export const inviteReadiness = (
   return { kind: 'ready', ready: true, note: `Ready · ${row.studentEmail}` }
 }
 
+export interface InviteReview {
+  /** Ready, nothing to check: they get the email. */
+  send: StudentAccountRow[]
+  /** Ready, but the address looks off (not a school address, doesn't mention them); ticked by default. */
+  check: { row: StudentAccountRow; warnings: NonNullable<StudentAccountRow['warnings']> }[]
+  /** Not invited this time, and why. */
+  skipped: { row: StudentAccountRow; reason: string }[]
+}
+
+/** The invite review's three groups (spec §2.4), in the order the rows came. */
+export const groupInviteReview = (
+  rows: StudentAccountRow[],
+  settings: Pick<ClassroomSettings, 'loginFromGrade'>,
+  now: Date = new Date(),
+): InviteReview => {
+  const review: InviteReview = { send: [], check: [], skipped: [] }
+  for (const row of rows) {
+    const readiness = inviteReadiness(row, settings)
+    if (readiness.ready) {
+      if (row.warnings && row.warnings.length > 0) review.check.push({ row, warnings: row.warnings })
+      else review.send.push(row)
+      continue
+    }
+    let reason = readiness.note
+    if (readiness.kind === 'no_email') reason = 'No email yet.'
+    else if (row.status === 'active') reason = 'Already active.'
+    else if (row.status === 'invited' && row.invite && hasOpenInvite(row) && row.invite.sentAt) {
+      reason = `Invite already sent ${shortDate(row.invite.sentAt, now)} (expires ${shortDate(row.invite.expiresAt, now)}). Use Resend.`
+    } else if (row.status === 'invited') reason = 'Already invited. Use Resend.'
+    review.skipped.push({ row, reason })
+  }
+  return review
+}
+
 // ---------------------------------------------------------------------------
 // Row menu
 

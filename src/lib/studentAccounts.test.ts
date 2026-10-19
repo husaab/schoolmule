@@ -21,6 +21,7 @@ import {
   inviteSubline,
   parseDomainList,
   peopleAccountLine,
+  groupInviteReview,
 } from './studentAccounts'
 
 const settings = { loginFromGrade: '1', qrUntilGrade: '3' } as const
@@ -326,5 +327,33 @@ describe('peopleAccountLine (class People tab)', () => {
     expect(peopleAccountLine({ status: 'active', invite: null, signInMethod: 'google' }, NOW)).toBe('Google')
     expect(peopleAccountLine({ status: 'active', invite: null, signInMethod: 'card' }, NOW)).toBe('QR card')
     expect(peopleAccountLine({ status: 'not_invited', invite: null, signInMethod: null }, NOW)).toBeNull()
+  })
+})
+
+describe('groupInviteReview', () => {
+  const allSettings = { loginFromGrade: '1', qrUntilGrade: '3', studentSignIn: 'google_or_password' } as const
+  it('splits students into will-send, check-these and skipped, with the reason for each skip', () => {
+    const rows = [
+      row({ studentId: 'ok', name: 'Amal Haddad' }),
+      row({ studentId: 'warn', name: 'Dina Nasser', warnings: [{ code: 'name_mismatch', message: "This address doesn't mention Dina or Nasser" }] }),
+      row({ studentId: 'none', name: 'Omar Ali', studentEmail: null }),
+      row({ studentId: 'shared', name: 'Sara Haddad', conflict: { kind: 'shared_with_student', message: 'Same address as Amal Haddad (Grade 2). Each student needs their own.' } }),
+      row({ studentId: 'active', name: 'Rami Saleh', status: 'active', account: login() }),
+      row({
+        studentId: 'pending', name: 'Lina Kareem', status: 'invited', account: login(),
+        invite: { state: 'pending', sentAt: '2026-10-15T14:00:00.000Z', expiresAt: '2026-10-29T14:00:00.000Z', endedAt: null, error: null },
+      }),
+      row({ studentId: 'sk', name: 'Yara Ali', grade: 'SK', status: 'not_eligible' }),
+    ]
+    const g = groupInviteReview(rows, allSettings, NOW)
+    expect(g.send.map((r) => r.studentId)).toEqual(['ok'])
+    expect(g.check.map((c) => [c.row.studentId, c.warnings.map((w) => w.code)])).toEqual([['warn', ['name_mismatch']]])
+    expect(g.skipped.map((s) => [s.row.studentId, s.reason])).toEqual([
+      ['none', 'No email yet.'],
+      ['shared', 'Same address as Amal Haddad (Grade 2). Each student needs their own.'],
+      ['active', 'Already active.'],
+      ['pending', 'Invite already sent Oct 15 (expires Oct 29). Use Resend.'],
+      ['sk', 'Not eligible: student logins start at Grade 1'],
+    ])
   })
 })
