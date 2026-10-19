@@ -38,6 +38,11 @@ export interface ConversationItem {
   lastMessageAt: string;
   createdAt: string;
   leadTeacherName: string | null;
+  /**
+   * Admin lists: the staff member a student-started thread is addressed to (a co-teacher, the homeroom teacher, a
+   * teaching admin…), which can differ from the class lead. Optional: older servers don't send it.
+   */
+  addresseeName?: string | null;
   /** The lead teacher's avatar (null = the neutral avatar). */
   leadTeacherAvatar?: import('./profile').AvatarSpec | null;
   /** The class's term, for the staff inbox's term filter. */

@@ -155,6 +155,11 @@ export interface GridOverlayCell {
   draftScore: number | null
   draftStatus: GradeStatus | null
   isLate: boolean
+  /**
+   * A draft this column's Publish would publish (false for one equal to what students already see, which
+   * Publish skips as unchanged). Optional: older servers don't send it, and then every draft counts.
+   */
+  needsPublish?: boolean
 }
 
 /** GET /classes/:classId/grid-overlay */

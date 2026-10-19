@@ -46,13 +46,22 @@ export function indexOverlay(data: GridOverlay | null | undefined): OverlayIndex
 /** An assessment filled by an assignment or quiz. */
 export const isTurnInColumn = (index: OverlayIndex, assessmentId: string): boolean => assessmentId in index.columns
 
+/**
+ * A draft its column's Publish would actually publish. The server marks each
+ * cell (`needsPublish`): a draft equal to what students already see is
+ * skipped as unchanged, so it isn't counted. Before the server sent the flag
+ * (or for a draft just typed, until the overlay is read again) every draft
+ * counts.
+ */
+export const awaitsPublish = (c: GridOverlayCell): boolean => c.state === 'draft' && c.needsPublish !== false
+
 /** Drafts waiting on one column: what its "Publish N" publishes. */
 export const draftCount = (index: OverlayIndex, assessmentId: string): number =>
-  Object.values(index.cells).filter((c) => c.assessmentId === assessmentId && c.state === 'draft').length
+  Object.values(index.cells).filter((c) => c.assessmentId === assessmentId && awaitsPublish(c)).length
 
 export function draftCounts(index: OverlayIndex): Record<string, number> {
   const out: Record<string, number> = {}
-  for (const c of Object.values(index.cells)) if (c.state === 'draft') out[c.assessmentId] = (out[c.assessmentId] ?? 0) + 1
+  for (const c of Object.values(index.cells)) if (awaitsPublish(c)) out[c.assessmentId] = (out[c.assessmentId] ?? 0) + 1
   return out
 }
 

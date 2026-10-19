@@ -175,11 +175,13 @@ const ConversationsOversight: React.FC = () => {
                       </p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {c.leadTeacherName ?? '—'}
-                      {/* Known limit: this list names the class's lead teacher, and a student can write to any of
-                          their teachers (a co-teacher, the homeroom teacher, a teaching admin). The list payload has
-                          no addressee name yet, so a student thread on a class says whose name this is. */}
-                      {c.includesStudent && c.classId && c.leadTeacherName && <p className="text-xs text-slate-400">Class lead</p>}
+                      {/* A student can write to any of their teachers (a co-teacher, the homeroom teacher, a teaching
+                          admin): the server names who the thread is addressed to. Until it does (an older server),
+                          the class's lead teacher is shown and labelled as such. */}
+                      {c.addresseeName ?? c.leadTeacherName ?? '—'}
+                      {!c.addresseeName && c.includesStudent && c.classId && c.leadTeacherName && (
+                        <p className="text-xs text-slate-400">Class lead</p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-slate-700">

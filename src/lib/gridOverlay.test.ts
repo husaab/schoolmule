@@ -43,6 +43,22 @@ describe('indexOverlay', () => {
     expect(draftCount(index, 'plain')).toBe(0)
     expect(draftCounts(index)).toEqual({ hw1: 2, q1: 1 })
   })
+
+  it("counts only drafts the server says Publish would publish (an unchanged draft isn't counted)", () => {
+    const flagged = indexOverlay({
+      items: data.items,
+      cells: [
+        { studentId: 's1', assessmentId: 'hw1', state: 'draft', draftScore: 8, draftStatus: 'graded', isLate: false, needsPublish: true },
+        // The same 9 the student already sees: Publish skips it.
+        { studentId: 's2', assessmentId: 'hw1', state: 'draft', draftScore: 9, draftStatus: 'graded', isLate: false, needsPublish: false },
+        // No flag (an older server, or a draft just typed): counted.
+        { studentId: 's3', assessmentId: 'hw1', state: 'draft', draftScore: 7, draftStatus: 'graded', isLate: false },
+        { studentId: 's4', assessmentId: 'hw1', state: 'turned_in', draftScore: null, draftStatus: null, isLate: false, needsPublish: true },
+      ],
+    })
+    expect(draftCount(flagged, 'hw1')).toBe(2)
+    expect(draftCounts(flagged)).toEqual({ hw1: 2 })
+  })
 })
 
 describe('overlayCell', () => {
