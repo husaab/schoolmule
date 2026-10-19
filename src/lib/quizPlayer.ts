@@ -418,3 +418,13 @@ export function resultRows(quiz: StudentQuiz): ResultRow[] {
     }
   })
 }
+
+/**
+ * The Saved pill's words while the quiz refused some answers for good (T24 N3):
+ * it never says "Saved" with a refused answer on screen. Null when none is refused.
+ */
+export function refusedAnswersLabel(rejected: Record<string, string> | null | undefined): string | null {
+  const n = Object.keys(rejected ?? {}).length
+  if (n === 0) return null
+  return n === 1 ? '1 answer not saved' : `${n} answers not saved`
+}

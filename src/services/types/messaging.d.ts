@@ -38,6 +38,8 @@ export interface ConversationItem {
   lastMessageAt: string;
   createdAt: string;
   leadTeacherName: string | null;
+  /** The student's own avatar (final review M7). Optional: older servers don't send it (the neutral avatar then). */
+  studentAvatar?: import('./profile').AvatarSpec | null;
   /**
    * Admin lists: the staff member a student-started thread is addressed to (a co-teacher, the homeroom teacher, a
    * teaching admin…), which can differ from the class lead. Optional: older servers don't send it.
@@ -103,6 +105,8 @@ export interface Participant {
 export interface StudentContext {
   studentId: string;
   name: string;
+  /** The student's own avatar (M7); optional, older servers don't send it. */
+  studentAvatar?: import('./profile').AvatarSpec | null;
   grade: string | number | null;
   homeroomTeacherName: string | null;
   attendancePct: number | null;

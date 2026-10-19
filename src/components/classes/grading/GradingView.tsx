@@ -35,6 +35,7 @@ import {
   gradingCounts,
   gradingSubline,
   mergeGradeEdits,
+  splitGradeEdits,
   neighbours,
   OUTSIDE_AUDIENCE_CODE,
   outsideAudienceMessage,
@@ -141,6 +142,8 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
       return `${n} grading change${n === 1 ? '' : 's'} on "${itemTitle}" didn't save. Open its grading view to retry.`
     },
     merge: mergeGradeEdits,
+    // A failed edit waits for Retry instead of riding along with another student's change (M1).
+    split: splitGradeEdits,
     save: async (edits, opts) => {
       // Students in parallel, so a page going away (keepalive) sends them all.
       const entries = Object.entries(edits)

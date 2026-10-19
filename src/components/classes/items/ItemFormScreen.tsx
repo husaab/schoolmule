@@ -2,7 +2,7 @@
 // Loads what the item form needs (the class, its classwork context, and the
 // item when editing) and shows the form, or why it can't be shown: still
 // loading, gone, not this teacher's class, a past school year (read-only),
-// or a kind that can't be created yet.
+// or no kind named.
 'use client'
 
 import type { ReactNode } from 'react'
@@ -11,7 +11,6 @@ import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useLoad } from '@/hooks/useLoad'
 import { classHref } from '@/lib/classroomRoutes'
-import { QUIZZES_ENABLED } from '@/lib/classroomFeatures'
 import { isApiError } from '@/services/apiClient'
 import { getClassPage } from '@/services/classroomService'
 import { getClasswork, getItem } from '@/services/classworkService'
@@ -123,13 +122,6 @@ export default function ItemFormScreen({ classId, itemId = null, kind = null, de
     return (
       <Notice classId={classId} from={from}>
         Choose what to make from Classwork → Create.
-      </Notice>
-    )
-  }
-  if (!data.item && formKind === 'quiz' && !QUIZZES_ENABLED) {
-    return (
-      <Notice classId={classId} from={from}>
-        Quizzes aren&apos;t available yet. Make an assignment for now.
       </Notice>
     )
   }

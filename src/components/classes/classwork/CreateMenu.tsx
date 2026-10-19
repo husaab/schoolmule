@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowPathIcon, FolderIcon, MegaphoneIcon, PlusIcon } from '@heroicons/react/24/outline'
-import { QUIZZES_ENABLED } from '@/lib/classroomFeatures'
 import { classHref, newItemHref } from '@/lib/classroomRoutes'
 import type { ItemKind } from '@/services/types/classwork'
 import { KindTile } from './ItemRow'
@@ -75,7 +74,7 @@ export default function CreateMenu({ classId, topicId = null, onNewTopic, onCopy
     router.push(href)
   }
 
-  const rows = KIND_ROWS.filter((r) => r.kind !== 'quiz' || QUIZZES_ENABLED)
+  const rows = KIND_ROWS
 
   return (
     <div ref={ref} className="relative">

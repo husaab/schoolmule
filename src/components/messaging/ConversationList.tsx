@@ -71,8 +71,8 @@ const Row: React.FC<{
       {isParent ? (
         <span className={`mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${unread ? t.badge : 'bg-slate-200'}`} aria-hidden />
       ) : (
-        // Thread lists carry no student avatar yet, so this is the neutral one.
-        <Avatar name={item.studentName} size={36} />
+        // The student's pick when the server sends it (M7), else the neutral one.
+        <Avatar name={item.studentName} avatar={item.studentAvatar ?? null} size={36} />
       )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">

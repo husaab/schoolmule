@@ -103,7 +103,7 @@ export interface ClassCard {
   identity: ClassIdentity
   /** ISO time, or null for an active class. */
   archivedAt: string | null
-  /** Turned-in work waiting for a grade (0 until T16). */
+  /** Turned-in work waiting for a grade. */
   toReviewCount: number
   next: ClassCardNext | null
 }

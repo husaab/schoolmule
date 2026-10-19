@@ -11,7 +11,7 @@ import LoadError from '@/components/classroom/LoadError'
 import NothingHere from '@/components/classroom/NothingHere'
 import StudentShell from '@/components/studentPortal/StudentShell'
 import TodoGroupList from '@/components/studentPortal/todo/TodoGroupList'
-import TodoTabs from '@/components/studentPortal/todo/TodoTabs'
+import TodoTabs, { todoTabId } from '@/components/studentPortal/todo/TodoTabs'
 import { setTodoBadgeCounts } from '@/components/studentPortal/useStudentBadges'
 import { useStudentClasses } from '@/components/studentPortal/useStudentClasses'
 import { useFilterParams } from '@/hooks/useFilterParams'
@@ -58,7 +58,7 @@ function StudentTodoContent() {
   return (
     <StudentShell title="To-do">
       <div className="flex max-w-[1000px] flex-col gap-[22px]">
-        <TodoTabs tabs={todoTabs(counts)} active={tab} onSelect={selectTab} />
+        <TodoTabs tabs={todoTabs(counts)} active={tab} onSelect={selectTab} panelId="todo-panel" />
 
         {classes && classes.length > 1 && (
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0" role="group" aria-label="Class">
@@ -69,19 +69,21 @@ function StudentTodoContent() {
           </div>
         )}
 
-        {todo.error && !data ? (
-          <LoadError title="We couldn't load your to-do" message={todo.error.message} onRetry={reload} />
-        ) : !data ? (
-          <div className="flex flex-col gap-2.5" aria-label="Loading">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[82px] animate-pulse rounded-2xl bg-slate-100" />
-            ))}
-          </div>
-        ) : data.groups.length === 0 ? (
-          <NothingHere message={emptyTodoMessage(tab, className)} />
-        ) : (
-          <TodoGroupList groups={data.groups} tab={tab} now={now} />
-        )}
+        <div id="todo-panel" role="tabpanel" aria-labelledby={todoTabId(tab)} className="flex flex-col">
+          {todo.error && !data ? (
+            <LoadError title="We couldn't load your to-do" message={todo.error.message} onRetry={reload} />
+          ) : !data ? (
+            <div className="flex flex-col gap-2.5" aria-label="Loading">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-[82px] animate-pulse rounded-2xl bg-slate-100" />
+              ))}
+            </div>
+          ) : data.groups.length === 0 ? (
+            <NothingHere message={emptyTodoMessage(tab, className)} />
+          ) : (
+            <TodoGroupList groups={data.groups} tab={tab} now={now} />
+          )}
+        </div>
       </div>
     </StudentShell>
   )

@@ -5,6 +5,8 @@
 // helpers read those three fields and nothing else, so the switcher UI, the
 // post-switch toast and the landing page all agree.
 
+import { roleHome } from '@/lib/authRouting'
+
 export type ViewUser = {
   role: string | null
   baseRole?: string | null
@@ -32,8 +34,8 @@ export const viewLabelFor = (view: string | null | undefined): string => {
   return LABELS[view] ?? view
 }
 
-/** Where a view opens. Every staff view shares the staff dashboard. */
-export const landingPathFor = (view: string): string => (view === 'PARENT' ? '/parent/dashboard' : '/dashboard')
+/** Where a view opens. Every staff view shares the staff dashboard (the same mapping as authRouting.roleHome). */
+export const landingPathFor = (view: string): string => roleHome(view)
 
 /** The one-shot toast shown after the reload that completes a switch. */
 export const switchFlashFor = (view: string, baseRole: string): string =>

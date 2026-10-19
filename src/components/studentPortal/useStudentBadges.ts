@@ -1,15 +1,17 @@
 // src/components/studentPortal/useStudentBadges.ts
 // What the student shell shows beside its nav items and under "My classes".
 // The To-do badge is what the student still has to do (assigned + missing,
-// from GET /api/student/todo), refreshed when the tab gets focus and by the
-// pages that change it (a turn-in, the To-do itself). The Messages badge is
+// from GET /api/student/todo). It asks at most once per 30 s (a mount, a focus
+// or the tab coming back all count; final review M8), and at once when a page
+// changed it (a turn-in, an unsubmit); the To-do page hands its own counts over. The Messages badge is
 // how many conversations have something unread (GET /api/student/conversations/
 // unread-count). It asks at most once per 30 s: one shared timer (not one per
 // nav bar, and not restarted by a page change), nothing while the tab is
 // hidden, and no request at all while the Messages page is open, because that
 // page's own list already carries the unread counts and hands the number over
-// (useMessagesBadgeFromList). The class list is the student's current-term
-// classes.
+// (useMessagesBadgeFromList) — unless that list can't count them (still
+// loading, failed, or too long), when the badge keeps asking on its own. The
+// class list is the student's current-term classes.
 
 import { useEffect, useMemo } from 'react'
 import { create } from 'zustand'
@@ -24,8 +26,8 @@ import { useUserStore } from '@/store/useUserStore'
 import type { StudentBadgeKey, StudentClassLink } from './studentNav'
 import { useStudentClasses } from './useStudentClasses'
 
-/** The two nav bars each ask for the badge; a refresh within this many ms of the last one is skipped. */
-const MIN_REFRESH_MS = 1500
+/** The To-do badge asks at most this often unless forced (a turn-in): a page change no longer refetches the list. */
+const TODO_REFRESH_MS = 30_000
 
 /** The Messages badge asks at most this often (a mount, a focus and the timer all count). */
 const MESSAGES_POLL_MS = 30_000
@@ -57,7 +59,7 @@ const useBadgeStore = create<BadgeState>((set, get) => ({
   refresh: async (userId, force = false) => {
     const now = Date.now()
     const { inFlight, lastAt, userId: stored } = get()
-    if (inFlight || (!force && stored === userId && now - lastAt < MIN_REFRESH_MS)) return
+    if (!refreshDue({ force, inFlight, sameUser: stored === userId, lastAt, now, everyMs: TODO_REFRESH_MS })) return
     // A different sign-in on this device starts from zero (the Messages count too).
     set({ inFlight: true, userId, todo: stored === userId ? get().todo : 0, messages: stored === userId ? get().messages : 0 })
     try {
@@ -117,17 +119,21 @@ export const refreshMessagesBadge = (userId: string) => useBadgeStore.getState()
 
 /**
  * The Messages page's list carries every row's unread count, so while that page
- * is open the badge takes its number from the list (`unreadConversations`, null
- * while the list is loading or too long to count from) and sends no request of its own.
+ * is open the badge takes its number from the list (`unreadConversations`) and
+ * sends no request of its own. While the list can't give the number (null:
+ * still loading, failed, or too long to count from) the badge keeps polling,
+ * so it never goes silent.
  */
 export const useMessagesBadgeFromList = (userId: string, unreadConversations: number | null): void => {
+  const feeding = unreadConversations !== null
   useEffect(() => {
+    if (!feeding) return
     listFeeders += 1
     return () => {
       listFeeders -= 1
       messagesPoll.rearm()
     }
-  }, [])
+  }, [feeding])
   useEffect(() => {
     if (unreadConversations !== null) useBadgeStore.getState().setMessagesCount(userId, unreadConversations)
   }, [userId, unreadConversations])

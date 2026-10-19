@@ -4,7 +4,6 @@
 'use client'
 
 import SearchableSelect from '@/components/ui/SearchableSelect'
-import { QUIZZES_ENABLED } from '@/lib/classroomFeatures'
 import { ITEM_KINDS, KIND_PLURALS, type TopicFilter } from '@/lib/classworkRows'
 import type { ItemKind, Topic } from '@/services/types/classwork'
 
@@ -12,17 +11,15 @@ interface ClassworkFiltersProps {
   topics: Topic[]
   topic: TopicFilter
   kind: ItemKind | null
-  /** Quizzes show in the type filter once they ship, or when the class already has one. */
-  hasQuizzes: boolean
   onChange: (patch: { topic?: string | null; kind?: string | null }) => void
 }
 
-export default function ClassworkFilters({ topics, topic, kind, hasQuizzes, onChange }: ClassworkFiltersProps) {
+export default function ClassworkFilters({ topics, topic, kind, onChange }: ClassworkFiltersProps) {
   const topicOptions = [
     ...[...topics].sort((a, b) => a.sortOrder - b.sortOrder).map((t) => ({ value: t.topicId, label: t.name })),
     { value: 'none', label: 'No topic' },
   ]
-  const kindOptions = ITEM_KINDS.filter((k) => k !== 'quiz' || QUIZZES_ENABLED || hasQuizzes).map((k) => ({
+  const kindOptions = ITEM_KINDS.map((k) => ({
     value: k,
     label: KIND_PLURALS[k],
   }))

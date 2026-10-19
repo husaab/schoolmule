@@ -21,7 +21,7 @@ const StudentContextCard: React.FC<{ student: StudentContext; tone: Tone }> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-      <Avatar name={student.name} size={40} />
+      <Avatar name={student.name} avatar={student.studentAvatar ?? null} size={40} />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Student</p>
         <p className="truncate text-sm font-medium text-slate-900">{student.name}</p>

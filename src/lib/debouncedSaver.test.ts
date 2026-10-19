@@ -8,7 +8,7 @@ interface Call<T> {
   reject: (err: unknown) => void
 }
 
-function setup<T>(merge?: (a: T, b: T) => T, delayMs?: number) {
+function setup<T>(merge?: (a: T, b: T) => T, delayMs?: number, split?: (failed: T, newer: T) => T | null) {
   const calls: Call<T>[] = []
   const save = vi.fn(
     (value: T, opts: DebouncedSaveOptions) =>
@@ -16,7 +16,7 @@ function setup<T>(merge?: (a: T, b: T) => T, delayMs?: number) {
         calls.push({ value, opts, resolve, reject })
       }),
   )
-  const saver = createDebouncedSaver<T>({ save, merge, delayMs })
+  const saver = createDebouncedSaver<T>({ save, merge, delayMs, split })
   const win = new EventTarget()
   const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState })
   return { calls, save, saver, win, doc }
@@ -198,6 +198,55 @@ describe('createDebouncedSaver', () => {
     saver.cancel()
     expect(saver.getState().status).toBe('saved')
     expect(saver.peek()).toBeNull()
+  })
+
+  it('with split, a failed value for one key is not re-sent with an unrelated change (final review M1)', async () => {
+    const splitEdits = (failed: Edits, newer: Edits): Edits | null => {
+      const out: Edits = {}
+      for (const [k, v] of Object.entries(failed)) if (!(k in newer)) out[k] = v
+      return Object.keys(out).length ? out : null
+    }
+    const { calls, saver } = setup<Edits>(mergeEdits, undefined, splitEdits)
+    // Ali's 9 fails.
+    saver.schedule({ ali: { score: 9 } })
+    const first = saver.flush()
+    calls[0].reject(new Error('Network down'))
+    await first
+    expect(saver.getState().status).toBe('error')
+    // Bilal's grade goes out alone: Ali's failed 9 is not sent over whatever Ali has now.
+    saver.schedule({ bilal: { score: 7 } })
+    const second = saver.flush()
+    expect(calls[1].value).toEqual({ bilal: { score: 7 } })
+    calls[1].resolve()
+    await second
+    expect(saver.getState()).toMatchObject({ status: 'error', error: 'Network down' })
+    expect(saver.peek()).toEqual({ ali: { score: 9 } })
+    // Typing Ali again replaces the failed value; Retry (explicit) sends what is still failed.
+    saver.schedule({ ali: { score: 8 } })
+    expect(saver.peek()).toEqual({ ali: { score: 8 } })
+    const third = saver.flush()
+    expect(calls[2].value).toEqual({ ali: { score: 8 } })
+    calls[2].resolve()
+    await third
+    expect(saver.getState().status).toBe('saved')
+  })
+
+  it('with split, Retry sends what failed', async () => {
+    const splitEdits = (failed: Edits, newer: Edits): Edits | null => {
+      const out: Edits = {}
+      for (const [k, v] of Object.entries(failed)) if (!(k in newer)) out[k] = v
+      return Object.keys(out).length ? out : null
+    }
+    const { calls, saver } = setup<Edits>(mergeEdits, undefined, splitEdits)
+    saver.schedule({ ali: { score: 9 } })
+    const first = saver.flush()
+    calls[0].reject(new Error('500'))
+    await first
+    const retried = saver.retry()
+    expect(calls[1].value).toEqual({ ali: { score: 9 } })
+    calls[1].resolve()
+    await retried
+    expect(saver.getState().status).toBe('saved')
   })
 
   it('peek shows failed < in flight < pending, merged', async () => {

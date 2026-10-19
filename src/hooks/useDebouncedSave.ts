@@ -59,6 +59,7 @@ export function useDebouncedSave<T>({
   save,
   delayMs = DEBOUNCED_SAVE_MS,
   merge,
+  split,
   key,
   failedAway,
 }: {
@@ -67,19 +68,21 @@ export function useDebouncedSave<T>({
   delayMs?: number
   /** Combines an older unsent value with a newer one (default: the newer wins). */
   merge?: (older: T, newer: T) => T
+  /** A keyed value: what of a failed value a newer change leaves (see debouncedSaver); the rest waits for Retry. */
+  split?: (failed: T, newer: T) => T | null
   /** Keep the saver for the session under this key (see above). */
   key?: string
   /** The toast for a value that failed after the view left (session savers). */
   failedAway?: (failed: T | null) => string
 }): DebouncedSave<T> {
-  const [local] = useState<DebouncedSaver<T> | null>(() => (key ? null : createDebouncedSaver<T>({ save, merge, delayMs })))
+  const [local] = useState<DebouncedSaver<T> | null>(() => (key ? null : createDebouncedSaver<T>({ save, merge, split, delayMs })))
   const saver = useMemo(
     () => (key ? sessionDebouncedSaver<T>(key, { delayMs, notify: notifyAway }) : (local as DebouncedSaver<T>)),
     [key, local, delayMs],
   )
   // The latest callbacks, so the saver (made once) never calls a stale closure.
   useEffect(() => {
-    saver.setHandlers({ save, merge })
+    saver.setHandlers({ save, merge, split })
     if (key && failedAway) setFailedAwayFor(saver, failedAway)
   })
   const state = useSyncExternalStore(saver.subscribe, saver.getState, serverState)

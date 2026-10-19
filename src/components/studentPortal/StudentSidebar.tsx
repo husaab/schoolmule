@@ -17,6 +17,7 @@ import type { AvatarSpec } from '@/services/types/profile'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { gradeLabel } from '@/lib/studentAccounts'
+import BackLink from '@/components/shared/BackLink'
 import { STUDENT_NAV, isStudentNavActive } from './studentNav'
 import { studentTone } from './studentTone'
 import { useStudentBadges, useStudentClassLinks } from './useStudentBadges'
@@ -42,9 +43,9 @@ export default function StudentSidebar() {
             const count = item.badgeKey ? badges[item.badgeKey] ?? 0 : 0
             const Icon = item.icon
             return (
-              <Link
+              <BackLink
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 text-[15px] transition-colors ${
                   active ? `${studentTone.navActive} font-medium` : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -57,7 +58,7 @@ export default function StudentSidebar() {
                     {count > 99 ? '99+' : count}
                   </span>
                 )}
-              </Link>
+              </BackLink>
             )
           })}
         </nav>
@@ -100,6 +101,30 @@ function StudentUserCard() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // The login's own pick, else the one the teacher picked (R12): the same face Home shows (final review M5).
+  const ownAvatar = avatar ?? me?.user.avatar ?? null
+  const shownAvatar = ownAvatar ?? me?.student.avatar ?? null
+
+  // An open menu takes the focus (its first item); arrows move through it, Escape closes it back onto ⋮ (M13).
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+  }, [menuOpen])
+  const onMenuKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const step = event.key === 'ArrowDown' ? 1 : -1
+      items[(at + step + items.length) % items.length]?.focus()
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      items[event.key === 'Home' ? 0 : items.length - 1]?.focus()
+    } else if (event.key === 'Tab') {
+      setMenuOpen(false)
+    }
+  }
 
   useEffect(() => {
     if (!menuOpen) return
@@ -107,7 +132,10 @@ function StudentUserCard() {
       if (cardRef.current && !cardRef.current.contains(event.target as Node)) setMenuOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        triggerRef.current?.focus()
+      }
     }
     document.addEventListener('mousedown', close)
     document.addEventListener('keydown', onKey)
@@ -129,7 +157,7 @@ function StudentUserCard() {
   return (
     <div ref={cardRef} className="relative shrink-0 border-t border-slate-100 p-4">
       <div className="flex items-center gap-3">
-        <Avatar name={name || 'You'} avatar={avatar} photoUrl={photoUrl} size={40} />
+        <Avatar name={name || 'You'} avatar={shownAvatar} photoUrl={photoUrl} size={40} />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-slate-900">{name}</span>
           <span className="truncate text-xs text-slate-500">
@@ -137,6 +165,7 @@ function StudentUserCard() {
           </span>
         </div>
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           aria-haspopup="menu"
@@ -151,8 +180,10 @@ function StudentUserCard() {
       {/* Hidden rather than unmounted: the sign-out confirmation lives inside
           LogoutModal and must outlive the menu closing. */}
       <div
+        ref={menuRef}
         role="menu"
         aria-label="Account"
+        onKeyDown={onMenuKey}
         className={`absolute bottom-full right-4 mb-2 w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-lg ${
           menuOpen ? '' : 'hidden'
         }`}
@@ -160,6 +191,7 @@ function StudentUserCard() {
         <button
           type="button"
           role="menuitem"
+          tabIndex={-1}
           onClick={() => {
             setMenuOpen(false)
             setPickerOpen(true)
@@ -174,6 +206,7 @@ function StudentUserCard() {
             <button
               type="button"
               role="menuitem"
+              tabIndex={-1}
               onClick={() => {
                 setMenuOpen(false)
                 open()
@@ -193,7 +226,7 @@ function StudentUserCard() {
         title="Your avatar"
         subtitle="Your teachers see it next to your name."
         name={name}
-        value={avatar}
+        value={ownAvatar}
         onSave={save}
       />
     </div>

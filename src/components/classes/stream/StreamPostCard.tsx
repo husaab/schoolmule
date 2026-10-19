@@ -15,6 +15,7 @@ import ReadReceipts from '@/components/announcements/ReadReceipts'
 import KebabMenu, { type KebabItem } from '@/components/classes/shared/KebabMenu'
 import { formatBytes, isImage } from '@/components/messaging/formatters'
 import { postByline, seenChips, type PostAuthor } from '@/lib/classStream'
+import { openSignedUrl } from '@/lib/openSignedUrl'
 import {
   getAnnouncement,
   getAnnouncementAttachmentUrl,
@@ -77,17 +78,14 @@ function AttachmentButton({ announcementId, attachment }: { announcementId: stri
   const open = async () => {
     if (opening) return
     setOpening(true)
-    // Opened before the request so the browser sees a click, filled in after.
-    const tab = window.open('about:blank', '_blank')
-    if (tab) tab.opener = null
     try {
-      const res = await getAnnouncementAttachmentUrl(announcementId, attachment.attachmentId)
-      const url = res.data?.url
-      if (!url) throw new Error("This file couldn't be opened.")
-      if (tab) tab.location.href = url
-      else window.location.assign(url)
+      await openSignedUrl(async () => {
+        const res = await getAnnouncementAttachmentUrl(announcementId, attachment.attachmentId)
+        const url = res.data?.url
+        if (!url) throw new Error("This file couldn't be opened.")
+        return url
+      })
     } catch (err) {
-      tab?.close()
       showNotification(err instanceof Error && err.message ? err.message : "This file couldn't be opened.", 'error')
     } finally {
       setOpening(false)

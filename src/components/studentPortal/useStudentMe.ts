@@ -78,3 +78,13 @@ export const useStudentMe = () => {
     reload,
   }
 }
+
+/**
+ * Home's answer names the avatar the teacher picked (R12): the shell's card
+ * shows the same face as Home even where /student/me doesn't send it (M5).
+ */
+export const shareStudentAvatarFromHome = (userId: string, avatar: StudentMe['student']['avatar']): void => {
+  const { userId: stored, me } = useStudentMeStore.getState()
+  if (stored !== userId || !me || avatar === undefined || me.student.avatar === avatar) return
+  useStudentMeStore.setState({ me: { ...me, student: { ...me.student, avatar } } })
+}

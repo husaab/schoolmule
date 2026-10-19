@@ -18,7 +18,7 @@ import DueSoonCard from '@/components/studentPortal/DueSoonCard'
 import PhoneHome from '@/components/studentPortal/PhoneHome'
 import StudentShell from '@/components/studentPortal/StudentShell'
 import { shareClassesFromHome } from '@/components/studentPortal/useStudentClasses'
-import { useStudentMe } from '@/components/studentPortal/useStudentMe'
+import { shareStudentAvatarFromHome, useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useLoad } from '@/hooks/useLoad'
 import { firstNameOf, greetingFor, homeDueLine } from '@/lib/classroomText'
 import { studentClassHref, studentGradesHref } from '@/lib/portalRoutes'
@@ -41,7 +41,10 @@ export default function StudentHomePage() {
 
   const home = useLoad(userId && role === 'STUDENT' ? `home:${userId}` : null, async () => {
     const res = await getStudentHome()
-    if (userId) shareClassesFromHome(userId, res.data.classes)
+    if (userId) {
+      shareClassesFromHome(userId, res.data.classes)
+      shareStudentAvatarFromHome(userId, res.data.student.avatar)
+    }
     return res.data
   })
 

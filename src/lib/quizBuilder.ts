@@ -433,19 +433,23 @@ export function notSavedLabel(unsaved: { n: number }[]): string | null {
   return unsaved.length === 1 ? `Question ${unsaved[0].n} not saved yet` : `${unsaved.length} questions not saved yet`
 }
 
-// The builder's list, per quiz, for the rest of the session, while something in
-// it can't be saved yet (an unfinished question, or every question deleted):
-// leaving the builder and coming back brings it back as it was.
+// The builder's list, per teacher and quiz, for the rest of the session, while
+// something in it can't be saved yet (an unfinished question, or every
+// question deleted): leaving the builder and coming back brings it back as it
+// was. Keyed by user too (T24 N2), so a co-teacher signing in on the same tab
+// never gets another teacher's unsaved questions.
 const keptLists = new Map<string, DraftQuestion[]>()
 
+const keptKey = (userId: string, itemId: string) => `${userId}:${itemId}`
+
 /** Keep the list while something in it isn't saved yet; forget it once everything is. */
-export function keepUnfinished(itemId: string, questions: DraftQuestion[], opts: { savedCount?: number } = {}): void {
-  if (unsavedQuestions(questions, opts.savedCount ?? 0).length > 0) keptLists.set(itemId, questions)
-  else keptLists.delete(itemId)
+export function keepUnfinished(userId: string, itemId: string, questions: DraftQuestion[], opts: { savedCount?: number } = {}): void {
+  if (unsavedQuestions(questions, opts.savedCount ?? 0).length > 0) keptLists.set(keptKey(userId, itemId), questions)
+  else keptLists.delete(keptKey(userId, itemId))
 }
 
-/** The list kept for this quiz (see keepUnfinished), or null. */
-export const keptUnfinished = (itemId: string): DraftQuestion[] | null => keptLists.get(itemId) ?? null
+/** The list this teacher kept for this quiz (see keepUnfinished), or null. */
+export const keptUnfinished = (userId: string, itemId: string): DraftQuestion[] | null => keptLists.get(keptKey(userId, itemId)) ?? null
 
 // ---------------------------------------------------------------------------
 // A question's picture

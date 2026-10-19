@@ -230,6 +230,23 @@ export function editedGrade(
 /** Unsaved edits, one patch per student: a newer key wins. */
 export type GradeEdits = Record<string, GradePatch>
 
+/**
+ * What of a failed save a newer change leaves waiting for Retry (final review
+ * M1): the newer change replaces the fields it names for its students; every
+ * other failed field stays failed, and is never re-sent unasked alongside an
+ * unrelated student's change. Null when nothing is left.
+ */
+export function splitGradeEdits(failed: GradeEdits, newer: GradeEdits): GradeEdits | null {
+  const out: GradeEdits = {}
+  for (const [studentId, patch] of Object.entries(failed)) {
+    const replaced = newer[studentId]
+    const left: GradePatch = { ...patch }
+    if (replaced) for (const field of Object.keys(replaced) as (keyof GradePatch)[]) delete left[field]
+    if (Object.keys(left).length > 0) out[studentId] = left
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
+
 export function mergeGradeEdits(older: GradeEdits, newer: GradeEdits): GradeEdits {
   const out: GradeEdits = { ...older }
   for (const [studentId, patch] of Object.entries(newer)) out[studentId] = { ...out[studentId], ...patch }

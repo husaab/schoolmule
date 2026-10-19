@@ -101,7 +101,6 @@ const ClassworkTab: FC<ClassTabProps> = ({ classId, data }) => {
   }
 
   const nothingYet = classwork.items.length === 0 && classwork.topics.length === 0
-  const hasQuizzes = classwork.items.some((i) => i.kind === 'quiz')
 
   return (
     <div className="flex flex-col gap-[22px]">
@@ -123,7 +122,6 @@ const ClassworkTab: FC<ClassTabProps> = ({ classId, data }) => {
             topics={topics}
             topic={topicFilter}
             kind={kindFilter}
-            hasQuizzes={hasQuizzes}
             onChange={(change) => setParams(change)}
           />
         )}

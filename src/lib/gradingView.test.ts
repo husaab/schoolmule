@@ -8,6 +8,7 @@ import {
   gradingSubline,
   isToGrade,
   mergeGradeEdits,
+  splitGradeEdits,
   neighbours,
   outsideAudienceMessage,
   parseGradingFilter,
@@ -334,5 +335,17 @@ describe('Alt+arrow student switching', () => {
     expect(studentShortcutFree({ tagName: 'TEXTAREA' })).toBe(false)
     expect(studentShortcutFree({ tagName: 'textarea' })).toBe(false)
     expect(studentShortcutFree({ tagName: 'DIV', isContentEditable: true })).toBe(false)
+  })
+})
+
+describe('splitGradeEdits (final review M1)', () => {
+  it('leaves for Retry what a newer change does not replace', () => {
+    const failed = { ali: { draftScore: 9, feedback: 'Neat.' }, sami: { draftScore: 4 } }
+    expect(splitGradeEdits(failed, { bilal: { draftScore: 7 } })).toEqual(failed)
+    expect(splitGradeEdits(failed, { ali: { draftScore: 8 } })).toEqual({ ali: { feedback: 'Neat.' }, sami: { draftScore: 4 } })
+    expect(splitGradeEdits(failed, { ali: { draftScore: 8, feedback: '' }, sami: { draftStatus: 'missing' } })).toEqual({
+      sami: { draftScore: 4 },
+    })
+    expect(splitGradeEdits({ ali: { draftScore: 9 } }, { ali: { draftScore: null } })).toBeNull()
   })
 })

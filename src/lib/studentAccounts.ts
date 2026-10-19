@@ -41,7 +41,8 @@ export const STATUS_ORDER: readonly AccountStatus[] = ['not_invited', 'invited',
 export const isAccountStatus = (value: string): value is AccountStatus =>
   (STATUS_ORDER as readonly string[]).includes(value)
 
-export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+// One list of day names (M11): the parent's email preferences define it.
+export { DAY_NAMES } from './notificationPrefs'
 
 // ---------------------------------------------------------------------------
 // Header copy

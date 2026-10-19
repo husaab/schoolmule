@@ -143,7 +143,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
   // A change that failed (or was still saving) when the teacher last left is picked up again, and so is a list
   // with a question that couldn't be saved yet (kept for the session).
   const [questions, setQuestions] = useState<DraftQuestion[]>(
-    () => saver.peek() ?? keptUnfinished(itemId) ?? data.questions.map(draftFromQuestion),
+    () => saver.peek() ?? keptUnfinished(userId, itemId) ?? data.questions.map(draftFromQuestion),
   )
   // The list as it stands, for handlers between renders.
   const latest = useRef(questions)
@@ -179,8 +179,8 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
 
   // Unsaved work stays for the session, so leaving and coming back brings it back.
   useEffect(() => {
-    keepUnfinished(itemId, questions, { savedCount })
-  }, [itemId, questions, savedCount])
+    keepUnfinished(userId, itemId, questions, { savedCount })
+  }, [userId, itemId, questions, savedCount])
   // Closing or reloading the tab would lose it: the browser asks first.
   const hasUnsaved = unsaved.length > 0
   useEffect(() => {
@@ -576,7 +576,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
         onDeleted={() => {
           setDiscardOpen(false)
           saver.discard()
-          keepUnfinished(itemId, [])
+          keepUnfinished(userId, itemId, [])
           router.push(classHref(classId, 'classwork'))
         }}
       />

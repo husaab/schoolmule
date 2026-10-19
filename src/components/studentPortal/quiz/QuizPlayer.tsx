@@ -29,6 +29,7 @@ import {
   nextLabel,
   progressPct,
   quizReducer,
+  refusedAnswersLabel,
   type AnswerMap,
   type PlayerAction,
 } from '@/lib/quizPlayer'
@@ -146,7 +147,9 @@ export default function QuizPlayer({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {saveStatus && <SaveStatusPill status={saveStatus} onRetry={() => onRetrySave?.()} />}
+            {saveStatus && (
+              <SaveStatusPill status={saveStatus} onRetry={() => onRetrySave?.()} notSaved={refusedAnswersLabel(rejected)} />
+            )}
             {!isDone &&
               (finishLater.href ? (
                 <Link href={finishLater.href} className={FINISH}>

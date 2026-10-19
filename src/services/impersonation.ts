@@ -4,6 +4,7 @@
 // whoever was signed in, and a hard navigation is the one way to be sure none
 // of it leaks from the admin to the previewed user or back.
 
+import { roleHome } from '@/lib/authRouting';
 import { removeToken, setToken } from './authService';
 import type { ImpersonationStart } from './types/adminUser';
 import { useUserStore } from '@/store/useUserStore';
@@ -22,8 +23,7 @@ let ending = false;
 // A one-shot message shown after the reload that ends a preview.
 const FLASH_KEY = 'impersonation_flash';
 
-export const landingPathFor = (role: string) =>
-  role === 'PARENT' ? '/parent/dashboard' : role === 'STUDENT' ? '/student' : '/dashboard';
+const landingPathFor = (role: string) => roleHome(role);
 
 const clearIdentityStores = () => {
   useUserStore.getState().clearUser();

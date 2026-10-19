@@ -395,17 +395,23 @@ describe('fix round 1: the points box follows the question', () => {
 describe("fix round 1: unfinished questions are kept for the session, never dropped", () => {
   it('keeps the whole list while a question is unfinished, and forgets it once everything saves', () => {
     const unfinished = newQuestion('one', 'k-new')
-    keepUnfinished('item-1', [one({ key: 'k1', questionId: ID1 }), unfinished])
-    expect(keptUnfinished('item-1')?.map((q) => q.key)).toEqual(['k1', 'k-new'])
-    keepUnfinished('item-1', [one({ key: 'k1', questionId: ID1 })])
-    expect(keptUnfinished('item-1')).toBeNull()
+    keepUnfinished('u1', 'item-1', [one({ key: 'k1', questionId: ID1 }), unfinished])
+    expect(keptUnfinished('u1', 'item-1')?.map((q) => q.key)).toEqual(['k1', 'k-new'])
+    keepUnfinished('u1', 'item-1', [one({ key: 'k1', questionId: ID1 })])
+    expect(keptUnfinished('u1', 'item-1')).toBeNull()
+  })
+
+  it('keeps it per teacher: a co-teacher on the same tab never gets it (T24 N2)', () => {
+    keepUnfinished('u1', 'item-3', [newQuestion('one', 'k-mine')])
+    expect(keptUnfinished('u2', 'item-3')).toBeNull()
+    expect(keptUnfinished('u1', 'item-3')?.map((q) => q.key)).toEqual(['k-mine'])
   })
 
   it('keeps a quiz emptied of every question (the server keeps the last one)', () => {
-    keepUnfinished('item-2', [], { savedCount: 1 })
-    expect(keptUnfinished('item-2')).toEqual([])
-    keepUnfinished('item-2', [], { savedCount: 0 })
-    expect(keptUnfinished('item-2')).toBeNull()
+    keepUnfinished('u1', 'item-2', [], { savedCount: 1 })
+    expect(keptUnfinished('u1', 'item-2')).toEqual([])
+    keepUnfinished('u1', 'item-2', [], { savedCount: 0 })
+    expect(keptUnfinished('u1', 'item-2')).toBeNull()
   })
 
   it('lists what is not saved yet, for the leave warning and the pill', () => {

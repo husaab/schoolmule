@@ -9,7 +9,11 @@ import type { Attachment } from './classwork';
 
 /** GET /api/student/me: who is signed in, for the portal shell. */
 export interface StudentMe {
-  student: { studentId: string; name: string; firstName: string; grade: GradeCode };
+  /**
+   * `avatar` is the one the teacher picked for the student (R12), shown until the student picks their own. Optional:
+   * older servers send it only on /student/home.
+   */
+  student: { studentId: string; name: string; firstName: string; grade: GradeCode; avatar?: import('./profile').AvatarSpec | null };
   /** `avatar` is the student's own pick (null until they choose one); `photoUrl` is null while the school has student photos off. */
   user: {
     userId: string

@@ -110,9 +110,11 @@ export const onboardingStep = (user: RouteUser): string | null => {
 const stepPaths = (step: string) => (step === '/verify-email' ? VERIFY_EMAIL_PATHS : SCHOOL_APPROVAL_PATHS)
 
 // Where a signed-in user lands when nothing more specific applies.
-export const homeFor = (user: RouteUser): string =>
-  onboardingStep(user) ??
-  (user.role === 'PARENT' ? '/parent/dashboard' : user.role === 'STUDENT' ? '/student' : '/dashboard')
+/** The home page of a role's portal: the one mapping every "where does this view land" asks (M11). */
+export const roleHome = (role: string | null | undefined): string =>
+  role === 'PARENT' ? '/parent/dashboard' : role === 'STUDENT' ? '/student' : '/dashboard'
+
+export const homeFor = (user: RouteUser): string => onboardingStep(user) ?? roleHome(user.role)
 
 // The redirect target for `path`, or null when the user may stay.
 export const resolveRedirect = (path: string, state: RouteState): string | null => {

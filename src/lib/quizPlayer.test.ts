@@ -24,6 +24,7 @@ import {
   toAnswerPayload,
   turnInBlock,
   type PlayerState,
+  refusedAnswersLabel,
 } from './quizPlayer'
 import type { StudentQuestion, StudentQuiz } from '@/services/types/quiz'
 
@@ -414,5 +415,14 @@ describe('fix round 1: an answer the quiz no longer takes (400)', () => {
       index: 2,
       message: "Question 3's answer didn't save: Keep a short answer to 300 characters. Change it or clear it, then turn in.",
     })
+  })
+})
+
+describe('the Saved pill with a refused answer (T24 N3)', () => {
+  it('never says Saved while an answer the quiz refused is showing', () => {
+    expect(refusedAnswersLabel({})).toBeNull()
+    expect(refusedAnswersLabel(undefined)).toBeNull()
+    expect(refusedAnswersLabel({ q1: 'Pick one of the choices.' })).toBe('1 answer not saved')
+    expect(refusedAnswersLabel({ q1: 'x', q2: 'y' })).toBe('2 answers not saved')
   })
 })

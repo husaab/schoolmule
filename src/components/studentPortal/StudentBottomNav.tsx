@@ -1,9 +1,11 @@
 // src/components/studentPortal/StudentBottomNav.tsx
-// The phone tab bar (below md): the same entries as the desktop sidebar.
+// The phone tab bar (below md): the same entries as the desktop sidebar. Each
+// carries its page's remembered filters (the To-do's tab and class, Grades'
+// class and term), as the staff and parent sidebars do (final review M4).
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import BackLink from '@/components/shared/BackLink'
 import { STUDENT_NAV, isStudentNavActive } from './studentNav'
 import { useStudentBadges } from './useStudentBadges'
 
@@ -22,9 +24,9 @@ export default function StudentBottomNav() {
         const count = item.badgeKey ? badges[item.badgeKey] ?? 0 : 0
         const Icon = item.icon
         return (
-          <Link
+          <BackLink
             key={item.href}
-            href={item.href}
+            to={item.href}
             aria-current={active ? 'page' : undefined}
             className={`flex h-16 flex-col items-center justify-center gap-1 text-xs ${
               active ? 'font-semibold text-indigo-700' : 'text-slate-500'
@@ -39,7 +41,7 @@ export default function StudentBottomNav() {
               )}
             </span>
             {item.label}
-          </Link>
+          </BackLink>
         )
       })}
     </nav>

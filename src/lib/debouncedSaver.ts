@@ -6,7 +6,12 @@
 // time; a change made meanwhile goes out next (latest wins, or `merge`
 // combines it with what is still unsent). A save that fails keeps its value
 // for Retry, and the next change carries it along, so an older value can
-// never be resent over a newer one. Framework-free so these rules are
+// never be resent over a newer one. A keyed value (the grading view's edits,
+// one per student) can pass `split` instead: then a new change replaces only
+// the failed parts it names, and the rest waits for Retry rather than riding
+// along with an unrelated change (final review M1: a failed draft for one
+// student must not be re-sent, unasked, over a grade typed for them since in
+// the gradebook). Framework-free so these rules are
 // unit-tested (debouncedSaver.test.ts); src/hooks/useDebouncedSave.ts binds
 // it to React.
 //
@@ -65,7 +70,7 @@ export interface DebouncedSaver<T> {
   /** A view shows this value; the returned disconnect saves on the way out. */
   connect(win: LifecycleTarget, doc: VisibilityTarget): () => void
   /** Swap in newer save / merge functions (a React view re-renders with fresh closures). */
-  setHandlers(handlers: { save?: SaveFn<T>; merge?: MergeFn<T> }): void
+  setHandlers(handlers: { save?: SaveFn<T>; merge?: MergeFn<T>; split?: SplitFn<T> }): void
   /** Called after a save fails (the failed value is already kept). */
   onFailed(handler: (message: string) => void): () => void
   /** Some view is showing this value (between connect and its disconnect). */
@@ -74,6 +79,8 @@ export interface DebouncedSaver<T> {
 
 type SaveFn<T> = (value: T, opts: DebouncedSaveOptions) => Promise<void>
 type MergeFn<T> = (older: T, newer: T) => T
+/** What of a failed value a newer change does not replace (null: nothing left). */
+type SplitFn<T> = (failed: T, newer: T) => T | null
 
 interface Timers {
   set: (fn: () => void, ms: number) => unknown
@@ -94,17 +101,21 @@ const newest = <T,>(_older: T, newer: T): T => newer
 export function createDebouncedSaver<T>({
   save: initialSave,
   merge: initialMerge,
+  split: initialSplit,
   delayMs = DEBOUNCED_SAVE_MS,
   timers = defaultTimers,
 }: {
   save: SaveFn<T>
   /** Combines an older unsent value with a newer one (default: the newer wins). */
   merge?: MergeFn<T>
+  /** A keyed value: a new change takes over only the failed parts it names; the rest waits for Retry. */
+  split?: SplitFn<T>
   delayMs?: number
   timers?: Timers
 }): DebouncedSaver<T> {
   let save: SaveFn<T> = initialSave
   let merge: MergeFn<T> = initialMerge ?? newest
+  let split: SplitFn<T> | null = initialSplit ?? null
   let pending: T | null = null
   let inFlight: T | null = null
   let failed: { value: T; message: string } | null = null
@@ -153,8 +164,9 @@ export function createDebouncedSaver<T>({
         changed()
       } catch (err) {
         const remaining = err instanceof PartialDebouncedSaveError ? (err.remaining as T) : (inFlight as T)
-        // A change typed while this save was in flight stays with what failed.
-        failed = { value: combine(remaining, pending) as T, message: messageOf(err) }
+        // A change typed while this save was in flight stays with what failed (and so does an older failure
+        // a keyed change left waiting).
+        failed = { value: combine(combine(failed?.value ?? null, remaining), pending) as T, message: messageOf(err) }
         pending = null
         inFlight = null
         changed()
@@ -188,9 +200,16 @@ export function createDebouncedSaver<T>({
   }
 
   const schedule = (value: T) => {
-    // What failed rides along with the new change, under it.
-    pending = combine(combine(failed?.value ?? null, pending), value)
-    failed = null
+    if (split && failed) {
+      // A keyed value: the change replaces the failed parts it names; the others wait for Retry.
+      const rest = split(failed.value, value)
+      failed = rest === null ? null : { value: rest, message: failed.message }
+      pending = combine(pending, value)
+    } else {
+      // What failed rides along with the new change, under it.
+      pending = combine(combine(failed?.value ?? null, pending), value)
+      failed = null
+    }
     changed()
     clearTimer()
     timer = timers.set(() => {
@@ -266,6 +285,7 @@ export function createDebouncedSaver<T>({
     setHandlers(handlers) {
       if (handlers.save) save = handlers.save
       if (handlers.merge) merge = handlers.merge
+      if (handlers.split) split = handlers.split
     },
     connect(win, doc) {
       connections += 1
