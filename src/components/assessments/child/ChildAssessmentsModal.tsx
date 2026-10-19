@@ -287,14 +287,14 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               }`}
                               title={
                                 childPublished
-                                  ? 'Live to parents — click to manage or unpublish this item'
-                                  : 'Not visible to parents — click to publish just this item'
+                                  ? 'Published to students and parents. Click to manage or unpublish this item.'
+                                  : 'Students and parents can’t see this yet. Click to publish just this item.'
                               }
                             >
                               {childPublished ? (
                                 <>
                                   <CheckIcon className="h-3 w-3" />
-                                  Live · manage
+                                  Published · manage
                                 </>
                               ) : (
                                 'Publish'

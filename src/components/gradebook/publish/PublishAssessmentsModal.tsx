@@ -315,7 +315,7 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-800 truncate">{a.name}</p>
                           {state?.isPublished && (
-                            <p className="text-xs text-emerald-600">Already live to parents</p>
+                            <p className="text-xs text-emerald-700">Already published</p>
                           )}
                           {(draftCounts[a.assessmentId] ?? 0) > 0 && (
                             <p className="text-xs text-cyan-700">

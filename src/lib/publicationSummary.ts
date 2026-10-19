@@ -40,30 +40,30 @@ export function summarizePublication(
 }
 
 /**
- * Wording for a summary. `short` fits a column header; `long` reads as a
- * sentence in a modal chip.
+ * Wording for a summary, in the spec's words (Publish / Published, never
+ * "sent"). `short` fits a column header; `long` reads as a sentence in a
+ * modal chip.
  */
 export function publicationLabel(s: PublicationSummary, style: 'short' | 'long'): string {
   const long = style === 'long'
   switch (s.state) {
     case 'none':
-      return long ? 'Not published to parents yet' : 'Not sent'
+      return long ? 'Not published yet' : 'Not published'
     case 'partial':
-      return long ? `${s.published} of ${s.total} sent to parents` : `${s.published} of ${s.total} sent`
+      return `${s.published} of ${s.total} published`
     case 'all':
-      if (s.isCategory) return long ? `All ${s.total} live to parents` : `All ${s.total} sent`
-      return long ? 'Live to parents' : '● Live'
+      return long && s.isCategory ? `All ${s.total} published` : 'Published'
   }
 }
 
-/** Tooltip for a header badge. */
+/** Tooltip for a header badge. Published grades reach students as well as parents. */
 export function publicationTitle(s: PublicationSummary): string {
   switch (s.state) {
     case 'none':
-      return 'Not visible to parents yet'
+      return 'Students and parents can’t see these grades yet'
     case 'partial':
-      return `${s.published} of ${s.total} individual assessments are live to parents — click to manage`
+      return `${s.published} of ${s.total} assessments are published to students and parents. Click to manage.`
     case 'all':
-      return 'Live to parents — click to manage or unpublish'
+      return 'Published to students and parents. Click to manage or unpublish.'
   }
 }
