@@ -166,8 +166,8 @@ export default function QrCardScanner({ onToken, onCameraError }: QrCardScannerP
         {/* The frame to hold the card's code in. */}
         <span className="pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-white/85 shadow-[0_0_0_999px_rgba(15,23,42,0.35)]" aria-hidden="true" />
         {starting && (
-          <span role="status" className="absolute inset-0 flex items-center justify-center text-sm font-medium text-white">
-            Starting the camera…
+          <span role="status" className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm font-medium text-white">
+            Starting the camera… If your browser asks, allow the camera.
           </span>
         )}
       </div>
