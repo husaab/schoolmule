@@ -243,7 +243,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {QUICK_ACTIONS.map((a) => (
                 <Link
-                  key={a.href}
+                  key={a.label}
                   href={a.href}
                   className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white pl-2 pr-3.5 py-1.5 text-sm font-medium text-slate-800 transition-colors ${a.hover}`}
                 >
