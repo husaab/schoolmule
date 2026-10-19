@@ -56,6 +56,12 @@ export interface GradingRow {
    */
   signsIn?: boolean
   /**
+   * A publish emails the student: they sign in, the school sends student emails for their grade and they have an
+   * address (FE re-review N6). Optional: no server sends it yet; without it the copy hedges the email for a student
+   * who signs in.
+   */
+  getsEmail?: boolean
+  /**
    * Fable I1: the draft grade or feedback was made before the student's newest turn-in (they unsubmitted and
    * handed in new work while the draft waited). Back in "To grade", flagged "Graded earlier — check the new work",
    * and left out of "Publish to N students" until the teacher saves the score or feedback again. Optional: older

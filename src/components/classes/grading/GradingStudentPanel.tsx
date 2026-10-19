@@ -366,7 +366,7 @@ export default function GradingStudentPanel({
           >
             {publishOneLabel(first, linked)}
           </button>
-          <span className="text-center text-xs text-slate-500">{publishOneHint(first, linked, row.signsIn)}</span>
+          <span className="text-center text-xs text-slate-500">{publishOneHint(first, linked, row.signsIn, row.getsEmail)}</span>
         </div>
       </aside>
     </div>

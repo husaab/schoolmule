@@ -219,14 +219,29 @@ export const publishOneLabel = (first: string, linked: boolean): string =>
   linked ? `Publish ${first}'s grade` : `Publish ${first}'s feedback`
 
 /**
- * Under "Publish {first}'s grade". Only a student who signs in gets the email
- * (smoke S5): `signsIn` from the server says so; without it (an older
- * server) the email is promised only to a student who signs in.
+ * Whether a publish emails this student. `getsEmail`, when the server sends
+ * it, is exact. Otherwise only a student who signs in can get the email
+ * (smoke S5), and even then the school's student-email setting and the
+ * student's own address decide (FE re-review N6), so it is only a 'maybe'.
+ * Null: an older server that says nothing about logins either.
  */
-export const publishOneHint = (first: string, linked: boolean, signsIn?: boolean): string => {
+type EmailChance = 'yes' | 'no' | 'maybe' | null
+
+const emailChance = (signsIn?: boolean, getsEmail?: boolean): EmailChance => {
+  if (typeof getsEmail === 'boolean') return getsEmail ? 'yes' : 'no'
+  if (signsIn === false) return 'no'
+  return signsIn === true ? 'maybe' : null
+}
+
+const IF_SCHOOL_EMAILS = ' if your school sends student emails'
+
+/** Under "Publish {first}'s grade": the email is promised only as far as it is known (see emailChance). */
+export const publishOneHint = (first: string, linked: boolean, signsIn?: boolean, getsEmail?: boolean): string => {
   const shows = `Publishing shows the ${linked ? 'grade and feedback' : 'feedback'} to ${first} and parents`
-  if (signsIn === true) return `${shows}, and emails ${first}.`
-  if (signsIn === false) return `${shows}.`
+  const chance = emailChance(signsIn, getsEmail)
+  if (chance === 'yes') return `${shows}, and emails ${first}.`
+  if (chance === 'maybe') return `${shows}, and emails ${first}${IF_SCHOOL_EMAILS}.`
+  if (chance === 'no') return `${shows}.`
   return `${shows}. ${first} gets an email if they sign in to SchoolMule.`
 }
 
@@ -324,9 +339,11 @@ const nameList = (names: string[], max = 6): string =>
   names.length <= max ? names.join(', ') : `${names.slice(0, max).join(', ')}, ${names.length - max} more`
 
 /**
- * The confirm before "Publish to N students". Only students who sign in get
- * the email (smoke S5): the rows' `signsIn` says who; without it (an older
- * server) the email is promised only to those who sign in.
+ * The confirm before "Publish to N students". The email is promised only as
+ * far as it is known (emailChance): exactly with the server's `getsEmail`,
+ * "if your school sends student emails" for students who sign in, never to
+ * a student without a login (smoke S5), and to "students who sign in" when
+ * an older server says nothing.
  */
 export function publishAllPrompt(rows: GradingRow[], linked: boolean): { title: string; body: string } {
   const waiting = rows.filter(inPublishAll)
@@ -340,14 +357,18 @@ export function publishAllPrompt(rows: GradingRow[], linked: boolean): { title: 
         ? ` ${earlier[0]} isn't included: new work came in after you graded it. Check it, then save the ${linked ? 'grade' : 'feedback'} again to publish it.`
         : ` ${earlier.length} students aren't included (${nameList(earlier)}): new work came in after you graded them. Check it, then save their ${linked ? 'grades' : 'feedback'} again to publish them.`
   const what = linked ? 'grade and feedback' : 'feedback'
-  const known = waiting.every((r) => typeof r.signsIn === 'boolean')
-  const emailed = waiting.filter((r) => r.signsIn === true).length
+  const chances = waiting.map((r) => emailChance(r.signsIn, r.getsEmail))
+  const known = chances.every((c) => c !== null)
+  const emailed = chances.filter((c) => c === 'yes' || c === 'maybe').length
+  // Any 'maybe': the school's setting decides, so the promise is hedged.
+  const hedge = chances.includes('maybe') ? IF_SCHOOL_EMAILS : ''
   const email = (one: boolean): string => {
     if (!known) return one ? `. ${names[0]} gets an email if they sign in to SchoolMule.` : '. Students who sign in also get an email.'
     if (emailed === 0) return '.'
-    if (one) return `, and ${names[0]} gets an email.`
-    if (emailed === waiting.length) return ', and each student gets an email.'
-    return `, and the ${emailed === 1 ? 'one who signs in gets' : `${emailed} who sign in get`} an email.`
+    if (one) return `, and ${names[0]} gets an email${hedge}.`
+    if (emailed === waiting.length) return `, and each student gets an email${hedge}.`
+    if (hedge) return `, and the ${emailed === 1 ? 'one who signs in gets' : `${emailed} who sign in get`} an email${hedge}.`
+    return `, and ${emailed === 1 ? 'one of them gets' : `${emailed} of them get`} an email.`
   }
   if (names.length === 1) {
     return {

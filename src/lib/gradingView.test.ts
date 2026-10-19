@@ -193,14 +193,24 @@ describe('header and panel lines', () => {
 
   it('names the student on the one-student Publish', () => {
     expect(publishOneLabel('Amal', true)).toBe("Publish Amal's grade")
-    expect(publishOneHint('Amal', true, true)).toBe('Publishing shows the grade and feedback to Amal and parents, and emails Amal.')
+    expect(publishOneHint('Amal', true, true, true)).toBe('Publishing shows the grade and feedback to Amal and parents, and emails Amal.')
     expect(publishOneLabel('Amal', false)).toBe("Publish Amal's feedback")
-    expect(publishOneHint('Amal', false, true)).toBe('Publishing shows the feedback to Amal and parents, and emails Amal.')
+    expect(publishOneHint('Amal', false, true, true)).toBe('Publishing shows the feedback to Amal and parents, and emails Amal.')
     // Smoke S5: no email promised to a student without a working login.
     expect(publishOneHint('Rami', true, false)).toBe('Publishing shows the grade and feedback to Rami and parents.')
     expect(publishOneHint('Rami', true)).toBe(
       'Publishing shows the grade and feedback to Rami and parents. Rami gets an email if they sign in to SchoolMule.',
     )
+  })
+
+  it('promises the email only as far as it is known (FE re-review N6)', () => {
+    // Signing in isn't enough: the school's student-email setting and the student's own address decide.
+    expect(publishOneHint('Amal', true, true)).toBe(
+      'Publishing shows the grade and feedback to Amal and parents, and emails Amal if your school sends student emails.',
+    )
+    // The server says outright (getsEmail): it wins over signsIn.
+    expect(publishOneHint('Amal', true, true, false)).toBe('Publishing shows the grade and feedback to Amal and parents.')
+    expect(publishOneHint('Rami', true, false, true)).toBe('Publishing shows the grade and feedback to Rami and parents, and emails Rami.')
   })
 })
 
@@ -213,8 +223,8 @@ describe('Publish to N students', () => {
 
   it('asks first, naming who sees it', () => {
     const waiting = [
-      row({ studentId: 'a', name: 'Amal Haddad', needsPublish: true, signsIn: true }),
-      row({ studentId: 'b', name: 'Sami Haddad', needsPublish: true, signsIn: true }),
+      row({ studentId: 'a', name: 'Amal Haddad', needsPublish: true, signsIn: true, getsEmail: true }),
+      row({ studentId: 'b', name: 'Sami Haddad', needsPublish: true, signsIn: true, getsEmail: true }),
       row({ studentId: 'c', name: 'Rana Kareem', needsPublish: false }),
     ]
     expect(publishAllPrompt(waiting, true)).toEqual({
@@ -231,15 +241,37 @@ describe('Publish to N students', () => {
     const rami = row({ studentId: 'r', name: 'Rami Saleh', needsPublish: true, signsIn: false })
     const adam = row({ studentId: 'a', name: 'Adam Haddad', needsPublish: true, signsIn: true })
     expect(publishAllPrompt([rami], true).body).toBe('Rami and parents see the grade and feedback.')
-    expect(publishAllPrompt([rami, adam], true).body).toBe('Rami, Adam and parents see their grade and feedback, and the one who signs in gets an email.')
+    expect(publishAllPrompt([rami, adam], true).body).toBe(
+      'Rami, Adam and parents see their grade and feedback, and the one who signs in gets an email if your school sends student emails.',
+    )
+    // The server's getsEmail, when sent, is exact.
+    expect(publishAllPrompt([{ ...rami, getsEmail: false }, { ...adam, getsEmail: true }], true).body).toBe(
+      'Rami, Adam and parents see their grade and feedback, and one of them gets an email.',
+    )
+    expect(publishAllPrompt([{ ...adam, getsEmail: false }], true).body).toBe('Adam and parents see the grade and feedback.')
     // An older server says nothing about logins: the email is promised only to those who sign in.
     const unknown = row({ studentId: 'u', name: 'Hana Saleh', needsPublish: true })
     expect(publishAllPrompt([unknown], true).body).toBe('Hana and parents see the grade and feedback. Hana gets an email if they sign in to SchoolMule.')
     expect(publishAllPrompt([unknown, adam], false).body).toBe('Hana, Adam and parents see their feedback. Students who sign in also get an email.')
   })
 
+  it('hedges the email for students who sign in when the server does not say (FE re-review N6)', () => {
+    const a = row({ studentId: 'a', name: 'Amal Haddad', needsPublish: true, signsIn: true })
+    const b = row({ studentId: 'b', name: 'Sami Haddad', needsPublish: true, signsIn: true })
+    expect(publishAllPrompt([a], true).body).toBe('Amal and parents see the grade and feedback, and Amal gets an email if your school sends student emails.')
+    expect(publishAllPrompt([a, b], true).body).toBe(
+      'Amal, Sami and parents see their grade and feedback, and each student gets an email if your school sends student emails.',
+    )
+    const c = row({ studentId: 'c', name: 'Rana Kareem', needsPublish: true, getsEmail: true, signsIn: true })
+    const d = row({ studentId: 'd', name: 'Lina Saleh', needsPublish: true, getsEmail: false, signsIn: true })
+    const e = row({ studentId: 'e', name: 'Omar Faris', needsPublish: true, getsEmail: true, signsIn: true })
+    expect(publishAllPrompt([c, d, e], true).body).toBe('Rana, Lina, Omar and parents see their grade and feedback, and 2 of them get an email.')
+  })
+
   it('shortens a long list of names', () => {
-    const many = Array.from({ length: 9 }, (_, i) => row({ studentId: `x${i}`, name: `Student${i} Haddad`, needsPublish: true, signsIn: true }))
+    const many = Array.from({ length: 9 }, (_, i) =>
+      row({ studentId: `x${i}`, name: `Student${i} Haddad`, needsPublish: true, signsIn: true, getsEmail: true }),
+    )
     expect(publishAllPrompt(many, true).body).toBe(
       'Student0, Student1, Student2, Student3, Student4, Student5, 3 more and parents see their grade and feedback, and each student gets an email.',
     )
@@ -371,7 +403,7 @@ describe('graded earlier: new work came in after the draft', () => {
     draftPredatesWork: true,
     signsIn: true,
   })
-  const ziad = { ...draft, signsIn: true }
+  const ziad = { ...draft, signsIn: true, getsEmail: true }
 
   it('reads the server flag (absent on older servers: never flagged)', () => {
     expect(gradedEarlier(ali)).toBe(true)
@@ -490,6 +522,6 @@ describe('graded earlier: new work came in after the draft', () => {
 
   it('a draft made after the newest work is not flagged and behaves as before', () => {
     expect(isToGrade(draft, true)).toBe(false)
-    expect(publishOneHint('Ziad', true, true)).toBe('Publishing shows the grade and feedback to Ziad and parents, and emails Ziad.')
+    expect(publishOneHint('Ziad', true, true, true)).toBe('Publishing shows the grade and feedback to Ziad and parents, and emails Ziad.')
   })
 })
