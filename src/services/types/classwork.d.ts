@@ -4,6 +4,7 @@
 // counts on an item come from Task 15.
 
 import type { ItemKind } from './classroom'
+import type { QuizRelease, QuizSettings } from './quiz'
 
 export type { ItemKind } from './classroom'
 
@@ -37,6 +38,10 @@ export interface ItemInput {
   emailStudents?: boolean
   remindStudents?: boolean
   showEarly?: boolean
+  /** Quiz only (T23): when students see their scores, shuffle, the right answers once published. */
+  quizRelease?: QuizRelease
+  quizShuffle?: boolean
+  quizShowAnswers?: boolean
 }
 
 export interface Topic {
@@ -127,6 +132,8 @@ export interface Item extends ItemSummary {
   remindStudents: boolean
   studentIds: string[]
   attachments: Attachment[]
+  /** A quiz's settings (T23); null for other kinds. */
+  quiz: QuizSettings | null
 }
 
 /** GET /classes/:classId/items */

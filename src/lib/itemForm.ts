@@ -24,6 +24,12 @@ export const TITLE_MAX = 200
 export const INSTRUCTIONS_MAX = 20_000
 export const MAX_SCORE_LIMIT = 10_000
 export const MAX_AUDIENCE = 500
+/**
+ * A quiz's column is out of the quiz's points: the server sets it each time
+ * the questions save. A new quiz has none yet, so its column starts out of 1
+ * until its first questions are saved; the form never asks for an "Out of".
+ */
+export const QUIZ_START_MAX = 1
 
 /** The server's D2 refusal when a class has no category to put graded work under. */
 export const D2_MESSAGE = 'Add a category in Grades → Assessments & categories first, or fill an existing column.'
@@ -169,7 +175,8 @@ export function validateItemForm(kind: ItemKind, values: ItemFormValues, ctx: It
       if (ctx.standaloneColumn) errors.gradebook = STANDALONE_MESSAGE
       else if (ctx.categories.length === 0) errors.categoryId = D2_MESSAGE
       else if (!values.categoryId || !inCategories(values.categoryId)) errors.categoryId = 'Choose a category'
-      if (!ctx.standaloneColumn) {
+      // A quiz is out of its points (QUIZ_START_MAX): nothing to check.
+      if (!ctx.standaloneColumn && kind !== 'quiz') {
         const max = unsetMaxKept ? null : maxScoreError(values.maxScore)
         if (max) errors.maxScore = max
       }
@@ -231,7 +238,10 @@ export interface ToInputOptions {
 
 function gradebookOf(kind: ItemKind, values: ItemFormValues): GradebookInput {
   if (kind === 'assessment' || values.gradebookMode === 'category') {
-    return { mode: 'category', categoryId: values.categoryId, maxScore: parseMax(values.maxScore) }
+    const max = parseMax(values.maxScore)
+    // A quiz keeps the "Out of" its questions gave it, or starts out of 1 (QUIZ_START_MAX).
+    const maxScore = kind === 'quiz' && !(Number.isFinite(max) && max > 0) ? QUIZ_START_MAX : max
+    return { mode: 'category', categoryId: values.categoryId, maxScore }
   }
   if (values.gradebookMode === 'existing') return { mode: 'existing', assessmentId: values.columnId }
   return { mode: 'none' }

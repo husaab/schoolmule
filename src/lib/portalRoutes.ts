@@ -70,6 +70,9 @@ export const studentTodoHref = (opts: { tab?: TodoTab | null; classId?: string |
 export const studentItemHref = (itemId: string, opts: { from?: 'todo' | null } = {}): string =>
   withQuery(`/student/items/${encodeURIComponent(itemId)}`, { from: opts.from })
 
+/** Taking a quiz: one question per screen (the item page's Start quiz / Continue). */
+export const studentQuizHref = (itemId: string): string => `/student/items/${encodeURIComponent(itemId)}/quiz`
+
 /** A classwork item in the parent's lens. */
 export const parentItemHref = (studentId: string, itemId: string): string =>
   `/parent/classes/${encodeURIComponent(studentId)}/items/${encodeURIComponent(itemId)}`

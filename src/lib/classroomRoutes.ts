@@ -106,10 +106,17 @@ export function legacyGradebookRedirect(pathname: string, search: string): strin
 }
 
 /**
- * A classwork item's page (the grading view), or its edit form. `from=grades`
- * (a link from Grades) sends the page's Back / Close to Grades.
+ * A classwork item's page (the grading view), its edit form, or a quiz's
+ * questions (the quiz builder). `from=grades` (a link from Grades) sends the
+ * page's Back / Close to Grades; `from=grading` sends the builder's Close back
+ * to the grading view.
  */
-export const classItemHref = (classId: string, itemId: string, page?: 'edit', params: { from?: 'grades' | null } = {}): string =>
+export const classItemHref = (
+  classId: string,
+  itemId: string,
+  page?: 'edit' | 'quiz',
+  params: { from?: 'grades' | 'grading' | null } = {},
+): string =>
   `/classes/${encodeURIComponent(classId)}/items/${encodeURIComponent(itemId)}${page ? `/${page}` : ''}${params.from ? `?from=${params.from}` : ''}`
 
 export type ItemFormKind = 'assessment' | 'assignment' | 'quiz' | 'material'
@@ -132,13 +139,14 @@ export function newItemHref(
 /**
  * Where a teacher's link to a classwork item goes: an assignment or quiz to
  * its grading view, a plain assessment to its column in Grades, a material
- * (and anything not live yet: a draft, a scheduled post) to its edit page.
+ * (and anything not live yet: a draft, a scheduled post) to its edit page; a
+ * quiz not live yet to its questions.
  */
 export function teacherItemHref(
   classId: string,
   item: { itemId: string; kind: ItemFormKind; assessmentId?: string | null; live?: boolean },
 ): string {
-  if (item.live === false) return classItemHref(classId, item.itemId, 'edit')
+  if (item.live === false) return classItemHref(classId, item.itemId, item.kind === 'quiz' ? 'quiz' : 'edit')
   if (item.kind === 'assignment' || item.kind === 'quiz') return classItemHref(classId, item.itemId)
   if (item.kind === 'assessment' && item.assessmentId) return classHref(classId, 'grades', { focus: item.assessmentId })
   return classItemHref(classId, item.itemId, 'edit')

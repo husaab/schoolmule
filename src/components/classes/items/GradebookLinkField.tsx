@@ -94,6 +94,8 @@ interface GradebookLinkFieldProps {
   /** JK and SK are graded on skills: nothing here is graded. */
   kindergarten?: boolean
   disabled?: boolean
+  /** Said in place of the "Out of" box when the item sets it itself (a quiz is out of its points). */
+  outOfNote?: string | null
 }
 
 const RADIO = 'h-[18px] w-[18px] shrink-0 cursor-pointer accent-cyan-600 disabled:cursor-not-allowed'
@@ -109,6 +111,7 @@ export default function GradebookLinkField({
   currentCategoryId = null,
   kindergarten = false,
   disabled = false,
+  outOfNote = null,
 }: GradebookLinkFieldProps) {
   const mode = values.gradebookMode
   const category = categories.find((c) => c.assessmentId === values.categoryId)
@@ -212,7 +215,8 @@ export default function GradebookLinkField({
         </label>
       </div>
 
-      {mode === 'category' && !categoryOff && (
+      {mode === 'category' && !categoryOff && outOfNote && <p className="text-[13px] text-slate-600">{outOfNote}</p>}
+      {mode === 'category' && !categoryOff && !outOfNote && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor={fieldId('maxScore')} className="text-[13px] font-medium text-slate-600">
             Out of

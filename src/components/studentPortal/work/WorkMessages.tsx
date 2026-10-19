@@ -1,8 +1,9 @@
 // src/components/studentPortal/work/WorkMessages.tsx
 // "Messages about this work · {teacher} and your parents" (Student-Assignment
 // board): the private thread tied to this assignment. The student asks the
-// teacher a question; the teacher and the student's parents can read it and
-// answer. The first message starts the thread. A student can edit or delete
+// teacher a question; the teacher (and the student's parents, when the school
+// lets parents read these: the item's parentsCanRead) can read it and
+// answer. Nothing claims parents read it when they don't. The first message starts the thread. A student can edit or delete
 // their own message for 15 minutes. Everything goes through the student's
 // routes (/api/student/items/:itemId/thread…); the words are in itemPageText.ts.
 'use client'
@@ -32,11 +33,13 @@ interface WorkMessagesProps {
   userId: string
   /** An admin's preview: the messages can be read but not written. */
   readOnly?: boolean
+  /** The school lets parents read the messages about work (the item's parentsCanRead). */
+  parentsCanRead: boolean
 }
 
 const messageOf = (err: unknown, fallback: string): string => (err instanceof Error && err.message ? err.message : fallback)
 
-export default function WorkMessages({ itemId, teacherName, thread, userId, readOnly = false }: WorkMessagesProps) {
+export default function WorkMessages({ itemId, teacherName, thread, userId, readOnly = false, parentsCanRead }: WorkMessagesProps) {
   const notify = useNotificationStore((s) => s.showNotification)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -114,7 +117,7 @@ export default function WorkMessages({ itemId, teacherName, thread, userId, read
   return (
     <section className="flex flex-col gap-3 rounded-[20px] border border-slate-200/70 bg-white p-5">
       <h2 className="text-[15px] font-semibold text-slate-900">
-        Messages about this work <span className="font-normal text-slate-500">· {workMessagesSubtitle(teacherName)}</span>
+        Messages about this work <span className="font-normal text-slate-500">· {workMessagesSubtitle(teacherName, parentsCanRead)}</span>
       </h2>
 
       {loaded.error && !loaded.data && !local ? (
@@ -243,7 +246,7 @@ export default function WorkMessages({ itemId, teacherName, thread, userId, read
           <PaperAirplaneIcon className="h-[18px] w-[18px]" aria-hidden="true" />
         </button>
       </form>
-      <p className="text-xs text-slate-500">Your parents can see these messages.</p>
+      {parentsCanRead && <p className="text-xs text-slate-500">Your parents can see these messages.</p>}
     </section>
   )
 }

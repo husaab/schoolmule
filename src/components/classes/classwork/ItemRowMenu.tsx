@@ -1,10 +1,11 @@
 // src/components/classes/classwork/ItemRowMenu.tsx
-// A classwork row's ⋮: Edit, Open (the grading view, for assignments and
-// quizzes) and Delete. A read-only class (a past school year) offers Open only.
+// A classwork row's ⋮: Edit, Questions (a quiz's builder), Open (the grading
+// view, for assignments and quizzes) and Delete. A read-only class (a past
+// school year) offers Open only.
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowTopRightOnSquareIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowTopRightOnSquareIcon, ListBulletIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import KebabMenu, { type KebabItem } from '@/components/classes/shared/KebabMenu'
 import { classItemHref } from '@/lib/classroomRoutes'
 import type { ItemSummary } from '@/services/types/classwork'
@@ -21,6 +22,9 @@ export default function ItemRowMenu({ item, canEdit, onDelete }: ItemRowMenuProp
   const items: KebabItem[] = []
   if (canEdit) {
     items.push({ key: 'edit', label: 'Edit', icon: PencilSquareIcon, onSelect: () => router.push(classItemHref(item.classId, item.itemId, 'edit')) })
+    if (item.kind === 'quiz') {
+      items.push({ key: 'questions', label: 'Questions', icon: ListBulletIcon, onSelect: () => router.push(classItemHref(item.classId, item.itemId, 'quiz')) })
+    }
   }
   if (gradable) {
     items.push({ key: 'open', label: 'Open', icon: ArrowTopRightOnSquareIcon, onSelect: () => router.push(classItemHref(item.classId, item.itemId)) })

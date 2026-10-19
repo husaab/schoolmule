@@ -163,8 +163,11 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
   const tab = parseParentClassTab(filters.get('tab'))
   const [asking, setAsking] = useState(false)
 
-  const classes = useLoad(`lens-classes:${child.studentId}:${yearId ?? ''}`, () => getLensClasses(child.studentId).then((r) => r.data.classes))
-  const selected: StudentClassCard | null = classes.data ? pickClass(classes.data, filters.get('class')) : null
+  // The classes, and whether the child signs in (a child with no login does the work in class).
+  const lensClasses = useLoad(`lens-classes:${child.studentId}:${yearId ?? ''}`, () => getLensClasses(child.studentId).then((r) => r.data))
+  const classList = lensClasses.data?.classes ?? null
+  const signsIn = lensClasses.data?.signsIn ?? true
+  const selected: StudentClassCard | null = classList ? pickClass(classList, filters.get('class')) : null
   const page = useLoad(
     selected ? `lens-class:${child.studentId}:${selected.classId}:${yearId ?? ''}` : null,
     () => getLensClass(child.studentId, selected!.classId).then((r) => r.data),
@@ -199,14 +202,14 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
     <div className="flex flex-col gap-6">
       <LensBanner childName={child.name} onBack={goBack} />
 
-      {classes.error && !classes.data ? (
-        <LoadError tone="parent" title={`We couldn't load ${first}'s classes`} message={classes.error.message} onRetry={classes.reload} />
-      ) : !classes.data ? (
+      {lensClasses.error && !classList ? (
+        <LoadError tone="parent" title={`We couldn't load ${first}'s classes`} message={lensClasses.error.message} onRetry={lensClasses.reload} />
+      ) : !classList ? (
         <div className="flex flex-wrap gap-6" aria-label="Loading">
           <div className="h-64 flex-1 basis-60 animate-pulse rounded-[18px] bg-stone-100" />
           <div className="h-64 flex-[999_1_520px] animate-pulse rounded-[18px] bg-stone-100" />
         </div>
-      ) : classes.data.length === 0 || !selected ? (
+      ) : classList.length === 0 || !selected ? (
         <NothingHere message={`${first} isn't in any classes this term.`} />
       ) : (
         <div className="flex flex-wrap items-start gap-6">
@@ -214,7 +217,7 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
             <ClassNavList
               tone="parent"
               title={`${first}'s classes`}
-              classes={classes.data.map((c) => ({
+              classes={classList.map((c) => ({
                 classId: c.classId,
                 subject: c.subject,
                 iconUrl: c.identity.iconUrl,
@@ -264,6 +267,7 @@ export default function ParentChildLens({ child }: ParentChildLensProps) {
                       childName={child.name}
                       color={page.data.class.identity.color}
                       teacherName={teacher?.name ?? null}
+                      signsIn={signsIn}
                     />
                   )}
                   {tab === 'grades' && <GradesBody key={selected.classId} child={child} header={page.data.class} />}

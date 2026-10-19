@@ -81,6 +81,8 @@ describe('classItemHref', () => {
     expect(classItemHref('c1', 'i9', 'edit')).toBe('/classes/c1/items/i9/edit')
     expect(classItemHref('c1', 'i9', undefined, { from: 'grades' })).toBe('/classes/c1/items/i9?from=grades')
     expect(classItemHref('c1', 'i9', undefined, { from: null })).toBe('/classes/c1/items/i9')
+    expect(classItemHref('c1', 'i9', 'quiz')).toBe('/classes/c1/items/i9/quiz')
+    expect(classItemHref('c1', 'i9', 'quiz', { from: 'grading' })).toBe('/classes/c1/items/i9/quiz?from=grading')
   })
 })
 
@@ -107,8 +109,9 @@ describe('teacherItemHref', () => {
     expect(teacherItemHref('c1', { itemId: 'i1', kind: 'material' })).toBe('/classes/c1/items/i1/edit')
   })
 
-  it('work that is not live yet opens its edit page', () => {
+  it('work that is not live yet opens its edit page; a quiz its questions', () => {
     expect(teacherItemHref('c1', { itemId: 'i1', kind: 'assignment', live: false })).toBe('/classes/c1/items/i1/edit')
+    expect(teacherItemHref('c1', { itemId: 'i1', kind: 'quiz', live: false })).toBe('/classes/c1/items/i1/quiz')
   })
 })
 

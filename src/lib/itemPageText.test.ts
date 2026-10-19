@@ -14,6 +14,8 @@ import {
   turnInHint,
   turnInLabel,
   turnedInNote,
+  turnInModeOf,
+  lensQuizLine,
   isFeedbackOnly,
   workHeading,
   workMessagesSubtitle,
@@ -231,8 +233,10 @@ describe('whose work it is', () => {
     expect(workMessagesSubtitle(null)).toBe('your teacher and your parents')
   })
 
-  it('says the parents can read the messages', () => {
-    expect(workMessagesSubtitle('Lina Farouk')).toContain('your parents')
+  it('says the parents can read the messages only when the school lets them', () => {
+    expect(workMessagesSubtitle('Lina Farouk', true)).toContain('your parents')
+    expect(workMessagesSubtitle('Lina Farouk', false)).toBe('Lina Farouk')
+    expect(workMessagesSubtitle(null, false)).toBe('your teacher')
   })
 
   it('words the saved state of a typed answer', () => {
@@ -250,8 +254,51 @@ describe('the parent side', () => {
     expect(lensClassworkNote('Amal Haddad', null)).toBe('Only Amal can turn work in. You see the same status Amal does.')
   })
 
+  it('says a child with no login does the work in class (P2 board)', () => {
+    expect(lensClassworkNote('Noor Haddad', 'Lina Farouk', false)).toBe("Noor doesn't have a login. The work happens in class.")
+    expect(lensClassworkNote('Noor Haddad', 'Lina Farouk', true)).toContain('Only Noor can turn work in.')
+  })
+
   it('counts the private comments', () => {
     expect(parentCommentsLine('Amal Haddad', 'Lina Farouk', 2)).toBe('Private comments between Amal and Lina Farouk: 2')
     expect(parentCommentsLine('Amal Haddad', null, 1)).toBe('Private comments between Amal and the teacher: 1')
+  })
+})
+
+describe('turnInModeOf', () => {
+  const sub = {
+    status: 'assigned' as const,
+    isLate: false,
+    turnedInAt: null,
+    textAnswer: null,
+    textSavedAt: null,
+    files: [],
+    canEdit: true,
+    canTurnIn: false,
+    canUnsubmit: false,
+    closed: false,
+  }
+
+  it("reads the item's own submission mode", () => {
+    expect(turnInModeOf({ kind: 'assignment', submission: sub, submissionMode: 'file' })).toBe('file')
+    expect(turnInModeOf({ kind: 'assignment', submission: sub, submissionMode: 'text' })).toBe('text')
+    expect(turnInModeOf({ kind: 'assignment', submission: sub, submissionMode: 'done' })).toBe('done')
+  })
+
+  it('has nothing to turn in here for a quiz, work done in class, or an item with no submission', () => {
+    expect(turnInModeOf({ kind: 'quiz', submission: sub, submissionMode: 'none' })).toBeNull()
+    expect(turnInModeOf({ kind: 'assignment', submission: sub, submissionMode: 'none' })).toBeNull()
+    expect(turnInModeOf({ kind: 'assessment', submission: null, submissionMode: 'none' })).toBeNull()
+    expect(turnInModeOf({ kind: 'assignment', submission: null, submissionMode: 'file' })).toBeNull()
+  })
+})
+
+describe('lensQuizLine', () => {
+  it('tells a parent the child takes the quiz online, then that it is in; nothing once graded', () => {
+    expect(lensQuizLine('Amal Haddad', { status: 'assigned', turnedIn: false })).toBe('Amal takes this quiz online.')
+    expect(lensQuizLine('Amal Haddad', { status: 'turned_in', turnedIn: true })).toBe('Amal turned this quiz in.')
+    expect(lensQuizLine('', { status: 'missing', turnedIn: false })).toBe('Your child takes this quiz online.')
+    expect(lensQuizLine('Amal Haddad', { status: 'graded', turnedIn: true })).toBeNull()
+    expect(lensQuizLine('Amal Haddad', { status: 'excused', turnedIn: false })).toBeNull()
   })
 })

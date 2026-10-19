@@ -21,9 +21,9 @@ const lens = (studentId: string) => `/parent-portal/students/${encodeURIComponen
 export const getClassroomSummary = () =>
   apiClient<StudentPortalEnvelope<ParentClassroomSummary>>('/parent-portal/classroom/summary');
 
-/** The child's classes, the way the child sees them. */
+/** The child's classes, the way the child sees them, and whether the child signs in (no login: work happens in class). */
 export const getLensClasses = (studentId: string) =>
-  apiClient<StudentPortalEnvelope<{ classes: StudentClassCard[] }>>(`${lens(studentId)}/classes`);
+  apiClient<StudentPortalEnvelope<{ classes: StudentClassCard[]; signsIn: boolean }>>(`${lens(studentId)}/classes`);
 
 /** One class of the child: header and what is coming up. */
 export const getLensClass = (studentId: string, classId: string) =>

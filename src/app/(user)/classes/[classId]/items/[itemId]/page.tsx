@@ -1,8 +1,9 @@
 // File: src/app/(user)/classes/[classId]/items/[itemId]/page.tsx
 // A piece of classwork, for the teacher. An assignment or quiz opens its
 // grading view; a plain assessment is graded in Grades (its column, focused);
-// a material, and any work not posted yet, opens its edit form. ?from=grades
-// (a Grades column name) sends Back to Grades.
+// a material, and any work not posted yet, opens its edit form (a quiz not
+// posted yet: its questions). ?from=grades (a Grades column name) sends Back
+// to Grades.
 'use client'
 
 import { Suspense, useEffect } from 'react'
@@ -22,6 +23,7 @@ const isGraded = (item: Item) => item.kind === 'assignment' || item.kind === 'qu
 /** Where a teacher's open of this item lands, when it isn't the grading view. */
 function elsewhere(classId: string, item: Item): string | null {
   if (item.kind === 'assessment') return classHref(classId, 'grades', { focus: item.gradebook?.assessmentId ?? null })
+  if (item.kind === 'quiz' && item.effectiveStatus !== 'posted') return classItemHref(classId, item.itemId, 'quiz')
   if (item.kind === 'material' || item.effectiveStatus !== 'posted') return classItemHref(classId, item.itemId, 'edit')
   return null
 }

@@ -1,5 +1,5 @@
 // src/lib/classroomFeatures.ts
-// Classroom features that ship in later tasks. Quizzes stay out of the Create
-// menu until the quiz builder and player exist (Task 24 flips this).
+// Classroom features that ship in stages. Quizzes are on since Task 24 (the
+// quiz builder, player and review).
 
-export const QUIZZES_ENABLED = false
+export const QUIZZES_ENABLED = true

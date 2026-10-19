@@ -10,6 +10,10 @@
 // one release word: "Publish to N students" (every draft, after a confirm) or
 // "Publish {first}'s grade". Once the column is published, a grade edit goes
 // live as it saves. Mark missing and Excuse are published at once.
+//
+// A quiz also loads its questions (the choices' words for the review) and
+// links to them ("Questions"); points saved on an answer read that student's
+// row again, so the list, the counts and the grade box follow the server.
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
@@ -22,7 +26,7 @@ import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader } from '@/comp
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { useLoad } from '@/hooks/useLoad'
-import { classHref } from '@/lib/classroomRoutes'
+import { classHref, classItemHref } from '@/lib/classroomRoutes'
 import { PartialDebouncedSaveError } from '@/lib/debouncedSaver'
 import {
   editedGrade,
@@ -43,6 +47,7 @@ import {
 } from '@/lib/gradingView'
 import { isApiError } from '@/services/apiClient'
 import { getClassPage } from '@/services/classroomService'
+import { getQuestions, restoreQuizScore } from '@/services/quizService'
 import {
   excuseStudents,
   getGradingList,
@@ -52,7 +57,8 @@ import {
   updateSubmission,
 } from '@/services/gradingService'
 import type { ClassPageData } from '@/services/types/classroom'
-import type { GradePatch, GradingList, GradingRow, PublishGradesResult, SubmissionDetail } from '@/services/types/grading'
+import type { GradePatch, GradeStatus, GradingList, GradingRow, PublishGradesResult, SubmissionDetail } from '@/services/types/grading'
+import type { Question } from '@/services/types/quiz'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import GradingHeader from './GradingHeader'
@@ -161,6 +167,56 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
     const res = await getSubmission(itemId, selectedId as string)
     return res.data
   })
+
+  // A quiz: its questions once (the answers carry only the choice ids).
+  const isQuiz = data?.list.item.kind === 'quiz'
+  const quizQuestions = useLoad<Map<string, Question>>(isQuiz ? `${itemId}:questions` : null, async () => {
+    const res = await getQuestions(itemId)
+    return new Map(res.data.questions.map((q) => [q.questionId, q]))
+  })
+
+  /**
+   * "Use auto-score": what is typed is saved first (a typed score still waiting would win again), then the quiz's
+   * own score goes back in the column. Answers with the student's grade as the server now holds it.
+   */
+  const restoreAutoScore = async (studentId: string): Promise<{ score: number | null; status: GradeStatus | null } | null> => {
+    await saver.flush()
+    if (saver.hasFailures()) {
+      showNotification("Your last changes didn't save. Retry them first.", 'error')
+      return null
+    }
+    try {
+      const res = await restoreQuizScore(itemId, studentId)
+      applyRow(res.data.row)
+      detail.patch((d) => (d.row.studentId === studentId ? { ...d, row: res.data.row, quiz: res.data.quiz ?? d.quiz } : d))
+      showNotification(`${nameOf(studentId)}'s score is the quiz's own again.`, 'success')
+      const g = editedGrade(res.data.row)
+      return { score: g.score, status: g.status }
+    } catch (err) {
+      showNotification(messageOf(err, "The quiz's score couldn't be used. Try again."), 'error')
+      return null
+    }
+  }
+
+  /** Points saved on a quiz: read those students' rows again; the open student's grade comes back for the grade box. */
+  const refreshQuizRows = async (studentIds: string[], openId: string): Promise<{ score: number | null; status: GradeStatus | null } | null> => {
+    let mine: { score: number | null; status: GradeStatus | null } | null = null
+    await Promise.all(
+      studentIds.map(async (id) => {
+        try {
+          const res = await getSubmission(itemId, id)
+          applyRow(res.data.row)
+          if (id === openId) {
+            const g = editedGrade(res.data.row, saver.peek()?.[id])
+            mine = { score: g.score, status: g.status }
+          }
+        } catch {
+          // The row stays as it was; the next save or reload brings it up to date.
+        }
+      }),
+    )
+    return mine
+  }
 
   // Remounts the student panel after a server-side change (Mark missing, Excuse).
   const [resetKey, setResetKey] = useState(0)
@@ -319,6 +375,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
         }}
         publishing={busy && confirmAll}
         canEdit={canEdit}
+        questionsHref={item.kind === 'quiz' && canEdit ? classItemHref(classId, itemId, 'quiz', { from: 'grading' }) : null}
       />
 
       {outside && (
@@ -393,6 +450,16 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
               )
             }
             onPublish={() => void act(() => publishGrades(itemId, [selectedRow.studentId]), (r) => publishOutcome(r, nameOf, linked, item.kind))}
+            quiz={
+              item.kind === 'quiz'
+                ? {
+                    questions: quizQuestions.data,
+                    userId,
+                    onSaved: (ids) => refreshQuizRows(ids, selectedRow.studentId),
+                    onUseAutoScore: () => restoreAutoScore(selectedRow.studentId),
+                  }
+                : null
+            }
           />
         ) : (
           <div className="flex flex-[999_1_760px] items-center justify-center p-10 text-sm text-slate-500">

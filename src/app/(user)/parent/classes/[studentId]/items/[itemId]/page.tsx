@@ -13,16 +13,15 @@ import { useParams, useRouter } from 'next/navigation'
 import { AcademicCapIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import ItemDetail from '@/components/classroom/ItemDetail'
 import LoadError from '@/components/classroom/LoadError'
-import { useSubmissionMode } from '@/components/classroom/useSubmissionMode'
 import LensBanner from '@/components/parent/classes/LensBanner'
 import ParentPageShell from '@/components/parent/ParentPageShell'
 import YourWorkCard from '@/components/studentPortal/work/YourWorkCard'
 import { useLoad } from '@/hooks/useLoad'
 import { firstNameOf } from '@/lib/classroomText'
-import { parentCommentsLine } from '@/lib/itemPageText'
+import { parentCommentsLine, turnInModeOf } from '@/lib/itemPageText'
 import { parentClassesHref } from '@/lib/portalRoutes'
 import { isApiError } from '@/services/apiClient'
-import { getLensClasswork, getLensFileUrl, getLensItem } from '@/services/parentClassroomService'
+import { getLensFileUrl, getLensItem } from '@/services/parentClassroomService'
 import type { Attachment } from '@/services/types/classwork'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { ALL_CHILDREN, useChildStoreHydrated, useSelectedChildStore } from '@/store/useSelectedChildStore'
@@ -43,7 +42,6 @@ function ParentItemContent() {
   }, [hydrated, child, selectedChildId, studentId, selectChild])
 
   const item = useLoad(`lens-item:${studentId}:${itemId}:${yearId ?? ''}`, () => getLensItem(studentId, itemId).then((r) => r.data))
-  const modeState = useSubmissionMode(item.data, `parent:${studentId}`, (classId) => getLensClasswork(studentId, classId).then((r) => r.data))
   const data = item.data
 
   // Attachment links are signed for an hour: ask for a fresh one when a file is previewed.
@@ -112,7 +110,7 @@ function ParentItemContent() {
                     userId={null}
                     actions={null}
                     readOnlyNote={`Only ${first || 'your child'} can turn work in. You can see what ${first || 'your child'} added.`}
-                    mode={modeState.mode}
+                    mode={turnInModeOf(data)}
                     resolveFileUrl={async (file) => (await getLensFileUrl(studentId, file.fileId)).data.url}
                     onItem={() => {}}
                     onFiles={() => {}}

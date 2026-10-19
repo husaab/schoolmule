@@ -10,6 +10,12 @@
 // 600 ms, and at once on blur and on a student switch). The page keys this
 // panel by student, so it opens on that student's saved values (with any
 // edit not saved yet over them).
+//
+// A quiz shows the student's answers in the middle (QuizAnswersReview), with
+// points and a note per answer. The grade box still takes a typed score, which
+// wins over the quiz's points ("Score set by teacher", with "Use auto-score").
+// When points on an answer save, the grade box shows the score the server now
+// holds.
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -25,9 +31,11 @@ import {
 } from '@/lib/gradingView'
 import type { CellValue } from '@/lib/scoreAutosaveQueue'
 import type { GradePatch, GradeStatus, GradingItem, GradingRow, SubmissionDetail } from '@/services/types/grading'
+import type { Question } from '@/services/types/quiz'
 import FeedbackBox from './FeedbackBox'
 import GradeInput from './GradeInput'
 import QuickCommentChips from './QuickCommentChips'
+import QuizAnswersReview from './QuizAnswersReview'
 import { appendQuickComment } from './quickComments'
 import WorkThreadPanel from './WorkThreadPanel'
 import WorkViewer from './WorkViewer'
@@ -69,6 +77,15 @@ interface GradingStudentPanelProps {
   onClearMissing: () => void
   onExcuse: (excused: boolean) => void
   onPublish: () => void
+  /** A quiz: its questions (the choices' words), the signed-in teacher, and what follows a saved point change. */
+  quiz?: {
+    questions: Map<string, Question> | null
+    userId: string
+    /** Points saved for these students: their rows are read again; this student's grade comes back (or null). */
+    onSaved: (studentIds: string[]) => Promise<{ score: number | null; status: GradeStatus | null } | null>
+    /** "Use auto-score" (POST …/quiz-score): this student's grade as the server now has it, or null when refused. */
+    onUseAutoScore: () => Promise<{ score: number | null; status: GradeStatus | null } | null>
+  } | null
 }
 
 const arrowClass =
@@ -100,9 +117,14 @@ export default function GradingStudentPanel({
   onClearMissing,
   onExcuse,
   onPublish,
+  quiz = null,
 }: GradingStudentPanelProps) {
   const first = firstName(row.name)
   const [status, setStatus] = useState<GradeStatus | null>(initial.status)
+  // The score in the box; a quiz's point change (or "Use auto-score") puts the server's score back in it.
+  const [score, setScore] = useState<number | null>(initial.score)
+  const [scoreKey, setScoreKey] = useState(0)
+  const [restoring, setRestoring] = useState(false)
   const [feedback, setFeedback] = useState(initial.feedback)
   // Something typed in this panel: Publish is offered before the save comes back.
   const [touched, setTouched] = useState(false)
@@ -129,8 +151,16 @@ export default function GradingStudentPanel({
 
   const changeScore = (value: CellValue) => {
     setTouched(true)
+    setScore(value)
     if (value !== null && status !== 'excused') setStatus('graded')
     onEdit({ draftScore: value })
+  }
+
+  /** The grade box shows a score that came from the server (a quiz's points). */
+  const showScore = (next: { score: number | null; status: GradeStatus | null }) => {
+    setScore(next.score)
+    setStatus(next.status)
+    setScoreKey((k) => k + 1)
   }
   const changeFeedback = (value: string) => {
     setTouched(true)
@@ -183,15 +213,47 @@ export default function GradingStudentPanel({
           </div>
         </div>
 
-        <WorkViewer
-          detail={detail}
-          loading={detailLoading}
-          error={detailError}
-          onReload={onReloadDetail}
-          kind={kind}
-          mode={item.submissionMode}
-          first={first}
-        />
+        {kind === 'quiz' && quiz ? (
+          <QuizAnswersReview
+            itemId={itemId}
+            itemTitle={item.title}
+            studentId={row.studentId}
+            first={first}
+            userId={quiz.userId}
+            detail={detail}
+            loading={detailLoading}
+            error={detailError}
+            onReload={onReloadDetail}
+            questions={quiz.questions}
+            canEdit={canEdit}
+            linked={linked}
+            current={{ score, status, setByTeacher: row.scoreSetByTeacher }}
+            restoring={restoring}
+            onSaved={(ids) => {
+              void quiz.onSaved(ids).then((mine) => {
+                if (mine) showScore(mine)
+              })
+            }}
+            onUseAutoScore={() => {
+              setRestoring(true)
+              void quiz
+                .onUseAutoScore()
+                .then((mine) => {
+                  if (mine) showScore(mine)
+                })
+                .finally(() => setRestoring(false))
+            }}
+          />
+        ) : (
+          <WorkViewer
+            detail={detail}
+            loading={detailLoading}
+            error={detailError}
+            onReload={onReloadDetail}
+            mode={item.submissionMode}
+            first={first}
+          />
+        )}
 
         {note && (
           <div className="rounded-[14px] border border-slate-200/70 bg-white px-4 py-3.5 text-sm leading-normal text-slate-700">
@@ -215,8 +277,9 @@ export default function GradingStudentPanel({
 
         {linked && (
           <GradeInput
+            key={scoreKey}
             studentName={row.name}
-            initialScore={initial.score}
+            initialScore={score}
             status={status}
             maxScore={item.maxScore}
             hint={hint}

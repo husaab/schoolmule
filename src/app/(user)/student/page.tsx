@@ -4,7 +4,7 @@
 // nudge to pick an avatar until they have, what is due soon and missing, the
 // latest published grades, and a card for each of their classes.
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Avatar from '@/components/avatar/Avatar'
 import AvatarPickerModal from '@/components/avatar/AvatarPickerModal'
 import PickAvatarCard from '@/components/avatar/PickAvatarCard'
@@ -18,7 +18,6 @@ import { useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useLoad } from '@/hooks/useLoad'
 import { firstNameOf, greetingFor, thingsDueThisWeek } from '@/lib/classroomText'
 import { studentClassHref, studentGradesHref } from '@/lib/portalRoutes'
-import { rememberSubmissionModes } from '@/lib/submissionModeCache'
 import { longDateLine } from '@/lib/studentAccounts'
 import { saveAvatar } from '@/services/profileService'
 import { getStudentHome } from '@/services/studentPortalService'
@@ -43,10 +42,6 @@ export default function StudentHomePage() {
   })
 
   const data = home.data
-  // Due soon and Missing know how each item is handed in; the assignment page reads it from here.
-  useEffect(() => {
-    if (data) rememberSubmissionModes([...data.dueSoon, ...data.missing])
-  }, [data])
   const now = new Date()
   const first = firstNameOf(data?.student.firstName || me?.student.firstName || username) || 'there'
   // The login's own pick; the neutral avatar until they choose one.

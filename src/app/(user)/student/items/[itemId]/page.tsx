@@ -5,8 +5,10 @@
 // messages about it on the right. An assignment shows photo / file / typed
 // answer / mark-as-done and Turn in, in every state (assigned, ready, turned
 // in, late, missing, closed, graded). A plain assessment shows the item and,
-// once published, the grade; a material shows only the item. `?from=todo`
-// makes Back return to the To-do with its filters.
+// once published, the grade; a material shows only the item. A quiz shows its
+// place in the quiz (Start quiz / Continue / waiting / the results); it is
+// answered on /student/items/{id}/quiz. `?from=todo` makes Back return to the
+// To-do with its filters.
 
 import { Suspense, useMemo } from 'react'
 import Link from 'next/link'
@@ -14,19 +16,20 @@ import { useParams, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import ItemDetail from '@/components/classroom/ItemDetail'
 import LoadError from '@/components/classroom/LoadError'
-import { useSubmissionMode } from '@/components/classroom/useSubmissionMode'
 import StudentShell from '@/components/studentPortal/StudentShell'
+import QuizIntro from '@/components/studentPortal/quiz/QuizIntro'
 import { studentTone } from '@/components/studentPortal/studentTone'
 import { refreshTodoBadge } from '@/components/studentPortal/useStudentBadges'
 import WorkMessages from '@/components/studentPortal/work/WorkMessages'
 import YourWorkCard, { type WorkActions } from '@/components/studentPortal/work/YourWorkCard'
 import BackLink from '@/components/shared/BackLink'
 import { useLoad } from '@/hooks/useLoad'
+import { turnInModeOf } from '@/lib/itemPageText'
 import { studentClassHref, studentTodoHref } from '@/lib/portalRoutes'
 import { isApiError } from '@/services/apiClient'
+import { getStudentQuiz } from '@/services/quizService'
 import {
   deleteStudentFile,
-  getStudentClasswork,
   getStudentFileUrl,
   getStudentItem,
   saveStudentAnswer,
@@ -50,7 +53,9 @@ function StudentItemContent() {
 
   const item = useLoad(role === 'STUDENT' && userId ? `item:${userId}:${itemId}` : null, () => getStudentItem(itemId).then((r) => r.data))
   const { patch, reload } = item
-  const modeState = useSubmissionMode(item.data, userId ?? '', (classId) => getStudentClasswork(classId).then((r) => r.data))
+  // A quiz: where the student stands in it (never the answer key; the results once the grade is out).
+  const isQuiz = item.data?.kind === 'quiz'
+  const quiz = useLoad(isQuiz && userId ? `quiz:${userId}:${itemId}` : null, () => getStudentQuiz(itemId).then((r) => r.data))
 
   // Everything the student can do to their work, from the student's own routes. A preview gets none.
   const actions = useMemo<WorkActions | null>(
@@ -162,25 +167,32 @@ function StudentItemContent() {
                 userId={userId || null}
                 actions={actions}
                 readOnlyNote={previewing ? PREVIEW_NOTE : null}
-                mode={modeState.mode}
+                mode={turnInModeOf(data)}
+                quiz={
+                  data.kind === 'quiz' ? (
+                    <QuizIntro item={data} quiz={quiz.data} error={quiz.error} onRetry={quiz.reload} previewing={previewing} />
+                  ) : undefined
+                }
                 resolveFileUrl={async (file) => (await getStudentFileUrl(file.fileId)).data.url}
                 onItem={(next) => patch(() => next)}
                 onFiles={setFiles}
-                onReload={reload}
+                onReload={() => {
+                  reload()
+                  if (isQuiz) quiz.reload()
+                }}
                 onCountsChanged={() => {
                   if (userId) void refreshTodoBadge(userId)
                 }}
               />
-              {modeState.error && (
-                <p className="text-sm text-rose-700">
-                  We couldn&apos;t load the details of this assignment.{' '}
-                  <button type="button" onClick={modeState.retry} className="cursor-pointer font-semibold underline underline-offset-2">
-                    Try again
-                  </button>
-                </p>
-              )}
               {takesThread && userId && (
-                <WorkMessages itemId={data.itemId} teacherName={data.teacher?.name ?? null} thread={data.thread} userId={userId} readOnly={previewing} />
+                <WorkMessages
+                  itemId={data.itemId}
+                  teacherName={data.teacher?.name ?? null}
+                  thread={data.thread}
+                  userId={userId}
+                  readOnly={previewing}
+                  parentsCanRead={data.parentsCanRead}
+                />
               )}
             </aside>
           )}

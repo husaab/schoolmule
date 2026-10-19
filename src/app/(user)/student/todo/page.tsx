@@ -17,7 +17,6 @@ import { useStudentClasses } from '@/components/studentPortal/useStudentClasses'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { useLoad } from '@/hooks/useLoad'
 import { parseTodoTab, type TodoTab } from '@/lib/portalRoutes'
-import { rememberSubmissionModes } from '@/lib/submissionModeCache'
 import { emptyTodoMessage, todoTabs } from '@/lib/todoText'
 import { getStudentTodo } from '@/services/studentPortalService'
 import { useUserStore } from '@/store/useUserStore'
@@ -41,11 +40,6 @@ function StudentTodoContent() {
   useEffect(() => {
     if (userId && data && !classId) setTodoBadgeCounts(userId, data.counts)
   }, [userId, data, classId])
-
-  // The rows know how each item is handed in; the assignment page reads it from here.
-  useEffect(() => {
-    if (data) rememberSubmissionModes(data.groups.flatMap((g) => g.items))
-  }, [data])
 
   // Coming back to the tab: the teacher may have posted something.
   useEffect(() => {

@@ -9,6 +9,7 @@
 
 import type { AvatarSpec } from './profile'
 import type { ItemSummary, SubmissionMode } from './classwork'
+import type { SubmissionQuiz } from './quiz'
 
 export type WorkStatus = 'assigned' | 'missing' | 'turned_in' | 'graded' | 'excused' | 'no_turn_in' | 'material'
 
@@ -44,6 +45,11 @@ export interface GradingRow {
   /** A thread about this work exists (the chat icon beside the student). */
   hasThread: boolean
   label: GradingLabel
+  /**
+   * A quiz column: the score was typed by the teacher and wins over the quiz's points (T23 fix round 1; false
+   * for every other column). Optional only so older fixtures still type-check.
+   */
+  scoreSetByTeacher?: boolean
 }
 
 export interface GradingCounts {
@@ -92,8 +98,8 @@ export interface SubmissionDetail {
   row: GradingRow
   textAnswer: string | null
   files: SubmissionFile[]
-  /** Task 23. */
-  quiz: null
+  /** A quiz: the student's attempt and answers with the key (Task 23); null until they start, and for assignments. */
+  quiz: SubmissionQuiz | null
   /** The private thread about this work; null until someone writes. */
   thread: ItemThreadStub | null
 }

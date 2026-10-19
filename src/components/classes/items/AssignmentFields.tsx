@@ -2,8 +2,7 @@
 // The assignment form (the Teacher-Assign board): title, instructions,
 // attachments and how students turn it in; then who it is for, when it is
 // due (Toronto), its topic, how it counts in the gradebook and the emails. A
-// quiz uses the same fields without the turn-in choice (its questions come
-// with the quiz builder).
+// quiz has its own form (QuizFields), its questions the quiz builder.
 'use client'
 
 import type { ItemKind } from '@/services/types/classwork'

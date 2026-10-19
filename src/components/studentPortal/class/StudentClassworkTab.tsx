@@ -7,19 +7,13 @@
 import ClassworkList from '@/components/classroom/ClassworkList'
 import LoadError from '@/components/classroom/LoadError'
 import NothingHere from '@/components/classroom/NothingHere'
-import { useEffect } from 'react'
 import { useLoad } from '@/hooks/useLoad'
-import { rememberSubmissionModes } from '@/lib/submissionModeCache'
 import { studentItemHref } from '@/lib/portalRoutes'
 import { getStudentClasswork } from '@/services/studentPortalService'
 import type { ClassIdentity } from '@/services/types/classroom'
 
 export default function StudentClassworkTab({ classId, identity }: { classId: string; identity: ClassIdentity }) {
   const classwork = useLoad(`classwork:${classId}`, () => getStudentClasswork(classId).then((r) => r.data))
-  const items = classwork.data?.items
-  useEffect(() => {
-    if (items) rememberSubmissionModes(items)
-  }, [items])
 
   if (classwork.error && !classwork.data) {
     return <LoadError title="We couldn't load the classwork" message={classwork.error.message} onRetry={classwork.reload} />

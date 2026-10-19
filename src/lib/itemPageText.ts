@@ -11,7 +11,7 @@ import { dayKeyOf, daysFromToday, firstNameOf, formatMark, timeText, wasDue } fr
 import { formatSize } from '@/lib/attachments'
 import { shortDate, torontoDateKey } from '@/lib/studentAccounts'
 import type { DebouncedSaveStatus } from '@/lib/debouncedSaver'
-import type { StudentItem, SubmissionFile, WorkStatus } from '@/services/types/studentPortal'
+import type { StudentItem, SubmissionFile, SubmissionMode, WorkStatus } from '@/services/types/studentPortal'
 
 const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1)
 
@@ -60,6 +60,16 @@ export function itemDueLine(
   }
   if (item.date) return { text: `${dayKeyLabel(item.date)} · in class`, tone: 'slate' }
   return null
+}
+
+/**
+ * How "Your work" takes the work: a photo or file, a typed answer, "Mark as done", or null when nothing is turned
+ * in on this page (a quiz is answered on its own page; an assessment, a material and work done in class have none).
+ * From the item payload's own submissionMode.
+ */
+export function turnInModeOf(item: Pick<StudentItem, 'kind' | 'submission' | 'submissionMode'>): SubmissionMode | null {
+  if (!item.submission || item.kind !== 'assignment' || item.submissionMode === 'none') return null
+  return item.submissionMode
 }
 
 /** The status the page works from: the submission's, else what the grade says, else "to read" or "nothing to turn in". */
@@ -200,12 +210,21 @@ export function gradeBlockCopy(
 /** "Your work" for the student, "Amal's work" for a parent. */
 export const workHeading = (owner: Owner): string => cap(`${possessive(owner)} work`)
 
-/** The student's messages about a piece of work always include their parents. */
-export const workMessagesSubtitle = (teacher: string | null): string => `${teacher ?? 'your teacher'} and your parents`
+/** A quiz on the parent's read-only page: the child takes it online; null once the grade block says it all. */
+export function lensQuizLine(childName: string, work: { status: WorkStatus; turnedIn: boolean }): string | null {
+  if (work.status === 'graded' || work.status === 'excused') return null
+  const who = firstNameOf(childName) || 'Your child'
+  return work.turnedIn ? `${who} turned this quiz in.` : `${who} takes this quiz online.`
+}
 
-/** Under the parent's Classwork list. */
-export function lensClassworkNote(childName: string, teacher: string | null): string {
+/** Who reads the student's messages about a piece of work: the teacher, and the parents when the school lets them. */
+export const workMessagesSubtitle = (teacher: string | null, parentsCanRead = true): string =>
+  parentsCanRead ? `${teacher ?? 'your teacher'} and your parents` : (teacher ?? 'your teacher')
+
+/** Under the parent's Classwork list (P2 board). A child with no login does the work in class. */
+export function lensClassworkNote(childName: string, teacher: string | null, signsIn = true): string {
   const first = firstNameOf(childName)
+  if (!signsIn) return `${first} doesn't have a login. The work happens in class.`
   const base = `Only ${first} can turn work in. You see the same status ${first} does.`
   return teacher ? `${base} Questions? Use "Message ${teacher}" at the top.` : base
 }

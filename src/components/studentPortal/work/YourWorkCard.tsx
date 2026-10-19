@@ -18,16 +18,18 @@
 //    successful Turn in, when put back, or when the student comes back to work
 //    that is already turned in or graded.
 //  - Turn in / Unsubmit are explicit buttons; the server decides who may.
+//  - A quiz is answered on its own page: the student's item page hands the
+//    card its quiz part (Start quiz, Continue, the results) as `quiz`; a parent
+//    reads one line about it.
 //  - Read-only is structural: the card changes nothing unless it is handed
 //    `actions`. A parent's page, and an admin's preview, pass none.
 'use client'
 
-import { useRef, useState } from 'react'
-import Link from 'next/link'
+import { useRef, useState, type ReactNode } from 'react'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { classifyAnswerSaveError, forgetRefusedAnswer, recallUsableRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
 import { downscaleImage } from '@/lib/imageDownscale'
-import { closedNote, isFeedbackOnly, itemStatusOf, lateNote, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
+import { closedNote, isFeedbackOnly, itemStatusOf, lateNote, lensQuizLine, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import { batchesOf, checkSubmissionFiles, UPLOAD_BATCH, withMimeType } from '@/lib/submissionFiles'
 import { displayStatus, workStatusLabel } from '@/lib/workStatusLabels'
@@ -63,8 +65,10 @@ interface YourWorkCardProps {
   actions: WorkActions | null
   /** Said under the heading when read-only ("Only Amal can turn work in."). */
   readOnlyNote?: string | null
-  /** How the work is handed in; undefined while it is being found out. */
-  mode: SubmissionMode | null | undefined
+  /** How the work is handed in (the item's own submissionMode; null: nothing to turn in on this page). */
+  mode: SubmissionMode | null
+  /** A quiz's own part, from the student's page: Start quiz / Continue / the results. */
+  quiz?: ReactNode
   /** Opens one of the files: asks for its link (the student's route, or the parent's). */
   resolveFileUrl: (file: SubmissionFile) => Promise<string>
   /** The item as the server now has it (the answer to Turn in and Unsubmit). */
@@ -94,6 +98,7 @@ export default function YourWorkCard({
   actions,
   readOnlyNote = null,
   mode,
+  quiz,
   resolveFileUrl,
   onItem,
   onFiles,
@@ -103,7 +108,6 @@ export default function YourWorkCard({
 }: YourWorkCardProps) {
   const notify = useNotificationStore((s) => s.showNotification)
   const sub = item.submission
-  const readOnly = actions === null
   const teacherName = item.teacher?.name ?? null
   const kindWord = item.kind === 'quiz' ? 'quiz' : 'assignment'
 
@@ -343,9 +347,9 @@ export default function YourWorkCard({
           </p>
         )
       ) : item.kind === 'quiz' ? (
-        <QuizEntry itemId={item.itemId} status={status} readOnly={readOnly} />
-      ) : mode === undefined ? (
-        <div className="h-24 animate-pulse rounded-[14px] bg-slate-100" aria-label="Loading" />
+        (quiz ?? (
+          <QuizLine text={'name' in owner ? lensQuizLine(owner.name, { status, turnedIn: Boolean(sub.turnedInAt) }) : null} />
+        ))
       ) : mode === 'file' ? (
         <div className="flex flex-col gap-3">
           {(files.length > 0 || shownPending.length > 0 || preparing > 0) && (
@@ -404,16 +408,7 @@ export default function YourWorkCard({
   )
 }
 
-/** Quizzes are answered on their own page (Task 24). */
-function QuizEntry({ itemId, status, readOnly }: { itemId: string; status: ReturnType<typeof itemStatusOf>; readOnly: boolean }) {
-  if (readOnly) return null
-  const done = status === 'turned_in' || status === 'graded'
-  return (
-    <Link
-      href={`/student/items/${encodeURIComponent(itemId)}/quiz`}
-      className="flex min-h-[52px] items-center justify-center rounded-[14px] bg-indigo-600 px-4 py-3.5 text-[17px] font-semibold text-white transition-colors hover:bg-indigo-700"
-    >
-      {done ? 'See your answers' : 'Start the quiz'}
-    </Link>
-  )
+/** A quiz seen read-only (a parent): one line on where it stands. */
+function QuizLine({ text }: { text: string | null }) {
+  return text ? <p className="text-sm leading-relaxed text-slate-600">{text}</p> : null
 }

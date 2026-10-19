@@ -10,6 +10,7 @@ import {
   itemToFormValues,
   keepsUnsetMax,
   toItemInput,
+  QUIZ_START_MAX,
   torontoToIso,
   validateItemForm,
   withSavedGradebook,
@@ -163,9 +164,11 @@ describe('validateItemForm: assignments and quizzes', () => {
     expect(validateItemForm('assignment', values(), ctx({ categories: [] })).categoryId).toBe(D2_MESSAGE)
   })
 
-  it('a category needs a choice and an out of', () => {
+  it('a category needs a choice and (an assignment) an out of', () => {
     expect(validateItemForm('quiz', values({ categoryId: '' }), ctx()).categoryId).toBe('Choose a category')
-    expect(validateItemForm('quiz', values({ maxScore: '-1' }), ctx()).maxScore).toBe('Out of must be more than 0')
+    expect(validateItemForm('assignment', values({ maxScore: '-1' }), ctx()).maxScore).toBe('Out of must be more than 0')
+    // A quiz is out of its points (see "a quiz in the gradebook").
+    expect(validateItemForm('quiz', values({ maxScore: '-1' }), ctx()).maxScore).toBeUndefined()
   })
 
   it('an existing column must be one the class offers', () => {
@@ -377,6 +380,7 @@ describe('itemToFormValues', () => {
     remindStudents: true,
     studentIds: [S1],
     attachments: [],
+    quiz: null,
     ...over,
   })
 
@@ -474,6 +478,7 @@ describe('autosaveFailure', () => {
     remindStudents: true,
     studentIds: [],
     attachments: [],
+    quiz: null,
   } as Item
 
   it("a refused gradebook change (409) shows the server's reason and puts the column back, keeping every other edit", () => {
@@ -514,5 +519,25 @@ describe('autosaveFailure', () => {
   it('withSavedGradebook copies only the gradebook fields', () => {
     const v = withSavedGradebook(values({ title: 'New title', gradebookMode: 'existing', columnId: 'x', maxScore: '3' }), saved)
     expect(v).toMatchObject({ title: 'New title', gradebookMode: 'category', categoryId: CAT, columnId: '', maxScore: '10' })
+  })
+})
+
+describe('a quiz in the gradebook', () => {
+  it('asks for no "Out of": the quiz is out of its points', () => {
+    const v = values({ gradebookMode: 'category', categoryId: CAT, maxScore: '' })
+    expect(validateItemForm('quiz', v, ctx()).maxScore).toBeUndefined()
+    expect(toItemInput('quiz', v).gradebook).toEqual({ mode: 'category', categoryId: CAT, maxScore: QUIZ_START_MAX })
+    expect(draftItemInput('quiz', v, ctx())!.gradebook).toEqual({ mode: 'category', categoryId: CAT, maxScore: 1 })
+  })
+
+  it('keeps the "Out of" its questions gave it', () => {
+    const v = values({ gradebookMode: 'category', categoryId: CAT, maxScore: '8' })
+    expect(toItemInput('quiz', v).gradebook).toEqual({ mode: 'category', categoryId: CAT, maxScore: 8 })
+  })
+
+  it('still asks an assignment for its "Out of"', () => {
+    expect(validateItemForm('assignment', values({ gradebookMode: 'category', categoryId: CAT, maxScore: '' }), ctx()).maxScore).toBe(
+      'Out of must be more than 0',
+    )
   })
 })

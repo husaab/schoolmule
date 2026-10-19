@@ -288,17 +288,16 @@ export interface StudentItem {
   /** 'YYYY-MM-DD' of a dated in-class assessment. */
   date: string | null;
   points: number | null;
-  /**
-   * How the work is handed in. The server's item payload does not carry it yet (it is on the To-do and Classwork
-   * rows), so it is optional here: see inferSubmissionMode in lib/submissionMode.ts.
-   */
-  submissionMode?: SubmissionMode | null;
+  /** How the work is handed in ('none' for a quiz, a material, an assessment and work done in class). */
+  submissionMode: SubmissionMode;
   attachments: Attachment[];
   /** Null when there is nothing to turn in online (an assessment, a material, work done in class). */
   submission: StudentSubmission | null;
   grade: StudentItemGrade | null;
   /** Assignments and quizzes only; null in the lens when the school keeps the thread from guardians. */
   thread: ItemThreadInfo | null;
+  /** The student's parents read the messages about this work (the school's "parents read private comments"). */
+  parentsCanRead: boolean;
 }
 
 /** One row of a class's Classwork: a TodoItem with its topic, posted time and visible grade. */

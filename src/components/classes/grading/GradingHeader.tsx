@@ -2,7 +2,8 @@
 // The grading view's header (Teacher-Grading board): back, the item's title
 // and "{Grade} {Subject} · due … · out of … · {category}", the three counts
 // (Turned in, Missing, Graded = drafts waiting), the Saved pill and the one
-// release action, "Publish to N students".
+// release action, "Publish to N students". A quiz also links to its
+// questions (a changed answer key regrades).
 'use client'
 
 import type { MouseEvent } from 'react'
@@ -28,6 +29,8 @@ interface GradingHeaderProps {
   onPublishAll: () => void
   publishing: boolean
   canEdit: boolean
+  /** A quiz: its questions in the builder. */
+  questionsHref?: string | null
 }
 
 function Stat({ value, label, tone = 'text-slate-900' }: { value: number; label: string; tone?: string }) {
@@ -53,6 +56,7 @@ export default function GradingHeader({
   onPublishAll,
   publishing,
   canEdit,
+  questionsHref = null,
 }: GradingHeaderProps) {
   return (
     <header className="z-20 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8 lg:sticky lg:top-0">
@@ -78,6 +82,15 @@ export default function GradingHeader({
           <Stat value={counts.drafts} label="Graded" />
         </div>
         <SavedPill status={saveStatus} failedCount={failedCount} onRetry={onRetry} onDiscard={onDiscard} />
+        {questionsHref && (
+          // The grading saver lives for the session: leaving by this link still sends what is typed.
+          <Link
+            href={questionsHref}
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-[10px] text-sm text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Questions
+          </Link>
+        )}
         <button
           type="button"
           onClick={onPublishAll}

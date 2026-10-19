@@ -3,6 +3,7 @@
 // box (open full size, rotate, download), a PDF in place, other files listed
 // to download, the typed answer, "Marked as done", or "Not turned in yet".
 // Files are signed for an hour; one that no longer loads offers a reload.
+// A quiz's answers are shown by QuizAnswersReview instead.
 'use client'
 
 import { useState } from 'react'
@@ -24,7 +25,6 @@ interface WorkViewerProps {
   loading: boolean
   error: string | null
   onReload: () => void
-  kind: 'assignment' | 'quiz'
   mode: SubmissionMode
   first: string
 }
@@ -168,7 +168,7 @@ function FileView({ file, first, onReload }: { file: SubmissionFile; first: stri
   )
 }
 
-export default function WorkViewer({ detail, loading, error, onReload, kind, mode, first }: WorkViewerProps) {
+export default function WorkViewer({ detail, loading, error, onReload, mode, first }: WorkViewerProps) {
   const [selected, setSelected] = useState(0)
 
   if (!detail) {
@@ -188,17 +188,6 @@ export default function WorkViewer({ detail, loading, error, onReload, kind, mod
             </button>
           </>
         )}
-      </Frame>
-    )
-  }
-
-  if (kind === 'quiz') {
-    return (
-      <Frame striped>
-        <DocumentIcon className="h-11 w-11 text-slate-400" aria-hidden="true" />
-        <figcaption className="text-center text-sm">
-          {first}&apos;s quiz answers show here once quizzes are switched on.
-        </figcaption>
       </Frame>
     )
   }

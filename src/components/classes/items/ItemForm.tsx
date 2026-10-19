@@ -10,6 +10,10 @@
 //   page and on pagehide.
 //   Assign posts it; the split menu schedules it, saves the draft or
 //   discards it.
+// - A quiz's details are this form (QuizFields); its questions are the quiz
+//   builder. A new or draft quiz's main button is "Next: questions": it saves
+//   (the first save creates the quiz) and opens the builder, which posts it.
+//   A posted or scheduled quiz links to its questions from the form.
 // - A material posts with Post, or is scheduled or saved as a draft.
 // - Editing a posted item saves with Save; a scheduled one can also post now,
 //   change its time or go back to drafts.
@@ -57,6 +61,7 @@ import AssessmentFields from './AssessmentFields'
 import AssignmentFields from './AssignmentFields'
 import { useAttachmentRows } from './AttachmentsEditor'
 import MaterialFields from './MaterialFields'
+import QuizFields from './QuizFields'
 import ScheduleMenu, { type ScheduleMenuItem } from './ScheduleMenu'
 import { fieldId, type ItemFieldsProps } from './formParts'
 
@@ -127,6 +132,8 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   // Edits not saved yet on a form that saves with a button (Cancel asks first).
   const [edited, setEdited] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  // Where "Discard changes" goes: back, or (a quiz) its questions.
+  const [leaveTarget, setLeaveTarget] = useState<string | null>(null)
 
   const attachments = useAttachmentRows(item?.attachments ?? [], itemId)
   // A scheduled item whose time has come is live, even before the scheduler's next run.
@@ -404,6 +411,41 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     router.push(backHref)
   }
 
+  /** A quiz's "Next: questions": save it (creating it the first time), then open its builder. */
+  const goToQuestions = async () => {
+    if (!autosaves) {
+      const id = itemIdRef.current
+      if (!id) return
+      const target = classItemHref(classId, id, 'quiz')
+      if (edited || attachments.pendingCount > 0) {
+        setLeaveTarget(target)
+        setConfirmLeave(true)
+        return
+      }
+      router.push(target)
+      return
+    }
+    const errs = validateItemForm(kind, values, ctx)
+    if (errs.title) {
+      setShowErrors(true)
+      focusFirst({ title: errs.title })
+      return
+    }
+    // The quiz is created by its first save, even if nothing changed since the title was typed.
+    if (!itemIdRef.current) dirtyRef.current = true
+    if (!(await saveDraftNow())) {
+      showNotification("The quiz didn't save. Retry, then open the questions.", 'error')
+      return
+    }
+    const id = itemIdRef.current
+    if (!id) return
+    if (attachmentsRef.current.pendingCount > 0 && (await attachmentsRef.current.flush(id)) > 0) {
+      setBanner("An attachment didn't upload. Retry below, or remove it, then open the questions.")
+      return
+    }
+    router.push(classItemHref(classId, id, 'quiz'))
+  }
+
   const discard = async () => {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current)
@@ -443,6 +485,23 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       <>
         {cancel}
         <ScheduleMenu primaryLabel="Save" onPrimary={() => void post()} busy={saving} />
+      </>
+    )
+  } else if (kind === 'quiz' && (status === null || status === 'draft')) {
+    // The builder posts a quiz (it needs its questions first): here it is saved and the questions come next.
+    const canDiscard = autosaves || status === 'draft'
+    actions = (
+      <>
+        {!autosaves && cancel}
+        <ScheduleMenu
+          primaryLabel="Next: questions"
+          onPrimary={() => void goToQuestions()}
+          items={[
+            { key: 'draft', label: 'Save draft', onSelect: () => void (autosaves ? leave() : saveAsDraft()) },
+            ...(canDiscard ? [{ key: 'discard', label: 'Discard draft', tone: 'danger' as const, onSelect: () => void discard() }] : []),
+          ]}
+          busy={saving}
+        />
       </>
     )
   } else if (status === null || status === 'draft') {
@@ -612,6 +671,8 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           <AssessmentFields {...fieldsProps} />
         ) : kind === 'material' ? (
           <MaterialFields {...fieldsProps} />
+        ) : kind === 'quiz' ? (
+          <QuizFields {...fieldsProps} itemId={itemId} onOpenQuestions={() => void goToQuestions()} />
         ) : (
           <AssignmentFields {...fieldsProps} kind={kind} />
         )}
@@ -628,7 +689,14 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           set({ topicId: topic.topicId })
         }}
       />
-      <Modal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} size="md">
+      <Modal
+        isOpen={confirmLeave}
+        onClose={() => {
+          setConfirmLeave(false)
+          setLeaveTarget(null)
+        }}
+        size="md"
+      >
         <ModalHeader title="Discard changes?" subtitle={values.title.trim() || undefined} icon={ExclamationTriangleIcon} tone="warning" />
         <ModalBody>
           <ConfirmBody tone="warning">
@@ -638,7 +706,14 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           </ConfirmBody>
         </ModalBody>
         <ModalFooter>
-          <Button type="button" variant="secondary" onClick={() => setConfirmLeave(false)}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setConfirmLeave(false)
+              setLeaveTarget(null)
+            }}
+          >
             Keep editing
           </Button>
           <Button
@@ -646,7 +721,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
             variant="warning"
             onClick={() => {
               setConfirmLeave(false)
-              router.push(backHref)
+              router.push(leaveTarget ?? backHref)
             }}
           >
             Discard changes
