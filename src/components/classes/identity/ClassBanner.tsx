@@ -19,11 +19,25 @@ interface ClassBannerProps {
   withIcon?: boolean
   /** A narrow card, where the banner's art can run under the meta line: give the line a soft backdrop (smoke S12). */
   metaBackdrop?: boolean
+  /** Shown above the subject (the class card's grade chip). */
+  eyebrow?: ReactNode
+  /** A soft white wash over the left of the art, so the eyebrow and subject never sit on it (the class card). */
+  scrim?: boolean
   className?: string
   children?: ReactNode
 }
 
-export default function ClassBanner({ identity, subject, meta, withIcon = false, metaBackdrop = false, className = '', children }: ClassBannerProps) {
+export default function ClassBanner({
+  identity,
+  subject,
+  meta,
+  withIcon = false,
+  metaBackdrop = false,
+  eyebrow,
+  scrim = false,
+  className = '',
+  children,
+}: ClassBannerProps) {
   const color = CLASS_COLORS[identity.color] ?? CLASS_COLORS.slate
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const showImage = identity.bannerUrl && identity.bannerUrl !== failedUrl
@@ -45,11 +59,18 @@ export default function ClassBanner({ identity, subject, meta, withIcon = false,
           onError={() => setFailedUrl(identity.bannerUrl)}
         />
       )}
+      {scrim && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-white/75 from-0% via-white/55 via-40% to-transparent to-75%"
+        />
+      )}
       <div className="relative flex items-center gap-3.5 px-5 py-[18px]">
         {withIcon && (
           <ClassIcon identity={identity} size={52} className="shadow-[0_1px_2px_rgba(15,23,42,0.08)]" />
         )}
         <div className="flex min-w-0 flex-col gap-1">
+          {eyebrow}
           <span className="truncate font-display text-[22px] font-semibold leading-tight">{subject}</span>
           {meta && (
             <span className={`truncate text-sm ${metaBackdrop && showImage ? '-ml-1.5 self-start rounded-md bg-white/75 px-1.5 py-px' : ''}`}>

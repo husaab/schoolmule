@@ -1,7 +1,8 @@
 // src/components/classes/home/ClassesHomeHeader.tsx
-// The Classes home heading (the Teacher-Home board): "Your classes" with the
-// term, class and student counts, then the term picker, the Cards | List
-// switch and "Add class" (for anyone who can change the year's classes).
+// The Classes home heading (the Teacher-Home board): "Your classes" ("All
+// classes" for admins) with the term, class and grade counts, then the term
+// picker, the Cards | List switch and "Add class" (for anyone who can change
+// the year's classes; an icon alone on a phone).
 'use client'
 
 import { PlusIcon } from '@heroicons/react/24/outline'
@@ -11,7 +12,9 @@ import type { TermPayload } from '@/services/types/term'
 export type ClassesView = 'cards' | 'list'
 
 interface ClassesHomeHeaderProps {
-  /** "Term 1 · 4 classes · 87 students" */
+  /** "Your classes", or "All classes" for admins. */
+  title: string
+  /** "Term 1 · 4 classes · 3 grades" */
   summary: string
   /** 'active' | 'all' | a term name (the `term` URL filter). */
   term: string
@@ -30,6 +33,7 @@ const VIEWS: { id: ClassesView; label: string }[] = [
 ]
 
 export default function ClassesHomeHeader({
+  title,
   summary,
   term,
   terms,
@@ -48,10 +52,10 @@ export default function ClassesHomeHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h1 className="font-display text-[30px] font-semibold leading-tight text-slate-900">Your classes</h1>
+        <h1 className="font-display text-[26px] font-semibold leading-tight text-slate-900 sm:text-[30px]">{title}</h1>
         <p className="text-[15px] text-slate-600">{summary}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <SearchableSelect
           options={termOptions}
           value={term}
@@ -59,7 +63,7 @@ export default function ClassesHomeHeader({
           ariaLabel="Term"
           searchPlaceholder="Find a term"
           size="sm"
-          className="min-w-[11rem]"
+          className="min-w-[11rem] flex-1 sm:flex-none"
         />
         <div role="group" aria-label="View" className="flex rounded-xl bg-slate-100 p-[3px]">
           {VIEWS.map((v) => {
@@ -83,10 +87,11 @@ export default function ClassesHomeHeader({
           <button
             type="button"
             onClick={onAdd}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600"
+            aria-label="Add class"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-3 py-2 text-sm font-medium text-white shadow-sm outline-none transition-all hover:from-cyan-600 hover:to-teal-600 focus-visible:ring-[3px] focus-visible:ring-cyan-600 focus-visible:ring-offset-2 sm:px-4"
           >
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Add class
+            <PlusIcon className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Add class</span>
           </button>
         )}
       </div>

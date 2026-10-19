@@ -3,7 +3,6 @@ import type { ClassCard, ComingUpRow, DraftOrScheduledRow } from '@/services/typ
 import { defaultIdentity } from './classIdentity'
 import {
   cardAsClassPayload,
-  cardMeta,
   cardNextLine,
   classTitle,
   comingUpClassLine,
@@ -12,7 +11,6 @@ import {
   draftWhen,
   filterCards,
   gradeShort,
-  groupCardsByGrade,
   headerMeta,
   homeSummary,
   reviewPill,
@@ -49,11 +47,6 @@ describe('labels', () => {
     expect(gradeShort('5')).toBe('Grade 5')
     expect(gradeShort('JK')).toBe('JK')
     expect(gradeShort('SK')).toBe('SK')
-  })
-
-  it('reads a card meta line', () => {
-    expect(cardMeta(card())).toBe('Grade 5 · 22 students')
-    expect(cardMeta(card({ grade: 'SK', studentCount: 1 }))).toBe('SK · 1 student')
   })
 
   it('sums the header line in classes and grades', () => {
@@ -207,14 +200,5 @@ describe('filters and grouping', () => {
     expect(filterCards(cards, { ...base, grade: '5' }, { isAdmin: true }).map((c) => c.classId)).toEqual(['g5s', 'g5m'])
     expect(filterCards(cards, { ...base, teacher: 'u2' }, { isAdmin: true }).map((c) => c.classId)).toEqual(['g5s', 'g5m', 'g8s'])
     expect(filterCards(cards, { ...base, term: 'active' }, { isAdmin: false, activeTermName: 'Term 1' }).map((c) => c.classId)).toEqual(['jk', 'g5s', 'g8s'])
-  })
-
-  it('groups cards by grade in the order the server sent them', () => {
-    const groups = groupCardsByGrade(cards)
-    expect(groups.map((g) => [g.grade, g.label, g.cards.map((c) => c.classId)])).toEqual([
-      ['JK', 'Junior Kindergarten', ['jk']],
-      ['5', 'Grade 5', ['g5s', 'g5m']],
-      ['8', 'Grade 8', ['g8s']],
-    ])
   })
 })

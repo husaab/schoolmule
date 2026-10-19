@@ -14,7 +14,6 @@ import type {
   ToReviewRow,
 } from '@/services/types/classroom'
 import type { GradeValue } from '@/lib/schoolUtils'
-import { getGradeDisplayName } from '@/lib/schoolUtils'
 import { filterClasses, type ClassListFilterValues } from '@/lib/classListFilters'
 import { torontoDateKey } from '@/lib/studentAccounts'
 import { gradeKey, sectionLabel } from '@/lib/classGradeSections'
@@ -50,10 +49,6 @@ export const headerMeta = (
   card: { grade: string | number; termName: string | null; teacherName?: string | null },
   teachers: { name: string; role: 'lead' | 'co' }[],
 ): string => [gradeShort(card.grade), card.termName, teacherLine(teachers, card.teacherName)].filter(Boolean).join(' · ')
-
-/** "Grade 5 · 22 students" */
-export const cardMeta = (card: Pick<ClassCard, 'grade' | 'studentCount'>): string =>
-  `${gradeShort(card.grade)} · ${plural(card.studentCount, 'student', 'students')}`
 
 /**
  * "Term 1 · 4 classes · 3 grades", or "· Grade 5" when they share one. Not a
@@ -160,7 +155,7 @@ export function draftWhen(row: Pick<DraftOrScheduledRow, 'status' | 'publishAt'>
 }
 
 // ---------------------------------------------------------------------------
-// Filters, modals and grouping
+// Filters and modals
 
 /**
  * A card as the class payload the existing Classes filters and the Duplicate
@@ -191,28 +186,4 @@ export function filterCards(
 ): ClassCard[] {
   const kept = new Set(filterClasses(cards.map((c) => cardAsClassPayload(c, '')), values, opts).map((c) => c.classId))
   return cards.filter((c) => kept.has(c.classId))
-}
-
-export interface GradeGroup<T> {
-  grade: string
-  /** "Junior Kindergarten", "Grade 5". */
-  label: string
-  cards: T[]
-}
-
-/** Cards grouped under their grade, in the order the grades first appear (the server sorts them). */
-export function groupCardsByGrade<T extends { grade: string | number }>(cards: T[]): GradeGroup<T>[] {
-  const groups: GradeGroup<T>[] = []
-  const byGrade = new Map<string, GradeGroup<T>>()
-  for (const card of cards) {
-    const grade = String(card.grade)
-    let group = byGrade.get(grade)
-    if (!group) {
-      group = { grade, label: getGradeDisplayName(grade), cards: [] }
-      byGrade.set(grade, group)
-      groups.push(group)
-    }
-    group.cards.push(card)
-  }
-  return groups
 }

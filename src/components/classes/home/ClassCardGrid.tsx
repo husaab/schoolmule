@@ -1,66 +1,47 @@
 // src/components/classes/home/ClassCardGrid.tsx
-// The Classes home card grid. Teachers see one grid; admins (who may have
-// sixty classes) see the cards under collapsible grade headers, as the list
-// has always been grouped.
+// The Classes home card grid, laid out by layoutClasses: one grid in grade
+// order for a teacher, collapsible grade sections for an admin (who may have
+// sixty classes), and archived classes in their own section at the end.
 'use client'
 
-import { useState } from 'react'
-import { groupCardsByGrade } from '@/lib/classesHome'
+import type { CardLabel, ClassesLayout, GradeSection } from '@/lib/classGradeSections'
 import type { ClassCard as ClassCardData } from '@/services/types/classroom'
 import ClassCard, { type ClassCardActions } from './ClassCard'
 import GradeGroupHeader from './GradeGroupHeader'
 
 interface ClassCardGridProps extends ClassCardActions {
-  cards: ClassCardData[]
-  /** Group the cards under grade headers (admins). */
-  grouped: boolean
+  layout: ClassesLayout<ClassCardData>
+  labels: Map<string, CardLabel>
+  collapsed: Set<string>
+  onToggle: (key: string) => void
 }
 
 const GRID = 'grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr))]'
+const NO_LABEL: CardLabel = { showTeacher: false, termChip: null, railSuffix: null }
 
-export default function ClassCardGrid({ cards, grouped, ...actions }: ClassCardGridProps) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+export default function ClassCardGrid({ layout, labels, collapsed, onToggle, ...actions }: ClassCardGridProps) {
+  const grid = (cards: ClassCardData[]) => (
+    <div className={GRID}>
+      {cards.map((card) => (
+        <ClassCard key={card.classId} card={card} label={labels.get(card.classId) ?? NO_LABEL} {...actions} />
+      ))}
+    </div>
+  )
 
-  if (!grouped) {
+  const section = (s: GradeSection<ClassCardData>, archived = false) => {
+    const isCollapsed = collapsed.has(s.key)
     return (
-      <div className={GRID}>
-        {cards.map((card) => (
-          <ClassCard key={card.classId} card={card} {...actions} />
-        ))}
-      </div>
+      <section key={s.key} aria-label={s.label} className="flex flex-col gap-3">
+        <GradeGroupHeader section={s} archived={archived} collapsed={isCollapsed} onToggle={() => onToggle(s.key)} />
+        {!isCollapsed && grid(s.cards)}
+      </section>
     )
   }
 
-  const toggle = (grade: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(grade)) next.delete(grade)
-      else next.add(grade)
-      return next
-    })
-
   return (
-    <div className="space-y-5">
-      {groupCardsByGrade(cards).map((group) => {
-        const isCollapsed = collapsed.has(group.grade)
-        return (
-          <section key={group.grade} className="space-y-3">
-            <GradeGroupHeader
-              label={group.label}
-              count={group.cards.length}
-              collapsed={isCollapsed}
-              onToggle={() => toggle(group.grade)}
-            />
-            {!isCollapsed && (
-              <div className={GRID}>
-                {group.cards.map((card) => (
-                  <ClassCard key={card.classId} card={card} {...actions} />
-                ))}
-              </div>
-            )}
-          </section>
-        )
-      })}
+    <div className="flex flex-col gap-5">
+      {layout.sectioned ? layout.sections.map((s) => section(s)) : layout.flat.length > 0 && grid(layout.flat)}
+      {layout.archived && section(layout.archived, true)}
     </div>
   )
 }
