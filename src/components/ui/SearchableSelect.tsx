@@ -65,6 +65,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const listRef = useRef<HTMLUListElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const [pos, setPos] = useState<React.CSSProperties | null>(null)
   // Hover moves the highlight but must not scroll the list under the pointer.
   const hoverRef = useRef(false)
@@ -120,6 +121,14 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       window.removeEventListener('scroll', place, true)
     }
   }, [open])
+
+  // Focus the search box once the panel is on screen. Not autoFocus: that
+  // runs while React is still mounting the panel, before panelRef is set, so
+  // onBlur read the move as focus leaving and closed the list at once.
+  const placed = pos !== null
+  useEffect(() => {
+    if (open && placed) searchRef.current?.focus()
+  }, [open, placed])
 
   useEffect(() => {
     setCursor(0)
@@ -195,8 +204,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             <label className="relative mb-1.5 block">
               <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                ref={searchRef}
                 type="search"
-                autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
