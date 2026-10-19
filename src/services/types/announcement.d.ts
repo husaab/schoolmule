@@ -10,6 +10,8 @@ export interface AnnouncementResponse<T> {
 export type AnnouncementScope = 'class' | 'grade' | 'school' | 'custom';
 export type AnnouncementAuthorRole = 'TEACHER' | 'ADMIN';
 
+import type { AvatarSpec } from './profile';
+
 export interface AnnouncementChild {
   studentId: string;
   name: string;
@@ -51,6 +53,10 @@ export interface AnnouncementItem {
   authorId: string | null;
   authorName: string;
   authorRole: AnnouncementAuthorRole;
+  /** The author's picked avatar; null draws one from their name. */
+  authorAvatar?: AvatarSpec | null;
+  /** A signed photo URL when the author uploaded one. */
+  authorPhotoUrl?: string | null;
   publishedAt: string;
   /** YYYY-MM-DD or null. */
   pinnedUntil: string | null;

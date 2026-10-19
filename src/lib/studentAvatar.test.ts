@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isAvatarSpec } from './avatar'
-import { studentAvatar } from './studentAvatar'
+import { drawnAvatar, studentAvatar } from './studentAvatar'
 
 const names = Array.from({ length: 300 }, (_, i) => `Test Student ${i}`)
 
@@ -39,5 +39,12 @@ describe('studentAvatar', () => {
     expect(isAvatarSpec(studentAvatar({ name: 'Test Student 7', avatar: null }))).toBe(true)
     expect(studentAvatar({ name: 'Test Student 7', avatar: { style: 'mohawk' } })).toEqual(studentAvatar({ name: 'Test Student 7' }))
     expect(isAvatarSpec(studentAvatar({ name: null }))).toBe(true)
+  })
+
+  it('draws the same avatar for anyone by name, so a teacher or parent never shows a blank one', () => {
+    expect(isAvatarSpec(drawnAvatar('Teacher One'))).toBe(true)
+    expect(drawnAvatar('Teacher One')).toEqual(drawnAvatar(' teacher  ONE'))
+    expect(drawnAvatar('Test Student 7')).toEqual(studentAvatar({ name: 'Test Student 7' }))
+    expect(isAvatarSpec(drawnAvatar(null))).toBe(true)
   })
 })

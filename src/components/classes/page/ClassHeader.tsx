@@ -1,14 +1,15 @@
 // src/components/classes/page/ClassHeader.tsx
 // The top of every class page (the class boards): a back link to the Classes
 // list as the user left it, then the class banner tinted with the class
-// color, with the icon, the subject, "Grade 5 · Term 1 · lead, with co" and
-// "Change banner" for those who may edit. The tab bar goes in as children so
+// color, with the icon, the subject and "Grade 5 · Term 1 · lead, with co".
+// Changing the banner lives in Settings (and the class card's ⋮ menu), not
+// on the banner itself. The tab bar goes in as children so
 // it sits at the bottom of the banner. `actions` is where the student and
 // parent variants put "Message {teacher}"; the teacher page passes none.
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { ChevronRightIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { ChevronRightIcon } from '@heroicons/react/24/outline'
 import BackLink from '@/components/shared/BackLink'
 import ClassIcon from '@/components/classes/identity/ClassIcon'
 import { CLASS_COLORS } from '@/lib/classIdentity'
@@ -17,8 +18,6 @@ import type { ClassPageData } from '@/services/types/classroom'
 
 interface ClassHeaderProps {
   data: ClassPageData
-  /** Opens the banner, color and icon window; shown only when the viewer may edit. */
-  onChangeBanner?: () => void
   actions?: ReactNode
   /** The tab bar. */
   children?: ReactNode
@@ -29,7 +28,6 @@ interface ClassHeaderProps {
 
 export default function ClassHeader({
   data,
-  onChangeBanner,
   actions,
   children,
   backTo = '/classes',
@@ -44,7 +42,6 @@ export default function ClassHeader({
   const watch = (el: HTMLImageElement | null) => {
     if (el && el.complete && el.naturalWidth === 0) setFailedUrl(identity.bannerUrl)
   }
-  const canChangeBanner = !!onChangeBanner && data.permissions.canEdit
 
   return (
     <header>
@@ -81,21 +78,7 @@ export default function ClassHeader({
                 <span className="text-[15px]">{headerMeta(cls, data.teachers)}</span>
               </div>
             </div>
-            {(actions || canChangeBanner) && (
-              <div className="flex flex-wrap items-center gap-2">
-                {actions}
-                {canChangeBanner && (
-                  <button
-                    type="button"
-                    onClick={onChangeBanner}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-white/85 px-3 py-2 text-[13px] font-medium transition-colors hover:bg-white"
-                  >
-                    <PhotoIcon className="h-4 w-4" aria-hidden="true" />
-                    Change banner
-                  </button>
-                )}
-              </div>
-            )}
+            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
           </div>
           {children}
         </div>

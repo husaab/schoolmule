@@ -135,7 +135,7 @@ function ClassPageContent() {
 
   return (
     <Shell>
-      <ClassHeader data={data} onChangeBanner={() => setIdentityOpen(true)}>
+      <ClassHeader data={data}>
         <ClassTabs active={tab} hrefFor={(t) => classHref(classId, t)} onSelect={selectTab} />
       </ClassHeader>
 

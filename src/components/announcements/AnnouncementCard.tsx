@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { ChatBubbleLeftRightIcon, CheckIcon } from '@heroicons/react/24/outline'
+import Avatar from '@/components/avatar/Avatar'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
 import type { AnnouncementAttachment, AnnouncementItem } from '@/services/types/announcement'
@@ -55,9 +56,12 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
           <AnnouncementScopeChip item={item} tone="parent" child={child} />
           {item.children && item.children.length > 1 && <span className="text-[11px] text-slate-400">+ {item.children.length - 1} more</span>}
-          <span className="ml-auto text-xs text-slate-400">
-            {item.authorName} · {formatDayLabel(item.publishedAt)}, {formatTime(item.publishedAt)}
-            {item.editedAt ? ' · edited' : ''}
+          <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-slate-400">
+            <Avatar name={item.authorName} avatar={item.authorAvatar} photoUrl={item.authorPhotoUrl} size={20} />
+            <span>
+              {item.authorName} · {formatDayLabel(item.publishedAt)}, {formatTime(item.publishedAt)}
+              {item.editedAt ? ' · edited' : ''}
+            </span>
           </span>
         </div>
         <h2 className={`text-base font-semibold ${unread ? 'text-slate-900' : 'text-slate-800'}`}>{item.title}</h2>

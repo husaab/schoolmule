@@ -1,8 +1,9 @@
-// Every student gets an avatar without anyone picking one: hijab or short
-// hair, with a skin tone and a background, drawn from their name. Across a
-// class it looks random, but a student always gets the same one, on every
-// page and every year (a new school year gives students new ids, not new
-// names). An avatar that was actually picked for the student always wins.
+// Everyone gets an avatar without anyone picking one: hijab or short hair,
+// with a skin tone and a background, drawn from their name. Across a class it
+// looks random, but a person always gets the same one, on every page and
+// every year (a new school year gives students new ids, not new names). An
+// avatar that was actually picked always wins. The Avatar component draws one
+// for anybody shown without a pick (teachers, parents, students alike).
 
 import { AVATAR_BGS, AVATAR_SKINS, isAvatarSpec, type AvatarSpec } from './avatar'
 
@@ -23,13 +24,17 @@ function hash(text: string): number {
   return h >>> 0
 }
 
-/** The avatar to show for a student: their picked one, else the one their name draws. */
-export function studentAvatar(student: { name: string | null; avatar?: unknown }): AvatarSpec {
-  if (isAvatarSpec(student.avatar)) return student.avatar
-  const h = hash((student.name ?? '').trim().toLowerCase().replace(/\s+/g, ' '))
+/** The avatar a name draws (case and spacing ignored). */
+export function drawnAvatar(name: string | null | undefined): AvatarSpec {
+  const h = hash((name ?? '').trim().toLowerCase().replace(/\s+/g, ' '))
   return {
     style: STUDENT_STYLES[h % STUDENT_STYLES.length],
     skin: (Math.floor(h / 2) % AVATAR_SKINS.length) as AvatarSpec['skin'],
     bg: (Math.floor(h / 10) % AVATAR_BGS.length) as AvatarSpec['bg'],
   }
+}
+
+/** The avatar to show for a student: their picked one, else the one their name draws. */
+export function studentAvatar(student: { name: string | null; avatar?: unknown }): AvatarSpec {
+  return isAvatarSpec(student.avatar) ? student.avatar : drawnAvatar(student.name)
 }

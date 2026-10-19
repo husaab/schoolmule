@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { ArrowLeftIcon, ArrowPathIcon, CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import Avatar from '@/components/avatar/Avatar'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
 import { toneClasses, type Tone } from '@/components/messaging/tones'
@@ -124,9 +125,12 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
             )}
           </div>
           <h2 className="text-lg font-semibold text-slate-900">{detail.title}</h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {detail.authorId === user.id ? 'You' : detail.authorName} · {formatDayLabel(detail.publishedAt)}, {formatTime(detail.publishedAt)}
-            {detail.editedAt && ` · edited ${formatDayLabel(detail.editedAt)}`}
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+            <Avatar name={detail.authorName} avatar={detail.authorAvatar} photoUrl={detail.authorPhotoUrl} size={22} />
+            <span>
+              {detail.authorId === user.id ? 'You' : detail.authorName} · {formatDayLabel(detail.publishedAt)}, {formatTime(detail.publishedAt)}
+              {detail.editedAt && ` · edited ${formatDayLabel(detail.editedAt)}`}
+            </span>
           </p>
           {isStaff && detail.scope === 'custom' && detail.students && (
             <p className="mt-1 text-xs text-slate-500">

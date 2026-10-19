@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import Modal from '@/components/shared/modal'
 import { DEFAULT_AVATAR, isAvatarSpec } from '@/lib/avatar'
+import { drawnAvatar } from '@/lib/studentAvatar'
 import type { AvatarSpec } from '@/services/types/profile'
 import AvatarPicker from './AvatarPicker'
 
@@ -16,7 +17,7 @@ interface AvatarPickerModalProps {
   onClose: () => void
   title: string
   subtitle?: string
-  /** The saved avatar; null starts the picker on the default look. */
+  /** The saved avatar; null starts the picker on the one their name draws (what they show now). */
   value: AvatarSpec | null
   onSave: (avatar: AvatarSpec) => Promise<void>
   /** Whose avatar this is, shown under the preview. */
@@ -37,7 +38,8 @@ export default function AvatarPickerModal({
   photosAllowed = false,
   onUsePhoto,
 }: AvatarPickerModalProps) {
-  const [draft, setDraft] = useState<AvatarSpec>(isAvatarSpec(value) ? value : DEFAULT_AVATAR)
+  const start = (): AvatarSpec => (isAvatarSpec(value) ? value : name ? drawnAvatar(name) : DEFAULT_AVATAR)
+  const [draft, setDraft] = useState<AvatarSpec>(start)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,7 +49,7 @@ export default function AvatarPickerModal({
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen)
     if (isOpen) {
-      setDraft(isAvatarSpec(value) ? value : DEFAULT_AVATAR)
+      setDraft(start())
       setError(null)
       setSaving(false)
     }

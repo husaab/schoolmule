@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { MagnifyingGlassIcon, MapPinIcon, MegaphoneIcon } from '@heroicons/react/24/outline'
+import Avatar from '@/components/avatar/Avatar'
 import Spinner from '@/components/Spinner'
 import StatTile from '@/components/ui/StatTile'
 import EmptyState from '@/components/ui/EmptyState'
@@ -203,8 +204,13 @@ const AdminAnnouncementsTable: React.FC<Props> = ({ refreshKey = 0 }) => {
                     <p className="text-xs text-slate-400">{subtitle(i)}</p>
                   </td>
                   <td className="px-4 py-3 text-slate-700">
-                    {i.authorName}
-                    {i.authorRole === 'ADMIN' && <span className="ml-1 text-[11px] text-slate-400">(admin)</span>}
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar name={i.authorName} avatar={i.authorAvatar} photoUrl={i.authorPhotoUrl} size={24} />
+                      <span>
+                        {i.authorName}
+                        {i.authorRole === 'ADMIN' && <span className="ml-1 text-[11px] text-slate-400">(admin)</span>}
+                      </span>
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-700">{formatListStamp(i.publishedAt)}</td>
                   <td className="px-4 py-3">

@@ -1,11 +1,13 @@
 // src/components/avatar/Avatar.tsx
 // The one way a person is pictured in SchoolMule: their photo when they have
 // one, otherwise the illustrated avatar they picked (style, skin tone,
-// background), otherwise the neutral avatar. Never initials.
+// background), otherwise one drawn from their name (lib/studentAvatar). Never
+// initials. `neutral` shows the blank avatar instead of a drawn one.
 'use client'
 
 import { createElement, useState } from 'react'
-import { reactAttrs, resolveShapes } from '@/lib/avatar'
+import { isAvatarSpec, reactAttrs, resolveShapes } from '@/lib/avatar'
+import { drawnAvatar } from '@/lib/studentAvatar'
 import type { AvatarSpec } from '@/services/types/profile'
 
 interface AvatarProps {
@@ -17,9 +19,11 @@ interface AvatarProps {
   /** Pixels, width and height. */
   size?: number
   className?: string
+  /** No pick shows the blank neutral avatar rather than one drawn from the name. */
+  neutral?: boolean
 }
 
-export default function Avatar({ name, avatar = null, photoUrl = null, size = 32, className = '' }: AvatarProps) {
+export default function Avatar({ name, avatar = null, photoUrl = null, size = 32, className = '', neutral = false }: AvatarProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   // Server names can be missing (a removed sender): never let that throw.
   const label = (name ?? '').trim() || 'Avatar'
@@ -56,7 +60,9 @@ export default function Avatar({ name, avatar = null, photoUrl = null, size = 32
       aria-label={label}
       className={`${box} overflow-hidden`}
     >
-      {resolveShapes(avatar).map((shape, i) => createElement(shape.tag, { key: i, ...reactAttrs(shape.attrs) }))}
+      {resolveShapes(isAvatarSpec(avatar) ? avatar : neutral ? null : drawnAvatar(name)).map((shape, i) =>
+        createElement(shape.tag, { key: i, ...reactAttrs(shape.attrs) })
+      )}
     </svg>
   )
 }
