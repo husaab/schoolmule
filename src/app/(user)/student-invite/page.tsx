@@ -24,7 +24,13 @@ import { isApiError } from '@/services/apiClient'
 import { signOutLocally, startSession } from '@/services/sessionSync'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
-import { inviteOutcomeCopy, readInviteToken, studentPasswordProblem, type InviteOutcome } from '@/lib/studentInvite'
+import {
+  forgetInviteToken,
+  inviteOutcomeCopy,
+  rememberedInviteToken,
+  studentPasswordProblem,
+  type InviteOutcome,
+} from '@/lib/studentInvite'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 type View = 'loading' | 'choose' | 'password' | 'outcome'
@@ -62,13 +68,15 @@ export default function StudentInvitePage() {
   const [show, setShow] = useState(false)
 
   const deadEnd = (next: InviteOutcome) => {
+    if (next !== 'not_open') forgetInviteToken(window.sessionStorage)
     setOutcome(next)
     setView('outcome')
   }
 
-  // Read the secret once, take it out of the address bar, then look the invite up.
+  // Read the secret (remembered for this tab, so a reload keeps it), take it
+  // out of the address bar, then look the invite up.
   useEffect(() => {
-    const secret = readInviteToken(window.location.hash)
+    const secret = rememberedInviteToken(window.location.hash, window.sessionStorage)
     window.history.replaceState(window.history.state, '', window.location.pathname)
     if (!secret) return deadEnd('not_found')
     token.current = secret
@@ -90,6 +98,7 @@ export default function StudentInvitePage() {
   const finish = (data: Awaited<ReturnType<typeof acceptStudentInvite>>['data']) => {
     if ('activated' in data && data.signedIn === false) return deadEnd('not_open')
     if (!('token' in data)) return deadEnd('not_open')
+    forgetInviteToken(window.sessionStorage)
     startSession(data)
     notify(invite ? `You're all set, ${invite.student.firstName}.` : "You're all set.", 'success')
     router.replace('/student')
@@ -137,7 +146,7 @@ export default function StudentInvitePage() {
     const problem = studentPasswordProblem(password, {
       email: invite.email,
       firstName: invite.student.firstName,
-      lastName: '',
+      lastName: invite.student.lastName ?? '',
       schoolName: invite.school.name,
     })
     if (problem) return setNote(problem)

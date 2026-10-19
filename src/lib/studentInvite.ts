@@ -10,9 +10,40 @@ export const readInviteToken = (hash: string): string | null => {
   return m ? m[1] : null
 }
 
-export type InviteOutcome =
-  | 'expired' | 'used' | 'replaced' | 'cancelled' | 'not_found'
-  | 'not_open' | 'google_wrong_account' | 'google_wrong_domain' | 'google_blocked'
+const TOKEN_KEY = 'student-invite-token'
+
+/**
+ * The secret for this tab: from the fragment (remembered in sessionStorage,
+ * since the page drops it from the address bar), else the remembered one, so
+ * a reload or a tab the phone discarded still knows its link. Storage that
+ * throws (private mode) only loses the reload case.
+ */
+export const rememberedInviteToken = (
+  hash: string,
+  storage: Pick<Storage, 'getItem' | 'setItem'>,
+): string | null => {
+  const fromLink = readInviteToken(hash)
+  try {
+    if (fromLink) {
+      storage.setItem(TOKEN_KEY, fromLink)
+      return fromLink
+    }
+    return readInviteToken(`#${storage.getItem(TOKEN_KEY) ?? ''}`)
+  } catch {
+    return fromLink
+  }
+}
+
+/** Forget the tab's remembered secret (the invite is used or dead). */
+export const forgetInviteToken = (storage: Pick<Storage, 'removeItem'>): void => {
+  try {
+    storage.removeItem(TOKEN_KEY)
+  } catch {
+    /* nothing remembered */
+  }
+}
+
+export type InviteOutcome = 'expired' | 'used' | 'replaced' | 'cancelled' | 'not_found' | 'not_open' | 'google_blocked'
 
 export interface OutcomeCopy {
   title: string
@@ -30,12 +61,7 @@ const COPY: Record<InviteOutcome, OutcomeCopy> = {
     title: "You're set up.",
     body: "Your school hasn't opened SchoolMule to students yet. You'll be able to sign in once it does.",
   },
-  google_wrong_account: { title: "That's a different Google account.", body: '' },
-  google_wrong_domain: { title: 'Use your school Google account.', body: '' },
-  google_blocked: {
-    title: "Google didn't let you sign in.",
-    body: "Google didn't let you sign in. If it says your school blocked it, tell your teacher.",
-  },
+  google_blocked: { title: "Google didn't let you sign in.", body: 'If it says your school blocked it, tell your teacher.' },
 }
 
 /** The page's words for an outcome (a dead link, a set-up-but-not-open account, a Google refusal). */

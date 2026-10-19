@@ -21,10 +21,11 @@ export const COLUMN_ROLES: readonly ColumnRole[] = ['full_name', 'first_name', '
 
 /** A first guess from a column's header ("Email Address" → email, "Org Unit Path" → grade). */
 export const guessRole = (header: string): ColumnRole => {
-  const h = header.trim().toLowerCase()
+  // Brackets are Google Admin's notes ("Last Name [Required]", "Last Sign In [READ ONLY]").
+  const h = header.replace(/\[[^\]]*\]/g, ' ').trim().toLowerCase()
   if (/e-?mail/.test(h)) return 'email'
-  if (/first|given/.test(h)) return 'first_name'
-  if (/last|family|surname/.test(h)) return 'last_name'
+  if (/\bfirst\s*name\b|^first$|given/.test(h)) return 'first_name'
+  if (/\blast\s*name\b|^last$|family|surname/.test(h)) return 'last_name'
   if (/grade|org ?unit/.test(h)) return 'grade'
   if (/name|student/.test(h)) return 'full_name'
   return 'ignore'

@@ -26,6 +26,16 @@ describe('guessRole', () => {
     expect(guessRole('Grade')).toBe('grade')
     expect(guessRole('Notes')).toBe('ignore')
   })
+  it("reads Google Admin's whole export header, whatever the column order", () => {
+    const header = [
+      'First Name [Required]', 'Last Name [Required]', 'Email Address [Required]', 'Password [Required]',
+      'Org Unit Path [Required]', 'New Primary Email [UPLOAD ONLY]', 'Recovery Email', 'Last Sign In [READ ONLY]',
+    ]
+    expect(guessRoles(header)).toEqual(['first_name', 'last_name', 'email', 'ignore', 'grade', 'ignore', 'ignore', 'ignore'])
+    // "Last Sign In" is never a last name, even before the real one.
+    expect(guessRoles(['Last Sign In [READ ONLY]', 'Last Name', 'Email'])).toEqual(['ignore', 'last_name', 'email'])
+  })
+
   it('never guesses the same role twice', () => {
     expect(guessRoles(['Email', 'Backup email', 'Name'])).toEqual(['email', 'ignore', 'full_name'])
   })

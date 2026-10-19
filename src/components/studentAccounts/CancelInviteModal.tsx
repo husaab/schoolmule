@@ -11,6 +11,7 @@ import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader } from '@/comp
 import { cancelStudentInvite } from '@/services/studentAccountService'
 import type { StudentAccountRow } from '@/services/types/studentAccount'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { cancelKeepsLogin } from '@/lib/studentAccounts'
 import { XCircleIcon } from '@heroicons/react/24/outline'
 
 interface Props {
@@ -27,8 +28,8 @@ export default function CancelInviteModal({ isOpen, onClose, row, onSaved }: Pro
   const [saving, setSaving] = useState(false)
   const first = firstName(row.name)
   const email = row.account?.email ?? row.studentEmail ?? ''
-  // A login that signs in already (a QR card) stays; otherwise it goes with the invite.
-  const keepsLogin = row.status === 'active'
+  // A login that already works (signed in, or a live QR card) stays; otherwise it goes with the invite.
+  const keepsLogin = cancelKeepsLogin(row)
 
   const cancel = async () => {
     setSaving(true)
@@ -51,7 +52,7 @@ export default function CancelInviteModal({ isOpen, onClose, row, onSaved }: Pro
         <ConfirmBody tone="warning">
           The link sent to <strong className="font-semibold text-slate-900">{email}</strong> stops working.{' '}
           {keepsLogin
-            ? `${first} keeps signing in with the QR card.`
+            ? `${first}'s login stays and keeps working.`
             : `${first} goes back to Not invited, and you can invite again later.`}
         </ConfirmBody>
       </ModalBody>

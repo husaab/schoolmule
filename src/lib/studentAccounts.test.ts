@@ -22,6 +22,7 @@ import {
   parseDomainList,
   peopleAccountLine,
   groupInviteReview,
+  cancelKeepsLogin,
 } from './studentAccounts'
 
 const settings = { loginFromGrade: '1', qrUntilGrade: '3' } as const
@@ -355,5 +356,17 @@ describe('groupInviteReview', () => {
       ['pending', 'Invite already sent Oct 15 (expires Oct 29). Use Resend.'],
       ['sk', 'Not eligible: student logins start at Grade 1'],
     ])
+  })
+})
+
+describe('cancelKeepsLogin', () => {
+  const invite = { state: 'pending' as const, sentAt: null, expiresAt: '2026-10-29T14:00:00.000Z', endedAt: null, error: null }
+  it('a login never used goes with the invite', () => {
+    expect(cancelKeepsLogin(row({ status: 'invited', account: login(), invite }))).toBe(false)
+  })
+  it('a login that already works stays: signed in, a live QR card, or active', () => {
+    expect(cancelKeepsLogin(row({ status: 'invited', account: login({ qr: { active: true, issuedAt: '2026-10-15T14:00:00.000Z', voidedAt: null } }), invite }))).toBe(true)
+    expect(cancelKeepsLogin(row({ status: 'invited', account: login({ lastLoginAt: '2026-10-15T14:00:00.000Z' }), invite }))).toBe(true)
+    expect(cancelKeepsLogin(row({ status: 'active', account: login(), signInMethod: 'card', invite }))).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { inviteOutcomeCopy, readInviteToken, studentPasswordProblem } from './studentInvite'
+import { inviteOutcomeCopy, readInviteToken, rememberedInviteToken, studentPasswordProblem } from './studentInvite'
 
 const SECRET = 'a'.repeat(21) + '_' + 'B'.repeat(20) + '-'
 
@@ -39,7 +39,9 @@ describe('inviteOutcomeCopy', () => {
     expect(inviteOutcomeCopy('not_open')).toEqual({
       title: "You're set up.", body: "Your school hasn't opened SchoolMule to students yet. You'll be able to sign in once it does.",
     })
-    expect(inviteOutcomeCopy('google_blocked').body).toBe("Google didn't let you sign in. If it says your school blocked it, tell your teacher.")
+    expect(inviteOutcomeCopy('google_blocked')).toEqual({
+      title: "Google didn't let you sign in.", body: 'If it says your school blocked it, tell your teacher.',
+    })
   })
 })
 
@@ -60,5 +62,21 @@ describe('studentPasswordProblem (same rules as the server)', () => {
   it('accepts a passphrase', () => {
     expect(studentPasswordProblem('cedar-river', ctx)).toBeNull()
     expect(studentPasswordProblem('maple lake 42', ctx)).toBeNull()
+  })
+})
+
+describe('rememberedInviteToken (a reload keeps the link)', () => {
+  it('takes the fragment first and remembers it for the tab; a reload with no fragment uses the remembered one', () => {
+    const store = new Map<string, string>()
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) }
+    expect(rememberedInviteToken(`#${SECRET}`, storage)).toBe(SECRET)
+    expect(rememberedInviteToken('', storage)).toBe(SECRET)
+    const other = 'c'.repeat(43)
+    expect(rememberedInviteToken(`#${other}`, storage)).toBe(other)
+  })
+  it('works without storage (private mode)', () => {
+    const broken = { getItem: () => { throw new Error('no') }, setItem: () => { throw new Error('no') } }
+    expect(rememberedInviteToken(`#${SECRET}`, broken)).toBe(SECRET)
+    expect(rememberedInviteToken('', broken)).toBeNull()
   })
 })

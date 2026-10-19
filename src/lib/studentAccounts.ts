@@ -239,6 +239,14 @@ export const peopleAccountLine = (
 export const hasOpenInvite = (row: StudentAccountRow): boolean =>
   Boolean(row.invite && ['pending', 'failed', 'expired'].includes(row.invite.state))
 
+/**
+ * Whether cancelling the invite keeps the login (the server keeps one that
+ * already works: signed in, a live QR card, or active) or removes it, so the
+ * student goes back to Not invited.
+ */
+export const cancelKeepsLogin = (row: StudentAccountRow): boolean =>
+  row.status === 'active' || Boolean(row.account?.qr.active) || Boolean(row.account?.lastLoginAt)
+
 /** A login that hasn't set up email sign-in yet (invited, or a card student): Resend applies. */
 export const canResendInvite = (row: StudentAccountRow): boolean =>
   row.status === 'invited' || (row.status === 'active' && row.signInMethod === 'card')

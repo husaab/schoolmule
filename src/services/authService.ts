@@ -43,7 +43,8 @@ export const studentQrSignIn = async (token: string): Promise<LoginResponse> => 
 export interface StudentInviteInfo {
   state: 'valid' | 'expired' | 'used' | 'replaced' | 'cancelled';
   school: { code: string; name: string };
-  student: { firstName: string; lastInitial: string; grade: string };
+  /** lastName is for the page's password check; the page shows the initial. */
+  student: { firstName: string; lastName?: string; lastInitial: string; grade: string };
   email: string;
   methods: { google: boolean; password: boolean };
   expiresAt: string;
