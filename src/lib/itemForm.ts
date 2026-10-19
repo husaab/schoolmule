@@ -371,6 +371,73 @@ export function withSavedGradebook(values: ItemFormValues, saved: Item | null): 
   return { ...values, gradebookMode: from.gradebookMode, categoryId: from.categoryId, columnId: from.columnId, maxScore: from.maxScore }
 }
 
+/** Whether two form states hold the same values (an edit typed back to what was sent is no change). */
+export function sameFormValues(a: ItemFormValues, b: ItemFormValues): boolean {
+  if (a === b) return true
+  return (Object.keys(a) as (keyof ItemFormValues)[]).every((key) => {
+    const x = a[key]
+    const y = b[key]
+    if (Array.isArray(x) && Array.isArray(y)) return x.length === y.length && x.every((v, i) => v === y[i])
+    return x === y
+  })
+}
+
+/** What became of the edits typed while a button save (Assign, Post, Save, Schedule) was in flight. */
+export type NewerEditsOutcome<R> =
+  /** Nothing was typed meanwhile. */
+  | { kind: 'none' }
+  /** The newest values saved too; `result` is the server's last answer. */
+  | { kind: 'saved'; result: R }
+  /** The newest values have a problem the form shows; nothing was sent for them. */
+  | { kind: 'invalid'; values: ItemFormValues; errors: ItemFormErrors }
+  /** Sending the newest values failed. */
+  | { kind: 'failed'; error: unknown }
+  /** Still changing after `maxRounds` sends (typing without a pause). */
+  | { kind: 'unsettled' }
+
+/**
+ * FE re-review N1 ("never lose an edit"): the fields stay editable while a
+ * button save is in flight, so a change typed meanwhile was not in what it
+ * sent. Once that save succeeds, this sends the newest values as well, as a
+ * plain edit, and again while they keep changing (latest edit wins), before
+ * the form may leave. A value the form would refuse is not sent: the caller
+ * keeps the form open on it, as it does on a failure or when the values never
+ * settle.
+ */
+export async function saveNewerEdits<R>({
+  sent,
+  latest,
+  check,
+  send,
+  maxRounds = 5,
+}: {
+  /** What the button save sent. */
+  sent: ItemFormValues
+  /** The form's values now. */
+  latest: () => ItemFormValues
+  /** The form's own checks for these values (validateItemForm). */
+  check: (values: ItemFormValues) => ItemFormErrors
+  /** Saves these values (a PATCH that changes no status). */
+  send: (values: ItemFormValues) => Promise<R>
+  maxRounds?: number
+}): Promise<NewerEditsOutcome<R>> {
+  let last = sent
+  let saved: { result: R } | null = null
+  for (let round = 0; round < maxRounds; round++) {
+    const next = latest()
+    if (sameFormValues(next, last)) return saved ? { kind: 'saved', result: saved.result } : { kind: 'none' }
+    const errors = check(next)
+    if (hasErrors(errors)) return { kind: 'invalid', values: next, errors }
+    try {
+      saved = { result: await send(next) }
+    } catch (error) {
+      return { kind: 'failed', error }
+    }
+    last = next
+  }
+  return saved && sameFormValues(latest(), last) ? { kind: 'saved', result: saved.result } : { kind: 'unsettled' }
+}
+
 export interface AutosaveFailure {
   /** What the teacher reads: the server's own reason. */
   message: string

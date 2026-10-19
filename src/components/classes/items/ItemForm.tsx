@@ -27,7 +27,10 @@
 //   opening the form again brings them back.
 // Every save first runs the server's own checks (lib/itemForm), so problems
 // show beside their fields. Attachments added before the item exists go up
-// right after its first save.
+// right after its first save. The fields stay editable while a button save
+// is in flight: a change typed meanwhile is sent right after it
+// (saveNewerEdits), and the form leaves only once that has saved too; if it
+// can't, the form stays open on the newest values and says so.
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
@@ -51,9 +54,11 @@ import {
   hasErrors,
   isoToTorontoParts,
   itemToFormValues,
+  saveNewerEdits,
   toItemInput,
   validateItemForm,
   withSavedGradebook,
+  type CurrentColumn,
   type ItemFormContext,
   type ItemFormErrors,
   type ItemFormField,
@@ -196,6 +201,9 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     return [...own, ...classwork.linkableColumns.filter((c) => !own.some((o) => o.assessmentId === c.assessmentId))]
   }, [item, classwork.linkableColumns])
 
+  /** The column an item fills as saved, for a save that must tell an unchanged column from a new choice. */
+  const columnOf = (it: Item | null): CurrentColumn | null =>
+    it?.gradebook ? { categoryId: it.gradebook.categoryId, maxScore: it.gradebook.maxScore } : null
   const savedGradebook = saved?.gradebook ?? null
   const currentColumn = useMemo(
     () => (savedGradebook ? { categoryId: savedGradebook.categoryId, maxScore: savedGradebook.maxScore } : null),
@@ -221,7 +229,8 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const itemIdRef = useRef(itemId)
   const savedRef = useRef(saved)
   const savingRef = useRef(false)
-  // A change typed while Assign, Post or Save was running (sent if that save fails).
+  // An autosaving draft's change typed while Assign or Post was running: sent as a draft if that save fails
+  // (on success, saveNewerEdits sends it).
   const heldRef = useRef(false)
   const editedRef = useRef(edited)
   // Set when the teacher leaves on purpose (a save went through, or they chose to discard).
@@ -323,7 +332,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
         setEdited(true)
         return
       }
-      // While Assign or Post is saving, a change waits; it is sent if that save fails.
+      // While Assign or Post is saving, a change waits: the save sends it after itself, or as a draft if it fails.
       if (savingRef.current) {
         heldRef.current = true
         return
@@ -434,7 +443,9 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     await flushDraft()
     savingRef.current = true
     heldRef.current = false
-    const input = toItemInput(kind, valuesRef.current, {
+    // The fields stay editable while this save runs: what it sends is kept, so anything typed after is sent too.
+    const sent = valuesRef.current
+    const input = toItemInput(kind, sent, {
       status: intent.status,
       publishAt: intent.publishAt,
       standaloneColumn: standalone,
@@ -456,19 +467,58 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       // Posted or scheduled: nothing autosaves any more (not even on the way out).
       if (res.data.status !== 'draft') autosavesRef.current = false
       const failed = await attachments.flush(res.data.itemId)
-      if (failed > 0) {
+      // FE re-review N1, "never lose an edit": a change typed while this save (or the uploads) ran goes out
+      // too, as a plain edit, before the form leaves (latest edit wins).
+      const newer = await saveNewerEdits({
+        sent,
+        latest: () => valuesRef.current,
+        check: (v) => validateItemForm(kind, v, { ...ctxRef.current, currentColumn: columnOf(savedRef.current) }),
+        send: async (v) => {
+          const next = await updateItem(
+            res.data.itemId,
+            toItemInput(kind, v, { standaloneColumn: standalone, currentColumn: columnOf(savedRef.current) }),
+          )
+          created(next.data, false)
+          return next.data
+        },
+      })
+      const unsaved = newer.kind === 'invalid' || newer.kind === 'failed' || newer.kind === 'unsettled'
+      if (failed > 0 || unsaved) {
+        const uploads = failed === 1 ? 'an attachment' : `${failed} attachments`
+        const why =
+          newer.kind === 'invalid'
+            ? "Fix what's marked below, then Save."
+            : newer.kind === 'failed'
+              ? `${messageOf(newer.error, "They couldn't be saved.")} Save again to retry.`
+              : "Save again when you're done."
         setBanner(
-          `The ${kindWord} saved, but ${failed === 1 ? 'an attachment' : `${failed} attachments`} didn't upload. Retry below, or close and add them later.`,
+          !unsaved
+            ? `The ${kindWord} saved, but ${uploads} didn't upload. Retry below, or close and add them later.`
+            : failed > 0
+              ? `The ${kindWord} saved, but ${uploads} didn't upload and your newest changes aren't saved yet. ${why} Retry the attachments below.`
+              : `The ${kindWord} saved, but your newest changes aren't saved yet. ${why}`,
         )
-        editedRef.current = false
-        setEdited(false)
+        // The newest changes stay in the form: a draft that autosaves again sends them; any other form keeps
+        // them as unsaved edits (Cancel, links and the tab ask first).
+        const autosavesNow =
+          (kind === 'assignment' || kind === 'quiz') && res.data.status === 'draft' && res.data.effectiveStatus !== 'posted'
+        editedRef.current = unsaved && !autosavesNow
+        setEdited(unsaved && !autosavesNow)
+        if (newer.kind === 'invalid') {
+          setShowErrors(true)
+          focusFirst(newer.errors)
+        }
         finishFailed()
+        if (unsaved && autosavesNow) {
+          autosavesRef.current = true
+          scheduleDraft(valuesRef.current)
+        }
         return
       }
       editedRef.current = false
       setEdited(false)
       showNotification(intent.message(res.data), 'success')
-      leaveTo(doneHref(res.data))
+      leaveTo(doneHref(savedRef.current ?? res.data))
     } catch (err) {
       const message = messageOf(err, `The ${kindWord} couldn't be saved.`)
       setBanner(message)

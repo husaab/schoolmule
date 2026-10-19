@@ -9,6 +9,8 @@ import {
   isoToTorontoParts,
   itemToFormValues,
   keepsUnsetMax,
+  sameFormValues,
+  saveNewerEdits,
   toItemInput,
   QUIZ_START_MAX,
   torontoToIso,
@@ -539,5 +541,121 @@ describe('a quiz in the gradebook', () => {
     expect(validateItemForm('assignment', values({ gradebookMode: 'category', categoryId: CAT, maxScore: '' }), ctx()).maxScore).toBe(
       'Out of must be more than 0',
     )
+  })
+})
+
+describe('sameFormValues', () => {
+  it('is true for the same fields, whatever the object', () => {
+    expect(sameFormValues(values(), values())).toBe(true)
+    expect(sameFormValues(values({ studentIds: [S1] }), values({ studentIds: [S1] }))).toBe(true)
+  })
+
+  it('tells any changed field apart, the chosen students too', () => {
+    expect(sameFormValues(values(), values({ title: 'Plant cell diagram!' }))).toBe(false)
+    expect(sameFormValues(values(), values({ emailStudents: false }))).toBe(false)
+    expect(sameFormValues(values({ studentIds: [S1] }), values({ studentIds: [] }))).toBe(false)
+    expect(sameFormValues(values({ studentIds: [S1, 'x'] }), values({ studentIds: ['x', S1] }))).toBe(false)
+  })
+})
+
+// FE re-review N1: typing while Assign, Post or Save is in flight is never dropped when that save succeeds.
+describe('saveNewerEdits', () => {
+  const ok = () => ({})
+
+  it('sends nothing when nothing was typed while the save ran', async () => {
+    const sent = values()
+    const calls: ItemFormValues[] = []
+    const out = await saveNewerEdits({
+      sent,
+      latest: () => values(),
+      check: ok,
+      send: async (v) => {
+        calls.push(v)
+        return 'saved'
+      },
+    })
+    expect(out).toEqual({ kind: 'none' })
+    expect(calls).toEqual([])
+  })
+
+  it('sends the newer value once, and reports what the server answered', async () => {
+    const sent = values({ title: 'Plant' })
+    const typed = values({ title: 'Plant cell' })
+    const calls: ItemFormValues[] = []
+    const out = await saveNewerEdits({
+      sent,
+      latest: () => typed,
+      check: ok,
+      send: async (v) => {
+        calls.push(v)
+        return `saved:${v.title}`
+      },
+    })
+    expect(calls).toEqual([typed])
+    expect(out).toEqual({ kind: 'saved', result: 'saved:Plant cell' })
+  })
+
+  it('keeps sending while the teacher keeps typing during the follow-up (latest wins)', async () => {
+    let current = values({ title: 'Plant c' })
+    const calls: string[] = []
+    const out = await saveNewerEdits({
+      sent: values({ title: 'Plant' }),
+      latest: () => current,
+      check: ok,
+      send: async (v) => {
+        calls.push(v.title)
+        // A keystroke lands while this follow-up is in flight (the first time only).
+        if (v.title === 'Plant c') current = values({ title: 'Plant cell' })
+        return v.title
+      },
+    })
+    expect(calls).toEqual(['Plant c', 'Plant cell'])
+    expect(out).toEqual({ kind: 'saved', result: 'Plant cell' })
+  })
+
+  it('never sends a newer value the form would refuse, and says why', async () => {
+    const typed = values({ title: '' })
+    const calls: ItemFormValues[] = []
+    const out = await saveNewerEdits({
+      sent: values(),
+      latest: () => typed,
+      check: (v) => (v.title ? {} : { title: 'Give it a title' }),
+      send: async (v) => {
+        calls.push(v)
+        return 'saved'
+      },
+    })
+    expect(calls).toEqual([])
+    expect(out).toEqual({ kind: 'invalid', values: typed, errors: { title: 'Give it a title' } })
+  })
+
+  it('reports a failed follow-up (the newer value is still in the form for the teacher to save)', async () => {
+    const boom = new Error('Network down')
+    const out = await saveNewerEdits({
+      sent: values(),
+      latest: () => values({ instructions: 'Label every part' }),
+      check: ok,
+      send: async () => {
+        throw boom
+      },
+    })
+    expect(out).toEqual({ kind: 'failed', error: boom })
+  })
+
+  it('stops after a few rounds of non-stop typing and says the form is not settled', async () => {
+    let n = 0
+    const calls: string[] = []
+    const out = await saveNewerEdits({
+      sent: values({ title: 'T0' }),
+      latest: () => values({ title: `T${++n}` }),
+      check: ok,
+      send: async (v) => {
+        calls.push(v.title)
+        return v.title
+      },
+      maxRounds: 3,
+    })
+    expect(calls).toHaveLength(3)
+    expect(out).toEqual({ kind: 'unsettled' })
   })
 })
