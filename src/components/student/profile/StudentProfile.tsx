@@ -37,7 +37,6 @@ import GradesTab from './GradesTab'
 import AttendanceTab from './AttendanceTab'
 import ReportsTab from './ReportsTab'
 import MessagesTab from './MessagesTab'
-import ProfileInfoTab from './ProfileInfoTab'
 import { Card, EmptyState, type GradebookLink } from './ui'
 
 type ModalKind = 'edit' | 'archive' | 'unarchive' | 'delete' | 'message'
@@ -184,8 +183,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
       : `/analytics?view=student&studentId=${encodeURIComponent(studentId)}&termId=${encodeURIComponent(shownTermId)}`
   }
   // Admins open any gradebook; a teacher only their own class's.
-  const gradebookLink: GradebookLink = (e) =>
-    isAdmin || (e.teacherId != null && e.teacherId === user.id) ? gradebookHref(e.classId, e.grade) : null
+  const gradebookLink: GradebookLink = (e) => (isAdmin || (e.teacherId != null && e.teacherId === user.id) ? gradebookHref(e.classId, e.grade) : null)
 
   const goTab = (next: ProfileTab) => onView({ tab: next === 'overview' ? null : next, classId: null })
   const openClass = (classId: string) => onView({ tab: 'grades', classId })
@@ -193,17 +191,43 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
 
   const studentAnalytics = analyticsLink()
   const menuItems: MenuItem[] = [
-    ...(studentAnalytics
-      ? [{ key: 'analytics', label: 'Open in Analytics', icon: ChartBarIcon, onSelect: () => router.push(studentAnalytics) }]
-      : []),
+    ...(studentAnalytics ? [{ key: 'analytics', label: 'Open in Analytics', icon: ChartBarIcon, onSelect: () => router.push(studentAnalytics) }] : []),
     archived
       ? { key: 'restore', label: 'Restore student', icon: ArchiveBoxIcon, onSelect: () => setModal('unarchive') }
       : { key: 'archive', label: 'Archive student', icon: ArchiveBoxArrowDownIcon, onSelect: () => setModal('archive') },
     { key: 'delete', label: 'Delete student', icon: TrashIcon, danger: true, onSelect: () => setModal('delete') },
   ]
 
-  const showTerms = (tab === 'overview' || tab === 'grades') && overview.terms.length > 0
   const openThreads = threads?.filter((t) => t.status === 'open').length ?? 0
+
+  // Shared by Overview (above its progress) and Grades (at the top).
+  const termControls =
+    overview.terms.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-3">
+        <TermPicker terms={overview.terms} value={termId} onChange={pickTerm} />
+        {gradesPending && (
+          <span className="inline-flex items-center gap-2 text-xs text-slate-400">
+            <Spinner size="sm" />
+            Loading grades…
+          </span>
+        )}
+      </div>
+    ) : null
+  // Stands in for grade content until the first load lands, or after it fails.
+  const gradesFallback = gradesFailed ? (
+    <Card>
+      <EmptyState icon={ExclamationTriangleIcon} title="Could not load grades">
+        <button onClick={reload} className="cursor-pointer font-medium text-cyan-600 hover:text-cyan-700">
+          Try again
+        </button>
+      </EmptyState>
+    </Card>
+  ) : gradesLoading && !grades ? (
+    <div className="flex justify-center py-16">
+      <Spinner size="lg" />
+    </div>
+  ) : null
+  const dimGrades = gradesPending && grades != null
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -218,68 +242,51 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
       />
 
       <div className="px-4 py-5 sm:px-6">
-        {showTerms && (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <TermPicker terms={overview.terms} value={termId} onChange={pickTerm} />
-            {gradesPending && (
-              <span className="inline-flex items-center gap-2 text-xs text-slate-400">
-                <Spinner size="sm" />
-                Loading grades…
-              </span>
+        {tab === 'overview' ? (
+          <OverviewTab
+            overview={overview}
+            term={shownTerm}
+            detail={detail}
+            analyticsHref={studentAnalytics}
+            gradebookLink={gradebookLink}
+            onOpenClass={openClass}
+            onTab={goTab}
+            onEdit={archived ? null : () => setModal('edit')}
+            termControls={termControls}
+            gradesFallback={gradesFallback}
+            gradesPending={dimGrades}
+          />
+        ) : tab === 'grades' ? (
+          <>
+            {termControls && <div className="mb-5">{termControls}</div>}
+            {gradesFallback ?? (
+              <div className={`transition-opacity ${dimGrades ? 'opacity-60' : ''}`}>
+                <GradesTab
+                  overview={overview}
+                  term={shownTerm}
+                  detail={detail}
+                  openClassId={openClassId}
+                  onToggleClass={(classId) => onView({ classId })}
+                  classAnalyticsHref={(classId) => analyticsLink(classId)}
+                  gradebookLink={gradebookLink}
+                />
+              </div>
             )}
-          </div>
+          </>
+        ) : tab === 'attendance' ? (
+          <AttendanceTab overview={overview} />
+        ) : tab === 'reports' ? (
+          <ReportsTab overview={overview} />
+        ) : (
+          <MessagesTab
+            threads={threads}
+            loading={threadsLoading}
+            error={threadsError}
+            isAdmin={isAdmin}
+            archived={archived}
+            onNew={() => setModal('message')}
+          />
         )}
-
-        <div className={`transition-opacity ${showTerms && gradesPending && grades ? 'opacity-60' : ''}`}>
-          {(tab === 'overview' || tab === 'grades') && gradesFailed ? (
-            <Card>
-              <EmptyState icon={ExclamationTriangleIcon} title="Could not load grades">
-                <button onClick={reload} className="cursor-pointer font-medium text-cyan-600 hover:text-cyan-700">
-                  Try again
-                </button>
-              </EmptyState>
-            </Card>
-          ) : (tab === 'overview' || tab === 'grades') && gradesLoading && !grades ? (
-            <div className="flex justify-center py-16">
-              <Spinner size="lg" />
-            </div>
-          ) : tab === 'overview' ? (
-            <OverviewTab
-              overview={overview}
-              term={shownTerm}
-              detail={detail}
-              analyticsHref={studentAnalytics}
-              gradebookLink={gradebookLink}
-              onOpenClass={openClass}
-              onTab={goTab}
-            />
-          ) : tab === 'grades' ? (
-            <GradesTab
-              overview={overview}
-              term={shownTerm}
-              detail={detail}
-              openClassId={openClassId}
-              onToggleClass={(classId) => onView({ classId })}
-              classAnalyticsHref={(classId) => analyticsLink(classId)}
-              gradebookLink={gradebookLink}
-            />
-          ) : tab === 'attendance' ? (
-            <AttendanceTab overview={overview} />
-          ) : tab === 'reports' ? (
-            <ReportsTab overview={overview} />
-          ) : tab === 'messages' ? (
-            <MessagesTab
-              threads={threads}
-              loading={threadsLoading}
-              error={threadsError}
-              isAdmin={isAdmin}
-              archived={archived}
-              onNew={() => setModal('message')}
-            />
-          ) : (
-            <ProfileInfoTab overview={overview} onEdit={archived ? null : () => setModal('edit')} />
-          )}
-        </div>
       </div>
 
       {modal === 'edit' && <StudentEditModal isOpen onClose={() => setModal(null)} student={student} onUpdate={changed} />}

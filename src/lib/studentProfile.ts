@@ -5,7 +5,7 @@
 import type { AssessmentScoreCell, StudentData } from '@/services/types/analytics'
 import type { AttendanceDay, AttendanceStatus, ProfileTerm } from '@/services/types/studentProfile'
 
-export type ProfileTab = 'overview' | 'grades' | 'attendance' | 'reports' | 'messages' | 'profile'
+export type ProfileTab = 'overview' | 'grades' | 'attendance' | 'reports' | 'messages'
 
 export const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -13,7 +13,6 @@ export const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
   { key: 'attendance', label: 'Attendance' },
   { key: 'reports', label: 'Reports' },
   { key: 'messages', label: 'Messages' },
-  { key: 'profile', label: 'Profile' },
 ]
 
 export const parseTab = (value: string | null | undefined): ProfileTab =>
