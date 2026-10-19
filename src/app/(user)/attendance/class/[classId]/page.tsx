@@ -11,6 +11,7 @@ import { format } from 'date-fns-tz';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useUserStore } from '@/store/useUserStore';
 import { useFilterParams } from '@/hooks/useFilterParams';
+import StudentNameLink from '@/components/student/profile/StudentNameLink';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
@@ -127,7 +128,7 @@ function ClassAttendanceContent() {
                   className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-800">{student.name}</p>
+                    <p className="font-medium text-gray-800"><StudentNameLink studentId={student.studentId}>{student.name}</StudentNameLink></p>
                     <p className="text-gray-600 text-sm">Grade {student.grade}</p>
                   </div>
                   <div className="flex space-x-4 items-center">

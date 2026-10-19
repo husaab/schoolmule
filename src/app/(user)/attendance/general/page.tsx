@@ -19,6 +19,7 @@ import { ClipboardDocumentCheckIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, 
 import Spinner from '@/components/Spinner';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
+import StudentNameLink from '@/components/student/profile/StudentNameLink';
 
 type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
 
@@ -330,7 +331,7 @@ function GeneralAttendanceContent() {
                             <div className="flex items-center gap-3">
                               <Avatar name={student.name} avatar={student.avatar} size={36} />
                               <div>
-                                <p className="font-medium text-slate-900">{student.name}</p>
+                                <p className="font-medium text-slate-900"><StudentNameLink studentId={student.studentId}>{student.name}</StudentNameLink></p>
                                 <p className="text-slate-500 text-sm">Grade {student.grade}</p>
                               </div>
                             </div>

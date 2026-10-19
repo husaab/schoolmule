@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { createPortal } from 'react-dom'
 
@@ -10,11 +10,54 @@ interface ModalProps {
   children: ReactNode
   title?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl'
+  /** Escape closes this modal, but only while it is the top-most one open. */
+  closeOnEscape?: boolean
+  /** Replaces the default max-h-[85vh] cap on the box. */
+  maxHeightClass?: string
+  /** Edge to edge below the sm breakpoint (no outer padding, square corners). */
+  fullScreenOnMobile?: boolean
+  /** Accessible name when the modal has no title. */
+  ariaLabel?: string
 }
 
-const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalProps) => {
+// Modals can stack (a confirm opened from a larger modal). Track the open
+// ones so Escape only ever reaches the top one, and keep the page behind
+// scroll-locked until the last of them closes.
+const openModals: string[] = []
+let scrollLocks = 0
+let overflowBeforeLock = ''
+
+const lockBodyScroll = () => {
+  if (scrollLocks++ === 0) {
+    overflowBeforeLock = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  }
+}
+
+const unlockBodyScroll = () => {
+  if (scrollLocks > 0 && --scrollLocks === 0) document.body.style.overflow = overflowBeforeLock
+}
+
+const Modal = ({
+  isOpen,
+  onClose,
+  children,
+  style,
+  title,
+  size = 'md',
+  closeOnEscape = false,
+  maxHeightClass = 'max-h-[85vh]',
+  fullScreenOnMobile = false,
+  ariaLabel,
+}: ModalProps) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
+  const id = useId()
+  // The keydown listener outlives renders; read the latest props through refs.
+  const latest = useRef({ onClose, closeOnEscape })
+  useEffect(() => {
+    latest.current = { onClose, closeOnEscape }
+  })
 
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -30,28 +73,42 @@ const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalPr
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true)
-      document.body.style.overflow = 'hidden'
       // Trigger animation after render
       requestAnimationFrame(() => {
         setIsVisible(true)
       })
     } else {
       setIsVisible(false)
-      document.body.style.overflow = 'auto'
       // Wait for animation to complete before unmounting
       const timer = setTimeout(() => setShouldRender(false), 200)
       return () => clearTimeout(timer)
     }
-
-    return () => {
-      document.body.style.overflow = 'auto'
-    }
   }, [isOpen])
+
+  // While open: hold a scroll lock and a place on the stack.
+  useEffect(() => {
+    if (!isOpen) return
+    openModals.push(id)
+    lockBodyScroll()
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      if (openModals[openModals.length - 1] !== id || !latest.current.closeOnEscape) return
+      e.preventDefault()
+      latest.current.onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      const at = openModals.lastIndexOf(id)
+      if (at !== -1) openModals.splice(at, 1)
+      unlockBodyScroll()
+    }
+  }, [isOpen, id])
 
   if (!shouldRender) return null
 
   const modalContent = (
-    <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
+    <div className={`fixed inset-0 flex items-center justify-center z-[60] ${fullScreenOnMobile ? 'p-0 sm:p-4' : 'p-4'}`}>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity duration-200 ${
@@ -62,9 +119,13 @@ const Modal = ({ isOpen, onClose, children, style, title, size = 'md' }: ModalPr
 
       {/* Modal box */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel ?? title}
         className={`
-          relative bg-white rounded-2xl shadow-2xl z-10
-          overflow-hidden max-h-[85vh] flex flex-col
+          relative bg-white shadow-2xl z-10
+          ${fullScreenOnMobile ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'}
+          overflow-hidden ${maxHeightClass} flex flex-col
           transition-all duration-200 ease-out
           ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}
           ${style ? style : `w-full ${sizeClasses[size]}`}

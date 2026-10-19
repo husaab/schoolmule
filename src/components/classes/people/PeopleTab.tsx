@@ -13,12 +13,12 @@ import { useRouter } from 'next/navigation'
 import { ChatBubbleLeftRightIcon, MagnifyingGlassIcon, PaperAirplaneIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import AvatarPickerModal from '@/components/avatar/AvatarPickerModal'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
-import StudentViewModal from '@/components/student/view/studentViewModal'
 import InviteStudentsModal from '@/components/studentAccounts/InviteStudentsModal'
 import PrintQrCardsModal from '@/components/studentAccounts/PrintQrCardsModal'
 import TabEmptyState from '@/components/classes/page/TabEmptyState'
 import type { ClassTabProps } from '@/components/classes/page/tabs'
 import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
+import { useStudentProfile } from '@/hooks/useStudentProfile'
 import {
   avatarPickerSubtitle,
   chipCounts,
@@ -37,12 +37,10 @@ import {
   resetStudentPassword,
   setStudentAvatar,
 } from '@/services/classroomService'
-import { getStudentById } from '@/services/studentService'
 import { getStudentAccounts } from '@/services/studentAccountService'
 import type { PeopleStudent } from '@/services/types/classroom'
 import type { AvatarSpec } from '@/services/types/profile'
 import type { ClassroomSettings, StudentAccountRow } from '@/services/types/studentAccount'
-import type { StudentPayload } from '@/services/types/student'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -61,6 +59,7 @@ interface InviteRun {
 
 const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
   const router = useRouter()
+  const { open: openProfile } = useStudentProfile()
   const notify = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
   const role = useUserStore((s) => s.user.role)
@@ -77,7 +76,6 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteRun, setInviteRun] = useState<InviteRun | null>(null)
   const [messageFor, setMessageFor] = useState<PeopleStudent | null>(null)
-  const [viewing, setViewing] = useState<StudentPayload | null>(null)
   const [avatarFor, setAvatarFor] = useState<PeopleStudent | null>(null)
   // Printing a card voids the older one: the student whose print is waiting on a yes.
   const [printFor, setPrintFor] = useState<PeopleStudent | null>(null)
@@ -145,15 +143,7 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
   const act = (action: StudentMenuAction, student: PeopleStudent) => {
     switch (action) {
       case 'view':
-        return void withBusy(student, async () => {
-          try {
-            const res = await getStudentById(student.studentId)
-            // The roster already knows the avatar to show (the student's own pick over a teacher's).
-            setViewing({ ...res.data, avatar: res.data.avatar ?? student.avatar })
-          } catch (err) {
-            notify(errorText(err, "This student's details couldn't be opened."), 'error')
-          }
-        })
+        return openProfile(student.studentId)
       case 'message':
         return setMessageFor(student)
       case 'resend_invite':
@@ -327,8 +317,6 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
           onConfirm={() => printQr(printFor)}
         />
       )}
-
-      {viewing && <StudentViewModal isOpen onClose={() => setViewing(null)} student={viewing} />}
 
       <AvatarPickerModal
         isOpen={avatarFor !== null}

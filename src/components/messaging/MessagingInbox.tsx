@@ -26,6 +26,9 @@ interface MessagingInboxProps {
   /** Hide the New message button (admin oversight). */
   hideNewMessage?: boolean
   emptyHint?: string
+  /** Desktop: grow into the page's flex column instead of a fixed viewport
+   *  height, so the composer stays on screen whatever sits above the inbox. */
+  fillHeight?: boolean
 }
 
 const LIST_REFRESH_MS = 30_000
@@ -44,6 +47,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
   newMessageClassId,
   hideNewMessage = false,
   emptyHint,
+  fillHeight = false,
 }) => {
   const t = toneClasses(tone)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -123,7 +127,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
 
   return (
     <>
-      <div className={`flex h-[calc(100vh-13rem)] min-h-[520px] overflow-hidden ${t.card}`}>
+      <div className={`flex h-[calc(100vh-13rem)] min-h-[520px] overflow-hidden ${fillHeight ? 'lg:h-auto lg:min-h-[420px] lg:flex-1' : ''} ${t.card}`}>
         {/* List pane */}
         <div className={`${showList ? 'flex' : 'hidden'} w-full flex-col lg:flex lg:w-[360px] lg:flex-shrink-0 lg:border-r ${t.divider}`}>
           {!hideNewMessage && (

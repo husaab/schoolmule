@@ -16,6 +16,7 @@ import { TermPayload } from '@/services/types/term';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams';
+import StudentNameLink from '@/components/student/profile/StudentNameLink';
 
 function GenerateReportCardsPageContent() {
   const user = useUserStore((state) => state.user);
@@ -382,7 +383,7 @@ function GenerateReportCardsPageContent() {
                                 }`}
                               >
                                 <div className="flex-1">
-                                  <p className="font-medium text-gray-800">{student.name}</p>
+                                  <p className="font-medium text-gray-800"><StudentNameLink studentId={student.studentId}>{student.name}</StudentNameLink></p>
                                   <p className="text-gray-600 text-sm">Grade {student.grade}</p>
                                 </div>
                                 <input

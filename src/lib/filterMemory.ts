@@ -7,6 +7,8 @@
 // year switch, never resurrects filters (class ids, term names) that are not
 // theirs. sessionStorage keeps two tabs from fighting and empties with the tab.
 
+import { STUDENT_PROFILE_PARAMS } from './studentProfileUrl'
+
 export const FILTER_MEMORY_PREFIX = 'sm.filters.v1:'
 
 /** Query keys that describe a moment, not a filter: never remembered. */
@@ -24,6 +26,8 @@ export const DEFAULT_TRANSIENT_KEYS: readonly string[] = [
   // OAuth round-trip outcomes (see useOAuthOutcome)
   'qbo',
   'google',
+  // The student profile modal, open over any page (see lib/studentProfileUrl)
+  ...Object.values(STUDENT_PROFILE_PARAMS),
 ]
 
 /** The subset of the Storage interface the memory needs; sessionStorage fits. */

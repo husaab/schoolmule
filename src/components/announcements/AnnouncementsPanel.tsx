@@ -19,6 +19,8 @@ interface Props {
   /** Class picker options (value = classId), already scoped to the current term. */
   classes: SearchableOption[]
   presetClassId?: string
+  /** Desktop: grow into the page's flex column instead of a fixed viewport height. */
+  fillHeight?: boolean
 }
 
 const REFRESH_MS = 30_000
@@ -28,7 +30,7 @@ const REFRESH_MS = 30_000
  * announcement on the right with read receipts and edit/delete. The open id
  * lives in ?announcement= so emails deep-link straight to it.
  */
-const AnnouncementsPanel: React.FC<Props> = ({ tone, classes, presetClassId }) => {
+const AnnouncementsPanel: React.FC<Props> = ({ tone, classes, presetClassId, fillHeight = false }) => {
   const t = toneClasses(tone)
   const router = useRouter()
   const pathname = usePathname()
@@ -93,7 +95,7 @@ const AnnouncementsPanel: React.FC<Props> = ({ tone, classes, presetClassId }) =
 
   return (
     <>
-      <div className={`flex h-[calc(100vh-16rem)] min-h-[520px] overflow-hidden ${t.card}`}>
+      <div className={`flex h-[calc(100vh-16rem)] min-h-[520px] overflow-hidden ${fillHeight ? 'lg:h-auto lg:min-h-[420px] lg:flex-1' : ''} ${t.card}`}>
         {/* List pane */}
         <div className={`${showList ? 'flex' : 'hidden'} w-full flex-col lg:flex lg:w-[380px] lg:flex-shrink-0 lg:border-r ${t.divider}`}>
           <div className={`flex items-center justify-between border-b px-3 py-2.5 ${t.divider}`}>

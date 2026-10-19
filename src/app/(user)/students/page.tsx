@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import StudentAddModal from '@/components/student/add/studentAddModal';
-import StudentViewModal from '@/components/student/view/studentViewModal';
 import StudentDeleteModal from '@/components/student/delete/studentDeleteModal';
 import StudentEditModal from '@/components/student/edit/studentEditModal';
 import StudentArchiveModal from '@/components/student/archive/studentArchiveModal';
@@ -15,6 +14,11 @@ import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import StudentNameLink from '@/components/student/profile/StudentNameLink';
+import Avatar from '@/components/avatar/Avatar';
+import { studentAvatar } from '@/lib/studentAvatar';
+import { useStudentProfile } from '@/hooks/useStudentProfile';
+import { useStudentProfileStore } from '@/store/useStudentProfileStore';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
 import Spinner from '@/components/Spinner';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -36,13 +40,16 @@ const StudentsContent = () => {
     const gradeFilter = get('grade');
     const showArchived = get('archived') === '1';
     const [showAddModal, setShowAddModal] = useState(false);
-    const [viewStudent, setViewStudent] = useState<StudentPayload | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<StudentPayload | null>(null);
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null);
     const [archiveTarget, setArchiveTarget] = useState<StudentPayload | null>(null);
     const [unarchiveTarget, setUnarchiveTarget] = useState<StudentPayload | null>(null);
     const [messageTarget, setMessageTarget] = useState<StudentPayload | null>(null);
     const router = useRouter();
+    // Rows open the student's full profile as a modal over this list.
+    const { open: openProfile } = useStudentProfile();
+    // ...which bumps this when it edits, archives or deletes someone.
+    const profileChanges = useStudentProfileStore((s) => s.changeVersion);
 
     const loadStudents = useCallback(async () => {
         if (!user.school) return;
@@ -66,7 +73,7 @@ const StudentsContent = () => {
         } finally {
             setLoading(false);
         }
-    }, [user.school, showArchived, selectedYearId]); // refetch when the selected school year changes
+    }, [user.school, showArchived, selectedYearId, profileChanges]); // refetch when the selected school year changes, or the profile modal changed a student
 
     useEffect(() => {
         loadStudents();
@@ -261,27 +268,30 @@ const StudentsContent = () => {
                                             {filteredStudents.map((student) => (
                                                 <tr
                                                     key={student.studentId}
-                                                    onClick={() => setViewStudent(student)}
+                                                    onClick={() => openProfile(student.studentId)}
                                                     onKeyDown={(e) => {
+                                                        // Keys pressed on the row's own buttons and links are theirs.
+                                                        if (e.target !== e.currentTarget) return
                                                         if (e.key === 'Enter' || e.key === ' ') {
                                                             e.preventDefault()
-                                                            setViewStudent(student)
+                                                            openProfile(student.studentId)
                                                         }
                                                     }}
                                                     tabIndex={0}
                                                     role="button"
-                                                    aria-label={`View ${student.name}`}
+                                                    aria-label={`Open ${student.name}'s profile`}
                                                     className={`hover:bg-slate-50 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500 ${showArchived ? 'opacity-75' : ''} group`}
                                                 >
                                                     <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                                                                <UserIcon className="h-4 w-4 text-cyan-600" />
-                                                            </div>
+                                                            <Avatar name={student.name} avatar={studentAvatar(student)} size={32} />
                                                             <div>
-                                                                <div className="text-sm font-medium text-slate-900">
+                                                                <StudentNameLink
+                                                                    studentId={student.studentId}
+                                                                    className="text-sm font-medium text-slate-900 hover:text-cyan-700 hover:underline"
+                                                                >
                                                                     {student.name}
-                                                                </div>
+                                                                </StudentNameLink>
                                                                 {showArchived && (
                                                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
                                                                         Archived
@@ -319,7 +329,7 @@ const StudentsContent = () => {
                                                         </td>
                                                     )}
                                                     <td className="sticky right-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                                        {/* Row itself opens the view modal, so keep these actions from bubbling into it. */}
+                                                        {/* Row itself opens the profile, so keep these actions from bubbling into it. */}
                                                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                             {!showArchived && (
                                                                 <button
@@ -331,9 +341,9 @@ const StudentsContent = () => {
                                                                 </button>
                                                             )}
                                                             <button
-                                                                onClick={() => setViewStudent(student)}
+                                                                onClick={() => openProfile(student.studentId)}
                                                                 className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
-                                                                title="View Student"
+                                                                title="View profile"
                                                             >
                                                                 <EyeIcon className="h-5 w-5" />
                                                             </button>
@@ -389,18 +399,6 @@ const StudentsContent = () => {
                     onClose={() => setShowAddModal(false)}
                     onAdd={() => loadStudents()}
                 />
-
-                {viewStudent && (
-                    <StudentViewModal
-                        isOpen={!!viewStudent}
-                        onClose={() => setViewStudent(null)}
-                        student={viewStudent}
-                        onEdit={showArchived ? undefined : () => {
-                            setEditStudent(viewStudent)
-                            setViewStudent(null)
-                        }}
-                    />
-                )}
 
                 {editStudent && (
                     <StudentEditModal

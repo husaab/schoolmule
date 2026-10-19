@@ -49,6 +49,7 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; activeTermName?: st
           tone="staff"
           classes={classOptions}
           presetClassId={classId || undefined}
+          fillHeight
         />
       ) : (
         <MessagingInbox
@@ -56,6 +57,7 @@ const StaffMessagesBody: React.FC<{ classes: ClassPayload[]; activeTermName?: st
           role={role}
           fixedFilters={classId ? { classId } : undefined}
           newMessageClassId={classId || undefined}
+          fillHeight
           emptyHint={
             classes.length === 0
               ? 'You are not assigned to any class this year.'
@@ -117,10 +119,13 @@ const StaffMessagesPage: React.FC = () => {
     <>
       <Navbar />
       <Sidebar />
-      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-[1600px] mx-auto space-y-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+      {/* Desktop: the page is exactly one viewport tall and the inbox takes
+          whatever the header leaves, so the open chat and its composer are
+          always on screen; only the message list scrolls. */}
+      <main className="lg:ml-72 pt-20 min-h-screen lg:h-screen flex flex-col bg-slate-50">
+        <div className="flex flex-col flex-1 lg:min-h-0 gap-5 p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
+          <div className="flex flex-shrink-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
                 <ChatBubbleLeftRightIcon className="h-7 w-7 text-cyan-600" /> Messages
               </h1>
@@ -129,16 +134,15 @@ const StaffMessagesPage: React.FC = () => {
                 {summary.needsReply > 0 && ` ${summary.needsReply} ${summary.needsReply === 1 ? 'needs' : 'need'} a reply.`}
               </p>
             </div>
+            <div className="grid flex-shrink-0 grid-cols-2 gap-2.5 md:grid-cols-4">
+              <StatTile dense label="Needs reply" value={summary.needsReply} tone={summary.needsReply > 0 ? 'warn' : 'neutral'} loading={!loaded} />
+              <StatTile dense label="Unread conversations" value={summary.unreadConversations} loading={!loaded} />
+              <StatTile dense label="Unread messages" value={summary.unreadMessages} loading={!loaded} />
+              <StatTile dense label="New announcements" value={summary.unreadAnnouncements} loading={!loaded} />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:max-w-3xl">
-            <StatTile label="Needs reply" value={summary.needsReply} tone={summary.needsReply > 0 ? 'warn' : 'neutral'} loading={!loaded} />
-            <StatTile label="Unread conversations" value={summary.unreadConversations} loading={!loaded} />
-            <StatTile label="Unread messages" value={summary.unreadMessages} loading={!loaded} />
-            <StatTile label="New announcements" value={summary.unreadAnnouncements} loading={!loaded} />
-          </div>
-
-          <Suspense fallback={<div className="h-[520px] rounded-2xl border border-slate-200/70 bg-white" />}>
+          <Suspense fallback={<div className="h-[520px] lg:h-auto lg:min-h-[420px] lg:flex-1 rounded-2xl border border-slate-200/70 bg-white" />}>
             <StaffMessagesBody classes={classes} activeTermName={activeTermName} role={role} />
           </Suspense>
         </div>
