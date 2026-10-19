@@ -1,14 +1,7 @@
 'use client'
 
-import React from 'react'
-import {
-  AcademicCapIcon,
-  ArchiveBoxIcon,
-  BuildingLibraryIcon,
-  ChatBubbleLeftRightIcon,
-  PencilIcon,
-  UserIcon,
-} from '@heroicons/react/24/outline'
+import React, { useEffect, useRef, useState } from 'react'
+import { AcademicCapIcon, ArchiveBoxIcon, BuildingLibraryIcon, ChatBubbleLeftRightIcon, PencilIcon, UserIcon } from '@heroicons/react/24/outline'
 import MenuButton, { type MenuItem } from '@/components/shared/MenuButton'
 import { getGradeDisplayName, getSchoolName } from '@/lib/schoolUtils'
 import { PROFILE_TABS, formatStamp, type ProfileTab } from '@/lib/studentProfile'
@@ -29,12 +22,44 @@ interface ProfileHeaderProps {
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabBadges = {}, onMessage, onEdit, menuItems }) => {
   const archived = Boolean(student.isArchived)
+  const gradeLabel = student.grade ? getGradeDisplayName(student.grade) : 'No grade'
 
-  // Identity scrolls away with the content; the tab bar stays pinned to the
-  // top of the modal. Both leave room on the right for the modal's close button.
+  // The identity block scrolls away with the content. Once it has, a slim bar
+  // with the student's name takes its place, pinned above the tab bar. The
+  // sentinel sits one bar-height above the identity's bottom edge, which is
+  // the exact scroll point where the tabs pin under the bar. The observer uses
+  // the viewport, but the modal's scroll area clips what counts as visible.
+  // Everything pinned leaves room on the right for the modal's close button.
+  const [condensed, setCondensed] = useState(false)
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setCondensed(!entry.isIntersecting))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
-      <div className="flex flex-col gap-5 border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-6 pl-5 pr-14 sm:pl-6 md:flex-row md:items-center md:justify-between md:pr-16">
+      {/* Zero-height so showing the bar never shifts the content beneath it. */}
+      <div className="sticky top-0 z-10 h-0" aria-hidden>
+        <div
+          className={`absolute inset-x-0 top-0 flex h-14 items-center gap-3 border-b border-slate-100 bg-white pl-5 pr-14 transition-all duration-200 motion-reduce:transition-none sm:pl-6 md:pr-16 ${
+            condensed ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
+          }`}
+        >
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-xs font-semibold text-white">
+            {initials(student.name)}
+          </div>
+          <p className="truncate font-semibold text-slate-900">{student.name}</p>
+          <span className="hidden flex-shrink-0 rounded-md bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-700 sm:inline">{gradeLabel}</span>
+          {archived && <span className="flex-shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">Archived</span>}
+        </div>
+      </div>
+
+      <div className="relative flex flex-col gap-5 border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-6 pl-5 pr-14 sm:pl-6 md:flex-row md:items-center md:justify-between md:pr-16">
+        <div ref={sentinel} className="pointer-events-none absolute inset-x-0 bottom-14 h-px" />
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 text-xl font-semibold tracking-wide text-white shadow-sm">
             {initials(student.name)}
@@ -44,7 +69,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-2 py-1 text-sm font-medium text-purple-700">
                 <AcademicCapIcon className="h-4 w-4" />
-                {student.grade ? getGradeDisplayName(student.grade) : 'No grade'}
+                {gradeLabel}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">OEN</span>
@@ -95,7 +120,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
       </div>
 
       <nav
-        className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-slate-100 bg-white pl-3 pr-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="sticky top-14 z-10 flex gap-1 overflow-x-auto border-b border-slate-100 bg-white pl-3 pr-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Student profile sections"
       >
         {PROFILE_TABS.map((t) => {

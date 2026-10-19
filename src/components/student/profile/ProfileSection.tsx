@@ -15,7 +15,10 @@ const ACCOUNT_PILL: Record<GuardianAccount['status'], [string, string]> = {
 
 // Who the student is and how to reach their family: the first thing on the
 // profile's Overview, above their progress.
-const ProfileSection: React.FC<{ overview: StudentOverview; onEdit: (() => void) | null }> = ({ overview, onEdit }) => {
+const ProfileSection: React.FC<{
+  overview: StudentOverview
+  onEdit: (() => void) | null
+}> = ({ overview, onEdit }) => {
   const s = overview.student
   const dob = clean(s.dateOfBirth)
   const address = clean(s.address)
@@ -24,8 +27,8 @@ const ProfileSection: React.FC<{ overview: StudentOverview; onEdit: (() => void)
   const emergency = clean(s.emergencyContact)
 
   return (
-    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
-      <Card className="xl:col-span-2" title="Guardians" subtitle="On file from registration or manual entry">
+    <div className="space-y-6">
+      <Card title="Guardians" subtitle="On file from registration or manual entry">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <GuardianCard role="Mother" person={s.mother} />
           <GuardianCard role="Father" person={s.father} />
@@ -67,50 +70,60 @@ const ProfileSection: React.FC<{ overview: StudentOverview; onEdit: (() => void)
           ) : undefined
         }
       >
-        <div className="space-y-5">
-          <section className="space-y-2">
-            <SectionLabel>Homeroom</SectionLabel>
-            <p className="flex items-center gap-2 text-sm">
-              <UserIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
-              {s.homeroomTeacherName ? (
-                <span className="text-slate-700">{s.homeroomTeacherName}</span>
-              ) : (
-                <span className="text-slate-400">No homeroom teacher assigned</span>
-              )}
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <SectionLabel>Personal</SectionLabel>
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center gap-2">
-                <CakeIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
-                {dob ? (
-                  <span className="text-slate-700">{formatDay(dob, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+        <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-5">
+            <section className="space-y-2">
+              <SectionLabel>Homeroom</SectionLabel>
+              <p className="flex items-center gap-2 text-sm">
+                <UserIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                {s.homeroomTeacherName ? (
+                  <span className="text-slate-700">{s.homeroomTeacherName}</span>
                 ) : (
-                  <span className="text-slate-400">No date of birth</span>
+                  <span className="text-slate-400">No homeroom teacher assigned</span>
                 )}
               </p>
-              <p className="flex items-center gap-2">
-                <IdentificationIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
-                {healthCard ? <span className="font-mono text-slate-700">{healthCard}</span> : <span className="text-slate-400">No health card number</span>}
-              </p>
-              <p className="flex items-start gap-2">
-                <HomeIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
-                {address ? <span className="text-slate-700">{address}</span> : <span className="text-slate-400">No address</span>}
-              </p>
-            </div>
-          </section>
+            </section>
 
-          {medical && (
             <section className="space-y-2">
-              <SectionLabel>Medical</SectionLabel>
+              <SectionLabel>Personal</SectionLabel>
+              <div className="space-y-2 text-sm">
+                <p className="flex items-center gap-2">
+                  <CakeIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  {dob ? (
+                    <span className="text-slate-700">
+                      {formatDay(dob, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">No date of birth</span>
+                  )}
+                </p>
+                <p className="flex items-center gap-2">
+                  <IdentificationIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  {healthCard ? <span className="font-mono text-slate-700">{healthCard}</span> : <span className="text-slate-400">No health card number</span>}
+                </p>
+                <p className="flex items-start gap-2">
+                  <HomeIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+                  {address ? <span className="text-slate-700">{address}</span> : <span className="text-slate-400">No address</span>}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <section className="space-y-2">
+            <SectionLabel>Medical</SectionLabel>
+            {medical ? (
               <div className="flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
                 <HeartIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-rose-500" />
                 <MedicalNote text={medical} />
               </div>
-            </section>
-          )}
+            ) : (
+              <p className="text-sm text-slate-400">No medical notes on file</p>
+            )}
+          </section>
 
           <section className="space-y-2">
             <SectionLabel>Emergency contact</SectionLabel>
@@ -123,18 +136,18 @@ const ProfileSection: React.FC<{ overview: StudentOverview; onEdit: (() => void)
               <p className="text-sm text-slate-400">No emergency contact on file</p>
             )}
           </section>
+        </div>
 
-          <div className="border-t border-slate-100 pt-4 text-xs text-slate-400">
-            <p>
-              Added {formatStamp(s.createdAt)} · Updated {formatStamp(s.lastModifiedAt)}
+        <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-400">
+          <p>
+            Added {formatStamp(s.createdAt)} · Updated {formatStamp(s.lastModifiedAt)}
+          </p>
+          {s.sourceSubmissionId && (
+            <p className="mt-0.5 inline-flex items-center gap-1 text-slate-500">
+              <DocumentTextIcon className="h-3.5 w-3.5" />
+              Imported from a registration form
             </p>
-            {s.sourceSubmissionId && (
-              <p className="mt-0.5 inline-flex items-center gap-1 text-slate-500">
-                <DocumentTextIcon className="h-3.5 w-3.5" />
-                Imported from a registration form
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </Card>
     </div>
