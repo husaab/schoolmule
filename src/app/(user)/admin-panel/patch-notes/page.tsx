@@ -7,6 +7,7 @@ import Sidebar from '@/components/sidebar/Sidebar';
 import Modal from '@/components/shared/modal';
 import CategoryTag from '@/components/patchNotes/CategoryTag';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
 import {
   getAllPatchNotesAdmin,
   createPatchNote,
@@ -70,6 +71,22 @@ export default function AdminPatchNotesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  // The screenshot is resized (PNG kept, 2400 px) as soon as it is picked; Save waits for it.
+  const [preparingImage, setPreparingImage] = useState(false);
+
+  const pickImage = async (picked: File | null) => {
+    if (!picked) {
+      setForm((p) => ({ ...p, imageFile: null }));
+      return;
+    }
+    setPreparingImage(true);
+    try {
+      const [ready] = await prepareUploads([picked], 'screenshot');
+      setForm((p) => ({ ...p, imageFile: ready }));
+    } finally {
+      setPreparingImage(false);
+    }
+  };
 
   const loadNotes = async () => {
     try {
@@ -329,11 +346,14 @@ export default function AdminPatchNotesPage() {
             <input
               type="file"
               accept="image/png,image/jpeg,image/gif,image/webp"
-              onChange={(e) =>
-                setForm((p) => ({ ...p, imageFile: e.target.files?.[0] || null }))
-              }
+              onChange={(e) => void pickImage(e.target.files?.[0] || null)}
               className="w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
             />
+            {preparingImage ? (
+              <p role="status" className="mt-1 text-xs text-slate-500">Resizing the screenshot…</p>
+            ) : form.imageFile ? (
+              <p className="mt-1 text-xs text-slate-500">{uploadSizeLabel(form.imageFile)}</p>
+            ) : null}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -345,7 +365,7 @@ export default function AdminPatchNotesPage() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || preparingImage}
               className="bg-gradient-to-r from-cyan-600 to-teal-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:from-cyan-500 hover:to-teal-500 transition-all disabled:opacity-50"
             >
               {submitting ? 'Saving...' : editingId ? 'Update' : 'Create'}

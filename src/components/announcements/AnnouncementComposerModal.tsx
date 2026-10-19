@@ -11,6 +11,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { createAnnouncement, getAnnouncementTargets, getPickableStudents, previewAudience, sendAnnouncementPreviewEmail, updateAnnouncement } from '@/services/announcementService'
 import type { AnnouncementDetail, AnnouncementScope, AnnouncementSender, AnnouncementTargets, AudiencePreview, PickableStudent } from '@/services/types/announcement'
 import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
+import { uploadSizeLabel } from '@/lib/uploadPrep'
 import type { Tone } from '@/components/messaging/tones'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import StudentPicker from './StudentPicker'
@@ -190,6 +191,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
   )
 
   const ready =
+    files.preparing === 0 &&
     title.trim().length > 0 &&
     title.length <= MAX_TITLE &&
     body.trim().length > 0 &&
@@ -374,7 +376,7 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
             placeholder="What should every family know?"
           />
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <input ref={files.fileInput} type="file" multiple accept={files.accept} className="hidden" onChange={(e) => files.addFiles(e.target.files)} />
+            <input ref={files.fileInput} type="file" multiple accept={files.accept} className="hidden" onChange={(e) => void files.addFiles(e.target.files)} />
             <Button type="button" variant="secondary" onClick={() => files.fileInput.current?.click()} disabled={files.full} className="!px-3 !py-1.5 !text-xs">
               <PaperClipIcon className="h-4 w-4" /> Attach
             </Button>
@@ -395,13 +397,19 @@ const AnnouncementComposerModal: React.FC<Props> = ({ isOpen, onClose, tone, mod
             {files.files.map((f) => (
               <span key={`${f.name}-${f.size}`} className="inline-flex items-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 py-1 pl-2 pr-1 text-xs text-slate-700">
                 <span className="max-w-[160px] truncate">{f.name}</span>
-                <span className="text-slate-400">{formatBytes(f.size)}</span>
+                <span className="text-slate-400">{uploadSizeLabel(f)}</span>
                 <button type="button" aria-label={`Remove ${f.name}`} onClick={() => files.removeFile(f)} className="rounded p-0.5 text-slate-400 hover:bg-slate-200 cursor-pointer">
                   <XMarkIcon className="h-3.5 w-3.5" />
                 </button>
               </span>
             ))}
-            <span className="text-[11px] text-slate-400">Up to 5 files · 10 MB each</span>
+            {files.preparing > 0 ? (
+              <span role="status" className="text-[11px] text-slate-500">
+                Resizing {files.preparing === 1 ? 'a picture' : `${files.preparing} pictures`}…
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400">Up to 5 files · 10 MB each (photos are resized)</span>
+            )}
           </div>
         </Field>
 

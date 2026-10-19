@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpTrayIcon, LinkIcon } from '@heroicons/react/24/outline'
 import AttachmentPreviewModal from '@/components/classroom/AttachmentPreviewModal'
 import { ATTACHMENT_ACCEPT, UPLOAD_BATCH, checkNewFiles, fileTitlePatch, youtubeIdOf } from '@/lib/attachments'
+import { prepareUploads } from '@/lib/uploadPrep'
 import {
   addLink as apiAddLink,
   deleteAttachment,
@@ -80,12 +81,15 @@ export interface AttachmentsState {
   clearProblems: () => void
   /** Rows not saved yet (waiting for the item, or failed). */
   pendingCount: number
-  addFiles: (files: File[]) => void
+  /** Pictures still being resized before they are added (they aren't rows yet). */
+  preparing: number
+  /** Resizes the pictures first, then checks and adds them. */
+  addFiles: (files: File[]) => Promise<void>
   addLink: (title: string | null, url: string) => Promise<string | null>
   saveLink: (key: string, title: string | null, url: string) => Promise<string | null>
   /** A file's display title (blank = its own name); a file still waiting keeps it until it uploads. */
   renameFile: (key: string, title: string) => Promise<string | null>
-  replace: (key: string, file: File) => void
+  replace: (key: string, file: File) => Promise<void>
   remove: (key: string) => void
   retry: (key: string) => void
   /** A fresh address for a row's preview. */
@@ -101,6 +105,7 @@ export interface AttachmentsState {
 export function useAttachmentRows(initial: Attachment[], itemId: string | null): AttachmentsState {
   const [rows, setRows] = useState<AttachmentEditorRow[]>(() => initial.map(savedRow))
   const [problems, setProblems] = useState<string[]>([])
+  const [preparing, setPreparing] = useState(0)
   const itemRef = useRef(itemId)
   const rowsRef = useRef(rows)
   useEffect(() => {
@@ -176,8 +181,17 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
     [settleUploaded, sendLocalTitles],
   )
 
+  // Every picture is resized before it is checked (src/lib/uploadPrep.ts): a 12 MB phone photo goes up as
+  // a ~1 MB JPEG instead of being refused as over 10 MB. PDFs, GIFs and documents go up as they are.
   const addFiles = useCallback(
-    (files: File[]) => {
+    async (picked: File[]) => {
+      setPreparing((n) => n + picked.length)
+      let files: File[]
+      try {
+        files = await prepareUploads(picked, 'attachment')
+      } finally {
+        setPreparing((n) => n - picked.length)
+      }
       const { accepted, problems: found } = checkNewFiles(files, rowsRef.current.length)
       setProblems(found)
       if (accepted.length === 0) return
@@ -245,7 +259,16 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
   )
 
   const replace = useCallback(
-    (key: string, file: File) => {
+    async (key: string, picked: File) => {
+      if (!rowsRef.current.some((r) => r.key === key)) return
+      setPreparing((n) => n + 1)
+      let file: File
+      try {
+        ;[file] = await prepareUploads([picked], 'attachment')
+      } finally {
+        setPreparing((n) => n - 1)
+      }
+      // The row may have gone while the picture was resized.
       const row = rowsRef.current.find((r) => r.key === key)
       if (!row) return
       const { accepted, problems: found } = checkNewFiles([file], 0)
@@ -331,6 +354,7 @@ export function useAttachmentRows(initial: Attachment[], itemId: string | null):
     problems,
     clearProblems: () => setProblems([]),
     pendingCount: rows.filter((r) => !r.saved).length,
+    preparing,
     addFiles,
     addLink,
     saveLink,
@@ -389,7 +413,7 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
                 row={row}
                 disabled={disabled}
                 onPreview={() => setPreviewing(row)}
-                onReplace={(file) => state.replace(row.key, file)}
+                onReplace={(file) => void state.replace(row.key, file)}
                 onEdit={() => {
                   setAddingLink(false)
                   setEditingKey(row.key)
@@ -412,6 +436,12 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
             return problem
           }}
         />
+      )}
+
+      {state.preparing > 0 && (
+        <span role="status" className="text-xs text-slate-500">
+          {state.preparing === 1 ? 'Getting the file ready (pictures are resized first)…' : `Getting ${state.preparing} files ready (pictures are resized first)…`}
+        </span>
       )}
 
       {state.problems.length > 0 && (
@@ -461,7 +491,7 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
             onChange={(e) => {
               const files = Array.from(e.target.files ?? [])
               e.target.value = ''
-              if (files.length) state.addFiles(files)
+              if (files.length) void state.addFiles(files)
             }}
           />
         </div>

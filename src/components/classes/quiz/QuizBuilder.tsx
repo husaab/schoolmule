@@ -51,12 +51,14 @@ import {
   moveInList,
   newQuestion,
   notSavedLabel,
+  quizImageProblem,
   totalPoints,
   unsavedQuestions,
   validateQuestions,
   waitingLine,
   type DraftQuestion,
 } from '@/lib/quizBuilder'
+import { prepareUploads } from '@/lib/uploadPrep'
 import { getQuestions, saveQuestions, uploadQuestionImage } from '@/services/quizService'
 import { updateItem } from '@/services/classworkService'
 import type { ClassPageData } from '@/services/types/classroom'
@@ -77,9 +79,6 @@ interface QuizBuilderProps {
   /** Opened from the grading view: Close goes back there. */
   from?: 'grading' | null
 }
-
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const IMAGE_MAX_BYTES = 3 * 1024 * 1024
 
 const messageOf = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback)
 
@@ -239,13 +238,17 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
     e.target.value = ''
     const key = imageTarget
     if (!file || !key) return
-    if (!IMAGE_TYPES.includes(file.type) || file.size > IMAGE_MAX_BYTES) {
-      notify('Use a JPEG, PNG or WebP image up to 3 MB.', 'error')
-      return
-    }
     setUploading((s) => new Set(s).add(key))
     try {
-      const res = await uploadQuestionImage(itemId, file)
+      // A phone photo is resized first (a HEIC the browser reads becomes a JPEG), then checked: never refused for
+      // being a big photo.
+      const [ready] = await prepareUploads([file], 'quizImage')
+      const problem = quizImageProblem(ready)
+      if (problem) {
+        notify(problem, 'error')
+        return
+      }
+      const res = await uploadQuestionImage(itemId, ready)
       const q = latest.current.find((x) => x.key === key)
       if (q) updateOne(key, { ...q, imagePath: res.data.imagePath, imageUrl: res.data.url })
     } catch (err) {
@@ -534,7 +537,7 @@ export default function QuizBuilder({ classId, page, item: initialItem, data, fr
           <input
             ref={imageInput}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
             className="hidden"
             aria-hidden="true"
             tabIndex={-1}

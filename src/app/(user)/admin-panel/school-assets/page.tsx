@@ -14,6 +14,7 @@ import {
   clearSchoolUrlCache
 } from '@/services/schoolAssetService';
 import type { AssetType, SchoolAsset } from '@/services/types/schoolAsset';
+import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
 interface AssetUpload {
@@ -156,9 +157,11 @@ const SchoolAssetsPage = () => {
     }
   ];
 
-  const handleFileSelect = (assetType: keyof typeof assets, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = async (assetType: keyof typeof assets, event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = event.target.files?.[0];
+    if (!picked) return;
+    // Resized first (2400 px, a PNG stays a PNG so a logo keeps its see-through parts), then checked.
+    const [file] = await prepareUploads([picked], 'logo');
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
@@ -351,7 +354,7 @@ const SchoolAssetsPage = () => {
                       ref={config.inputRef}
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleFileSelect(config.key, e)}
+                      onChange={(e) => void handleFileSelect(config.key, e)}
                       className="hidden"
                       id={`${config.key}-input`}
                     />
@@ -399,6 +402,10 @@ const SchoolAssetsPage = () => {
                       </div>
                     )}
                   </div>
+
+                  {asset.file && asset.preview && (
+                    <p className="-mt-2 mb-4 text-xs text-gray-500">{asset.file.name} · {uploadSizeLabel(asset.file)}</p>
+                  )}
 
                   {/* Status Messages */}
                   {asset.error && (

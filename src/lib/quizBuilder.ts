@@ -446,3 +446,21 @@ export function keepUnfinished(itemId: string, questions: DraftQuestion[], opts:
 
 /** The list kept for this quiz (see keepUnfinished), or null. */
 export const keptUnfinished = (itemId: string): DraftQuestion[] | null => keptLists.get(itemId) ?? null
+
+// ---------------------------------------------------------------------------
+// A question's picture
+
+export const QUIZ_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+export const QUIZ_IMAGE_LIMIT_BYTES = 3 * 1024 * 1024
+
+/**
+ * Why a question's picture can't go up, or null. Run on the picture AFTER it
+ * was resized (src/lib/uploadPrep.ts, preset 'quizImage'): a phone photo is
+ * shrunk well under 3 MB first, so only a picture the browser couldn't redraw
+ * is ever refused for its size.
+ */
+export function quizImageProblem(file: Pick<File, 'type' | 'size'>): string | null {
+  if (!QUIZ_IMAGE_TYPES.includes(file.type)) return 'Use a JPEG, PNG or WebP picture.'
+  if (file.size > QUIZ_IMAGE_LIMIT_BYTES) return "This picture is still over 3 MB after resizing. Try a smaller one, or a screenshot of it."
+  return null
+}

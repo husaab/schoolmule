@@ -9,6 +9,7 @@ import { useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { AttachmentThumb } from '@/components/classroom/AttachmentList'
 import { ATTACHMENT_ACCEPT, attachmentMeta, attachmentName, previewKind } from '@/lib/attachments'
+import { uploadSizeLabel } from '@/lib/uploadPrep'
 import type { AttachmentEditorRow } from './AttachmentsEditor'
 
 interface AttachmentRowProps {
@@ -29,7 +30,8 @@ export default function AttachmentRow({ row, disabled = false, onPreview, onRepl
   const fileInput = useRef<HTMLInputElement>(null)
   const a = row.attachment
   const name = attachmentName(a)
-  const meta = attachmentMeta(a)
+  // A file still waiting to upload says what it weighs now, and what it weighed before it was resized.
+  const meta = row.file && !row.saved ? uploadSizeLabel(row.file) : attachmentMeta(a)
   const working = row.state === 'working'
   const plainLink = previewKind(a) === 'link'
 

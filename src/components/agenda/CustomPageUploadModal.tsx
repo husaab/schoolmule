@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { XMarkIcon, ArrowUpTrayIcon, DocumentIcon } from '@heroicons/react/24/outline';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { uploadAgendaPage } from '@/services/agendaService';
+import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
 import type { AgendaAnchor } from '@/services/types/agenda';
 
 const MONTH_NAMES = [
@@ -39,8 +40,20 @@ export default function CustomPageUploadModal({
     defaultAnchor === 'month' && defaultAnchorMonth ? `month-${defaultAnchorMonth}` : defaultAnchor
   );
   const [uploading, setUploading] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
-  const handleFileChange = (selected: File | null) => {
+  // A picture is printed full-page, so it is only resized to a print-safe 3000 px (90 % JPEG, a PNG stays a
+  // PNG); a PDF goes up as it is.
+  const handleFileChange = async (picked: File | null) => {
+    let selected = picked;
+    if (picked) {
+      setPreparing(true);
+      try {
+        [selected] = await prepareUploads([picked], 'print');
+      } finally {
+        setPreparing(false);
+      }
+    }
     setFile(selected);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(selected && selected.type.startsWith('image/') ? URL.createObjectURL(selected) : null);
@@ -93,10 +106,15 @@ export default function CustomPageUploadModal({
             onClick={() => fileInputRef.current?.click()}
             className="w-full border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors cursor-pointer"
           >
-            {file ? (
+            {preparing ? (
+              <span role="status" className="text-sm text-slate-500">Resizing the picture…</span>
+            ) : file ? (
               previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewUrl} alt="Preview" className="mx-auto max-h-40 rounded-lg shadow-sm" />
+                <span className="flex flex-col items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL preview */}
+                  <img src={previewUrl} alt="Preview" className="mx-auto max-h-40 rounded-lg shadow-sm" />
+                  <span className="text-xs text-slate-500">{uploadSizeLabel(file)}</span>
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-2 text-sm text-slate-700">
                   <DocumentIcon className="w-5 h-5 text-rose-400" /> {file.name}
@@ -115,7 +133,7 @@ export default function CustomPageUploadModal({
             type="file"
             accept="application/pdf,image/png,image/jpeg"
             className="hidden"
-            onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+            onChange={(e) => void handleFileChange(e.target.files?.[0] || null)}
           />
 
           <div>
@@ -154,7 +172,7 @@ export default function CustomPageUploadModal({
             </button>
             <button
               type="submit"
-              disabled={uploading || !file}
+              disabled={uploading || preparing || !file}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl cursor-pointer disabled:opacity-50"
             >
               {uploading ? 'Uploading…' : 'Upload Page'}

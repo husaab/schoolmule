@@ -13,10 +13,11 @@ import { EyeIcon, MegaphoneIcon, PaperClipIcon, DocumentIcon, XMarkIcon } from '
 import Avatar from '@/components/avatar/Avatar'
 import StudentPicker from '@/components/announcements/StudentPicker'
 import { useAnnouncementFiles } from '@/components/announcements/useAnnouncementFiles'
-import { MAX_BODY, formatBytes } from '@/components/messaging/formatters'
+import { MAX_BODY } from '@/components/messaging/formatters'
 import { Button, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import { classTitle } from '@/lib/classesHome'
 import { emailCheckboxText } from '@/lib/classStream'
+import { uploadSizeLabel } from '@/lib/uploadPrep'
 import { createAnnouncement, getPickableStudents, previewAudience } from '@/services/announcementService'
 import type { AnnouncementDetail, AudiencePreview, PickableStudent } from '@/services/types/announcement'
 import type { StreamAudience } from '@/services/types/classroom'
@@ -136,6 +137,7 @@ export default function StreamComposer({
   const reach = mode === 'all' ? audience : chosenAudience
 
   const ready =
+    files.preparing === 0 &&
     title.trim().length > 0 &&
     title.length <= MAX_TITLE &&
     body.trim().length > 0 &&
@@ -281,7 +283,7 @@ export default function StreamComposer({
           >
             <DocumentIcon className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
             <span className="max-w-[200px] truncate">{file.name}</span>
-            <span className="text-xs text-slate-400">{formatBytes(file.size)}</span>
+            <span className="text-xs text-slate-400">{uploadSizeLabel(file)}</span>
             <button
               type="button"
               aria-label={`Preview ${file.name}`}
@@ -302,7 +304,7 @@ export default function StreamComposer({
             </button>
           </span>
         ))}
-        <input ref={files.fileInput} type="file" multiple accept={files.accept} className="hidden" onChange={(e) => files.addFiles(e.target.files)} />
+        <input ref={files.fileInput} type="file" multiple accept={files.accept} className="hidden" onChange={(e) => void files.addFiles(e.target.files)} />
         <button
           type="button"
           onClick={() => files.fileInput.current?.click()}
@@ -312,7 +314,13 @@ export default function StreamComposer({
           <PaperClipIcon className="h-4 w-4" aria-hidden="true" />
           Attach file
         </button>
-        <span className="text-[11px] text-slate-400">Up to 5 files · 10 MB each. Put links in the message.</span>
+        {files.preparing > 0 ? (
+          <span role="status" className="text-[11px] text-slate-500">
+            Resizing {files.preparing === 1 ? 'a picture' : `${files.preparing} pictures`}…
+          </span>
+        ) : (
+          <span className="text-[11px] text-slate-400">Up to 5 files · 10 MB each (photos are resized). Put links in the message.</span>
+        )}
       </div>
 
       <div className="flex flex-col gap-2.5 rounded-xl bg-slate-50 p-3.5">

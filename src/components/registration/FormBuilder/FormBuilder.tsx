@@ -24,6 +24,7 @@ import FieldTypeSelector from './FieldTypeSelector';
 import StatusBadge from './StatusBadge';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
+import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
 import dynamic from 'next/dynamic';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -113,9 +114,11 @@ export default function FormBuilder({ form, onSaved }: Props) {
 
   // ─── Banner ─────────────────────────────────────────────────────
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  // The banner is resized first (2400 px, a PNG stays a PNG, a GIF is left as it is), then checked.
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0];
+    if (picked) {
+      const [file] = await prepareUploads([picked], 'banner');
       if (file.size > 5 * 1024 * 1024) {
         showNotification('Banner image must be under 5MB', 'error');
         return;
@@ -340,9 +343,10 @@ export default function FormBuilder({ form, onSaved }: Props) {
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleBannerChange}
+                onChange={(e) => void handleBannerChange(e)}
                 className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
               />
+              {bannerFile && <p className="mt-1 text-xs text-slate-500">{bannerFile.name} · {uploadSizeLabel(bannerFile)}</p>}
             </div>
 
             {/* Description (Rich Text) */}

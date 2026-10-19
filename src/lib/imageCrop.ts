@@ -4,6 +4,8 @@
 // profile photos as a square. The server checks type and size only; it never
 // resizes, so this is where large phone photos get scaled down.
 
+import { decodeImage } from './imageDownscale'
+
 export interface CropRect {
   sx: number
   sy: number
@@ -32,26 +34,12 @@ interface Decoded {
   release: () => void
 }
 
+// The one decode helper (src/lib/imageDownscale.ts): it reads the camera's
+// orientation, so a phone photo is cropped upright on every browser.
 async function decode(file: Blob): Promise<Decoded> {
-  if (typeof createImageBitmap === 'function') {
-    try {
-      const bitmap = await createImageBitmap(file)
-      return { source: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() }
-    } catch {
-      // Fall through to an <img>, which some browsers decode more formats with.
-    }
-  }
-  const url = URL.createObjectURL(file)
-  try {
-    const img = new Image()
-    img.decoding = 'async'
-    img.src = url
-    await img.decode()
-    return { source: img, width: img.naturalWidth, height: img.naturalHeight, release: () => URL.revokeObjectURL(url) }
-  } catch {
-    URL.revokeObjectURL(url)
-    throw new Error(UNREADABLE_IMAGE)
-  }
+  const decoded = await decodeImage(file)
+  if (!decoded) throw new Error(UNREADABLE_IMAGE)
+  return decoded
 }
 
 export interface CropOptions {

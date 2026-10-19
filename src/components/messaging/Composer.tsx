@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { CheckIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { ACCEPT_ATTR, MAX_BODY, MAX_FILES, fileProblem, formatBytes, isImage } from './formatters'
+import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep'
+import { ACCEPT_ATTR, MAX_BODY, MAX_FILES, fileProblem, isImage } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
 interface ComposerProps {
@@ -21,9 +22,10 @@ interface ComposerProps {
 
 /**
  * The message box: text, attachments as removable chips, limits spelled out
- * next to the attach button. Enter sends, Shift+Enter breaks a line. Files are
- * validated here with the same rules as the server so a bad pick is refused
- * before it uploads.
+ * next to the attach button. Enter sends, Shift+Enter breaks a line. Pictures
+ * are resized first (src/lib/uploadPrep.ts), then every file is validated here
+ * with the same rules as the server, so a bad pick is refused before it
+ * uploads and a big phone photo goes up small instead of being refused.
  */
 const Composer: React.FC<ComposerProps> = ({
   tone,
@@ -39,13 +41,29 @@ const Composer: React.FC<ComposerProps> = ({
   const showNotification = useNotificationStore((s) => s.showNotification)
   const [body, setBody] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [preparing, setPreparing] = useState(0)
   const [sending, setSending] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  // The list as it stands after the resize's await (the render's `files` may be stale by then).
+  const filesRef = useRef(files)
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
 
-  const addFiles = (picked: FileList | null) => {
+  const addFiles = async (picked: FileList | null) => {
     if (!picked) return
-    const next = [...files]
-    for (const f of Array.from(picked)) {
+    const chosen = Array.from(picked)
+    if (fileInput.current) fileInput.current.value = ''
+    if (chosen.length === 0) return
+    setPreparing((n) => n + chosen.length)
+    let ready: File[]
+    try {
+      ready = await prepareUploads(chosen, 'attachment')
+    } finally {
+      setPreparing((n) => n - chosen.length)
+    }
+    const next = [...filesRef.current]
+    for (const f of ready) {
       if (next.length >= MAX_FILES) {
         showNotification(`At most ${MAX_FILES} files per message`, 'error')
         break
@@ -58,11 +76,11 @@ const Composer: React.FC<ComposerProps> = ({
       if (next.some((x) => x.name === f.name && x.size === f.size)) continue
       next.push(f)
     }
+    filesRef.current = next
     setFiles(next)
-    if (fileInput.current) fileInput.current.value = ''
   }
 
-  const canSend = !disabled && !sending && (body.trim().length > 0 || files.length > 0) && body.length <= MAX_BODY
+  const canSend = !disabled && !sending && preparing === 0 && (body.trim().length > 0 || files.length > 0) && body.length <= MAX_BODY
 
   const send = async () => {
     if (!canSend) return
@@ -94,7 +112,7 @@ const Composer: React.FC<ComposerProps> = ({
                 </span>
               ) : null}
               <span className="max-w-[160px] truncate">{f.name}</span>
-              <span className="text-slate-400">{formatBytes(f.size)}</span>
+              <span className="text-slate-400">{uploadSizeLabel(f)}</span>
               <button
                 type="button"
                 aria-label={`Remove ${f.name}`}
@@ -132,16 +150,21 @@ const Composer: React.FC<ComposerProps> = ({
           multiple
           accept={ACCEPT_ATTR}
           className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
+          onChange={(e) => void addFiles(e.target.files)}
         />
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          disabled={disabled || sending || files.length >= MAX_FILES}
+          disabled={disabled || sending || files.length + preparing >= MAX_FILES}
           className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium ${t.secondary} cursor-pointer disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <PaperClipIcon className="h-4 w-4" /> Attach
         </button>
+        {preparing > 0 && (
+          <span role="status" className="text-[11px] text-slate-500">
+            Resizing {preparing === 1 ? 'a picture' : `${preparing} pictures`}…
+          </span>
+        )}
         <span className="flex-1" />
         {recipientsLabel && (
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
