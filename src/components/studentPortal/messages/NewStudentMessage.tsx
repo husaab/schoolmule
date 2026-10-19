@@ -3,7 +3,8 @@
 // of the student's own teachers to pick from, a subject ("What is it about?"),
 // the message, and a note saying plainly that their parents will be in the
 // conversation too. A teacher who teaches several of the student's classes gets
-// a small "About" choice. The server decides who is allowed; this only offers
+// an "About which class?" choice, which the student must make (nothing is
+// picked for them, smoke S7). The server decides who is allowed; this only offers
 // the teachers it listed. A refused send keeps everything that was typed.
 'use client'
 
@@ -14,6 +15,7 @@ import {
   BODY_MAX,
   SUBJECT_MAX,
   guardiansNote,
+  needsClassChoice,
   newMessageProblem,
   resolveCompose,
   teacherClassesLine,
@@ -56,7 +58,7 @@ export default function NewStudentMessage({
   const [failure, setFailure] = useState<string | null>(null)
 
   const choice = resolveCompose(targets, teacherId, classId)
-  const problem = newMessageProblem({ teacherId: choice.teacher?.userId ?? null, subject, body })
+  const problem = newMessageProblem({ teacherId: choice.teacher?.userId ?? null, needsClass: needsClassChoice(choice), subject, body })
   const canSend = !problem && !sending && !previewing
 
   const send = async () => {

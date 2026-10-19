@@ -64,6 +64,7 @@ import { guardedLinkTarget, keepEdits, takeEdits } from '@/lib/leaveGuard'
 import { isJK, isSK } from '@/lib/schoolUtils'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { isApiError } from '@/services/apiClient'
+import { previewAudience } from '@/services/announcementService'
 import { createItem, updateItem } from '@/services/classworkService'
 import type { ClassPageData } from '@/services/types/classroom'
 import type { ClassworkData, ColumnOption, Item, ItemKind, ItemStatus, Topic } from '@/services/types/classwork'
@@ -166,6 +167,21 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null)
 
   const attachments = useAttachmentRows(item?.attachments ?? [], itemId)
+  // How many of the class's students an item email reaches (they sign in): the Emails card says so, not the roster.
+  const [emailableStudents, setEmailableStudents] = useState<number | null>(null)
+  useEffect(() => {
+    if (kind === 'assessment' || kind === 'material') return
+    let cancelled = false
+    previewAudience({ scope: 'class', classId }).then(
+      (res) => {
+        if (!cancelled && res.data) setEmailableStudents(res.data.studentsWithAccount ?? 0)
+      },
+      () => undefined,
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [classId, kind])
   // A scheduled item whose time has come is live, even before the scheduler's next run.
   const status: ItemStatus | null = saved ? (saved.effectiveStatus === 'posted' ? 'posted' : saved.status) : null
   const autosaves = (kind === 'assignment' || kind === 'quiz') && (status === null || status === 'draft')
@@ -659,6 +675,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     classId,
     subject: cls.subject,
     studentCount: cls.studentCount,
+    emailableStudents,
     values,
     set,
     errors: shownErrors,

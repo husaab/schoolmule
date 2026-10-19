@@ -147,15 +147,16 @@ export function teacherClassesLine(teacher: Pick<StudentTargetTeacher, 'classes'
 
 export interface ComposeChoice {
   teacher: StudentTargetTeacher | null
-  /** The class the message is about; null when the teacher has none (a homeroom teacher). */
+  /** The class the message is about; null when the teacher has none (a homeroom teacher) or none is chosen yet. */
   classId: string | null
 }
 
 /**
  * Who a new message is for, from the link's `teacher` and `class`. A class that
  * is not one of that teacher's is ignored; a class with no teacher picks the
- * first teacher of it; a teacher alone gets their first class (what the server
- * would pick too).
+ * first teacher of it. A teacher with one class gets it; a teacher of several
+ * of the student's classes gets none until the student chooses (smoke S7: a
+ * Science question was filed under Math, the first class).
  */
 export function resolveCompose(targets: Pick<StudentMessageTargets, 'teachers'> | null, teacherId: string | null, classId: string | null): ComposeChoice {
   const teachers = targets?.teachers ?? []
@@ -165,8 +166,11 @@ export function resolveCompose(targets: Pick<StudentMessageTargets, 'teachers'> 
     null
   if (!teacher) return { teacher: null, classId: null }
   const wanted = classId && teacher.classes.some((c) => c.classId === classId) ? classId : null
-  return { teacher, classId: wanted ?? teacher.classes[0]?.classId ?? null }
+  return { teacher, classId: wanted ?? (teacher.classes.length === 1 ? teacher.classes[0].classId : null) }
 }
+
+/** The student still has to say which of this teacher's classes the message is about. */
+export const needsClassChoice = (choice: ComposeChoice): boolean => Boolean(choice.teacher && choice.teacher.classes.length > 1 && !choice.classId)
 
 /** The note above Send: who else will be in the conversation. */
 export function guardiansNote(guardians: { name: string }[]): string {
@@ -177,6 +181,8 @@ export function guardiansNote(guardians: { name: string }[]): string {
 
 export interface NewMessageDraft {
   teacherId: string | null
+  /** The teacher teaches several of the student's classes and none is chosen yet. */
+  needsClass?: boolean
   subject: string
   body: string
 }
@@ -184,6 +190,7 @@ export interface NewMessageDraft {
 /** Why a new message cannot be sent yet, or null when it can. */
 export function newMessageProblem(draft: NewMessageDraft): string | null {
   if (!draft.teacherId) return 'Pick who to write to.'
+  if (draft.needsClass) return 'Pick which class it is about.'
   const subject = draft.subject.trim()
   if (!subject) return 'Say what it is about.'
   if (subject.length > SUBJECT_MAX) return `Keep what it is about to ${SUBJECT_MAX} letters.`

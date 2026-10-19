@@ -193,10 +193,17 @@ export function gradeHint(
 export const publishOneLabel = (first: string, linked: boolean): string =>
   linked ? `Publish ${first}'s grade` : `Publish ${first}'s feedback`
 
-export const publishOneHint = (first: string, linked: boolean): string =>
-  linked
-    ? `Publishing shows the grade and feedback to ${first} and parents, and emails ${first}.`
-    : `Publishing shows the feedback to ${first} and parents, and emails ${first}.`
+/**
+ * Under "Publish {first}'s grade". Only a student who signs in gets the email
+ * (smoke S5): `signsIn` from the server says so; without it (an older
+ * server) the email is promised only to a student who signs in.
+ */
+export const publishOneHint = (first: string, linked: boolean, signsIn?: boolean): string => {
+  const shows = `Publishing shows the ${linked ? 'grade and feedback' : 'feedback'} to ${first} and parents`
+  if (signsIn === true) return `${shows}, and emails ${first}.`
+  if (signsIn === false) return `${shows}.`
+  return `${shows}. ${first} gets an email if they sign in to SchoolMule.`
+}
 
 /** What the panel shows: the saved grade, with an edit not saved yet over it. */
 export function editedGrade(
@@ -238,19 +245,33 @@ export const publishAllLabel = (n: number): string => `Publish to ${plural(n, 's
 const nameList = (names: string[], max = 6): string =>
   names.length <= max ? names.join(', ') : `${names.slice(0, max).join(', ')}, ${names.length - max} more`
 
-/** The confirm before "Publish to N students". */
+/**
+ * The confirm before "Publish to N students". Only students who sign in get
+ * the email (smoke S5): the rows' `signsIn` says who; without it (an older
+ * server) the email is promised only to those who sign in.
+ */
 export function publishAllPrompt(rows: GradingRow[], linked: boolean): { title: string; body: string } {
-  const names = rows.filter((r) => r.needsPublish).map((r) => firstName(r.name))
+  const waiting = rows.filter((r) => r.needsPublish)
+  const names = waiting.map((r) => firstName(r.name))
   const what = linked ? 'grade and feedback' : 'feedback'
+  const known = waiting.every((r) => typeof r.signsIn === 'boolean')
+  const emailed = waiting.filter((r) => r.signsIn === true).length
+  const email = (one: boolean): string => {
+    if (!known) return one ? `. ${names[0]} gets an email if they sign in to SchoolMule.` : '. Students who sign in also get an email.'
+    if (emailed === 0) return '.'
+    if (one) return `, and ${names[0]} gets an email.`
+    if (emailed === waiting.length) return ', and each student gets an email.'
+    return `, and the ${emailed === 1 ? 'one who signs in gets' : `${emailed} who sign in get`} an email.`
+  }
   if (names.length === 1) {
     return {
       title: linked ? 'Publish 1 grade?' : 'Publish feedback for 1 student?',
-      body: `${names[0]} and parents see the ${what}, and ${names[0]} gets an email.`,
+      body: `${names[0]} and parents see the ${what}${email(true)}`,
     }
   }
   return {
     title: linked ? `Publish ${names.length} grades?` : `Publish feedback for ${names.length} students?`,
-    body: `${nameList(names)} and parents see their ${what}, and each student gets an email.`,
+    body: `${nameList(names)} and parents see their ${what}${email(false)}`,
   }
 }
 

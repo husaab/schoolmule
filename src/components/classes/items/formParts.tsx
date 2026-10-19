@@ -117,6 +117,8 @@ export interface ItemFieldsProps {
   classId: string
   subject: string
   studentCount: number
+  /** Students of the class an item email reaches (they sign in, and are in the school's student-email grades); null while unknown. */
+  emailableStudents: number | null
   values: ItemFormValues
   set: (patch: Partial<ItemFormValues>) => void
   errors: ItemFormErrors

@@ -18,7 +18,7 @@ import { FIELD_INPUT, FormCard, LabeledField, TopicField, fieldId, type ItemFiel
 const END_OF_DAY = '23:59'
 
 export default function AssignmentFields(props: ItemFieldsProps & { kind: Extract<ItemKind, 'assignment' | 'quiz'> }) {
-  const { kind, classId, studentCount, values, set, errors, topics, categories, columns, standalone, kindergarten } = props
+  const { kind, classId, studentCount, emailableStudents, values, set, errors, topics, categories, columns, standalone, kindergarten } = props
 
   return (
     <>
@@ -122,7 +122,7 @@ export default function AssignmentFields(props: ItemFieldsProps & { kind: Extrac
           kindergarten={kindergarten}
         />
 
-        <EmailOptionsField variant="turnin" values={values} set={set} studentCount={studentCount} />
+        <EmailOptionsField variant="turnin" values={values} set={set} studentCount={studentCount} emailableStudents={emailableStudents} />
       </aside>
     </>
   )

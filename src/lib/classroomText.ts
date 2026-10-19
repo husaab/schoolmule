@@ -182,10 +182,37 @@ export function upcomingLabel(item: Pick<TodoItem, 'dueAt' | 'date' | 'status'>,
 export const HOME_DUE_SOON_CAP = 5
 
 /** "3 things due this week" for the end of Home's date line; null when nothing is due. */
-export function thingsDueThisWeek(count: number): string | null {
+export function thingsDueThisWeek(count: number, week: 'this week' | 'next week' = 'this week'): string | null {
   if (count <= 0) return null
-  if (count >= HOME_DUE_SOON_CAP) return `${HOME_DUE_SOON_CAP}+ things due this week`
-  return `${count} ${count === 1 ? 'thing' : 'things'} due this week`
+  if (count >= HOME_DUE_SOON_CAP) return `${HOME_DUE_SOON_CAP}+ things due ${week}`
+  return `${count} ${count === 1 ? 'thing' : 'things'} due ${week}`
+}
+
+/**
+ * Whether the To-do files this item under this week: Today, Tomorrow or This
+ * week. The server's rule (services/classroom/todoGroups.js): Toronto days, a
+ * week runs Monday to Sunday, and tomorrow is "Tomorrow" even on a Sunday.
+ */
+export function isDueThisWeek(item: { dueAt: string | null; date?: string | null }, now: Date = new Date()): boolean {
+  if (!item.dueAt) return false
+  const key = dayKeyOf({ dueAt: item.dueAt, date: item.date ?? null })
+  if (!key) return false
+  const ahead = daysFromToday(key, now)
+  if (ahead <= 1) return true
+  const today = torontoDateKey(now)
+  const sinceMonday = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7
+  return ahead + sinceMonday <= 6
+}
+
+/**
+ * The end of Home's date line (smoke S6): the same week the To-do uses, so
+ * Home never says "this week" about work the To-do files under Next week.
+ * `dueSoon` is Home's list (due in the next 7 days, at most 5).
+ */
+export function homeDueLine(dueSoon: { dueAt: string | null; date?: string | null }[], now: Date = new Date()): string | null {
+  const thisWeek = dueSoon.filter((i) => isDueThisWeek(i, now)).length
+  if (thisWeek > 0) return thingsDueThisWeek(thisWeek)
+  return thingsDueThisWeek(dueSoon.length, 'next week')
 }
 
 export interface DuePill {
@@ -297,6 +324,25 @@ export function otherTermFor(
 /** The class a Grades page opens on: the one in the URL when it exists, else the first. */
 export const pickClass = <T extends { classId: string }>(classes: T[], wanted: string | null | undefined): T | null =>
   classes.find((c) => c.classId === wanted) ?? classes[0] ?? null
+
+/**
+ * The class a Grades page opens on (smoke S8): the one named in the URL, else
+ * the class with the newest published grade (the board leads with it), else
+ * the first.
+ */
+export function pickGradesClass<T extends { classId: string; latestPublishedAt: string | null }>(
+  classes: T[],
+  wanted: string | null | undefined,
+): T | null {
+  const named = classes.find((c) => c.classId === wanted)
+  if (named) return named
+  let newest: T | null = null
+  for (const c of classes) {
+    if (!c.latestPublishedAt) continue
+    if (!newest || Date.parse(c.latestPublishedAt) > Date.parse(newest.latestPublishedAt as string)) newest = c
+  }
+  return newest ?? classes[0] ?? null
+}
 
 /**
  * "SK doesn't use marks. Ms. Jaber records skills (Beginning, Developing,

@@ -10,7 +10,7 @@
 
 import ClassBannerHeader from '@/components/classroom/ClassBannerHeader'
 import GradeItemRow from '@/components/classroom/GradeItemRow'
-import { classDetailLine, classNote, gradeLinkLabel, pctText, pickClass } from '@/lib/classroomText'
+import { classDetailLine, classNote, gradeLinkLabel, pctText, pickGradesClass } from '@/lib/classroomText'
 import type { PersonLite } from '@/services/types/profile'
 import type { ChildClassGrades, ChildGrades, GradeItem } from '@/services/types/studentPortal'
 
@@ -105,7 +105,7 @@ export default function ChildGradesView({
     return <p className="rounded-[14px] bg-stone-50 p-[18px] text-[15px] leading-relaxed text-stone-700">{noMarksNote}</p>
   }
 
-  const cls = pickClass(grades.classes, selectedClassId)
+  const cls = pickGradesClass(grades.classes, selectedClassId)
   if (!cls) {
     return (
       <p className="rounded-2xl border border-slate-200/70 bg-white p-6 text-center text-[15px] text-slate-500">

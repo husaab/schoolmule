@@ -31,6 +31,9 @@ import {
   scoreText,
   statTiles,
   thingsDueThisWeek,
+  homeDueLine,
+  pickGradesClass,
+  isDueThisWeek,
   upcomingLabel,
   wasDue,
 } from './classroomText'
@@ -288,6 +291,25 @@ describe('the Home date line', () => {
     expect(thingsDueThisWeek(3)).toBe('3 things due this week')
   })
 
+  it('uses the To-do week (Mon–Sun), so Home and To-do agree (smoke S6)', () => {
+    // Sunday, Oct 18 2026, 10 am in Toronto.
+    const sunday = new Date('2026-10-18T14:00:00Z')
+    const tue = { dueAt: '2026-10-20T19:30:00Z', date: null }
+    const wed = { dueAt: '2026-10-21T19:30:00Z', date: null }
+    const mon = { dueAt: '2026-10-19T19:30:00Z', date: null }
+    // The To-do files Tue and Wed under Next week on a Sunday; Monday is "Tomorrow".
+    expect(isDueThisWeek(tue, sunday)).toBe(false)
+    expect(isDueThisWeek(mon, sunday)).toBe(true)
+    expect(homeDueLine([tue, wed], sunday)).toBe('2 things due next week')
+    expect(homeDueLine([mon, tue, wed], sunday)).toBe('1 thing due this week')
+    // On Thursday Oct 15, Sunday Oct 18 is this week and Monday Oct 19 is not (it is 4 days ahead).
+    expect(isDueThisWeek({ dueAt: '2026-10-18T20:00:00Z', date: null }, NOW)).toBe(true)
+    expect(isDueThisWeek({ dueAt: '2026-10-19T20:00:00Z', date: null }, NOW)).toBe(false)
+    expect(homeDueLine([], NOW)).toBeNull()
+    // Late on Sunday in Toronto is still Sunday (already Monday in UTC).
+    expect(isDueThisWeek({ dueAt: '2026-10-19T03:30:00Z', date: null }, sunday)).toBe(true)
+  })
+
   it('says "5+" once the server has hit the most it lists', () => {
     expect(thingsDueThisWeek(4)).toBe('4 things due this week')
     expect(thingsDueThisWeek(5)).toBe('5+ things due this week')
@@ -335,5 +357,24 @@ describe('minor wording and lookups', () => {
     expect(otherTermFor(grades, { classId: 'c-old', termName: 'Term 2' })).toBeNull()
     expect(otherTermFor(grades, { classId: 'c-old', termName: null })).toBeNull()
     expect(otherTermFor({ ...grades, usesMarks: false }, { classId: 'c-old', termName: 'Term 1' })).toBeNull()
+  })
+})
+
+describe('pickGradesClass (smoke S8)', () => {
+  const math = { classId: 'math', latestPublishedAt: null }
+  const science = { classId: 'sci', latestPublishedAt: '2026-10-14T15:00:00Z' }
+  const english = { classId: 'eng', latestPublishedAt: '2026-10-02T15:00:00Z' }
+
+  it('opens the class with the newest grade, not the first one', () => {
+    expect(pickGradesClass([math, english, science], null)).toBe(science)
+  })
+
+  it('keeps the class the URL names', () => {
+    expect(pickGradesClass([math, english, science], 'math')).toBe(math)
+  })
+
+  it('falls back to the first class when nothing is graded', () => {
+    expect(pickGradesClass([math, { classId: 'art', latestPublishedAt: null }], 'gone')).toBe(math)
+    expect(pickGradesClass([], null)).toBeNull()
   })
 })

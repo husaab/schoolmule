@@ -5,6 +5,7 @@
 // email and the evening-before reminder. A material: the post email.
 'use client'
 
+import { itemEmailReach } from '@/lib/classStream'
 import type { ItemFormValues } from '@/lib/itemForm'
 import { CardTitle, CheckboxRow, FormCard } from './formParts'
 
@@ -13,10 +14,12 @@ interface EmailOptionsFieldProps {
   values: Pick<ItemFormValues, 'emailStudents' | 'remindStudents' | 'audience' | 'studentIds'>
   set: (patch: Partial<ItemFormValues>) => void
   studentCount: number
+  /** Students an item email reaches (only those who sign in); null while unknown. */
+  emailableStudents?: number | null
   disabled?: boolean
 }
 
-export default function EmailOptionsField({ variant, values, set, studentCount, disabled }: EmailOptionsFieldProps) {
+export default function EmailOptionsField({ variant, values, set, studentCount, emailableStudents = null, disabled }: EmailOptionsFieldProps) {
   if (variant === 'assessment') {
     return (
       <CheckboxRow checked={values.emailStudents} onChange={(emailStudents) => set({ emailStudents })} disabled={disabled}>
@@ -25,12 +28,18 @@ export default function EmailOptionsField({ variant, values, set, studentCount, 
     )
   }
 
-  const reach = values.audience === 'some' ? `${values.studentIds.length} chosen` : `all ${studentCount}`
+  // Who the email reaches: only students who sign in get it, so the roster alone would overstate it (smoke S4).
+  const reach = itemEmailReach({
+    audience: values.audience === 'some' ? 'some' : 'all',
+    chosen: values.studentIds.length,
+    roster: studentCount,
+    emailable: emailableStudents,
+  })
   return (
     <FormCard className="!gap-3">
       <CardTitle>Emails</CardTitle>
       <CheckboxRow checked={values.emailStudents} onChange={(emailStudents) => set({ emailStudents })} disabled={disabled}>
-        Email students when it&apos;s posted <span className="text-slate-500">· {reach}</span>
+        Email students when it&apos;s posted {reach && <span className="text-slate-500">· {reach}</span>}
       </CheckboxRow>
       {variant === 'turnin' && (
         <>

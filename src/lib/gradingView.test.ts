@@ -187,9 +187,14 @@ describe('header and panel lines', () => {
 
   it('names the student on the one-student Publish', () => {
     expect(publishOneLabel('Amal', true)).toBe("Publish Amal's grade")
-    expect(publishOneHint('Amal', true)).toBe('Publishing shows the grade and feedback to Amal and parents, and emails Amal.')
+    expect(publishOneHint('Amal', true, true)).toBe('Publishing shows the grade and feedback to Amal and parents, and emails Amal.')
     expect(publishOneLabel('Amal', false)).toBe("Publish Amal's feedback")
-    expect(publishOneHint('Amal', false)).toBe('Publishing shows the feedback to Amal and parents, and emails Amal.')
+    expect(publishOneHint('Amal', false, true)).toBe('Publishing shows the feedback to Amal and parents, and emails Amal.')
+    // Smoke S5: no email promised to a student without a working login.
+    expect(publishOneHint('Rami', true, false)).toBe('Publishing shows the grade and feedback to Rami and parents.')
+    expect(publishOneHint('Rami', true)).toBe(
+      'Publishing shows the grade and feedback to Rami and parents. Rami gets an email if they sign in to SchoolMule.',
+    )
   })
 })
 
@@ -202,8 +207,8 @@ describe('Publish to N students', () => {
 
   it('asks first, naming who sees it', () => {
     const waiting = [
-      row({ studentId: 'a', name: 'Amal Haddad', needsPublish: true }),
-      row({ studentId: 'b', name: 'Sami Haddad', needsPublish: true }),
+      row({ studentId: 'a', name: 'Amal Haddad', needsPublish: true, signsIn: true }),
+      row({ studentId: 'b', name: 'Sami Haddad', needsPublish: true, signsIn: true }),
       row({ studentId: 'c', name: 'Rana Kareem', needsPublish: false }),
     ]
     expect(publishAllPrompt(waiting, true)).toEqual({
@@ -216,8 +221,19 @@ describe('Publish to N students', () => {
     })
   })
 
+  it('never promises an email to a student without a login (smoke S5)', () => {
+    const rami = row({ studentId: 'r', name: 'Rami Saleh', needsPublish: true, signsIn: false })
+    const adam = row({ studentId: 'a', name: 'Adam Haddad', needsPublish: true, signsIn: true })
+    expect(publishAllPrompt([rami], true).body).toBe('Rami and parents see the grade and feedback.')
+    expect(publishAllPrompt([rami, adam], true).body).toBe('Rami, Adam and parents see their grade and feedback, and the one who signs in gets an email.')
+    // An older server says nothing about logins: the email is promised only to those who sign in.
+    const unknown = row({ studentId: 'u', name: 'Hana Saleh', needsPublish: true })
+    expect(publishAllPrompt([unknown], true).body).toBe('Hana and parents see the grade and feedback. Hana gets an email if they sign in to SchoolMule.')
+    expect(publishAllPrompt([unknown, adam], false).body).toBe('Hana, Adam and parents see their feedback. Students who sign in also get an email.')
+  })
+
   it('shortens a long list of names', () => {
-    const many = Array.from({ length: 9 }, (_, i) => row({ studentId: `x${i}`, name: `Student${i} Haddad`, needsPublish: true }))
+    const many = Array.from({ length: 9 }, (_, i) => row({ studentId: `x${i}`, name: `Student${i} Haddad`, needsPublish: true, signsIn: true }))
     expect(publishAllPrompt(many, true).body).toBe(
       'Student0, Student1, Student2, Student3, Student4, Student5, 3 more and parents see their grade and feedback, and each student gets an email.',
     )

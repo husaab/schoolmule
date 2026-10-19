@@ -50,6 +50,11 @@ export interface GradingRow {
    * for every other column). Optional only so older fixtures still type-check.
    */
   scoreSetByTeacher?: boolean
+  /**
+   * The student signs in to the student portal, so a publish emails them (smoke S5). Optional: older servers don't
+   * send it, and then the copy promises the email only to students who sign in.
+   */
+  signsIn?: boolean
 }
 
 export interface GradingCounts {

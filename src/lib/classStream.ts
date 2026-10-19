@@ -166,6 +166,34 @@ export const emailAudienceKind = (audience: StreamAudience): EmailAudienceKind =
 }
 
 /**
+ * "Who gets emails" on the Stream: the counts are who is actually emailed (a
+ * student only with a working login and the school's student-email grade), so
+ * it never says "all 1 student" or "their" parents of a roster it isn't.
+ * Null pieces are left out.
+ */
+export function whoGetsEmailsCounts(audience: StreamAudience): { students: string | null; guardians: string | null } {
+  return {
+    students: audience.students > 0 ? plural(audience.students, 'student', 'students') : null,
+    guardians: audience.guardians > 0 ? plural(audience.guardians, 'parent', 'parents') : null,
+  }
+}
+
+/**
+ * Beside an item's "Email students when it's posted": how many students that
+ * email reaches. Only students who sign in (and are in the school's student-
+ * email grades) get it, so the class roster alone would overstate it.
+ * `emailable` is the class's emailable students (null while unknown: then no
+ * count is given); `chosen` the picked students when it goes to some.
+ */
+export function itemEmailReach(o: { audience: 'all' | 'some'; chosen: number; roster: number; emailable: number | null }): string | null {
+  if (o.emailable === null) return o.audience === 'some' ? `${o.chosen} chosen` : null
+  if (o.emailable === 0) return 'no student signs in yet, so no email goes out'
+  if (o.audience === 'some') return o.emailable < o.roster ? `${o.chosen} chosen, those who sign in` : `${o.chosen} chosen`
+  if (o.emailable >= o.roster) return o.roster === 1 ? '1 student' : `all ${o.roster} students`
+  return `${o.emailable} of ${plural(o.roster, 'student', 'students')}, those who sign in`
+}
+
+/**
  * The composer's email checkbox: "Email students and parents · 22 students, 31 parents".
  * With no count to give yet (null: students are still being picked, or the count is on its way),
  * it says no numbers rather than a "no one has an email" it does not know.

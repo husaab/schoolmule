@@ -6,7 +6,8 @@
 // answer. Back / Next ("Review & turn in" on the last) and the numbered dots.
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { answerText, questionLine, rejectedLine } from '@/lib/quizPlayer'
 import type { QuizAnswerValue, StudentQuestion } from '@/services/types/quiz'
 import QuizDots from './QuizDots'
@@ -73,6 +74,20 @@ export default function QuestionView({
     if (focusOnMount) headingRef.current?.focus()
   }, [focusOnMount])
 
+  // Arrow keys move between the choices (Space or Enter picks one), as in any radio group.
+  const choicesRef = useRef<HTMLDivElement>(null)
+  const onChoicesKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
+    if (!step) return
+    const buttons = Array.from(choicesRef.current?.querySelectorAll<HTMLButtonElement>('button[data-choice]') ?? [])
+    const at = buttons.findIndex((b) => b === document.activeElement)
+    if (at < 0 || buttons.length === 0) return
+    e.preventDefault()
+    buttons[(at + step + buttons.length) % buttons.length].focus()
+  }
+  // One tab stop for a radio group: the picked choice, else the first.
+  const tabStop = several ? null : (question.options.find((o) => picked.has(o.id))?.id ?? question.options[0]?.id ?? null)
+
   return (
     <div className="flex flex-col gap-6">
       <span className="text-[15px] font-medium text-indigo-700">{questionLine(index, count, question.points)}</span>
@@ -90,15 +105,23 @@ export default function QuestionView({
       {question.hint && <span className="-mt-2 text-base text-slate-600">{question.hint}</span>}
 
       {(question.kind === 'one' || question.kind === 'many') && (
-        <div role={several ? 'group' : 'radiogroup'} aria-label="Choices" className="flex flex-col gap-3">
+        <div
+          ref={choicesRef}
+          role={several ? 'group' : 'radiogroup'}
+          aria-label={several ? 'Choices (pick all that are right)' : 'Choices (pick one)'}
+          onKeyDown={onChoicesKey}
+          className="flex flex-col gap-3"
+        >
           {question.options.map((o, i) => {
             const on = picked.has(o.id)
             return (
               <button
                 key={o.id}
                 type="button"
+                data-choice
                 role={several ? 'checkbox' : 'radio'}
                 aria-checked={on}
+                tabIndex={tabStop === null || tabStop === o.id ? 0 : -1}
                 disabled={readOnly}
                 onClick={() => onPick(o.id)}
                 className={`flex min-h-[68px] cursor-pointer items-center gap-4 rounded-2xl border-2 px-[18px] py-3.5 text-left text-[17px] text-slate-900 transition-colors disabled:cursor-default sm:text-[19px] ${
@@ -113,7 +136,14 @@ export default function QuestionView({
                 >
                   {letterAt(i)}
                 </span>
-                <span className="min-w-0 break-words">{o.text}</span>
+                <span className="min-w-0 flex-1 break-words">{o.text}</span>
+                {on && (
+                  // aria-checked already says it to a screen reader.
+                  <span aria-hidden="true" className="flex flex-none items-center gap-1 text-sm font-semibold text-indigo-700">
+                    <CheckCircleIcon className="h-6 w-6" />
+                    <span className="hidden sm:inline">Selected</span>
+                  </span>
+                )}
               </button>
             )
           })}

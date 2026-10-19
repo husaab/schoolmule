@@ -6,6 +6,8 @@ import {
   emailAudienceKind,
   emailCheckboxText,
   emailedLabel,
+  itemEmailReach,
+  whoGetsEmailsCounts,
   noticeHeadline,
   noticeMeta,
   postByline,
@@ -206,5 +208,29 @@ describe('who gets emails', () => {
     expect(emailCheckboxText({ students: 0, guardians: 0 })).toBe('Email students and parents · no one has an email on file yet')
     // Nothing to count yet (no one picked, or the count is loading): no numbers, and no claim that no one has an email.
     expect(emailCheckboxText(null)).toBe('Email students and parents')
+  })
+})
+
+describe('email reach (smoke S4: counts match who actually gets email)', () => {
+  it('never says "all 1" or counts a roster it does not email', () => {
+    expect(whoGetsEmailsCounts({ students: 1, guardians: 6 })).toEqual({ students: '1 student', guardians: '6 parents' })
+    expect(whoGetsEmailsCounts({ students: 0, guardians: 2 })).toEqual({ students: null, guardians: '2 parents' })
+  })
+
+  it('an item email counts only the students who sign in', () => {
+    expect(itemEmailReach({ audience: 'all', chosen: 0, roster: 6, emailable: 1 })).toBe('1 of 6 students, those who sign in')
+    expect(itemEmailReach({ audience: 'all', chosen: 0, roster: 6, emailable: 6 })).toBe('all 6 students')
+    expect(itemEmailReach({ audience: 'all', chosen: 0, roster: 1, emailable: 1 })).toBe('1 student')
+    expect(itemEmailReach({ audience: 'all', chosen: 0, roster: 6, emailable: 0 })).toBe('no student signs in yet, so no email goes out')
+  })
+
+  it('says no count while it is unknown, rather than the roster', () => {
+    expect(itemEmailReach({ audience: 'all', chosen: 0, roster: 6, emailable: null })).toBeNull()
+    expect(itemEmailReach({ audience: 'some', chosen: 2, roster: 6, emailable: null })).toBe('2 chosen')
+  })
+
+  it('a pick says it reaches those of them who sign in', () => {
+    expect(itemEmailReach({ audience: 'some', chosen: 2, roster: 6, emailable: 1 })).toBe('2 chosen, those who sign in')
+    expect(itemEmailReach({ audience: 'some', chosen: 2, roster: 6, emailable: 6 })).toBe('2 chosen')
   })
 })

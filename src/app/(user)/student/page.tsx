@@ -16,7 +16,7 @@ import StudentShell from '@/components/studentPortal/StudentShell'
 import { shareClassesFromHome } from '@/components/studentPortal/useStudentClasses'
 import { useStudentMe } from '@/components/studentPortal/useStudentMe'
 import { useLoad } from '@/hooks/useLoad'
-import { firstNameOf, greetingFor, thingsDueThisWeek } from '@/lib/classroomText'
+import { firstNameOf, greetingFor, homeDueLine } from '@/lib/classroomText'
 import { studentClassHref, studentGradesHref } from '@/lib/portalRoutes'
 import { longDateLine } from '@/lib/studentAccounts'
 import { saveAvatar } from '@/services/profileService'
@@ -82,7 +82,7 @@ export default function StudentHomePage() {
                 </span>
               </h2>
               <p className="order-first text-sm text-slate-500 md:order-none md:text-base md:text-slate-600">
-                {[longDateLine(now), thingsDueThisWeek(data.dueSoon.length)].filter(Boolean).join(' · ')}
+                {[longDateLine(now), homeDueLine(data.dueSoon, now)].filter(Boolean).join(' · ')}
               </p>
             </div>
             <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} className="md:hidden" />

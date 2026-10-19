@@ -10,6 +10,7 @@ import {
   listWhen,
   messageWhen,
   messagesBadgeCount,
+  needsClassChoice,
   newMessageProblem,
   orderParticipants,
   parentLabel,
@@ -192,10 +193,18 @@ describe('a new message', () => {
     expect(resolveCompose(targets, 't2', 'c-cs')).toEqual({ teacher: targets.teachers[1], classId: 'c-cs' })
   })
 
-  it('uses the teacher\'s first class when none (or a wrong one) is named', () => {
-    expect(resolveCompose(targets, 't2', null).classId).toBe('c-math')
-    expect(resolveCompose(targets, 't2', 'c-sci').classId).toBe('c-math')
+  it('lets the student choose the class of a teacher who teaches several (smoke S7)', () => {
+    // No class named (or a wrong one): none is picked for them.
+    expect(resolveCompose(targets, 't2', null).classId).toBeNull()
+    expect(resolveCompose(targets, 't2', 'c-sci').classId).toBeNull()
+    expect(needsClassChoice(resolveCompose(targets, 't2', null))).toBe(true)
+    expect(needsClassChoice(resolveCompose(targets, 't2', 'c-cs'))).toBe(false)
+    // One class: it is the one.
+    expect(resolveCompose(targets, 't1', null).classId).toBe(targets.teachers[0].classes[0].classId)
+    expect(needsClassChoice(resolveCompose(targets, 't1', null))).toBe(false)
+    // A homeroom teacher with no class: nothing to choose.
     expect(resolveCompose(targets, 't3', 'c-sci')).toEqual({ teacher: targets.teachers[2], classId: null })
+    expect(needsClassChoice(resolveCompose(targets, 't3', null))).toBe(false)
   })
 
   it('finds the teacher of a class when only the class is named', () => {
@@ -225,6 +234,7 @@ describe('a new message', () => {
     const ok = { teacherId: 't1', subject: 'Plant cells', body: 'Is the wall thicker?' }
     expect(newMessageProblem(ok)).toBeNull()
     expect(newMessageProblem({ ...ok, teacherId: null })).toBe('Pick who to write to.')
+    expect(newMessageProblem({ ...ok, needsClass: true })).toBe('Pick which class it is about.')
     expect(newMessageProblem({ ...ok, subject: '  ' })).toBe('Say what it is about.')
     expect(newMessageProblem({ ...ok, body: ' ' })).toBe('Write your message.')
     expect(newMessageProblem({ ...ok, subject: 'x'.repeat(SUBJECT_MAX + 1) })).toMatch(/Keep what it is about/)
