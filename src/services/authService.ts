@@ -39,6 +39,43 @@ export const studentQrSignIn = async (token: string): Promise<LoginResponse> => 
   });
 };
 
+/** What the student invite page shows: who the link is for and how to get in (or why it is dead). */
+export interface StudentInviteInfo {
+  state: 'valid' | 'expired' | 'used' | 'replaced' | 'cancelled';
+  school: { code: string; name: string };
+  student: { firstName: string; lastInitial: string; grade: string };
+  email: string;
+  methods: { google: boolean; password: boolean };
+  expiresAt: string;
+}
+
+/** POST /auth/student-invite: look at an invite link (changes nothing). 404 INVITE_NOT_FOUND for an unknown one. */
+export const inspectStudentInvite = (token: string) =>
+  apiClient<{ success: boolean; message: string; data: StudentInviteInfo }>('/auth/student-invite', {
+    method: 'POST',
+    body: { token },
+  });
+
+/** Set up, but the school hasn't opened sign-in for this student yet. */
+export interface StudentInviteNotOpen {
+  activated: true;
+  signedIn: false;
+  code: string;
+  message: string;
+}
+
+/**
+ * POST /auth/student-invite/accept with a password or a Google code: the
+ * login payload (signed in), or StudentInviteNotOpen. Refusals: 410 with
+ * data.state (dead link), 400 PASSWORD_WEAK, 403 PASSWORD_SIGN_IN_OFF,
+ * 409 GOOGLE_WRONG_ACCOUNT / GOOGLE_WRONG_DOMAIN / GOOGLE_IN_USE.
+ */
+export const acceptStudentInvite = (body: { token: string; password: string } | { token: string; googleCode: string }) =>
+  apiClient<{ success: boolean; message: string; data: LoginResponse['data'] | StudentInviteNotOpen }>('/auth/student-invite/accept', {
+    method: 'POST',
+    body,
+  });
+
 export const googleAuth = async (request: GoogleAuthRequest): Promise<GoogleAuthResponse> => {
   return apiClient<GoogleAuthResponse>('/auth/google', {
     method: 'POST',

@@ -37,7 +37,8 @@ const GUARDED_ROUTES = [...new Set(discoverRoutes(path.join(appDir, '(user)')))]
 // Guarded pages a signed-out visitor may still open.
 // /qr is the QR sign-in card's link: it must open signed out (and from any session).
 const isSignedOutPage = (p: string) =>
-  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token', '/qr'].includes(p) || p.startsWith('/signup/')
+  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token', '/qr', '/student-invite'].includes(p) ||
+  p.startsWith('/signup/')
 
 // Follows redirects until the user settles; throws on a loop.
 const settle = (start: string, state: RouteState): string => {
@@ -53,7 +54,7 @@ const settle = (start: string, state: RouteState): string => {
 // Shapes the filesystem can't express on its own.
 const EXTRA_PATHS = [
   '/jcc/enrolment-form', '/jcc/schedule/abc123', '/signup/jcc', '/parentfoo', '/does-not-exist',
-  '/student/todo', '/studentfoo', '/qr',
+  '/student/todo', '/studentfoo', '/qr', '/student-invite',
 ]
 const PATHS = [...new Set([...APP_ROUTES, ...EXTRA_PATHS])]
 
@@ -110,18 +111,20 @@ describe('guarded pages stay protected', () => {
       (r) =>
         !r.startsWith('/signup/') &&
         r !== '/qr' &&
+        r !== '/student-invite' &&
         !['/parent', '/settings', '/support', '/contact-us'].some((pre) => r === pre || r.startsWith(`${pre}/`)) &&
         resolveRedirect(r, { hasToken: true, user: p }) === null,
     )
     expect(leaks).toEqual([])
   })
 
-  it('a student is kept out of every guarded page except the student portal and /qr', () => {
+  it('a student is kept out of every guarded page except the student portal, /qr and /student-invite', () => {
     const s = { id: 's1', role: 'STUDENT', isVerifiedEmail: true, isVerifiedSchool: true }
     const leaks = GUARDED_ROUTES.filter(
       (r) =>
         !r.startsWith('/signup/') &&
         r !== '/qr' &&
+        r !== '/student-invite' &&
         !(r === '/student' || r.startsWith('/student/')) &&
         resolveRedirect(r, { hasToken: true, user: s }) === null,
     )
@@ -177,6 +180,16 @@ describe('student routing', () => {
     expect(resolveRedirect('/qr', signedInState(teacher))).toBeNull()
     expect(resolveRedirect('/qr', signedInState(parentUser))).toBeNull()
     expect(resolveRedirect('/qr', signedInState(student))).toBeNull()
+  })
+
+  it('the student invite page opens signed out and from any session, never bounced (Review Focus 2)', () => {
+    const admin = { id: 'a1', role: 'ADMIN', isVerifiedEmail: true, isVerifiedSchool: true }
+    const unverified = { id: 'u1', role: 'PARENT', isVerifiedEmail: false, isVerifiedSchool: false }
+    expect(resolveRedirect('/student-invite', { hasToken: false, user: anonymous })).toBeNull()
+    expect(resolveRedirect('/student-invite', signedInState(admin))).toBeNull()
+    expect(resolveRedirect('/student-invite', signedInState(parentUser))).toBeNull()
+    expect(resolveRedirect('/student-invite', signedInState(student))).toBeNull()
+    expect(resolveRedirect('/student-invite', signedInState(unverified))).toBeNull()
   })
 
   it('landing after sign-in keeps a student inside the portal', () => {

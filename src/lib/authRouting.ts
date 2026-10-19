@@ -55,6 +55,10 @@ const STUDENT_PREFIXES = ['/student']
 
 // A QR card's link must work signed out and from any session (shared devices).
 const QR_SIGN_IN_PATH = '/qr'
+// A student's invite link opens signed out and from any session: on a family
+// laptop or a classroom Chromebook someone else is often signed in, and the
+// page itself offers to sign them out first (never a bounce).
+export const STUDENT_INVITE_PATH = '/student-invite'
 
 // Known top-level app route segments (to distinguish from public form slugs).
 // Every folder under src/app/(user) must be listed, or its two-segment pages
@@ -67,7 +71,7 @@ const KNOWN_APP_ROUTES = [
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
   'finance', 'messages', 'observe', 'student-views', 'analytics',
-  'student', 'qr',
+  'student', 'qr', 'student-invite',
   'forbidden', 'api', '_next',
 ]
 
@@ -119,13 +123,16 @@ export const homeFor = (user: RouteUser): string => onboardingStep(user) ?? role
 // The redirect target for `path`, or null when the user may stay.
 export const resolveRedirect = (path: string, state: RouteState): string | null => {
   if (!state.hasToken) {
-    return AUTH_ENTRY_PATHS.includes(path) || path === '/verify-email-token' || path === QR_SIGN_IN_PATH || isOpenPath(path)
+    return AUTH_ENTRY_PATHS.includes(path) || path === '/verify-email-token' || path === QR_SIGN_IN_PATH ||
+      path === STUDENT_INVITE_PATH || isOpenPath(path)
       ? null
       : '/'
   }
 
   // Token but no user yet: AuthGuard is validating the session. Stay put.
   if (!state.user.id) return null
+  // Whoever is signed in, the invite page stays (it asks before signing them out).
+  if (path === STUDENT_INVITE_PATH) return null
 
   const { user } = state
   const step = onboardingStep(user)

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { requestPasswordReset } from '@/services/passwordService'
+import { isApiError } from '@/services/apiClient'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
 import {
   EnvelopeIcon,
@@ -31,8 +32,10 @@ const ForgotPasswordPage: FC = () => {
       } else {
         notify(response.message || 'Something went wrong.', 'error')
       }
-    } catch {
-      notify('Internal server error.', 'error')
+    } catch (err) {
+      // The server's own words when it refuses for a reason the person can act on
+      // (no account, a student who hasn't set up yet, a Google-only school, too many tries).
+      notify(isApiError(err) && err.status < 500 && err.message ? err.message : 'Internal server error.', 'error')
     } finally {
       setLoading(false)
     }
