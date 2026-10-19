@@ -1,24 +1,22 @@
 'use client'
 
-// /qr?t=… — the link printed on a student's QR sign-in card. It works signed
-// out and from any session: cards are scanned on shared classroom devices,
-// so whoever is signed in here is signed out first, then the card's student
-// is signed in and lands in the student portal.
+// /qr — "Scan my card": a student signs in by holding their printed QR card up
+// to the device's camera (final review I2). It works signed out and from any
+// session: cards are scanned on shared classroom devices, so whoever is
+// signed in here is signed out first, then the card's student is signed in
+// and lands in the student portal.
+//
+// A card carries "SCHOOLMULE-QR:<token>", read only by this in-app scanner.
+// The first cards carried a /qr?t=<token> link instead; opening such a link
+// no longer signs anyone in (a link stays in a shared iPad's history and
+// address-bar suggestions, where the next student could reopen it). The
+// param is dropped from the address at once and the scanner is shown.
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline'
-import { useFilterParams } from '@/hooks/useFilterParams'
-import { getToken, studentQrSignIn } from '@/services/authService'
-import { signOutLocally, startSession } from '@/services/sessionSync'
-import { landingFor } from '@/lib/authRouting'
-import { qrSignInMessage } from '@/lib/qrSignIn'
-import { useUserStore } from '@/store/useUserStore'
+import { useSearchParams } from 'next/navigation'
+import QrCardSignIn from '@/components/auth/QrCardSignIn'
 import { studentTone } from '@/components/studentPortal/studentTone'
-
-const MISSING_CODE = 'This link is missing its sign-in code. Scan your card again.'
 
 function QrFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -31,58 +29,32 @@ function QrFrame({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SigningIn() {
-  return (
-    <div role="status" aria-live="polite" className="flex flex-col items-center gap-4 py-2">
-      <span className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600" aria-hidden="true" />
-      <p className="text-base font-medium text-slate-700">Signing you in…</p>
-    </div>
-  )
-}
-
 function QrSignInContent() {
-  const router = useRouter()
-  // `t` is the card's secret: a moment, never a filter to remember.
-  const { get } = useFilterParams({ transient: ['t'] })
-  const cardToken = get('t')
-  const [signInError, setSignInError] = useState<string | null>(null)
-  const error = cardToken ? signInError : MISSING_CODE
-  const started = useRef(false)
+  const searchParams = useSearchParams()
+  // Opened from an early card's link: say why the link alone doesn't sign in. Read once, so it survives
+  // dropping the param.
+  const [fromLink] = useState(() => searchParams.has('t'))
 
   useEffect(() => {
-    if (started.current || !cardToken) return
-    started.current = true
-
-    // Someone else's session (a teacher on the classroom laptop, the last
-    // student) must not survive a card scan.
-    if (getToken() || useUserStore.getState().user.id) signOutLocally()
-
-    studentQrSignIn(cardToken)
-      .then((res) => {
-        const user = startSession(res.data)
-        router.replace(landingFor(user, '/student'))
-      })
-      .catch((err: unknown) => {
-        // The server's words for a card it refused; a plain line when the connection dropped.
-        setSignInError(qrSignInMessage(err))
-      })
-  }, [cardToken, router])
-
-  if (!error) return <SigningIn />
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has('t')) return
+    params.delete('t')
+    const query = params.toString()
+    // Out of the address bar (and this tab's history entry) at once.
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+  }, [])
 
   return (
-    <div role="alert" className="flex flex-col items-center gap-3">
-      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50">
-        <ExclamationCircleIcon className="h-6 w-6 text-rose-600" aria-hidden="true" />
-      </span>
-      <h1 className="font-display text-xl font-semibold text-slate-900">We couldn&apos;t sign you in</h1>
-      <p className="text-sm leading-relaxed text-slate-600">{error}</p>
-      <Link
-        href="/login"
-        className={`mt-3 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold ${studentTone.primary}`}
-      >
-        Sign in with your email instead
-      </Link>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <h1 className="font-display text-xl font-semibold text-slate-900">Sign in with your card</h1>
+        <p className="text-sm leading-relaxed text-slate-600">
+          {fromLink
+            ? 'Card links no longer sign you in. Tap Scan my card and hold your card up to the camera.'
+            : 'Tap Scan my card and hold your card up to the camera.'}
+        </p>
+      </div>
+      <QrCardSignIn />
     </div>
   )
 }
@@ -90,7 +62,7 @@ function QrSignInContent() {
 export default function QrSignInPage() {
   return (
     <QrFrame>
-      <Suspense fallback={<SigningIn />}>
+      <Suspense fallback={null}>
         <QrSignInContent />
       </Suspense>
     </QrFrame>
