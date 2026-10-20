@@ -3,6 +3,7 @@ import { createJSONStorage, persist, PersistOptions } from 'zustand/middleware';
 import { clearRefusedAnswers } from '@/lib/answerSaveFailure';
 import { clearFilterMemory, getFilterMemoryStorage } from '@/lib/filterMemory';
 import type { AvatarSpec } from '@/services/types/profile';
+import type { AccessRoleRef } from '@/lib/permissions';
 
 export type User = {
     id: string | null;
@@ -29,6 +30,16 @@ export type User = {
     // /auth/me. Optional for the same reason as the fields above.
     avatar?: AvatarSpec | null;
     photoUrl?: string | null;
+    // Access claims (RBAC, lib/permissions): the active view's permission
+    // keys, full-admin flag, custom access role and whether they teach a class.
+    // Optional and never defaulted: a user persisted before roles existed has
+    // none, and lib/permissions reads that as a legacy session (ADMIN = full
+    // admin) until /auth/me fills them in. Defaulting `permissions` to []
+    // would lock every legacy admin out of the admin pages instead.
+    permissions?: string[];
+    isFullAdmin?: boolean;
+    accessRole?: AccessRoleRef | null;
+    teachesClasses?: boolean;
 }
 
 type UserStore = {

@@ -15,6 +15,21 @@ export interface ErrorResponse {
     message: string;
 }
 
+/**
+ * What the session's active view may do (RBAC), on every payload that opens
+ * or refreshes a session. UI hints only: the API enforces. Absent on an older
+ * backend, which lib/permissions then reads by role.
+ */
+export interface AccessClaims {
+  /** The active view's permission keys (lib/permissions PERMISSIONS). Full admins get all of them. */
+  permissions?: string[];
+  isFullAdmin?: boolean;
+  /** The custom access role; null for the built-in Admin and Teacher. */
+  accessRole?: { id: string; name: string } | null;
+  /** Leads or co-teaches a class this school year (false outside staff views). */
+  teachesClasses?: boolean;
+}
+
 export interface RegisterRequest {
   username: string;
   email: string;
@@ -46,7 +61,7 @@ export interface RegisterResponse {
     token: string;
     activeSchoolYear?: { schoolYearId: string; label: string } | null;
     schoolYears?: import('./schoolYear').SchoolYear[];
-  };
+  } & AccessClaims;
 }
 
 export interface LoginRequest {
@@ -88,7 +103,7 @@ export interface LoginResponse {
     token: string;
     activeSchoolYear?: { schoolYearId: string; label: string } | null;
     schoolYears?: import('./schoolYear').SchoolYear[];
-  };
+  } & AccessClaims;
 }
 
 // The login payload, plus whether this request created the account (false

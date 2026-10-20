@@ -15,4 +15,8 @@ describe('previewViewsFor', () => {
   it('offers nothing extra until the children are known', () => {
     expect(previewViewsFor('TEACHER', null)).toEqual(['TEACHER'])
   })
+  it('opens a restricted admin in the admin view, and in the parent view too when they are a parent', () => {
+    expect(previewViewsFor('ADMIN', false)).toEqual(['ADMIN'])
+    expect(previewViewsFor('ADMIN', true)).toEqual(['ADMIN', 'PARENT'])
+  })
 })

@@ -16,6 +16,7 @@
 
 import apiClient from './apiClient'
 import { setToken } from './authService'
+import { accessClaimsOf } from '@/lib/permissions'
 import { impersonateSchoolUser } from './adminUserService'
 import { startImpersonation } from './impersonation'
 import type { LoginResponse } from './types/auth'
@@ -87,6 +88,9 @@ export const switchView = async (view: View): Promise<void> => {
       isVerifiedSchool: data.isVerifiedSchool,
       activeTerm: data.activeTerm || null,
       isPlatformOwner: Boolean(data.isPlatformOwner),
+      // The new view's access. Never carried over from the old view: parent
+      // view holds none, and a reply without the fields is read by role.
+      ...accessClaimsOf(data),
     })
 
     setFlash(data.role, data.baseRole ?? data.role)
@@ -99,11 +103,14 @@ export const switchView = async (view: View): Promise<void> => {
 
 /**
  * The in-preview switch: re-mint the running preview in the other portal.
- * Only teachers and parents can be previewed, so ADMIN is never a valid
- * target here even though the type allows it.
+ * ADMIN is only a staff view for a restricted admin (full admins previewing
+ * an admin with an access role); full admins themselves are never previewed,
+ * and the server refuses anything else.
  */
 const switchPreviewView = async (preview: ImpersonationSession, view: View): Promise<void> => {
-  if (view === 'ADMIN') throw new Error('A preview can only open the teacher or the parent view')
+  if (view === 'ADMIN' && preview.target.baseRole !== 'ADMIN') {
+    throw new Error('A preview can only open the views this account holds')
+  }
   const res = await impersonateSchoolUser(preview.target.userId, view, preview.adminToken)
   const data = res.data
 

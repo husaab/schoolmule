@@ -9,7 +9,8 @@ import { reportClientEvent, flushClientEvents } from '@/services/clientErrors'
 import { getUnreadPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
-import { resolveRedirect, landingFor, createLoopDetector, signInDetourFor } from '@/lib/authRouting'
+import { useNotificationStore } from '@/store/useNotificationStore'
+import { resolveRedirect, landingFor, createLoopDetector, signInDetourFor, isAccessDenied } from '@/lib/authRouting'
 import PatchNotesModal from '@/components/patchNotes/PatchNotesModal'
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   // During an admin "view as" preview, "What's new" belongs to the previewed
   // user and dismissing it would be a (refused) write, so leave it alone.
   const previewing = useImpersonationStore((s) => Boolean(s.session))
+  const notify = useNotificationStore((s) => s.showNotification)
 
   // Session: fill in or refresh the user from the server.
   useEffect(() => {
@@ -141,8 +143,11 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       flushClientEvents()
       return
     }
+    // Sent home for lack of access (a bookmark, an old link, or a role an
+    // admin just changed): say why instead of silently moving them.
+    if (state.hasToken && isAccessDenied(path, user)) notify("You don't have access to that page", 'error')
     router.replace(target)
-  }, [hasHydrated, user, path, router, loopTrail])
+  }, [hasHydrated, user, path, router, loopTrail, notify])
 
   // don’t render anything while we’re redirecting
     if (!hasHydrated) {

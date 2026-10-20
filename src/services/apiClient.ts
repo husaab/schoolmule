@@ -116,6 +116,15 @@ async function apiClient<T, B = unknown>(
             );
         }
 
+        // The caller's role doesn't cover this (or no longer does: an admin
+        // may have just changed it). One toast, and the session is re-read so
+        // the menus and the router catch up. A 401 SESSION_REVOKED (archived
+        // account) already signed out above, like any 401.
+        if (response.status === 403 && errorBody.code === 'PERMISSION_DENIED' && typeof window !== 'undefined') {
+            const { handlePermissionDenied } = await import('./permissionDenied');
+            void handlePermissionDenied();
+        }
+
         // Session failures are expected flow, not errors worth a report.
         if (response.status !== 401 && errorBody.code !== 'ACCOUNT_NOT_VERIFIED' && typeof window !== 'undefined') {
             const { reportClientEvent } = await import('./clientErrors');

@@ -5,6 +5,7 @@
 // of it leaks from the admin to the previewed user or back.
 
 import { roleHome } from '@/lib/authRouting';
+import { TEACHER_DEFAULT } from '@/lib/permissions';
 import { removeToken, setToken } from './authService';
 import type { ImpersonationStart } from './types/adminUser';
 import { useUserStore } from '@/store/useUserStore';
@@ -72,6 +73,16 @@ export const startImpersonation = (
     avatar: preview.avatar ?? null,
     // The preview payload carries no photo; /auth/me fills it in on reload.
     photoUrl: null,
+    // The previewed account's access, so menus and routing match what they
+    // see. A preview is never a full admin (roles, "View as" and making
+    // admins stay with the admin behind it), so the flag is always false; a
+    // payload from an older backend without permissions falls back to what
+    // that role had before roles existed (only teachers and parents could be
+    // previewed then).
+    isFullAdmin: false,
+    permissions: preview.permissions ?? (preview.role === 'TEACHER' ? [...TEACHER_DEFAULT] : []),
+    accessRole: preview.accessRole ?? null,
+    teachesClasses: preview.teachesClasses,
   });
   const years = preview.schoolYears ?? [];
   useSchoolYearStore.getState().setYears(years);

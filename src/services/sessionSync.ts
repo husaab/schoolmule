@@ -8,6 +8,7 @@ import { getToken, setToken, removeToken, type SessionValidationResponse } from 
 import type { LoginResponse, RegisterResponse } from './types/auth'
 import type { AvatarSpec } from './types/profile'
 import { useUserStore, type User } from '@/store/useUserStore'
+import { accessClaimsOf, sameAccess } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
@@ -40,6 +41,7 @@ const storeSession = (data: SignInData): User => {
     fullName: data.fullName ?? null,
     avatar: data.avatar ?? null,
     photoUrl: data.photoUrl ?? null,
+    ...accessClaimsOf(data),
   }
   useUserStore.getState().setUser(user)
   useSchoolYearStore.getState().setYears(data.schoolYears ?? [])
@@ -68,8 +70,9 @@ const sameAvatar = (a: AvatarSpec | null | undefined, b: AvatarSpec | null | und
 
 // Brings a persisted user's access flags (and avatar, photo and name) up to
 // date without touching the rest of the session (e.g. the school year they
-// picked). Returns true when anything changed. Ignores a reply for a
-// different user.
+// picked). Returns true when anything changed, permissions included, so a
+// role edited by an admin re-renders the menus and re-runs the router (a
+// page they lost sends them home). Ignores a reply for a different user.
 export const refreshAccessFlags = (data: SessionData, sentToken: string | null): boolean => {
   const current = useUserStore.getState().user
   if (sessionChangedSince(sentToken) || current.id !== data.userId) return false
@@ -85,6 +88,7 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
     fullName: data.fullName ?? current.fullName ?? null,
     avatar: data.avatar ?? null,
     photoUrl: data.photoUrl ?? null,
+    ...accessClaimsOf(data),
   }
   const changed =
     next.role !== current.role ||
@@ -95,7 +99,8 @@ export const refreshAccessFlags = (data: SessionData, sentToken: string | null):
     next.isPlatformOwner !== current.isPlatformOwner ||
     next.fullName !== current.fullName ||
     sameAvatar(next.avatar, current.avatar) === false ||
-    next.photoUrl !== (current.photoUrl ?? null)
+    next.photoUrl !== (current.photoUrl ?? null) ||
+    !sameAccess(next, current)
   if (changed) useUserStore.getState().setUser(next)
   return changed
 }

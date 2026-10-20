@@ -15,13 +15,16 @@
 //      may only be on that step's pages. Nothing else applies until it's done.
 //   3. Fully onboarded: auth/onboarding pages send you home, then role and
 //      owner gates. A STUDENT may open only the student portal (/student);
-//      staff and parents never open it.
+//      staff and parents never open it. Staff pages follow the permission
+//      rules in lib/permissions (ROUTE_RULES), the same table the sidebar
+//      and the admin-panel cards read.
 //
 // The QR sign-in page (/qr) is open to everyone, signed in or not: a QR card
 // is scanned on shared classroom devices, so the page itself swaps whatever
 // session it finds for the student's.
 
 import { parseSetParam } from '@/lib/notificationPrefs'
+import { canOpenPath, type AccessRoleRef } from '@/lib/permissions'
 
 export type RouteUser = {
   id: string | null
@@ -33,6 +36,12 @@ export type RouteUser = {
   // Dual-role claims. Present for information only: routing reads `role`.
   baseRole?: string | null
   roles?: string[]
+  // Access claims (lib/permissions). Absent on a legacy session, which is
+  // then read by role: ADMIN as a full admin, TEACHER as the built-in teacher.
+  permissions?: string[]
+  isFullAdmin?: boolean
+  accessRole?: AccessRoleRef | null
+  teachesClasses?: boolean
 }
 
 export type RouteState = {
@@ -49,7 +58,6 @@ const VERIFY_EMAIL_PATHS = ['/verify-email', '/verify-email-token']
 const SCHOOL_APPROVAL_PATHS = ['/school-approval']
 const ONBOARDING_PATHS = [...VERIFY_EMAIL_PATHS, ...SCHOOL_APPROVAL_PATHS]
 
-const ADMIN_ONLY_PREFIXES = ['/admin-panel', '/staff-attendance', '/finance']
 const PARENT_PREFIXES = ['/parent', '/settings', '/support', '/contact-us']
 const STUDENT_PREFIXES = ['/student']
 
@@ -148,10 +156,21 @@ export const resolveRedirect = (path: string, state: RouteState): string | null 
   // Staff and parents never open student pages.
   if (isStudentPath(path)) return home
   if (underPrefix(path, '/observe') && user.isPlatformOwner === false) return home
-  if (ADMIN_ONLY_PREFIXES.some((p) => underPrefix(path, p)) && user.role !== 'ADMIN') return home
+  // Permission rules. Both homes are open to everyone there, so this can only
+  // ever send someone to a page they may stay on. A parent view holds no staff
+  // permissions, so it also keeps parents (and admins in parent view) out.
+  if (!canOpenPath(path, user)) return home
   if (user.role === 'PARENT' && !isParentPath(path)) return home
   return null
 }
+
+// True when a staff member is turned away from `path` for lack of access
+// (rather than onboarding, a portal or signing in), so AuthGuard can say why.
+export const isAccessDenied = (path: string, user: RouteUser): boolean =>
+  Boolean(user.id) &&
+  onboardingStep(user) === null &&
+  (user.role === 'ADMIN' || user.role === 'TEACHER') &&
+  !canOpenPath(path, user)
 
 // The weekly email's one-click links ("Get it daily", "Turn it off") open the
 // parent's email preferences with ?set=. Opened signed out, such a link goes to

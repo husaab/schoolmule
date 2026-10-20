@@ -135,3 +135,63 @@ describe('avatar and photo in the session', () => {
     expect(setUser).not.toHaveBeenCalled()
   })
 })
+
+describe('access claims in the session (RBAC)', () => {
+  const access = {
+    permissions: ['users', 'forms'],
+    isFullAdmin: false,
+    accessRole: { id: 'role-1', name: 'Office Staff' },
+    teachesClasses: false,
+  }
+  const current = {
+    id: 'user-1', username: 'Demo Parent', role: 'TEACHER', baseRole: 'TEACHER', roles: ['TEACHER', 'PARENT'],
+    isVerifiedEmail: true, isVerifiedSchool: false, isPlatformOwner: false,
+    fullName: 'Demo Parent', avatar: null, photoUrl: null, activeTerm: 'Term 1',
+  }
+
+  beforeEach(() => {
+    setToken.mockReset()
+    setUser.mockReset()
+    storedToken = 'session-token'
+    storedUser = {}
+  })
+
+  it('stores the permissions, full-admin flag, access role and teaching flag a sign-in carries', () => {
+    const user = startSession({ ...signIn, ...access })
+    expect(user).toMatchObject(access)
+  })
+
+  it('leaves them undefined, never empty, when the backend sends none (read by role until /auth/me)', () => {
+    const user = startSession(signIn)
+    expect(user.permissions).toBeUndefined()
+    expect(user.isFullAdmin).toBeUndefined()
+    expect(user.accessRole).toBeUndefined()
+    expect(user.teachesClasses).toBeUndefined()
+  })
+
+  it('counts a permission change from /auth/me as a change, so the menus and router re-run', () => {
+    storedUser = { ...current, ...access }
+    const changed = refreshAccessFlags({ ...signIn, ...access, permissions: ['users'] }, 'session-token')
+    expect(changed).toBe(true)
+    expect(setUser).toHaveBeenCalledWith(expect.objectContaining({ permissions: ['users'], activeTerm: 'Term 1' }))
+  })
+
+  it('notices a renamed or removed access role and a full-admin flip', () => {
+    storedUser = { ...current, ...access }
+    expect(refreshAccessFlags({ ...signIn, ...access, accessRole: { id: 'role-1', name: 'Front office' } }, 'session-token')).toBe(true)
+    expect(refreshAccessFlags({ ...signIn, ...access, accessRole: null }, 'session-token')).toBe(true)
+    expect(refreshAccessFlags({ ...signIn, ...access, isFullAdmin: true }, 'session-token')).toBe(true)
+  })
+
+  it('reports no change when the same keys come back in another order', () => {
+    storedUser = { ...current, ...access }
+    expect(refreshAccessFlags({ ...signIn, ...access, permissions: ['forms', 'users'] }, 'session-token')).toBe(false)
+    expect(setUser).not.toHaveBeenCalled()
+  })
+
+  it('the first refresh after the deploy fills a legacy session in', () => {
+    storedUser = { ...current }
+    expect(refreshAccessFlags({ ...signIn, ...access }, 'session-token')).toBe(true)
+    expect(setUser).toHaveBeenCalledWith(expect.objectContaining(access))
+  })
+})

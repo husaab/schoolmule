@@ -83,13 +83,25 @@ describe('switchView inside an admin preview', () => {
     expect(takeViewSwitchFlash()).toBe("You're now in Parent view")
   })
 
-  it('refuses the admin view, which no preview can hold', async () => {
+  it("refuses the admin view for a teacher's preview, which can't hold it", async () => {
     session = preview
     const { switchView } = await import('./viewSwitch')
 
-    await expect(switchView('ADMIN')).rejects.toThrow(/teacher or the parent view/)
+    await expect(switchView('ADMIN')).rejects.toThrow(/views this account holds/)
     expect(impersonateSchoolUser).not.toHaveBeenCalled()
     expect(startImpersonation).not.toHaveBeenCalled()
+  })
+
+  it('takes a restricted admin previewed as a parent back to their admin view', async () => {
+    session = { ...preview, target: { userId: 'admin-2', fullName: 'Office Staff test user', role: 'PARENT', baseRole: 'ADMIN' } }
+    const adminPreview = { ...parentPreview, userId: 'admin-2', role: 'ADMIN', baseRole: 'ADMIN', roles: ['ADMIN', 'PARENT'], isFullAdmin: false, permissions: ['users'] }
+    impersonateSchoolUser.mockResolvedValue({ status: 'success', data: adminPreview })
+    const { switchView } = await import('./viewSwitch')
+
+    await switchView('ADMIN')
+
+    expect(impersonateSchoolUser).toHaveBeenCalledWith('admin-2', 'ADMIN', 'admin-token')
+    expect(startImpersonation).toHaveBeenCalledWith('admin-token', adminPreview, expect.objectContaining({ keepSelectedYear: true }))
   })
 
   it('surfaces the server refusal and lets the next click try again', async () => {

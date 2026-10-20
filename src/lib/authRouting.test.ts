@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import fs from 'fs'
-import path from 'path'
 import {
   resolveRedirect,
   homeFor,
@@ -8,31 +6,18 @@ import {
   safeNextPath,
   signInDetourFor,
   createLoopDetector,
+  isAccessDenied,
   type RouteState,
   type RouteUser,
 } from './authRouting'
+import { PERMISSIONS, can } from './permissions'
+import { appRoutes, guardedRoutes } from '@/test/routeDiscovery'
 
 // Every page in the app, discovered from the filesystem so a route added
-// later is covered without touching this file. Route groups like (user) are
-// dropped and dynamic segments get a placeholder.
-const appDir = path.resolve(__dirname, '../app')
-const discoverRoutes = (dir: string, segments: string[] = []): string[] => {
-  const routes: string[] = []
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      const name = entry.name
-      if (name.startsWith('_') || name.startsWith('@')) continue
-      const next = /^\(.*\)$/.test(name) ? segments : [...segments, name.replace(/^\[+\.*(.*?)\]+$/, 'x-$1')]
-      routes.push(...discoverRoutes(path.join(dir, name), next))
-    } else if (/^page\.(tsx|ts|jsx|js)$/.test(entry.name)) {
-      routes.push(`/${segments.join('/')}`)
-    }
-  }
-  return routes
-}
-const APP_ROUTES = [...new Set(discoverRoutes(appDir))]
+// later is covered without touching this file.
+const APP_ROUTES = appRoutes()
 // The pages AuthGuard actually wraps (src/app/(user)/layout.tsx).
-const GUARDED_ROUTES = [...new Set(discoverRoutes(path.join(appDir, '(user)')))]
+const GUARDED_ROUTES = guardedRoutes()
 
 // Guarded pages a signed-out visitor may still open.
 // /qr is the QR sign-in card's link: it must open signed out (and from any session).
@@ -62,12 +47,33 @@ const ROLES = ['ADMIN', 'TEACHER', 'PARENT', 'STUDENT', 'STAFF', null]
 const BOOLS = [true, false]
 const OWNER = [true, false, undefined]
 
+// The "Office Staff" preset (spec section 7): everything except Finance,
+// Analytics and other teachers' classes.
+const OFFICE_STAFF = [
+  'students', 'report_cards', 'attendance.daily', 'attendance.classes', 'staff_attendance', 'users',
+  'messages.all', 'announcements.school', 'school_setup', 'scheduling', 'forms',
+]
+
+// What the session says about access (lib/permissions). Every fully
+// onboarded user is tried with each of these, so every invariant below also
+// holds for restricted admins, teachers with a custom role and full admins.
+const ACCESS: Partial<RouteUser>[] = [
+  {}, // legacy session: read by role
+  { isFullAdmin: true, permissions: [...PERMISSIONS], accessRole: null, teachesClasses: false },
+  { isFullAdmin: false, permissions: [], accessRole: { id: 'r0', name: 'Nothing' }, teachesClasses: false },
+  { isFullAdmin: false, permissions: OFFICE_STAFF, accessRole: { id: 'r1', name: 'Office Staff' }, teachesClasses: false },
+  { isFullAdmin: false, permissions: ['finance'], accessRole: { id: 'r2', name: 'Bursar' }, teachesClasses: true },
+  { isFullAdmin: false, permissions: ['users'], accessRole: { id: 'r3', name: 'Registrar' }, teachesClasses: true },
+  ...PERMISSIONS.map((p) => ({ isFullAdmin: false, permissions: [p], accessRole: { id: `r-${p}`, name: p }, teachesClasses: false })),
+]
+
 const users: RouteUser[] = []
 for (const role of ROLES)
   for (const isVerifiedEmail of BOOLS)
     for (const isVerifiedSchool of BOOLS)
       for (const isPlatformOwner of OWNER)
-        users.push({ id: 'u1', role, isVerifiedEmail, isVerifiedSchool, isPlatformOwner })
+        for (const access of isVerifiedEmail && isVerifiedSchool ? ACCESS : [{}])
+          users.push({ id: 'u1', role, isVerifiedEmail, isVerifiedSchool, isPlatformOwner, ...access })
 
 const anonymous: RouteUser = { id: null, role: null, isVerifiedEmail: false, isVerifiedSchool: false }
 
@@ -85,7 +91,8 @@ const states: RouteState[] = [
 const signedInState = (user: RouteUser): RouteState => ({ hasToken: true, user })
 
 const describeState = (s: RouteState) =>
-  `token=${s.hasToken} id=${s.user.id} role=${s.user.role} email=${s.user.isVerifiedEmail} school=${s.user.isVerifiedSchool} owner=${s.user.isPlatformOwner}`
+  `token=${s.hasToken} id=${s.user.id} role=${s.user.role} email=${s.user.isVerifiedEmail} school=${s.user.isVerifiedSchool} owner=${s.user.isPlatformOwner}` +
+  ` full=${s.user.isFullAdmin} perms=${s.user.permissions?.join('|') ?? 'legacy'} teaches=${s.user.teachesClasses}`
 
 describe('route discovery', () => {
   it('finds the app routes', () => {
@@ -238,10 +245,13 @@ describe('dual-role users route by their active view', () => {
 })
 
 // Redirects pages make on their own, outside AuthGuard. Each landing must
-// settle without leading back to the page that sent the user there.
-const PAGE_REDIRECTS: { from: string; to: string; signedIn: boolean; roles: (string | null)[] }[] = [
+// settle without leading back to the page that sent the user there. `when`
+// narrows a row to the users the page actually redirects.
+const PAGE_REDIRECTS: { from: string; to: string; signedIn: boolean; roles: (string | null)[]; when?: (u: RouteUser) => boolean }[] = [
   { from: '/my-schedule', to: '/school-schedule', signedIn: true, roles: ['ADMIN'] },
-  { from: '/admin-panel/schedule-planner', to: '/dashboard', signedIn: true, roles: ['TEACHER', 'PARENT', 'STAFF', null] },
+  // The planner pages send anyone without `scheduling` home (restricted admins included).
+  { from: '/admin-panel/schedule-planner', to: '/dashboard', signedIn: true, roles: ROLES, when: (u) => !can(u, 'scheduling') },
+  { from: '/admin-panel/schedule-planner/x-scheduleId', to: '/dashboard', signedIn: true, roles: ROLES, when: (u) => !can(u, 'scheduling') },
   { from: '/does-not-exist', to: '/dashboard', signedIn: true, roles: ROLES },
   { from: '/does-not-exist', to: '/', signedIn: false, roles: [null] },
   { from: '/verify-email-token', to: '/login', signedIn: true, roles: ROLES },
@@ -260,7 +270,7 @@ describe('page-level redirects', () => {
   it('every page-level redirect settles without bouncing back', () => {
     const failures: string[] = []
     for (const r of PAGE_REDIRECTS) {
-      const candidates = r.signedIn ? users.filter((u) => r.roles.includes(u.role)) : [anonymous]
+      const candidates = r.signedIn ? users.filter((u) => r.roles.includes(u.role) && (!r.when || r.when(u))) : [anonymous]
       for (const user of candidates) {
         const state = { hasToken: r.signedIn, user }
         let landed: string
@@ -460,6 +470,96 @@ describe('an email\'s ?set= link opened signed out', () => {
   it('leaves every other guarded page going to the front page when signed out', () => {
     expect(resolveRedirect('/parent/notifications', signedOut)).toBe('/')
     expect(resolveRedirect('/dashboard', signedOut)).toBe('/')
+  })
+})
+
+// Staff pages follow lib/permissions (ROUTE_RULES). These pin the cases the
+// spec names; the invariants above already run over every access variant.
+describe('permission-aware routing', () => {
+  const verified = { id: 'a1', isVerifiedEmail: true, isVerifiedSchool: true, isPlatformOwner: false }
+  const legacyAdmin: RouteUser = { ...verified, role: 'ADMIN' }
+  const fullAdmin: RouteUser = { ...verified, role: 'ADMIN', isFullAdmin: true, permissions: [...PERMISSIONS], accessRole: null, teachesClasses: false }
+  const restricted = (permissions: string[], extra: Partial<RouteUser> = {}): RouteUser => ({
+    ...verified, role: 'ADMIN', isFullAdmin: false, permissions, accessRole: { id: 'r', name: 'Custom' }, teachesClasses: false, ...extra,
+  })
+  const officeStaffTestUser = restricted(OFFICE_STAFF, { accessRole: { id: 'r1', name: 'Office Staff' } })
+  const teacher: RouteUser = { ...verified, role: 'TEACHER', isFullAdmin: false, permissions: ['students', 'analytics', 'report_cards', 'attendance.daily'], accessRole: null, teachesClasses: true }
+  const adminPages = GUARDED_ROUTES.filter((p) => p === '/admin-panel' || p.startsWith('/admin-panel/'))
+
+  it('a legacy or full admin stays on every admin, finance and staff attendance page', () => {
+    for (const user of [legacyAdmin, fullAdmin]) {
+      for (const p of [...adminPages, '/finance/tuition', '/staff-attendance', '/admin-panel/roles']) {
+        expect(resolveRedirect(p, signedInState(user)), p).toBeNull()
+      }
+    }
+  })
+
+  it('a restricted admin holding nothing goes home from every gated page and keeps the open ones', () => {
+    const nobody = restricted([])
+    for (const p of ['/admin-panel', '/admin-panel/users', '/finance/tuition', '/staff-attendance', '/classes', '/gradebook', '/students', '/analytics', '/reports']) {
+      expect(resolveRedirect(p, signedInState(nobody)), p).toBe('/dashboard')
+    }
+    for (const p of ['/dashboard', '/messages', '/school-schedule', '/my-attendance', '/my-schedule', '/whats-new', '/settings']) {
+      expect(resolveRedirect(p, signedInState(nobody)), p).toBeNull()
+    }
+  })
+
+  it('the Office Staff test user gets her section 7 pages and nothing else', () => {
+    for (const p of ['/admin-panel', '/admin-panel/users', '/admin-panel/student-accounts', '/admin-panel/forms/submissions', '/admin-panel/school-settings/new-year', '/admin-panel/agendas/x-agendaId', '/staff-attendance', '/attendance/class/x-classId', '/report-cards/view', '/students']) {
+      expect(resolveRedirect(p, signedInState(officeStaffTestUser)), p).toBeNull()
+    }
+    for (const p of ['/classes', '/classes/x-classId', '/gradebook/x-classId', '/analytics', '/finance/tuition', '/admin-panel/patch-notes', '/admin-panel/roles', '/observe']) {
+      expect(resolveRedirect(p, signedInState(officeStaffTestUser)), p).toBe('/dashboard')
+    }
+    expect(landingFor(officeStaffTestUser, '/finance/tuition')).toBe('/dashboard')
+    expect(landingFor(officeStaffTestUser, '/admin-panel/users')).toBe('/admin-panel/users')
+  })
+
+  it('a forms holder opens the forms and the overview, not the rest of the admin panel', () => {
+    const forms = restricted(['forms'])
+    expect(resolveRedirect('/admin-panel/forms', signedInState(forms))).toBeNull()
+    expect(resolveRedirect('/admin-panel/forms/submissions/x-slug', signedInState(forms))).toBeNull()
+    expect(resolveRedirect('/admin-panel', signedInState(forms))).toBeNull()
+    expect(resolveRedirect('/admin-panel/users', signedInState(forms))).toBe('/dashboard')
+  })
+
+  it('roles and patch notes are full-admin only, even with every key', () => {
+    const everything = restricted([...PERMISSIONS], { teachesClasses: true })
+    expect(resolveRedirect('/admin-panel/roles', signedInState(everything))).toBe('/dashboard')
+    expect(resolveRedirect('/admin-panel/patch-notes', signedInState(everything))).toBe('/dashboard')
+    expect(resolveRedirect('/admin-panel/users', signedInState(everything))).toBeNull()
+  })
+
+  it('the built-in teacher routes exactly as before roles existed', () => {
+    const legacyTeacher: RouteUser = { ...verified, role: 'TEACHER' }
+    for (const p of PATHS) {
+      expect(resolveRedirect(p, signedInState(teacher)), p).toBe(resolveRedirect(p, signedInState(legacyTeacher)))
+    }
+    expect(resolveRedirect('/classes', signedInState(teacher))).toBeNull()
+    expect(resolveRedirect('/admin-panel', signedInState(teacher))).toBe('/dashboard')
+  })
+
+  it('a teacher with a custom role gets its keys on top of their own classes', () => {
+    const bursar: RouteUser = { ...teacher, permissions: ['finance'], accessRole: { id: 'r2', name: 'Bursar' } }
+    expect(resolveRedirect('/finance/tuition', signedInState(bursar))).toBeNull()
+    expect(resolveRedirect('/classes', signedInState(bursar))).toBeNull()
+    expect(resolveRedirect('/analytics', signedInState(bursar))).toBe('/dashboard')
+  })
+
+  it('a full admin in parent view loses every staff page until they switch back', () => {
+    const inParentView: RouteUser = { ...fullAdmin, role: 'PARENT', baseRole: 'ADMIN', roles: ['ADMIN', 'PARENT'] }
+    expect(resolveRedirect('/admin-panel', signedInState(inParentView))).toBe('/parent/dashboard')
+    expect(resolveRedirect('/finance/tuition', signedInState(inParentView))).toBe('/parent/dashboard')
+    expect(resolveRedirect('/parent/grades', signedInState(inParentView))).toBeNull()
+  })
+
+  it('says "no access" only for a permission refusal', () => {
+    expect(isAccessDenied('/finance/tuition', officeStaffTestUser)).toBe(true)
+    expect(isAccessDenied('/students', officeStaffTestUser)).toBe(false)
+    // Onboarding and portal confinement are not access refusals.
+    expect(isAccessDenied('/finance/tuition', { ...officeStaffTestUser, isVerifiedEmail: false })).toBe(false)
+    expect(isAccessDenied('/admin-panel', { id: 'p1', role: 'PARENT', isVerifiedEmail: true, isVerifiedSchool: true })).toBe(false)
+    expect(isAccessDenied('/admin-panel', fullAdmin)).toBe(false)
   })
 })
 

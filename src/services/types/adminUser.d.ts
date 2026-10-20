@@ -1,5 +1,7 @@
 // src/services/types/adminUser.d.ts
 
+import type { AccessClaims } from './auth';
+
 export type SchoolRole = 'ADMIN' | 'TEACHER' | 'PARENT';
 
 /** A user account as seen from the admin Users page. */
@@ -14,6 +16,11 @@ export interface SchoolUser {
   role: SchoolRole;
   /** Admins only: the title parents see when they message them (e.g. "Principal"). null = parents can't message them. */
   staffTitle: string | null;
+  /** The custom access role (RBAC); null for the built-in Admin or Teacher. Optional until the backend sends it. */
+  accessRoleId?: string | null;
+  accessRoleName?: string | null;
+  /** An ADMIN with no access role: only full admins may edit, archive, delete or preview them. */
+  isFullAdmin?: boolean;
   isVerified: boolean;
   isVerifiedSchool: boolean;
   /** Archived: kept with all their records, hidden from staff lists, can't sign in. */
@@ -60,6 +67,8 @@ export interface InviteUserRequest {
   lastName: string;
   email: string;
   role: SchoolRole;
+  /** Full admins only, staff roles only. Omitted = the built-in Admin or Teacher. */
+  accessRoleId?: string | null;
 }
 
 export interface UpdateSchoolUserRequest {
@@ -69,10 +78,12 @@ export interface UpdateSchoolUserRequest {
   isVerifiedSchool: boolean;
   /** Admins only; empty or omitted clears it. Ignored for other roles. */
   staffTitle?: string;
+  /** Full admins only. null clears it (back to the built-in); omitted leaves it unchanged. */
+  accessRoleId?: string | null;
 }
 
 /** POST /admin/users/:id/impersonate — a login-shaped payload for the previewed user. */
-export interface ImpersonationStart {
+export interface ImpersonationStart extends AccessClaims {
   userId: string;
   username: string;
   fullName: string;

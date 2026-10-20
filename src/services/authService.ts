@@ -172,7 +172,7 @@ export interface SessionValidationResponse {
     impersonator?: { userId: string; username: string; fullName: string } | null;
     /** A fresh token, present only when the sent token's claims were stale (e.g. approved after sign-in). */
     token?: string;
-  };
+  } & import('./types/auth').AccessClaims;
 }
 
 export function validateSession(): Promise<SessionValidationResponse> {
