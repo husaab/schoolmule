@@ -1,6 +1,6 @@
 'use client'
 
-import { FC, useState } from 'react'
+import { FC, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
@@ -70,9 +70,17 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<SignUpFormInputs>()
   const isParent = role === 'PARENT'
+
+  // A grades email's "Create your account" carries the address it went to
+  // (?email=): the one the school has, so the children match.
+  useEffect(() => {
+    const email = new URLSearchParams(window.location.search).get('email')?.trim()
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) setValue('email', email)
+  }, [setValue])
 
   const onSubmit: SubmitHandler<SignUpFormInputs> = async data => {
     // Honeypot check - bots fill this hidden field, humans don't

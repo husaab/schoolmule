@@ -9,7 +9,7 @@ import { isApiError } from '@/services/apiClient'
 import { startSession } from '@/services/sessionSync'
 import type { LoginResponse } from '@/services/types/auth'
 import GoogleSignIn from '@/components/auth/GoogleSignIn'
-import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice'
+import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED, LOGIN_NOTICE_LINK_EXPIRED } from '@/lib/loginNotice'
 import { landingFor } from '@/lib/authRouting'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -35,7 +35,8 @@ interface LoginFormInputs {
 // It lives in the URL because the forced sign-out is a hard navigation, which
 // drops the in-memory toast store.
 const NOTICES: Record<string, string> = {
-  [LOGIN_NOTICE_APPROVED]: 'Your account has been approved. Please sign in again to continue.'
+  [LOGIN_NOTICE_APPROVED]: 'Your account has been approved. Please sign in again to continue.',
+  [LOGIN_NOTICE_LINK_EXPIRED]: 'That sign-in link has expired. Sign in to continue.',
 }
 
 // Needs a Suspense boundary (useSearchParams). The message is captured once

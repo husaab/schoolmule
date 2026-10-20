@@ -89,6 +89,16 @@ export const acceptStudentInvite = (body: { token: string; password: string } | 
     body,
   });
 
+/**
+ * POST /auth/email-link: one-tap sign-in from a parent email's button
+ * (lib/emailLogin). The login payload, or 401 EMAIL_LINK_INVALID.
+ */
+export const emailLinkLogin = (token: string) =>
+  apiClient<LoginResponse>('/auth/email-link', {
+    method: 'POST',
+    body: { token },
+  });
+
 export const googleAuth = async (request: GoogleAuthRequest): Promise<GoogleAuthResponse> => {
   return apiClient<GoogleAuthResponse>('/auth/google', {
     method: 'POST',

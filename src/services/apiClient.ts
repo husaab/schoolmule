@@ -102,7 +102,7 @@ async function apiClient<T, B = unknown>(
         // A refused sign-in is a verdict on the credentials, not on any
         // session already in storage; never let a wrong password sign
         // someone out.
-        if (!['/auth/login', '/auth/register', '/auth/google', '/auth/student-qr', '/auth/student-invite'].some((p) => endpoint.startsWith(p))) {
+        if (!['/auth/login', '/auth/register', '/auth/google', '/auth/email-link', '/auth/student-qr', '/auth/student-invite'].some((p) => endpoint.startsWith(p))) {
             await handleSessionFailure(response.status, errorBody, token);
         }
 

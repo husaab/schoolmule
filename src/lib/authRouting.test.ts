@@ -22,7 +22,7 @@ const GUARDED_ROUTES = guardedRoutes()
 // Guarded pages a signed-out visitor may still open.
 // /qr is the QR sign-in card's link: it must open signed out (and from any session).
 const isSignedOutPage = (p: string) =>
-  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token', '/qr', '/student-invite'].includes(p) ||
+  ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email-token', '/qr', '/student-invite', '/email-login'].includes(p) ||
   p.startsWith('/signup/')
 
 // Follows redirects until the user settles; throws on a loop.
@@ -119,6 +119,7 @@ describe('guarded pages stay protected', () => {
         !r.startsWith('/signup/') &&
         r !== '/qr' &&
         r !== '/student-invite' &&
+        r !== '/email-login' &&
         !['/parent', '/settings', '/support', '/contact-us'].some((pre) => r === pre || r.startsWith(`${pre}/`)) &&
         resolveRedirect(r, { hasToken: true, user: p }) === null,
     )
@@ -132,6 +133,7 @@ describe('guarded pages stay protected', () => {
         !r.startsWith('/signup/') &&
         r !== '/qr' &&
         r !== '/student-invite' &&
+        r !== '/email-login' &&
         !(r === '/student' || r.startsWith('/student/')) &&
         resolveRedirect(r, { hasToken: true, user: s }) === null,
     )
@@ -197,6 +199,14 @@ describe('student routing', () => {
     expect(resolveRedirect('/student-invite', signedInState(parentUser))).toBeNull()
     expect(resolveRedirect('/student-invite', signedInState(student))).toBeNull()
     expect(resolveRedirect('/student-invite', signedInState(unverified))).toBeNull()
+  })
+
+  it("the email sign-in page opens signed out and from any session; the page itself decides where to go", () => {
+    const admin = { id: 'a1', role: 'ADMIN', isVerifiedEmail: true, isVerifiedSchool: true }
+    expect(resolveRedirect('/email-login', { hasToken: false, user: anonymous })).toBeNull()
+    expect(resolveRedirect('/email-login', signedInState(admin))).toBeNull()
+    expect(resolveRedirect('/email-login', signedInState(parentUser))).toBeNull()
+    expect(resolveRedirect('/email-login', signedInState(student))).toBeNull()
   })
 
   it('landing after sign-in keeps a student inside the portal', () => {

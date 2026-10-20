@@ -191,6 +191,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { path: '/verify-email-token', rule: PORTAL },
   { path: '/school-approval', rule: PORTAL },
   { path: '/student-invite', rule: PORTAL },
+  { path: '/email-login', rule: PORTAL },
   { path: '/qr', rule: PORTAL },
   { path: '/parent', rule: PORTAL },
   { path: '/student', rule: PORTAL },

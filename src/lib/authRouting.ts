@@ -24,6 +24,8 @@
 // session it finds for the student's.
 
 import { parseSetParam } from '@/lib/notificationPrefs'
+// A parent email's one-tap sign-in opens signed out and from any session; the page itself decides whether to sign in or go straight on.
+import { EMAIL_LOGIN_PATH } from '@/lib/emailLogin'
 import { canOpenPath, type AccessRoleRef } from '@/lib/permissions'
 
 export type RouteUser = {
@@ -79,7 +81,7 @@ const KNOWN_APP_ROUTES = [
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
   'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
   'finance', 'messages', 'observe', 'student-views', 'analytics',
-  'student', 'qr', 'student-invite',
+  'student', 'qr', 'student-invite', 'email-login',
   'forbidden', 'api', '_next',
 ]
 
@@ -132,15 +134,16 @@ export const homeFor = (user: RouteUser): string => onboardingStep(user) ?? role
 export const resolveRedirect = (path: string, state: RouteState): string | null => {
   if (!state.hasToken) {
     return AUTH_ENTRY_PATHS.includes(path) || path === '/verify-email-token' || path === QR_SIGN_IN_PATH ||
-      path === STUDENT_INVITE_PATH || isOpenPath(path)
+      path === STUDENT_INVITE_PATH || path === EMAIL_LOGIN_PATH || isOpenPath(path)
       ? null
       : '/'
   }
 
   // Token but no user yet: AuthGuard is validating the session. Stay put.
   if (!state.user.id) return null
-  // Whoever is signed in, the invite page stays (it asks before signing them out).
-  if (path === STUDENT_INVITE_PATH) return null
+  // Whoever is signed in, the invite page stays (it asks before signing them
+  // out), and so does the email sign-in page (it forwards on its own).
+  if (path === STUDENT_INVITE_PATH || path === EMAIL_LOGIN_PATH) return null
 
   const { user } = state
   const step = onboardingStep(user)
