@@ -31,13 +31,16 @@ const isParentView = (view: string) => view === 'PARENT'
 const dotClass = (view: string) =>
   isParentView(view) ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
 
-// A restricted admin (an access role) gets what the role allows, not "everything".
-const staffBlurb = (view: string, accessRoleName?: string | null) =>
-  view === 'ADMIN'
-    ? accessRoleName
-      ? `What ${accessRoleName} allows`
-      : 'Everything, including the admin panel'
-    : 'Classes, gradebook, attendance'
+// What the staff view holds. The session only describes the active view's
+// access (parent view carries none), so from the other side an admin view
+// is described neutrally rather than promising "everything" to someone an
+// access role limits.
+const staffBlurb = (view: string, active: { role: string | null; isFullAdmin?: boolean; accessRole?: { name: string } | null }) => {
+  if (view !== 'ADMIN') return 'Classes, gradebook, attendance'
+  if (active.role !== 'ADMIN') return 'Your admin tools'
+  if (active.accessRole?.name) return `What ${active.accessRole.name} allows`
+  return active.isFullAdmin === false ? 'Your admin tools' : 'Everything, including the admin panel'
+}
 
 const childrenBlurb = (children: ChildLite[] | null) => {
   if (children === null) return 'Your linked children'
@@ -185,7 +188,7 @@ const LabelSwitch: React.FC = () => {
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium">{viewLabelFor(view).replace(' view', '')}</span>
                     <span className="block truncate text-xs text-slate-500">
-                      {amber ? childrenBlurb(children) : staffBlurb(view, user.accessRole?.name)}
+                      {amber ? childrenBlurb(children) : staffBlurb(view, user)}
                     </span>
                   </span>
                   {active && <CheckIcon className="h-4 w-4 flex-shrink-0" />}

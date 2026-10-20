@@ -6,6 +6,8 @@ import { ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import type { AssessmentContext, SenderRole } from '@/services/types/messaging'
 import { toneClasses, type Tone } from './tones'
 import { classHref } from '@/lib/classroomRoutes'
+import { canOpenPath } from '@/lib/permissions'
+import { useUserStore } from '@/store/useUserStore'
 
 interface ThreadContextCardProps {
   context: AssessmentContext | null
@@ -31,6 +33,9 @@ const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, c
   const t = toneClasses(tone)
   const isParent = role === 'PARENT'
   const href = isParent ? '/parent/grades' : classId ? classHref(classId, 'grades') : '/classes'
+  // Someone reading every conversation (messages.all) may not open the
+  // class itself: no link that would only bounce them home.
+  const showLink = useUserStore((s) => isParent || canOpenPath(href, s.user))
   const meta = context
     ? [
         classSubject,
@@ -66,12 +71,14 @@ const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, c
           <p className="text-xs font-medium text-slate-500">Not graded</p>
         ) : null}
       </div>
-      <Link
-        href={href}
-        className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}
-      >
-        {isParent ? 'View in Grades' : 'Open gradebook'}
-      </Link>
+      {showLink && (
+        <Link
+          href={href}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium ${t.secondary} whitespace-nowrap`}
+        >
+          {isParent ? 'View in Grades' : 'Open gradebook'}
+        </Link>
+      )}
     </div>
   )
 }
