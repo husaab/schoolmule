@@ -10,7 +10,8 @@ import {
 } from '@/services/calendarEventService';
 import type {
   CalendarEventPayload,
-  CalendarEventCategory
+  CalendarEventCategory,
+  CalendarStaffDay
 } from '@/services/types/calendarEvent';
 
 const CATEGORY_OPTIONS: { value: CalendarEventCategory; label: string }[] = [
@@ -20,6 +21,16 @@ const CATEGORY_OPTIONS: { value: CalendarEventCategory; label: string }[] = [
   { value: 'exam', label: 'Exam' },
   { value: 'other', label: 'Other' },
 ];
+
+const STAFF_DAY_OPTIONS: { value: CalendarStaffDay; label: string; hint: string }[] = [
+  { value: 'off', label: 'Day off', hint: 'Unpaid: no hours for staff.' },
+  { value: 'paid', label: 'Paid holiday', hint: 'Staff are paid their usual hours.' },
+  { value: 'work', label: 'Work day', hint: 'Staff still come in (e.g. a PA day).' },
+];
+
+/** Staff work on PA days; any other closure starts as an unpaid day off. */
+const defaultStaffDay = (category: CalendarEventCategory): CalendarStaffDay =>
+  category === 'pa-day' ? 'work' : 'off';
 
 interface EventFormModalProps {
   school: string;
@@ -40,6 +51,9 @@ const EventFormModal = ({ school, event, defaultDate, onClose, onSaved }: EventF
   const [startDate, setStartDate] = useState(defaultDate || '');
   const [endDate, setEndDate] = useState('');
   const [isSchoolClosed, setIsSchoolClosed] = useState(false);
+  const [staffDay, setStaffDay] = useState<CalendarStaffDay>('off');
+  // Until someone picks a staff option, it follows the category.
+  const [staffDayChosen, setStaffDayChosen] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +64,8 @@ const EventFormModal = ({ school, event, defaultDate, onClose, onSaved }: EventF
       setStartDate(event.startDate?.slice(0, 10) || '');
       setEndDate(event.endDate?.slice(0, 10) || '');
       setIsSchoolClosed(event.isSchoolClosed);
+      setStaffDay(event.staffDay ?? 'off');
+      setStaffDayChosen(true);
       setNotes(event.notes || '');
     }
   }, [event]);
@@ -73,6 +89,7 @@ const EventFormModal = ({ school, event, defaultDate, onClose, onSaved }: EventF
         startDate,
         endDate: endDate || null,
         isSchoolClosed,
+        staffDay,
         notes: notes.trim() || null,
       };
       if (event) {
@@ -164,7 +181,11 @@ const EventFormModal = ({ school, event, defaultDate, onClose, onSaved }: EventF
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value as CalendarEventCategory)}
+              onChange={(e) => {
+                const next = e.target.value as CalendarEventCategory;
+                setCategory(next);
+                if (!staffDayChosen) setStaffDay(defaultStaffDay(next));
+              }}
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
             >
               {CATEGORY_OPTIONS.map((opt) => (
@@ -182,6 +203,34 @@ const EventFormModal = ({ school, event, defaultDate, onClose, onSaved }: EventF
             />
             School closed (no classes) — shaded on agenda planner pages
           </label>
+
+          {isSchoolClosed && (
+            <fieldset>
+              <legend className="block text-sm font-medium text-slate-700 mb-1">For staff</legend>
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
+                {STAFF_DAY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={staffDay === opt.value}
+                    onClick={() => {
+                      setStaffDay(opt.value);
+                      setStaffDayChosen(true);
+                    }}
+                    className={`rounded-lg px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                      staffDay === opt.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-500">
+                {STAFF_DAY_OPTIONS.find((opt) => opt.value === staffDay)?.hint} Ontario stat holidays
+                (Thanksgiving, Christmas…) are always paid.
+              </p>
+            </fieldset>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">

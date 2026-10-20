@@ -231,6 +231,8 @@ const SchoolCalendarContent = () => {
                           {event.startDate.slice(0, 10)}
                           {event.endDate ? ` – ${event.endDate.slice(0, 10)}` : ''}
                           {event.isSchoolClosed ? ' · School closed' : ''}
+                          {event.isSchoolClosed && event.staffDay === 'paid' ? ' · Paid for staff' : ''}
+                          {event.isSchoolClosed && event.staffDay === 'work' ? ' · Staff work day' : ''}
                         </p>
                       </div>
                       <span className="text-xs font-medium text-slate-400 capitalize">{event.category}</span>

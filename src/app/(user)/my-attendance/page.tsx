@@ -19,7 +19,7 @@ import MyPayPeriodCard from '@/components/teacherAttendance/MyPayPeriodCard'
 import MyPayHistory, { type MyPeriod } from '@/components/teacherAttendance/MyPayHistory'
 import { getMyMonth, getMyPayPeriod, updateMyRecord, deleteMyRecord } from '@/services/teacherAttendanceService'
 import type { AttendanceSummary, MyPayPeriodResponse } from '@/services/types/teacherAttendance'
-import { errorMessage, formatHours, shiftDate } from '@/components/teacherAttendance/payPeriodFormat'
+import { editableStatus, errorMessage, formatHours, shiftDate } from '@/components/teacherAttendance/payPeriodFormat'
 import MonthSwitcher from '@/components/teacherAttendance/MonthSwitcher'
 import { formatWorkDays } from '@/components/teacherAttendance/WorkDaysControl'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -50,6 +50,7 @@ function MyAttendanceContent() {
     date: string
     status: 'PRESENT' | 'ABSENT' | null
     notes: string | null
+    holidayName: string | null
   } | null>(null)
 
   const loadMonth = useCallback(async () => {
@@ -100,8 +101,9 @@ function MyAttendanceContent() {
     const record = month?.records.find((r) => r.attendanceDate.substring(0, 10) === date)
     setEditTarget({
       date,
-      status: (currentStatus as 'PRESENT' | 'ABSENT' | null) ?? null,
+      status: editableStatus(currentStatus),
       notes: record?.notes ?? null,
+      holidayName: record?.status === 'HOLIDAY' ? record.holidayName || 'Paid holiday' : null,
     })
   }
 
@@ -132,6 +134,7 @@ function MyAttendanceContent() {
   const workingDays = month?.workingDays ?? 0
   const presentDays = month?.presentDays ?? 0
   const absentDays = month?.absentDays ?? 0
+  const holidayDays = month?.holidayDays ?? 0
   const unmarkedDays = Math.max(0, workingDays - presentDays - absentDays)
   const partTime = !!month && month.workDays.length < 5
   const hasSchedule = !!payPeriod?.schedule
@@ -211,7 +214,13 @@ function MyAttendanceContent() {
           {/* This month's counts */}
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile label="Scheduled days" value={workingDays} loading={monthLoading} />
-            <StatTile label="Present" value={presentDays} tone={presentDays > 0 ? 'good' : 'neutral'} loading={monthLoading} />
+            <StatTile
+              label="Present"
+              value={presentDays}
+              tone={presentDays > 0 ? 'good' : 'neutral'}
+              loading={monthLoading}
+              sub={holidayDays > 0 ? `+ ${holidayDays} paid ${holidayDays === 1 ? 'holiday' : 'holidays'}` : undefined}
+            />
             <StatTile label="Absent" value={absentDays} tone={absentDays > 0 ? 'bad' : 'neutral'} loading={monthLoading} />
             <StatTile
               label="Hours this month"
@@ -230,6 +239,7 @@ function MyAttendanceContent() {
         date={editTarget?.date ?? ''}
         currentStatus={editTarget?.status ?? null}
         currentNotes={editTarget?.notes ?? null}
+        holidayName={editTarget?.holidayName ?? null}
         onSave={handleEditSave}
         onDelete={handleEditDelete}
         onClose={() => setEditTarget(null)}

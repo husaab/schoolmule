@@ -49,7 +49,7 @@ const StaffMonthRow: React.FC<StaffMonthRowProps> = ({
         <span className="min-w-0 flex-1">
           <span className="block font-medium text-slate-900 truncate">{staffName(teacher)}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-            <PresentAbsentChips presentDays={teacher.presentDays} absentDays={teacher.absentDays} />
+            <PresentAbsentChips presentDays={teacher.presentDays} absentDays={teacher.absentDays} holidayDays={teacher.holidayDays} />
             <span className="text-slate-400">of {teacher.workingDays} days</span>
           </span>
         </span>

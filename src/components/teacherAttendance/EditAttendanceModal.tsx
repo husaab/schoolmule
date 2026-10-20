@@ -25,6 +25,8 @@ interface EditAttendanceModalProps {
   usualHours?: number
   /** Remove the day's record entirely. Shown only when the day has one. */
   onDelete?: () => Promise<void>
+  /** The day is a paid holiday (e.g. "Thanksgiving"); saving records over it. */
+  holidayName?: string | null
 }
 
 const statusButton = (on: boolean, tone: 'emerald' | 'rose') =>
@@ -47,6 +49,7 @@ export default function EditAttendanceModal({
   currentHours = null,
   usualHours,
   onDelete,
+  holidayName = null,
 }: EditAttendanceModalProps) {
   const [status, setStatus] = useState<'PRESENT' | 'ABSENT'>(currentStatus ?? 'PRESENT')
   const [notes, setNotes] = useState(currentNotes ?? '')
@@ -99,6 +102,12 @@ export default function EditAttendanceModal({
     <Modal isOpen={isOpen} onClose={onClose} size="md">
       <ModalHeader title="Edit attendance" subtitle={formattedDate} icon={PencilSquareIcon} />
       <ModalBody>
+        {holidayName && (
+          <p className="rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+            <span className="font-semibold">{holidayName}</span> is a paid holiday and already counts the usual hours.
+            Only record something if this day was different.
+          </p>
+        )}
         <div className="flex gap-3">
           <button type="button" onClick={() => setStatus('PRESENT')} className={statusButton(status === 'PRESENT', 'emerald')}>
             <CheckCircleIcon className={`w-8 h-8 ${status === 'PRESENT' ? 'text-emerald-500' : 'text-slate-300'}`} />

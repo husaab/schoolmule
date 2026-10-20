@@ -4,7 +4,7 @@ export interface TodayStatusResponse {
     checkedIn: boolean;
     status: string | null;
     notes?: string | null;
-    /** False on school closures and the person's days off. */
+    /** False on school closures (paid holidays too) and the person's days off. */
     expected?: boolean;
   };
 }
@@ -22,11 +22,20 @@ export interface CheckInResponse {
 
 export interface AttendanceRecord {
   attendanceDate: string;
-  status: "PRESENT" | "ABSENT";
+  /**
+   * HOLIDAY is a paid holiday (an Ontario stat holiday, or a closure the
+   * school marked as paid): never stored, worth a usual day's hours.
+   */
+  status: "PRESENT" | "ABSENT" | "HOLIDAY";
   notes?: string | null;
   /** Admin override for the hours this day is worth; null = the person's usual day. */
   hours?: number | null;
+  /** HOLIDAY only: e.g. "Thanksgiving" */
+  holidayName?: string | null;
 }
+
+/** A status someone can record for a day (HOLIDAY is only ever computed). */
+export type RecordableStatus = "PRESENT" | "ABSENT";
 
 /** Where a staff member's work days came from. */
 export type WorkDaysSource = "custom" | "planner" | "default";
@@ -46,10 +55,12 @@ export interface AttendanceSummary {
   elapsedWorkingDays: number;
   presentDays: number;
   absentDays: number;
-  /** Hours a present day is worth for this person */
+  /** Paid holidays that have passed and fall on their work days */
+  holidayDays?: number;
+  /** Hours a present day (or paid holiday) is worth for this person */
   hoursPerDay: number;
   hoursPerDaySource: HoursPerDaySource;
-  /** Present days × hoursPerDay, with per-day overrides applied */
+  /** (Present days + paid holidays) × hoursPerDay, with per-day overrides applied */
   hoursWorked: number;
 }
 

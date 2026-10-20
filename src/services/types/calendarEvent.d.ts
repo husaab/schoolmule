@@ -3,6 +3,13 @@
 export type CalendarEventCategory = 'event' | 'holiday' | 'pa-day' | 'exam' | 'other';
 
 /**
+ * What a school closure means for staff hours: an unpaid day off, a paid
+ * holiday, or a staff work day (a PA day). Ontario stat holidays are always
+ * paid, whatever this says.
+ */
+export type CalendarStaffDay = 'off' | 'paid' | 'work';
+
+/**
  * School calendar event payload (from API response)
  */
 export interface CalendarEventPayload {
@@ -14,6 +21,7 @@ export interface CalendarEventPayload {
   startDate: string;           // ISO date string (YYYY-MM-DD)
   endDate?: string | null;     // Optional range end (YYYY-MM-DD)
   isSchoolClosed: boolean;     // Shades the day on agenda weekly pages
+  staffDay: CalendarStaffDay;  // Only meaningful when isSchoolClosed
   notes?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -29,6 +37,7 @@ export interface CreateCalendarEventRequest {
   startDate: string;
   endDate?: string | null;
   isSchoolClosed?: boolean;
+  staffDay?: CalendarStaffDay;
   notes?: string | null;
 }
 
@@ -41,6 +50,7 @@ export interface UpdateCalendarEventRequest {
   startDate?: string;
   endDate?: string | null;
   isSchoolClosed?: boolean;
+  staffDay?: CalendarStaffDay;
   notes?: string | null;
 }
 

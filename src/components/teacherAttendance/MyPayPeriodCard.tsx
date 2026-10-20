@@ -98,7 +98,12 @@ const MyPayPeriodCard: React.FC<MyPayPeriodCardProps> = ({ data, loading, error,
         <div className="px-6 py-4 text-center">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Days worked</p>
           <p className="text-2xl font-bold text-emerald-700 tabular-nums">{period.presentDays ?? 0}</p>
-          <p className="text-[11px] text-slate-400">of {period.workingDays ?? 0} scheduled</p>
+          <p className="text-[11px] text-slate-400">
+            of {period.workingDays ?? 0} scheduled
+            {!!period.holidayDays && (
+              <> · +{period.holidayDays} paid {period.holidayDays === 1 ? 'holiday' : 'holidays'}</>
+            )}
+          </p>
         </div>
         <div className="px-6 py-4 text-center">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Hours / day</p>

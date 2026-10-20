@@ -2,6 +2,7 @@
 // YYYY-MM-DD keys; parse them as local dates so nothing shifts a day.
 
 import { addDays, format, parseISO } from 'date-fns'
+import type { RecordableStatus } from '@/services/types/teacherAttendance'
 
 /** "Sep 25" or "Sep 25, 2026" */
 export const shortDate = (key: string, withYear = false) =>
@@ -49,6 +50,13 @@ export const staffName = (t: { firstName?: string | null; lastName?: string | nu
 /** The message from a thrown error, or a fallback when there is none to show. */
 export const errorMessage = (err: unknown, fallback: string) =>
   err instanceof Error && err.message ? err.message : fallback
+
+/**
+ * A day's status as the editor opens it. A paid holiday has no record of its
+ * own, so it opens like an empty day: whatever is saved replaces it.
+ */
+export const editableStatus = (status: string | null | undefined): RecordableStatus | null =>
+  status === 'PRESENT' || status === 'ABSENT' ? status : null
 
 /** Case-insensitive "name contains query"; an empty query keeps everyone. */
 export const filterByName = <T extends { name: string }>(list: T[], query: string): T[] => {

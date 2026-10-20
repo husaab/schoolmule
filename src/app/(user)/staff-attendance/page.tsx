@@ -27,7 +27,7 @@ import MarkDayModal, { type MarkDayFailure, type MarkDayPayload } from '@/compon
 import LinkSheetModal from '@/components/googleSheets/LinkSheetModal'
 import SheetSyncStatus from '@/components/googleSheets/SheetSyncStatus'
 import { useGoogleOAuthOutcome } from '@/components/googleSheets/useGoogleOAuthOutcome'
-import { errorMessage, shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
+import { editableStatus, errorMessage, shiftDate, staffName, todayKey } from '@/components/teacherAttendance/payPeriodFormat'
 import {
   getAllTeacherAttendance,
   updateTeacherRecord,
@@ -72,6 +72,8 @@ interface EditTarget {
   notes: string | null
   hours: number | null
   usualHours: number
+  /** Set when the day is a paid holiday with no record of its own. */
+  holidayName: string | null
 }
 
 const secondaryButton =
@@ -200,10 +202,11 @@ function StaffAttendanceContent() {
     setEditTarget({
       teacherId: teacher.teacherId,
       date,
-      status: record?.status ?? null,
+      status: editableStatus(record?.status),
       notes: record?.notes ?? null,
       hours: record?.hours ?? null,
       usualHours: teacher.hoursPerDay,
+      holidayName: record?.status === 'HOLIDAY' ? record.holidayName || 'Paid holiday' : null,
     })
 
   const handleMonthDayClick = (teacher: TeacherAttendanceData, date: string) => {
@@ -580,6 +583,7 @@ function StaffAttendanceContent() {
         allowHours
         currentHours={editTarget?.hours ?? null}
         usualHours={editTarget?.usualHours}
+        holidayName={editTarget?.holidayName ?? null}
         onSave={handleEditSave}
         onDelete={handleEditDelete}
         onClose={() => setEditTarget(null)}

@@ -16,8 +16,9 @@ import {
 
 interface AttendanceRecord {
   attendanceDate: string
-  status: 'PRESENT' | 'ABSENT'
+  status: 'PRESENT' | 'ABSENT' | 'HOLIDAY'
   notes?: string | null
+  holidayName?: string | null
 }
 
 interface AttendanceCalendarProps {
@@ -57,6 +58,7 @@ export default function AttendanceCalendar({
     return !workDays.includes(iso)
   }
   const hasOffDays = Boolean(workDays) && [1, 2, 3, 4, 5].some((d) => !workDays!.includes(d))
+  const hasHolidays = records.some((r) => r.status === 'HOLIDAY' && r.attendanceDate.substring(0, 7) === format(month, 'yyyy-MM'))
 
   return (
     <div>
@@ -83,6 +85,7 @@ export default function AttendanceCalendar({
           const record = recordMap[dateStr] || null
           const status = record?.status ?? null
           const hasNote = !!(record?.notes)
+          const holiday = status === 'HOLIDAY'
           // Not a work day and nothing recorded. Still clickable, so a covered
           // shift can be recorded.
           const off = inMonth && !weekend && !status && isOffDay(day)
@@ -94,17 +97,27 @@ export default function AttendanceCalendar({
           else if (off) bgClass = 'bg-slate-50 border border-dashed border-slate-200'
           else if (status === 'PRESENT') bgClass = 'bg-emerald-100'
           else if (status === 'ABSENT') bgClass = 'bg-red-100'
+          else if (holiday) bgClass = 'bg-sky-100'
 
           let textClass = 'text-slate-400'
           if (inMonth && !weekend) textClass = off ? 'text-slate-400' : 'text-slate-700'
           if (status === 'PRESENT') textClass = 'text-emerald-700'
           if (status === 'ABSENT') textClass = 'text-red-700'
+          if (holiday) textClass = 'text-sky-700'
 
           return (
             <button
               key={dateStr}
               disabled={disabled}
-              title={hasNote ? record!.notes! : off ? 'Not scheduled' : undefined}
+              title={
+                hasNote
+                  ? record!.notes!
+                  : holiday
+                    ? `Paid holiday${record?.holidayName ? `: ${record.holidayName}` : ''}`
+                    : off
+                      ? 'Not scheduled'
+                      : undefined
+              }
               onClick={() => {
                 if (!disabled && onDayClick) {
                   onDayClick(dateStr, status)
@@ -123,7 +136,7 @@ export default function AttendanceCalendar({
               {off && <span className="text-[10px] font-medium mt-0.5">Off</span>}
               {inMonth && !weekend && status && (
                 <span className="text-[10px] font-semibold mt-0.5">
-                  {status === 'PRESENT' ? 'P' : 'A'}
+                  {status === 'PRESENT' ? 'P' : holiday ? 'H' : 'A'}
                 </span>
               )}
               {inMonth && !weekend && hasNote && (
@@ -140,7 +153,7 @@ export default function AttendanceCalendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-4 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-4 text-xs text-slate-500">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200" />
           Present
@@ -149,6 +162,12 @@ export default function AttendanceCalendar({
           <div className="w-3 h-3 rounded bg-red-100 border border-red-200" />
           Absent
         </div>
+        {hasHolidays && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded bg-sky-100 border border-sky-200" />
+            Paid holiday
+          </div>
+        )}
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-slate-50 border border-slate-200" />
           Weekend

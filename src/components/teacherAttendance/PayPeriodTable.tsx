@@ -26,6 +26,12 @@ const noteCount = (t: TeacherAttendanceData) => t.records.filter((r) => r.notes)
 
 const headCell = 'px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400'
 
+const DAY_TONE: Record<AttendanceRecord['status'], { dot: string; text: string; label: string }> = {
+  PRESENT: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Present' },
+  ABSENT: { dot: 'bg-rose-500', text: 'text-rose-700', label: 'Absent' },
+  HOLIDAY: { dot: 'bg-sky-500', text: 'text-sky-700', label: 'Paid holiday' },
+}
+
 /** One person's days in the period, each a button that opens the editor. */
 const PeriodDayList: React.FC<{
   teacher: TeacherAttendanceData
@@ -44,21 +50,21 @@ const PeriodDayList: React.FC<{
       ) : (
         <ul className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {records.map((r) => {
-            const present = r.status === 'PRESENT'
+            const tone = DAY_TONE[r.status]
             const override = r.hours !== null && r.hours !== undefined
-            const hours = override ? Number(r.hours) : present ? teacher.hoursPerDay : 0
+            const hours = override ? Number(r.hours) : r.status === 'ABSENT' ? 0 : teacher.hoursPerDay
             return (
               <li key={r.attendanceDate}>
                 <button
                   type="button"
                   onClick={() => onEditDay(r)}
-                  title={r.notes ?? undefined}
+                  title={r.notes ?? (r.holidayName ? `Paid holiday: ${r.holidayName}` : undefined)}
                   className="group flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50/40 cursor-pointer active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${present ? 'bg-emerald-500' : 'bg-rose-500'}`} aria-hidden />
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${tone.dot}`} aria-hidden />
                   <span className="w-[6.5rem] shrink-0 tabular-nums text-slate-800">{weekdayDate(r.attendanceDate)}</span>
-                  <span className={`text-xs font-medium ${present ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {present ? 'Present' : 'Absent'}
+                  <span className={`min-w-0 truncate text-xs font-medium ${tone.text}`}>
+                    {r.status === 'HOLIDAY' ? r.holidayName || tone.label : tone.label}
                   </span>
                   <span
                     className={`ml-auto rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums ${
@@ -156,7 +162,14 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
                       {formatHours(t.hoursPerDay)}
                       {t.hoursPerDaySource === 'custom' && <span className="text-cyan-600" title="Set individually"> *</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700">{t.presentDays}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 whitespace-nowrap">
+                      {t.presentDays}
+                      {!!t.holidayDays && (
+                        <span className="ml-1 text-xs font-medium text-sky-700" title={`Plus ${t.holidayDays} paid ${t.holidayDays === 1 ? 'holiday' : 'holidays'}`}>
+                          +{t.holidayDays} H
+                        </span>
+                      )}
+                    </td>
                     <td className={`px-3 py-2.5 text-right tabular-nums ${t.absentDays > 0 ? 'font-medium text-rose-700' : 'text-slate-400'}`}>
                       {t.absentDays}
                     </td>
@@ -222,7 +235,7 @@ const PayPeriodTable: React.FC<PayPeriodTableProps> = ({ period, teachers, expan
                     {formatWorkDays(t.workDays)} · {formatHours(t.hoursPerDay)} h/day · {t.elapsedWorkingDays}/{t.workingDays} days
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-                    <PresentAbsentChips presentDays={t.presentDays} absentDays={t.absentDays} />
+                    <PresentAbsentChips presentDays={t.presentDays} absentDays={t.absentDays} holidayDays={t.holidayDays} />
                     {notes > 0 && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700">
                         <ChatBubbleBottomCenterTextIcon className="h-3.5 w-3.5" />

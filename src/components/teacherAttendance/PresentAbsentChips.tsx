@@ -1,16 +1,25 @@
 'use client'
 
 // "3 present · 1 absent" as two small chips. Absent only turns red when
-// there is something to see.
+// there is something to see; paid holidays get a third chip when there are any.
 
 import React from 'react'
 
-const PresentAbsentChips: React.FC<{ presentDays: number; absentDays: number }> = ({ presentDays, absentDays }) => (
+const PresentAbsentChips: React.FC<{ presentDays: number; absentDays: number; holidayDays?: number }> = ({
+  presentDays,
+  absentDays,
+  holidayDays = 0,
+}) => (
   <>
     <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">{presentDays} present</span>
     <span className={`rounded-md px-1.5 py-0.5 font-medium ${absentDays > 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
       {absentDays} absent
     </span>
+    {holidayDays > 0 && (
+      <span className="rounded-md bg-sky-50 px-1.5 py-0.5 font-medium text-sky-700">
+        {holidayDays} paid {holidayDays === 1 ? 'holiday' : 'holidays'}
+      </span>
+    )}
   </>
 )
 
