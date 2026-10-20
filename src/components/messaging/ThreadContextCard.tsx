@@ -67,6 +67,8 @@ const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, c
           </>
         ) : context && !context.isPublished && isParent ? (
           <p className="text-xs font-medium text-slate-500">Not shared yet</p>
+        ) : context?.marksHidden ? (
+          <p className="text-xs font-medium text-slate-500">Marks are visible to the class&apos;s teachers</p>
         ) : context ? (
           <p className="text-xs font-medium text-slate-500">Not graded</p>
         ) : null}

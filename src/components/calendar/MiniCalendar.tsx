@@ -14,8 +14,8 @@ import type { CalendarEventPayload } from '@/services/types/calendarEvent'
 
 interface MiniCalendarProps {
   school: string
-  /** Where the "Open calendar" link goes. */
-  calendarHref?: string
+  /** Where "Open calendar" goes; null hides the link (the viewer can't open the calendar). */
+  calendarHref?: string | null
 }
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -179,13 +179,15 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({
         )}
       </div>
 
-      <Link
-        href={calendarHref}
-        className="mt-3 inline-flex items-center gap-1 self-start text-xs font-medium text-cyan-700 hover:text-cyan-800"
-      >
-        Open calendar
-        <ArrowRightIcon className="h-3.5 w-3.5" />
-      </Link>
+      {calendarHref && (
+        <Link
+          href={calendarHref}
+          className="mt-3 inline-flex items-center gap-1 self-start text-xs font-medium text-cyan-700 hover:text-cyan-800"
+        >
+          Open calendar
+          <ArrowRightIcon className="h-3.5 w-3.5" />
+        </Link>
+      )}
     </div>
   )
 }

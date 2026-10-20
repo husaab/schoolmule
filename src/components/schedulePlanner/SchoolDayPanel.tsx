@@ -11,6 +11,7 @@ import { ArrowRightIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useAccess } from '@/hooks/useAccess'
 import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import SchoolNowList from './SchoolNowList'
@@ -26,6 +27,8 @@ import { useMinuteOfDay } from './useMinuteOfDay'
 
 const SchoolDayPanel: React.FC = () => {
   const user = useUserStore((s) => s.user)
+  // Links only to pages this account opens (a restricted admin may lack them).
+  const { canOpen } = useAccess()
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const { data, load, loaded } = useMyScheduleStore()
   const nowMin = useMinuteOfDay()
@@ -51,13 +54,15 @@ const SchoolDayPanel: React.FC = () => {
           title="No school timetable published yet"
           description="Build the timetable in the schedule planner and publish it — you'll see who is teaching where, live, right here."
           action={
-            <Link
-              href="/admin-panel/schedule-planner"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white text-sm font-medium rounded-xl hover:bg-cyan-700 transition"
-            >
-              Open the schedule planner
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
+            canOpen('/admin-panel/schedule-planner') ? (
+              <Link
+                href="/admin-panel/schedule-planner"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 text-white text-sm font-medium rounded-xl hover:bg-cyan-700 transition"
+              >
+                Open the schedule planner
+                <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            ) : undefined
           }
         />
       </Card>
@@ -110,7 +115,7 @@ const SchoolDayPanel: React.FC = () => {
         </div>
         {user.school && (
           <div className="border-t border-slate-100 px-2 pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-2">
-            <MiniCalendar school={user.school} />
+            <MiniCalendar school={user.school} calendarHref={canOpen('/admin-panel/school-calendar') ? undefined : null} />
           </div>
         )}
       </div>

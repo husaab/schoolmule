@@ -91,6 +91,29 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, user.id, clearUser, setUnread, previewing])
 
+  // Access can change mid-session (an admin edits a role or someone's access):
+  // re-read it when the tab comes back into view, at most once a minute and
+  // never during a preview. Losing access is also caught by the next 403.
+  useEffect(() => {
+    if (!hasHydrated || !user.id || previewing) return
+    let last = Date.now()
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - last < 60_000) return
+      last = Date.now()
+      const token = getToken()
+      if (!token) return
+      validateSession()
+        .then((response) => {
+          if (response.success && response.data) refreshAccessFlags(response.data, token)
+        })
+        .catch(() => {
+          // A failed check changes nothing; the next one (or a 401) decides.
+        })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [hasHydrated, user.id, previewing])
+
   // Check for unread patch notes when user is already logged in (once per session)
   useEffect(() => {
     if (!hasHydrated || !getToken() || !user.id || !user.isVerifiedEmail || !user.isVerifiedSchool) return

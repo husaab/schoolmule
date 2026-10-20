@@ -132,6 +132,8 @@ export interface AssessmentContext {
   parentComment: string | null;
   /** Staff only. */
   classAvgPct: number | null;
+  /** RBAC: graded, but this viewer doesn't see marks (office staff without class access). */
+  marksHidden?: boolean;
 }
 
 export interface Thread {
