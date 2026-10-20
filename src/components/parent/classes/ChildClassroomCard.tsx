@@ -25,7 +25,7 @@ export default function ChildClassroomCard({ child, onOpen, className = 'flex', 
   return (
     <article className={`${className} flex-col gap-4 rounded-[18px] border border-stone-200 bg-white p-[22px] shadow-sm`}>
       <div className="flex items-center gap-3">
-        <Avatar name={child.name} avatar={child.avatar} size={44} />
+        <Avatar name={child.name} avatar={child.avatar} photoUrl={child.photoUrl} size={44} />
         <div className="flex min-w-0 flex-1 flex-col">
           <h4 className="truncate font-display text-xl font-semibold text-slate-900">{first}</h4>
           <span className="text-[13px] text-stone-500">{childSubline(child)}</span>

@@ -32,6 +32,8 @@ export interface SchoolUser {
   invitePending: boolean;
   /** null = the neutral avatar. */
   avatar?: import('./profile').AvatarSpec | null;
+  /** Signed photo URL (null = no photo). */
+  photoUrl?: string | null;
   createdAt: string;
   lastModifiedAt: string;
 }
@@ -98,6 +100,8 @@ export interface ImpersonationStart extends AccessClaims {
   isVerifiedSchool: boolean;
   /** The previewed account's avatar (null = the neutral avatar). */
   avatar?: import('./profile').AvatarSpec | null;
+  /** The previewed account's signed photo URL (null = no photo). */
+  photoUrl?: string | null;
   activeTerm: string | false;
   activeSchoolYear: { schoolYearId: string; label: string } | null;
   schoolYears: import('./schoolYear').SchoolYear[];

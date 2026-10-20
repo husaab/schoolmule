@@ -35,6 +35,7 @@ const ChildSwitcher: React.FC = () => {
           name: link.student?.name || 'Unnamed Student',
           grade: link.student?.grade ?? null,
           avatar: link.student?.avatar ?? null,
+          photoUrl: link.student?.photoUrl ?? null,
         }))
         setChildren(list)
       })
@@ -74,7 +75,7 @@ const ChildSwitcher: React.FC = () => {
               onClick={() => selectChild(child.studentId)}
               className={pillClass(active)}
             >
-              <Avatar name={child.name} avatar={child.avatar} size={32} />
+              <Avatar name={child.name} avatar={child.avatar} photoUrl={child.photoUrl} size={32} />
               <span className="min-w-0">
                 <span className="block text-sm truncate">{child.name}</span>
                 {child.grade != null && (

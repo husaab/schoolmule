@@ -22,6 +22,7 @@ export default function ImpersonationBar() {
   // The bar only shows while the signed-in user is the previewed one, so the
   // store's avatar is theirs.
   const avatar = useUserStore((s) => s.user.avatar)
+  const photoUrl = useUserStore((s) => s.user.photoUrl)
   const userHydrated = useUserStore((s) => s.hasHydrated)
   const notify = useNotificationStore((s) => s.showNotification)
 
@@ -65,7 +66,7 @@ export default function ImpersonationBar() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-400" />
           </span>
 
-          <Avatar name={target.fullName} avatar={avatar} size={32} className="ring-2 ring-violet-400/60" />
+          <Avatar name={target.fullName} avatar={avatar} photoUrl={photoUrl} size={32} className="ring-2 ring-violet-400/60" />
 
           <div className="min-w-0 flex-1 leading-tight">
             <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-violet-200">

@@ -97,7 +97,7 @@ export default function ClassCard({ card, label, canWrite, onChangeBanner, onCop
           {/* pr-10 keeps the first line clear of the ⋮ button beside it */}
           {showTeacher && (
             <span className="flex min-w-0 items-center gap-2 pr-10 text-[13.5px] text-slate-700">
-              <Avatar name={leadName} avatar={lead?.avatar ?? null} size={22} />
+              <Avatar name={leadName} avatar={lead?.avatar ?? null} photoUrl={lead?.photoUrl} size={22} />
               <span className="truncate">
                 {leadName}
                 {coCount > 0 && <span className="text-slate-500"> +{coCount}</span>}

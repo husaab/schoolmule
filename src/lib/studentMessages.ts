@@ -128,12 +128,12 @@ export const isUnread = (item: Pick<ConversationItem, 'unreadCount'>): boolean =
  * student's teachers include them, else the class's lead (whose name the row carries).
  */
 export function rowTeacher(
-  item: Pick<ConversationItem, 'teacherId' | 'leadTeacherName' | 'leadTeacherAvatar'>,
+  item: Pick<ConversationItem, 'teacherId' | 'leadTeacherName' | 'leadTeacherAvatar' | 'leadTeacherPhotoUrl'>,
   teachers: StudentTargetTeacher[] | null,
-): { name: string; avatar: StudentTargetTeacher['avatar'] } {
+): { name: string; avatar: StudentTargetTeacher['avatar']; photoUrl: string | null } {
   const chosen = item.teacherId ? teachers?.find((t) => t.userId === item.teacherId) : undefined
-  if (chosen) return { name: chosen.name, avatar: chosen.avatar }
-  return { name: item.leadTeacherName ?? 'Your teacher', avatar: item.leadTeacherAvatar ?? null }
+  if (chosen) return { name: chosen.name, avatar: chosen.avatar, photoUrl: chosen.photoUrl ?? null }
+  return { name: item.leadTeacherName ?? 'Your teacher', avatar: item.leadTeacherAvatar ?? null, photoUrl: item.leadTeacherPhotoUrl ?? null }
 }
 
 // ---------------------------------------------------------------------------

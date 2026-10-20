@@ -167,6 +167,15 @@ describe('a thread', () => {
     expect(rowTeacher({ ...item, leadTeacherName: null }, null).name).toBe('Your teacher')
   })
 
+  it("carries that person's uploaded photo", () => {
+    const item: Pick<ConversationItem, 'teacherId' | 'leadTeacherName' | 'leadTeacherAvatar' | 'leadTeacherPhotoUrl'> = {
+      teacherId: 't2', leadTeacherName: 'Lina Farouk', leadTeacherAvatar: null, leadTeacherPhotoUrl: 'https://p/lina',
+    }
+    expect(rowTeacher(item, [teacher({ userId: 't2', name: 'Sami Kareem', photoUrl: 'https://p/sami' })]).photoUrl).toBe('https://p/sami')
+    expect(rowTeacher(item, null).photoUrl).toBe('https://p/lina')
+    expect(rowTeacher({ ...item, leadTeacherPhotoUrl: undefined }, null).photoUrl).toBeNull()
+  })
+
   it('counts the badge in conversations', () => {
     expect(messagesBadgeCount({ unreadConversations: 3 })).toBe(3)
     expect(messagesBadgeCount({})).toBe(0)

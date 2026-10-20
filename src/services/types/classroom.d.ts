@@ -75,6 +75,8 @@ export interface ClassCardTeacher {
   name: string
   role: 'lead' | 'co'
   avatar: import('./profile').AvatarSpec | null
+  /** Signed photo URL (null = no photo). Optional: older servers don't send it. */
+  photoUrl?: string | null
 }
 
 /** What a class card shows next: the next dated assessment until classwork items exist (T14). */

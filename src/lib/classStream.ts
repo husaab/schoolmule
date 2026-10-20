@@ -90,10 +90,17 @@ export interface PostAuthor {
   coTeacher: boolean
 }
 
-/** The author's avatar and tag, read from the class's teachers; anyone else (an admin) is the neutral avatar. */
-export function resolveAuthor(authorId: string | null, teachers: Pick<ClassPageTeacher, 'userId' | 'role' | 'avatar' | 'photoUrl'>[]): PostAuthor {
+/**
+ * The author's avatar and tag, read from the class's teachers; anyone else (an
+ * admin) gets the post's own picture (`own`), else the neutral avatar.
+ */
+export function resolveAuthor(
+  authorId: string | null,
+  teachers: Pick<ClassPageTeacher, 'userId' | 'role' | 'avatar' | 'photoUrl'>[],
+  own: { avatar?: AvatarSpec | null; photoUrl?: string | null } = {},
+): PostAuthor {
   const teacher = authorId ? teachers.find((t) => t.userId === authorId) : undefined
-  if (!teacher) return { avatar: null, photoUrl: null, coTeacher: false }
+  if (!teacher) return { avatar: own.avatar ?? null, photoUrl: own.photoUrl ?? null, coTeacher: false }
   return { avatar: teacher.avatar ?? null, photoUrl: teacher.photoUrl ?? null, coTeacher: teacher.role === 'co' }
 }
 

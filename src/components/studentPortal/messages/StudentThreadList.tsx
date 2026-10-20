@@ -43,7 +43,7 @@ export default function StudentThreadList({ items, teachers, classes, selectedId
                 selected ? 'bg-indigo-50' : 'bg-white hover:bg-slate-50'
               }`}
             >
-              <Avatar name={teacher.name} avatar={teacher.avatar} size={44} />
+              <Avatar name={teacher.name} avatar={teacher.avatar} photoUrl={teacher.photoUrl} size={44} />
               <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
                 <span className="flex items-baseline justify-between gap-2">
                   <span className={`truncate text-sm text-slate-900 ${unread ? 'font-semibold' : 'font-medium'}`}>{teacher.name}</span>

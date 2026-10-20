@@ -125,7 +125,9 @@ const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
                 key={entry.key}
                 item={entry.item}
                 audience={stream.audience}
-                author={resolveAuthor(entry.item.authorId, data.teachers)}
+                author={resolveAuthor(entry.item.authorId, data.teachers, {
+                  avatar: entry.item.authorAvatar, photoUrl: entry.item.authorPhotoUrl,
+                })}
                 canChange={canEdit && entry.item.canEdit}
                 canRetryEmails={canRetryEmails}
                 onEdit={setEditing}

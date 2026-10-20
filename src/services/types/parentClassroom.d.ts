@@ -41,6 +41,8 @@ export interface ChildClassroomSummary {
   name: string;
   grade: GradeCode;
   avatar: AvatarSpec | null;
+  /** Signed URL of the child's own photo (null while the school has student photos off). */
+  photoUrl?: string | null;
   /** The child can sign in to the student portal (an account, consent, the grade gate). */
   signsIn: boolean;
   classCount: number;

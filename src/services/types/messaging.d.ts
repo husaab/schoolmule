@@ -40,6 +40,8 @@ export interface ConversationItem {
   leadTeacherName: string | null;
   /** The student's own avatar (final review M7). Optional: older servers don't send it (the neutral avatar then). */
   studentAvatar?: import('./profile').AvatarSpec | null;
+  /** Staff lists: the student's signed photo URL, while the school has student photos on. */
+  studentPhotoUrl?: string | null;
   /**
    * Admin lists: the staff member a student-started thread is addressed to (a co-teacher, the homeroom teacher, a
    * teaching admin…), which can differ from the class lead. Optional: older servers don't send it.
@@ -47,6 +49,8 @@ export interface ConversationItem {
   addresseeName?: string | null;
   /** The lead teacher's avatar (null = the neutral avatar). */
   leadTeacherAvatar?: import('./profile').AvatarSpec | null;
+  /** The lead teacher's signed photo URL (null = no photo). */
+  leadTeacherPhotoUrl?: string | null;
   /** The class's term, for the staff inbox's term filter. */
   termName: string | null;
   /** Every guardian of the student (accounts and free-text rows), for the parent filter. */
@@ -79,6 +83,8 @@ export interface Message {
   senderName: string;
   /** The sender's avatar (null = the neutral avatar). */
   senderAvatar?: import('./profile').AvatarSpec | null;
+  /** The sender's signed photo URL (null = no photo). */
+  senderPhotoUrl?: string | null;
   senderRole: SenderRole;
   /** e.g. "Mother" — only for guardians. */
   senderRelation: string | null;
@@ -99,6 +105,7 @@ export interface Participant {
   /** Invited guardian who has not set a password yet. */
   invitePending: boolean;
   avatar?: import('./profile').AvatarSpec | null;
+  photoUrl?: string | null;
 }
 
 /** Staff-only context strip for general threads. */
@@ -107,6 +114,7 @@ export interface StudentContext {
   name: string;
   /** The student's own avatar (M7); optional, older servers don't send it. */
   studentAvatar?: import('./profile').AvatarSpec | null;
+  studentPhotoUrl?: string | null;
   grade: string | number | null;
   homeroomTeacherName: string | null;
   attendancePct: number | null;
@@ -154,6 +162,8 @@ export interface StudentTargetTeacher {
   userId: string;
   name: string;
   avatar: import('./profile').AvatarSpec | null;
+  /** Signed photo URL (null = no photo). */
+  photoUrl?: string | null;
   /** The student's classes this person teaches (none for a homeroom teacher with no class). */
   classes: { classId: string; subject: string }[];
 }
@@ -162,7 +172,7 @@ export interface StudentTargetTeacher {
 export interface StudentMessageTargets {
   teachers: StudentTargetTeacher[];
   /** Linked guardian accounts: the people who will be in every thread. */
-  guardians: { name: string; relation: string | null }[];
+  guardians: { name: string; relation: string | null; avatar?: import('./profile').AvatarSpec | null; photoUrl?: string | null }[];
 }
 
 /** The student's own number for the Messages badge. */

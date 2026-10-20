@@ -14,6 +14,8 @@ export interface StudentPayload {
   oen: string | null;
   /** The student's own pick, else the one a teacher set (null = the neutral avatar). */
   avatar?: import('./profile').AvatarSpec | null;
+  /** Signed URL of the photo on the student's login (null while the school has student photos off). */
+  photoUrl?: string | null;
   mother: {
     name: string | null;
     email: string | null;

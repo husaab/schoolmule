@@ -336,7 +336,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                       >
                         <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm font-medium text-slate-800">
                           <span className="flex items-center gap-2.5">
-                            <Avatar name={student.name} avatar={student.avatar ?? null} size={28} />
+                            <Avatar name={student.name} avatar={student.avatar ?? null} photoUrl={student.photoUrl} size={28} />
                             {student.name}
                           </span>
                         </td>

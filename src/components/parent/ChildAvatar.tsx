@@ -18,6 +18,6 @@ interface ChildAvatarProps {
 }
 
 export default function ChildAvatar({ studentId, name, avatar, size, className }: ChildAvatarProps) {
-  const listed = useSelectedChildStore((s) => s.children.find((c) => c.studentId === studentId)?.avatar ?? null)
-  return <Avatar name={name} avatar={avatar ?? listed} size={size} className={className} />
+  const listed = useSelectedChildStore((s) => s.children.find((c) => c.studentId === studentId))
+  return <Avatar name={name} avatar={avatar ?? listed?.avatar ?? null} photoUrl={listed?.photoUrl} size={size} className={className} />
 }

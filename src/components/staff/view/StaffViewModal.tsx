@@ -111,8 +111,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({
       {/* Identity */}
       <header className="border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 px-6 pt-6 pb-5">
         <div className="flex items-center gap-4 pr-8">
-          {/* Staff directory rows have no account of their own: the neutral avatar. */}
-          <Avatar name={staff.fullName} size={56} className="shadow-sm" />
+          {/* The matching account's photo or avatar; a row with no account gets one drawn from the name. */}
+          <Avatar name={staff.fullName} avatar={staff.avatar ?? null} photoUrl={staff.photoUrl} size={56} className="shadow-sm" />
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold text-slate-900">{staff.fullName}</h2>
             <p className="mt-0.5 truncate text-sm text-slate-500">{staff.staffRole}</p>

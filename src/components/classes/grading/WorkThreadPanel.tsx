@@ -188,7 +188,7 @@ export default function WorkThreadPanel({ itemId, studentId, first, includesPare
             const mine = Boolean(userId) && m.senderId === userId
             return (
               <li key={m.messageId} className={`flex max-w-[90%] gap-2 ${mine ? 'flex-row-reverse self-end' : 'self-start'}`}>
-                <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} size={24} />
+                <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} photoUrl={m.senderPhotoUrl} size={24} />
                 <span className={`min-w-0 rounded-[14px] border px-3 py-2.5 text-sm leading-snug ${bubbleFor(m, mine)}`}>
                   <span className="block text-xs text-slate-500">
                     {mine ? 'You' : senderLabelOf(m)} · {whenText(m.createdAt)}

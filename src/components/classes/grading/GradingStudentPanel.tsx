@@ -203,7 +203,7 @@ export default function GradingStudentPanel({
       <section className="flex min-w-0 flex-[999_1_420px] flex-col gap-4 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex min-w-0 items-center gap-3.5">
-            <Avatar name={row.name} avatar={row.avatar} size={52} />
+            <Avatar name={row.name} avatar={row.avatar} photoUrl={row.photoUrl} size={52} />
             <div className="flex min-w-0 flex-col gap-0.5">
               <h2 ref={headingRef} tabIndex={-1} className="font-display truncate text-2xl font-semibold text-slate-900 outline-none">
                 {row.name}

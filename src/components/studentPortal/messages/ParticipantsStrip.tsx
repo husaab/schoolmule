@@ -27,7 +27,7 @@ export default function ParticipantsStrip({ participants, userId, teacherId }: P
           key={p.userId}
           className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-3 text-[13px] text-slate-800"
         >
-          <Avatar name={p.name} avatar={p.avatar ?? null} size={26} />
+          <Avatar name={p.name} avatar={p.avatar ?? null} photoUrl={p.photoUrl} size={26} />
           {participantLabel(p, userId, teacherId)}
         </li>
       ))}

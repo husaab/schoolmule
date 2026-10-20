@@ -11,6 +11,8 @@ export type ChildLite = {
   grade: string | number | null;
   /** The child's own pick, else the one a teacher set (null = the neutral avatar). */
   avatar?: AvatarSpec | null;
+  /** Signed photo URL; a stale one (kept across a reload) falls back to the avatar. */
+  photoUrl?: string | null;
 };
 
 type SelectedChildStore = {

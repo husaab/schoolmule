@@ -130,6 +130,12 @@ describe('resolveAuthor', () => {
     expect(resolveAuthor('u9', teachers)).toEqual({ avatar: null, photoUrl: null, coTeacher: false })
     expect(resolveAuthor(null, teachers)).toEqual({ avatar: null, photoUrl: null, coTeacher: false })
   })
+  it("gives an author who isn't one of the class's teachers (an admin) the post's own picture", () => {
+    const own = { avatar: { style: 'kufi' as const, skin: 3 as const, bg: 1 as const }, photoUrl: 'https://example.com/admin.jpg' }
+    expect(resolveAuthor('u9', teachers, own)).toEqual({ ...own, coTeacher: false })
+    // A class teacher's header photo still wins (it is the fresher one).
+    expect(resolveAuthor('u2', teachers, own)).toEqual({ avatar: null, photoUrl: 'https://example.com/u2.jpg', coTeacher: true })
+  })
 })
 
 describe('seenChips', () => {

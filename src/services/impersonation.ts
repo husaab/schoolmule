@@ -71,8 +71,7 @@ export const startImpersonation = (
     activeTerm: preview.activeTerm || null,
     fullName: preview.fullName,
     avatar: preview.avatar ?? null,
-    // The preview payload carries no photo; /auth/me fills it in on reload.
-    photoUrl: null,
+    photoUrl: preview.photoUrl ?? null,
     // The previewed account's access, so menus and routing match what they
     // see. A preview is never a full admin (roles, "View as" and making
     // admins stay with the admin behind it), so the flag is always false; a

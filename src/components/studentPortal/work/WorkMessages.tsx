@@ -139,7 +139,7 @@ export default function WorkMessages({ itemId, teacherName, thread, userId, read
             const isEditing = editing?.messageId === m.messageId
             return (
               <li key={m.messageId} className={`flex max-w-[92%] items-end gap-2 ${mine ? 'flex-row-reverse self-end' : 'self-start'}`}>
-                <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} size={28} />
+                <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} photoUrl={m.senderPhotoUrl} size={28} />
                 <div className="flex min-w-0 flex-col gap-1">
                   <div className={`rounded-[14px] px-3.5 py-2.5 text-sm leading-snug ${mine ? 'bg-indigo-50' : 'bg-slate-100'}`}>
                     {!mine && (

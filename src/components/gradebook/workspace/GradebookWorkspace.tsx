@@ -928,7 +928,7 @@ export default function GradebookWorkspace({
                         <div className="flex items-center gap-2.5">
                           {/* No avatar on a phone: the name column stays narrow enough to leave room for scores. */}
                           <span className="hidden shrink-0 sm:inline-flex">
-                            <Avatar name={stu.name} avatar={stu.avatar ?? null} size={density === 'compact' ? 24 : 30} />
+                            <Avatar name={stu.name} avatar={stu.avatar ?? null} photoUrl={stu.photoUrl} size={density === 'compact' ? 24 : 30} />
                           </span>
                           <button
                             type="button"

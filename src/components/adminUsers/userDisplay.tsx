@@ -66,17 +66,18 @@ export const StatusBadge = ({ user }: { user: SchoolUser }) => {
   )
 }
 
-/** A user's picked avatar (the neutral one until they pick). */
+/** A user's photo, else their picked avatar (the neutral one until they pick). */
 export const UserAvatar = ({
   user,
   size = 'sm',
 }: {
-  user: Pick<SchoolUser, 'firstName' | 'lastName' | 'email'> & { avatar?: SchoolUser['avatar'] }
+  user: Pick<SchoolUser, 'firstName' | 'lastName' | 'email'> & Pick<Partial<SchoolUser>, 'avatar' | 'photoUrl'>
   size?: 'sm' | 'lg'
 }) => (
   <Avatar
     name={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email}
     avatar={user.avatar}
+    photoUrl={user.photoUrl}
     size={size === 'lg' ? 56 : 36}
     className={size === 'lg' ? 'shadow-sm' : ''}
   />

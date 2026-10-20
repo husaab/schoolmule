@@ -256,7 +256,7 @@ export default function StudentThread({ conversationId, userId, classes, preview
               const isEditing = editing?.messageId === m.messageId
               return (
                 <li key={m.messageId} className={`flex items-end gap-2.5 ${mine ? 'flex-row-reverse' : ''}`}>
-                  <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} size={34} />
+                  <Avatar name={m.senderName} avatar={m.senderAvatar ?? null} photoUrl={m.senderPhotoUrl} size={34} />
                   <div className={`flex max-w-[78%] flex-col gap-1 sm:max-w-[72%] ${mine ? 'items-end' : 'items-start'}`}>
                     <span className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
                       <span>

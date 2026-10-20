@@ -15,6 +15,8 @@ export interface ParentStudentPayload {
     grade: GradeValue;
     /** The child's own pick, else the one a teacher set (null = the neutral avatar). */
     avatar?: import('./profile').AvatarSpec | null;
+    /** Signed URL of the child's own photo (null while the school has student photos off). */
+    photoUrl?: string | null;
   };
   parentUser?: {
     firstName: string;

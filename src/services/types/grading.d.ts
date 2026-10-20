@@ -29,6 +29,8 @@ export interface GradingRow {
   studentId: string
   name: string
   avatar: AvatarSpec | null
+  /** Signed photo URL, while the school has student photos on. Optional: older servers don't send it. */
+  photoUrl?: string | null
   status: WorkStatus
   /** Turned in late (kept after grading, so the panel can still say so). */
   isLate: boolean

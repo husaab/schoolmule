@@ -16,6 +16,9 @@ export interface StaffPayload {
   phoneContactHours?: string;
   emailContactHours?: string;
   createdAt: string;
+  /** The matching account's avatar and signed photo URL (null when the row has no account). */
+  avatar?: import('./profile').AvatarSpec | null;
+  photoUrl?: string | null;
 }
 
 /**

@@ -81,6 +81,8 @@ export interface StudentAccountRow {
   name: string;
   /** The student's own avatar (final review M7); optional, older servers don't send it. */
   studentAvatar?: import('./profile').AvatarSpec | null;
+  /** Signed URL of the photo on the student's login (null while the school has student photos off). */
+  studentPhotoUrl?: string | null;
   grade: GradeCode;
   homeroomTeacherName: string | null;
   /** The student's own address (students.student_email). */

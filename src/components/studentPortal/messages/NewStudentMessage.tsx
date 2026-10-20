@@ -117,7 +117,7 @@ export default function NewStudentMessage({
                     on ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <Avatar name={t.name} avatar={t.avatar} size={36} />
+                  <Avatar name={t.name} avatar={t.avatar} photoUrl={t.photoUrl} size={36} />
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate text-sm font-semibold text-slate-900">{t.name}</span>
                     <span className="truncate text-xs text-slate-500">{teacherClassesLine(t)}</span>
@@ -181,7 +181,7 @@ export default function NewStudentMessage({
           {targets.guardians.length > 0 && (
             <span className="flex shrink-0 -space-x-3" aria-hidden="true">
               {targets.guardians.slice(0, 3).map((g, i) => (
-                <Avatar key={`${g.name}-${i}`} name={g.name} avatar={null} size={28} className="ring-2 ring-amber-50" />
+                <Avatar key={`${g.name}-${i}`} name={g.name} avatar={g.avatar ?? null} photoUrl={g.photoUrl} size={28} className="ring-2 ring-amber-50" />
               ))}
             </span>
           )}
