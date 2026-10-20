@@ -27,7 +27,9 @@ import {
   TrashIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
-import { RoleBadge, StatusBadge, UserAvatar, canImpersonate, formatDate, statusOf } from './userDisplay'
+import { RoleBadge, StatusBadge, UserAvatar, accessRoleLabel, canImpersonate, canManageUser, formatDate, statusOf } from './userDisplay'
+import { AccessRoleChip } from '@/components/adminRoles/roleDisplay'
+import { useAccess } from '@/hooks/useAccess'
 
 interface UserViewModalProps {
   isOpen: boolean
@@ -75,6 +77,9 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
 
   const isSelf = user.userId === currentUserId
   const status = statusOf(user)
+  // A `users` holder sees a full admin's account but can't change it; "View as" stays with full admins.
+  const { fullAdmin } = useAccess()
+  const canManage = canManageUser(user, fullAdmin)
 
   useEffect(() => {
     if (!isOpen) return
@@ -129,6 +134,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <RoleBadge role={user.role} title={user.staffTitle} />
+          <AccessRoleChip name={user.role === 'PARENT' ? null : user.accessRoleName} />
           <StatusBadge user={user} />
         </div>
       </header>
@@ -145,10 +151,12 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
             <p className="text-sm text-sky-900">
               They haven&apos;t set a password yet. Invite links last 7 days.
             </p>
-            <Button variant="secondary" onClick={handleResend} loading={resending} className="flex-shrink-0">
-              <PaperAirplaneIcon className="h-4 w-4" />
-              Resend invite
-            </Button>
+            {canManage && (
+              <Button variant="secondary" onClick={handleResend} loading={resending} className="flex-shrink-0">
+                <PaperAirplaneIcon className="h-4 w-4" />
+                Resend invite
+              </Button>
+            )}
           </div>
         )}
         {status === 'awaiting' && (
@@ -162,6 +170,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <SectionLabel>Account</SectionLabel>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
             <Fact label="Username">{user.username}</Fact>
+            {user.role !== 'PARENT' && <Fact label="Access role">{accessRoleLabel(user)}</Fact>}
             <Fact label="Email verified">{user.isVerified ? 'Yes' : 'No'}</Fact>
             <Fact label="School access">{user.isVerifiedSchool ? 'Granted' : 'Not granted'}</Fact>
             <Fact label="Joined">{formatDate(user.createdAt)}</Fact>
@@ -313,6 +322,8 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
       <footer className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-white px-6 py-4">
         {isSelf ? (
           <span className="text-xs text-slate-400">Manage your own login in Settings.</span>
+        ) : !canManage ? (
+          <span className="text-xs text-slate-400">Only full admins can change an Admin&apos;s account.</span>
         ) : (
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onDelete} className="text-rose-600 hover:bg-rose-50">
@@ -331,9 +342,9 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-          {canImpersonate(user, currentUserId) &&
+          {canImpersonate(user, currentUserId, fullAdmin) &&
             (() => {
-              // A teacher who is also a parent can be previewed in either portal.
+              // Staff who are also parents can be previewed in either portal.
               const views = previewViewsFor(user.role, details ? details.children.length > 0 : null)
               return views.map((view) => (
                 <Button
@@ -348,21 +359,22 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
                   }
                 >
                   <EyeIcon className="h-4 w-4" />
-                  {views.length > 1 ? (view === 'PARENT' ? 'View as parent' : 'View as teacher') : 'View as'}
+                  {views.length > 1 ? (view === 'PARENT' ? 'View as parent' : view === 'ADMIN' ? 'View as admin' : 'View as teacher') : 'View as'}
                 </Button>
               ))
             })()}
-          {status === 'archived' ? (
-            <Button onClick={onUnarchive}>
-              <ArrowUturnLeftIcon className="h-4 w-4" />
-              Restore
-            </Button>
-          ) : (
-            <Button onClick={onEdit}>
-              <PencilSquareIcon className="h-4 w-4" />
-              Edit
-            </Button>
-          )}
+          {canManage &&
+            (status === 'archived' ? (
+              <Button onClick={onUnarchive}>
+                <ArrowUturnLeftIcon className="h-4 w-4" />
+                Restore
+              </Button>
+            ) : (
+              <Button onClick={onEdit}>
+                <PencilSquareIcon className="h-4 w-4" />
+                Edit
+              </Button>
+            ))}
         </div>
       </footer>
     </Modal>

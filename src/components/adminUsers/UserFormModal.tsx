@@ -11,13 +11,16 @@ import {
   ModalFooter,
   ModalHeader,
   inputClass,
+  selectClass,
 } from '@/components/shared/modalKit'
 import { inviteSchoolUser, updateSchoolUser } from '@/services/adminUserService'
-import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
+import { SchoolRole, SchoolUser, UpdateSchoolUserRequest } from '@/services/types/adminUser'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useAccess } from '@/hooks/useAccess'
+import { useAccessRoles } from '@/hooks/useAccessRoles'
 import { PencilSquareIcon, UserPlusIcon } from '@heroicons/react/24/outline'
-import { ROLE_OPTIONS } from './userDisplay'
+import { ROLE_OPTIONS, accessRoleLabel } from './userDisplay'
 
 interface UserFormModalProps {
   isOpen: boolean
@@ -32,6 +35,10 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
   const currentUserId = useUserStore((s) => s.user.id)
   const notify = useNotificationStore((s) => s.showNotification)
   const isSelf = isEdit && user?.userId === currentUserId
+  // Making someone an Admin and choosing access roles stay with full admins;
+  // a `users` holder edits everything else (the API refuses the rest).
+  const { fullAdmin } = useAccess()
+  const { roles: accessRoles, loading: rolesLoading, failed: rolesFailed } = useAccessRoles(isOpen && fullAdmin)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -39,6 +46,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
   const [role, setRole] = useState<SchoolRole>('TEACHER')
   const [hasAccess, setHasAccess] = useState(true)
   const [staffTitle, setStaffTitle] = useState('')
+  /** '' = the built-in Admin or Teacher. */
+  const [accessRoleId, setAccessRoleId] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -49,6 +58,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
     setRole(user?.role ?? 'TEACHER')
     setHasAccess(user?.isVerifiedSchool ?? true)
     setStaffTitle(user?.staffTitle ?? '')
+    setAccessRoleId(user?.accessRoleId ?? '')
   }, [isOpen, user])
 
   const canSubmit =
@@ -58,15 +68,20 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
     e.preventDefault()
     if (!canSubmit) return
     setSaving(true)
+    // Only staff hold an access role. Sent only by a full admin and only
+    // when it changed (omitted leaves it as it is; null clears it).
+    const nextAccessRoleId = role === 'PARENT' ? null : accessRoleId || null
     try {
       if (isEdit && user) {
-        const res = await updateSchoolUser(user.userId, {
+        const payload: UpdateSchoolUserRequest = {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           role,
           isVerifiedSchool: hasAccess,
           staffTitle: role === 'ADMIN' ? staffTitle.trim() : '',
-        })
+        }
+        if (fullAdmin && !isSelf && nextAccessRoleId !== (user.accessRoleId ?? null)) payload.accessRoleId = nextAccessRoleId
+        const res = await updateSchoolUser(user.userId, payload)
         notify('User updated', 'success')
         onSaved(res.data)
       } else {
@@ -75,6 +90,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           lastName: lastName.trim(),
           email: email.trim(),
           role,
+          ...(fullAdmin && nextAccessRoleId ? { accessRoleId: nextAccessRoleId } : {}),
         })
         notify(
           res.data.inviteSent
@@ -145,7 +161,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
 
           <FormSection label="Role">
             <div className="grid gap-2" role="radiogroup" aria-label="Role">
-              {ROLE_OPTIONS.map((option) => {
+              {/* Only full admins make someone an Admin; an Admin's own row still shows its role. */}
+              {ROLE_OPTIONS.filter((option) => option.value !== 'ADMIN' || fullAdmin || user?.role === 'ADMIN').map((option) => {
                 const selected = role === option.value
                 const locked = isSelf && option.value !== 'ADMIN'
                 return (
@@ -177,6 +194,50 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
             {isSelf && (
               <p className="text-xs text-slate-400">You can&apos;t change your own role.</p>
             )}
+            {role !== 'PARENT' &&
+              (fullAdmin ? (
+                <Field
+                  label="Access role"
+                  htmlFor="user-access-role"
+                  hint={
+                    isSelf
+                      ? "You can't change your own access role."
+                      : accessRoleId
+                        ? accessRoles.find((r) => r.roleId === accessRoleId)?.description || 'Only what this role allows, plus their own classes.'
+                        : role === 'ADMIN'
+                          ? 'Built-in Admin: everything, including roles and View as.'
+                          : 'Built-in Teacher: their own classes, plus students, analytics, report cards and general attendance.'
+                  }
+                >
+                  <select
+                    id="user-access-role"
+                    className={selectClass}
+                    value={accessRoleId}
+                    onChange={(e) => setAccessRoleId(e.target.value)}
+                    disabled={isSelf || rolesLoading}
+                  >
+                    <option value="">{role === 'ADMIN' ? 'Built-in Admin (everything)' : 'Built-in Teacher'}</option>
+                    {accessRoles.map((r) => (
+                      <option key={r.roleId} value={r.roleId}>
+                        {r.name}
+                      </option>
+                    ))}
+                    {/* A role the list didn't return (still loading, or failed): keep it selectable so saving doesn't clear it. */}
+                    {accessRoleId && !accessRoles.some((r) => r.roleId === accessRoleId) && (
+                      <option value={accessRoleId}>{user?.accessRoleName ?? 'Current role'}</option>
+                    )}
+                  </select>
+                  {rolesFailed && <p className="mt-1 text-xs text-rose-600">Couldn&apos;t load the school&apos;s roles. Try again later.</p>}
+                </Field>
+              ) : (
+                isEdit &&
+                user && (
+                  <p className="text-xs text-slate-500">
+                    Access role: <span className="font-medium text-slate-700">{accessRoleLabel(user)}</span>. Only full
+                    admins change access roles.
+                  </p>
+                )
+              ))}
             {isEdit && role === 'ADMIN' && (
               <Field
                 label="Title shown to parents"

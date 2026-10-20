@@ -116,8 +116,8 @@ interface StreamPostCardProps {
   author: PostAuthor
   /** The viewer may open the ⋮ (Edit, Delete) when the post is theirs or they are an admin. */
   canChange: boolean
-  /** Admins can queue failed emails again. */
-  isAdmin: boolean
+  /** Holders of announcements.school can queue failed emails again. */
+  canRetryEmails: boolean
   /** Edit: the card fetches the post fresh, then hands it up to open the editor. */
   onEdit: (detail: AnnouncementDetail) => void
   onDelete: (item: AnnouncementItem) => void
@@ -125,7 +125,7 @@ interface StreamPostCardProps {
   onChanged: () => void
 }
 
-export default function StreamPostCard({ item, audience, author, canChange, isAdmin, onEdit, onDelete, onChanged }: StreamPostCardProps) {
+export default function StreamPostCard({ item, audience, author, canChange, canRetryEmails, onEdit, onDelete, onChanged }: StreamPostCardProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const [receiptsOpen, setReceiptsOpen] = useState(false)
   // Moves each time the receipts open, so the numbers are current when looked at.
@@ -251,7 +251,7 @@ export default function StreamPostCard({ item, audience, author, canChange, isAd
             ackCount={detail.ackCount ?? 0}
             receipts={detail.receipts}
             emails={detail.emails}
-            canRetry={isAdmin}
+            canRetry={canRetryEmails}
             onRetry={() => void retry()}
           />
         ) : failed ? (

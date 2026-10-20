@@ -166,7 +166,10 @@ export interface ClassPagePermissions {
   /** False for a teacher viewing a past school year's class (read-only). */
   canEdit: boolean
   canDelete: boolean
+  /** Holds classes.all: school-level power over every class (not merely an ADMIN account). */
   isAdmin: boolean
+  /** Holds announcements.school: may queue a post's failed emails again. Absent on an older backend (then isAdmin decides). */
+  canRetryEmails?: boolean
 }
 
 /** GET /classroom/classes/:classId: the class header and Settings data. */

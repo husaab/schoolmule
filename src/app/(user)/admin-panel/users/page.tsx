@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
@@ -20,9 +21,12 @@ import {
   UserAvatar,
   UserStatus,
   canImpersonate,
+  canManageUser,
   formatDate,
   statusOf,
 } from '@/components/adminUsers/userDisplay'
+import { AccessRoleChip } from '@/components/adminRoles/roleDisplay'
+import { useAccess } from '@/hooks/useAccess'
 import { getSchoolUsers } from '@/services/adminUserService'
 import { SchoolRole, SchoolUser } from '@/services/types/adminUser'
 import type { PreviewView } from '@/lib/previewViews'
@@ -33,6 +37,7 @@ import {
   ArchiveBoxIcon,
   ArrowUturnLeftIcon,
   EyeIcon,
+  LockClosedIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -50,8 +55,15 @@ const ROLE_TABS: { value: RoleFilter; label: string }[] = [
   { value: 'PARENT', label: 'Parents' },
 ]
 
+// The access-role filter: any, the built-ins only, or one custom role (by id).
+const ACCESS_ANY = 'ALL'
+const ACCESS_BUILT_IN = 'builtin'
+
 const UsersContent = () => {
   const currentUserId = useUserStore((s) => s.user.id)
+  // `users` holders manage everyone but full admins; full admins also preview
+  // staff and parents and reach the Roles page from here.
+  const { fullAdmin } = useAccess()
   // Filters live in the URL (and the page's filter memory) so Back, refresh
   // and sidebar re-clicks restore them. Modal/selection state stays local.
   const filters = useFilterParams()
@@ -64,6 +76,7 @@ const UsersContent = () => {
   const showArchived = get('archived') === '1'
   const roleFilter = get('role', 'ALL') as RoleFilter
   const statusFilter = get('status', 'ALL') as StatusFilter
+  const accessFilter = get('access', ACCESS_ANY)
 
   const [viewing, setViewing] = useState<SchoolUser | null>(null)
   const [editing, setEditing] = useState<SchoolUser | null>(null)
@@ -106,15 +119,30 @@ const UsersContent = () => {
     [pool, active, archived]
   )
 
+  // The custom roles anyone here holds, so the filter only offers what exists.
+  const accessOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    users.forEach((u) => {
+      if (u.role !== 'PARENT' && u.accessRoleId) seen.set(u.accessRoleId, u.accessRoleName ?? 'Custom role')
+    })
+    return [
+      { value: ACCESS_ANY, label: 'Any access role' },
+      { value: ACCESS_BUILT_IN, label: 'Built-in Admin or Teacher' },
+      ...[...seen].sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => ({ value, label })),
+    ]
+  }, [users])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return pool.filter(
       (u) =>
         (roleFilter === 'ALL' || u.role === roleFilter) &&
         (showArchived || statusFilter === 'ALL' || statusOf(u) === statusFilter) &&
+        (accessFilter === ACCESS_ANY ||
+          (u.role !== 'PARENT' && (accessFilter === ACCESS_BUILT_IN ? !u.accessRoleId : u.accessRoleId === accessFilter))) &&
         (!q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
     )
-  }, [pool, search, roleFilter, statusFilter, showArchived])
+  }, [pool, search, roleFilter, statusFilter, accessFilter, showArchived])
 
   const upsert = (saved: SchoolUser) => {
     setUsers((prev) => {
@@ -133,7 +161,7 @@ const UsersContent = () => {
     setViewing(null)
   }
 
-  const hasFilters = search || roleFilter !== 'ALL' || (!showArchived && statusFilter !== 'ALL')
+  const hasFilters = search || roleFilter !== 'ALL' || accessFilter !== ACCESS_ANY || (!showArchived && statusFilter !== 'ALL')
 
   const activeStatuses = (Object.keys(STATUS_META) as UserStatus[]).filter((s) => s !== 'archived')
 
@@ -149,13 +177,24 @@ const UsersContent = () => {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Users</h1>
               <p className="text-slate-500 mt-1">Everyone with a School Mule account at your school</p>
             </div>
-            <button
-              onClick={() => setAdding(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600 cursor-pointer"
-            >
-              <UserPlusIcon className="h-5 w-5" />
-              Add user
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {fullAdmin && (
+                <Link
+                  href="/admin-panel/roles"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                >
+                  <LockClosedIcon className="h-5 w-5 text-slate-500" />
+                  Roles
+                </Link>
+              )}
+              <button
+                onClick={() => setAdding(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600 cursor-pointer"
+              >
+                <UserPlusIcon className="h-5 w-5" />
+                Add user
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -222,6 +261,16 @@ const UsersContent = () => {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
+                {roleFilter !== 'PARENT' && accessOptions.length > 2 && (
+                  <SearchableSelect
+                    value={accessOptions.some((o) => o.value === accessFilter) ? accessFilter : ACCESS_ANY}
+                    onChange={(v) => setParams({ access: v === ACCESS_ANY ? null : v })}
+                    options={accessOptions}
+                    ariaLabel="Filter by access role"
+                    className="sm:w-52"
+                    triggerClassName="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 focus:ring-cyan-500"
+                  />
+                )}
                 {!showArchived && (
                   <SearchableSelect
                     value={statusFilter}
@@ -285,7 +334,7 @@ const UsersContent = () => {
                 action={
                   hasFilters ? (
                     <button
-                      onClick={() => setParams({ q: null, role: null, status: null })}
+                      onClick={() => setParams({ q: null, role: null, status: null, access: null })}
                       className="text-sm font-medium text-cyan-600 hover:text-cyan-700 cursor-pointer"
                     >
                       Clear filters
@@ -312,6 +361,7 @@ const UsersContent = () => {
                   <tbody className="divide-y divide-slate-50">
                     {filtered.map((u) => {
                       const isSelf = u.userId === currentUserId
+                      const canManage = canManageUser(u, fullAdmin)
                       return (
                         <tr
                           key={u.userId}
@@ -341,7 +391,10 @@ const UsersContent = () => {
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <RoleBadge role={u.role} title={u.staffTitle} />
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <RoleBadge role={u.role} title={u.staffTitle} />
+                              <AccessRoleChip name={u.role === 'PARENT' ? null : u.accessRoleName} />
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <StatusBadge user={u} />
@@ -351,7 +404,7 @@ const UsersContent = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-right">
                             <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                              {canImpersonate(u, currentUserId) && (
+                              {canImpersonate(u, currentUserId, fullAdmin) && (
                                 <button
                                   onClick={() => setPreviewing({ user: u })}
                                   title="View as (read-only)"
@@ -361,7 +414,11 @@ const UsersContent = () => {
                                   <EyeIcon className="h-4 w-4" />
                                 </button>
                               )}
-                              {u.isArchived ? (
+                              {!canManage ? (
+                                <span title="Only full admins can change an Admin's account" className="p-2 text-slate-300">
+                                  <LockClosedIcon className="h-4 w-4" />
+                                </span>
+                              ) : u.isArchived ? (
                                 <button
                                   onClick={() => setUnarchiving(u)}
                                   title="Restore"
@@ -380,7 +437,7 @@ const UsersContent = () => {
                                   <PencilSquareIcon className="h-4 w-4" />
                                 </button>
                               )}
-                              {!isSelf && !u.isArchived && (
+                              {canManage && !isSelf && !u.isArchived && (
                                 <button
                                   onClick={() => setArchiving(u)}
                                   title="Archive"
@@ -390,7 +447,7 @@ const UsersContent = () => {
                                   <ArchiveBoxArrowDownIcon className="h-4 w-4" />
                                 </button>
                               )}
-                              {!isSelf && (
+                              {canManage && !isSelf && (
                                 <button
                                   onClick={() => setDeleting(u)}
                                   title="Delete"

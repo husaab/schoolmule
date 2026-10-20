@@ -46,7 +46,8 @@ const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
 
   const cls = data.class
   const canEdit = data.permissions.canEdit
-  const isAdmin = data.permissions.isAdmin
+  // Retrying a post's failed emails is the school-announcements power.
+  const canRetryEmails = data.permissions.canRetryEmails ?? data.permissions.isAdmin
   const feed = useMemo(() => (stream ? buildFeed(stream.announcements, stream.notices) : []), [stream])
 
   if (loading) {
@@ -126,7 +127,7 @@ const StreamTab: FC<ClassTabProps> = ({ classId, data }) => {
                 audience={stream.audience}
                 author={resolveAuthor(entry.item.authorId, data.teachers)}
                 canChange={canEdit && entry.item.canEdit}
-                isAdmin={isAdmin}
+                canRetryEmails={canRetryEmails}
                 onEdit={setEditing}
                 onDelete={setDeleting}
                 onChanged={() => void reload()}

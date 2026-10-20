@@ -10,7 +10,7 @@ import Avatar from '@/components/avatar/Avatar'
 export const ROLE_OPTIONS: { value: SchoolRole; label: string; description: string }[] = [
   { value: 'TEACHER', label: 'Teacher', description: 'Classes, gradebook, attendance and reports' },
   { value: 'PARENT', label: 'Parent', description: 'Parent portal for their linked children' },
-  { value: 'ADMIN', label: 'Admin', description: 'Everything, including this page' },
+  { value: 'ADMIN', label: 'Admin', description: 'Everything, unless an access role limits it' },
 ]
 
 const roleStyles: Record<string, string> = {
@@ -45,17 +45,8 @@ export const statusOf = (user: SchoolUser): UserStatus => {
   return user.isVerified ? 'awaiting' : 'unverified'
 }
 
-/**
- * Can an admin "view as" this user? Only teachers and parents whose account
- * can actually sign in (active, or invited and pre-approved). Mirrors the
- * backend rule in adminUser.controller impersonateUser.
- */
-export const canImpersonate = (user: SchoolUser, currentUserId: string | null): boolean =>
-  user.userId !== currentUserId &&
-  (user.role === 'TEACHER' || user.role === 'PARENT') &&
-  !user.isArchived &&
-  user.isVerified &&
-  user.isVerifiedSchool
+// Who may manage or preview which account (pure, tested in lib/adminUserAccess).
+export { accessRoleLabel, canImpersonate, canManageUser, isFullAdminAccount } from '@/lib/adminUserAccess'
 
 export const STATUS_META: Record<UserStatus, { label: string; dot: string; text: string }> = {
   active: { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-700' },

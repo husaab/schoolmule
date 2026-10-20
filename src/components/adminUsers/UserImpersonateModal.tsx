@@ -26,7 +26,9 @@ const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onC
 
   const firstName = user.firstName || user.fullName
   const asParent = (view ?? user.role) === 'PARENT'
-  const portal = asParent ? 'the parent portal' : 'the teacher portal'
+  // A restricted admin opens in the admin view, limited exactly as their access role limits them.
+  const asAdmin = !asParent && user.role === 'ADMIN'
+  const portal = asParent ? 'the parent portal' : asAdmin ? `School Mule (${user.accessRoleName ?? 'their access role'})` : 'the teacher portal'
   // A teacher being previewed as a parent: say so, since the role fact below reads "Teacher".
   const crossView = asParent && user.role !== 'PARENT'
 
@@ -85,6 +87,7 @@ const UserImpersonateModal: React.FC<UserImpersonateModalProps> = ({ isOpen, onC
           facts={[
             { label: 'Email', value: user.email },
             { label: 'Role', value: roleLabel(user.role) },
+            ...(asAdmin && user.accessRoleName ? [{ label: 'Access role', value: user.accessRoleName }] : []),
             ...(crossView ? [{ label: 'Previewing', value: 'Parent view (their children)' }] : []),
           ]}
         />

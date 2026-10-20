@@ -38,6 +38,7 @@ import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import {
   GRADE_CODES,
   GRADE_OPTIONS,
@@ -89,6 +90,9 @@ const StudentAccountsContent = () => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const yearLabel = useSelectedYear()?.label ?? null
   const school = useUserStore((s) => s.user.school)
+  // Accounts are the `users` area; the classroom settings behind the header
+  // button are school setup (the API refuses a save without it).
+  const canEditSettings = useUserStore((s) => can(s.user, 'school_setup'))
 
   const filters = useFilterParams()
   const { get, setParams } = filters
@@ -368,32 +372,41 @@ const StudentAccountsContent = () => {
                 <InboxArrowDownIcon className="h-5 w-5" />
                 Import emails
               </button>
-              <button
-                type="button"
-                onClick={() => settings && setModal({ kind: 'settings' })}
-                disabled={!settings}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-              >
-                <Cog6ToothIcon className="h-5 w-5 text-slate-500" />
-                Classroom settings
-              </button>
+              {canEditSettings && (
+                <button
+                  type="button"
+                  onClick={() => settings && setModal({ kind: 'settings' })}
+                  disabled={!settings}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                >
+                  <Cog6ToothIcon className="h-5 w-5 text-slate-500" />
+                  Classroom settings
+                </button>
+              )}
             </div>
           </div>
 
           {settings && !settings.enabled && (
             <div role="status" className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
-              <p>
-                Student sign-in is off. Turn it on in{' '}
-                <button
-                  type="button"
-                  onClick={() => setModal({ kind: 'settings' })}
-                  className="cursor-pointer font-semibold underline underline-offset-2 hover:text-amber-950"
-                >
-                  Classroom settings
-                </button>{' '}
-                when you&apos;re ready. You can invite students now; they can sign in once it&apos;s on.
-              </p>
+              {canEditSettings ? (
+                <p>
+                  Student sign-in is off. Turn it on in{' '}
+                  <button
+                    type="button"
+                    onClick={() => setModal({ kind: 'settings' })}
+                    className="cursor-pointer font-semibold underline underline-offset-2 hover:text-amber-950"
+                  >
+                    Classroom settings
+                  </button>{' '}
+                  when you&apos;re ready. You can invite students now; they can sign in once it&apos;s on.
+                </p>
+              ) : (
+                <p>
+                  Student sign-in is off. Whoever sets the school up can turn it on in Classroom settings. You can
+                  invite students now; they can sign in once it&apos;s on.
+                </p>
+              )}
             </div>
           )}
 
@@ -573,7 +586,7 @@ const StudentAccountsContent = () => {
         </div>
       </main>
 
-      {modal?.kind === 'settings' && settings && (
+      {modal?.kind === 'settings' && settings && canEditSettings && (
         <ClassroomSettingsModal
           isOpen
           onClose={closeModal}
