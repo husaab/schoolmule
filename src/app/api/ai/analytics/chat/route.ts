@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireStaffSession } from '@/lib/server/aiSession'
 
 // POST /api/ai/analytics/chat — the app's first streaming AI route.
 // Body: { context: string, messages: {role, content}[], newMessage: string }
@@ -6,6 +7,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // the OpenAI SSE stream is unwrapped server-side so the client just appends text).
 
 export async function POST(request: NextRequest) {
+  // Staff with analytics only: this spends the OpenAI key (lib/server/aiSession).
+  const auth = await requireStaffSession(request, { permission: 'analytics' })
+  if (!auth.ok) return auth.response
+
   try {
     const body = await request.json()
     const { context, messages, newMessage } = body

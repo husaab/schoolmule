@@ -38,6 +38,7 @@ import {
   CalendarDaysIcon,
   PencilSquareIcon
 } from '@heroicons/react/24/outline'
+import { aiFetch } from '@/services/aiClient'
 
 // Core Standards options
 const CORE_STANDARDS_OPTIONS = [
@@ -247,19 +248,15 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
     const coverage = stored?.coverage ?? undefined
 
     try {
-      const response = await fetch('/api/ai/generate-progress-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName,
-          subject: classData?.subject || 'this class',
-          coreStandards,
-          workHabits: workHabit,
-          behavior,
-          term: selectedTerm,
-          grade,
-          coverage,
-        }),
+      const response = await aiFetch('/api/ai/generate-progress-comment', {
+        studentName,
+        subject: classData?.subject || 'this class',
+        coreStandards,
+        workHabits: workHabit,
+        behavior,
+        term: selectedTerm,
+        grade,
+        coverage,
       })
 
       if (!response.ok) {

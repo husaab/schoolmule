@@ -35,6 +35,7 @@ import {
   SparklesIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline'
+import { aiFetch } from '@/services/aiClient'
 
 // Rating options for Work Habits and Behavior
 const RATING_OPTIONS = [
@@ -232,18 +233,14 @@ export default function ReportCardCommentsWorkspace({ classId, classData, onOpen
     const coverage = stored?.coverage ?? undefined
 
     try {
-      const response = await fetch('/api/ai/generate-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName,
-          subject: classData?.subject || 'this class',
-          workHabits,
-          behavior,
-          term: selectedTerm,
-          grade,
-          coverage,
-        }),
+      const response = await aiFetch('/api/ai/generate-comment', {
+        studentName,
+        subject: classData?.subject || 'this class',
+        workHabits,
+        behavior,
+        term: selectedTerm,
+        grade,
+        coverage,
       })
 
       if (!response.ok) {

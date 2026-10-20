@@ -8,6 +8,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import type { AttendanceTrendPoint, DashboardSummaryData } from '@/services/types/dashboard'
+import { aiFetch } from '@/services/aiClient'
 
 interface DailyBriefingProps {
   /** Holds `analytics`. Without it the model is never told the grade average. */
@@ -85,11 +86,7 @@ const DailyBriefing: React.FC<DailyBriefingProps> = (props) => {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch('/api/ai/dashboard-briefing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: buildContext(props) }),
-        })
+        const res = await aiFetch('/api/ai/dashboard-briefing', { context: buildContext(props) })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to generate briefing')
         setBriefing(data.briefing)

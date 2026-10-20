@@ -25,6 +25,7 @@ import {
   ChevronDownIcon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
+import { aiFetch } from '@/services/aiClient';
 
 interface ProgressReportModalProps {
   isOpen: boolean;
@@ -157,19 +158,15 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
     setGeneratingAI(true);
     try {
-      const response = await fetch('/api/ai/generate-progress-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName,
-          subject: subjectName || 'General',
-          coreStandards,
-          workHabits: workHabit,
-          behavior,
-          term: term || 'Current Term',
-          grade: studentGrade,
-          coverage,
-        }),
+      const response = await aiFetch('/api/ai/generate-progress-comment', {
+        studentName,
+        subject: subjectName || 'General',
+        coreStandards,
+        workHabits: workHabit,
+        behavior,
+        term: term || 'Current Term',
+        grade: studentGrade,
+        coverage,
       });
 
       if (!response.ok) throw new Error('Failed to generate comment');

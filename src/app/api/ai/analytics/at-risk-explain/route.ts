@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireStaffSession } from '@/lib/server/aiSession'
 
 // POST /api/ai/analytics/at-risk-explain
 // Body: one student's risk profile (computed deterministically client-side).
@@ -12,6 +13,10 @@ Given a student's risk profile, write 2-3 sentences that:
 Do not use the words "at-risk" or "flagged". Refer to the student by first name. Output plain prose.`
 
 export async function POST(request: NextRequest) {
+  // Staff with analytics only: this spends the OpenAI key (lib/server/aiSession).
+  const auth = await requireStaffSession(request, { permission: 'analytics' })
+  if (!auth.ok) return auth.response
+
   try {
     const body = await request.json()
     const {

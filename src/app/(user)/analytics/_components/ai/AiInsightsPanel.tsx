@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
+import { aiFetch } from '@/services/aiClient'
 
 const AiInsightsPanel: React.FC = () => {
   const serializedContext = useAnalyticsStore((s) => s.serializedContext)
@@ -22,11 +23,7 @@ const AiInsightsPanel: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/ai/analytics/insights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: serializedContext, viewLevel }),
-      })
+      const res = await aiFetch('/api/ai/analytics/insights', { context: serializedContext, viewLevel })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to generate insights')
       setInsight(data.insight)

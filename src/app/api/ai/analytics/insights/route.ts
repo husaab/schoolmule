@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireStaffSession } from '@/lib/server/aiSession'
 
 // POST /api/ai/analytics/insights
 // Body: { context: string, viewLevel: 'school'|'grade'|'class'|'student' }
@@ -15,6 +16,10 @@ Write a concise professional narrative (3-6 sentences) that:
 Do not fabricate data. If the snapshot has insufficient data, say so briefly. Output plain prose, no headers or bullets.`
 
 export async function POST(request: NextRequest) {
+  // Staff with analytics only: this spends the OpenAI key (lib/server/aiSession).
+  const auth = await requireStaffSession(request, { permission: 'analytics' })
+  if (!auth.ok) return auth.response
+
   try {
     const body = await request.json()
     const { context, viewLevel } = body

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireStaffSession } from '@/lib/server/aiSession'
 
 // POST /api/ai/dashboard-briefing
 // Body: { context: string }
@@ -18,6 +19,10 @@ Rules:
 - Address the reader as "you". Plain prose, no headings, no bullets, no greeting, no sign-off.`
 
 export async function POST(request: NextRequest) {
+  // Signed-in staff only: this spends the OpenAI key (lib/server/aiSession).
+  const auth = await requireStaffSession(request)
+  if (!auth.ok) return auth.response
+
   try {
     const body = await request.json()
     const { context } = body

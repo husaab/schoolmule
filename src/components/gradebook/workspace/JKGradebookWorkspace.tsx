@@ -47,6 +47,7 @@ import {
   type KindergartenFields,
   type KindergartenSnapshot,
 } from '@/lib/kindergartenSave'
+import { aiFetch } from '@/services/aiClient'
 
 // Rating options for each document type
 const PROGRESS_REPORT_RATINGS = [
@@ -323,24 +324,20 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
 
     setGeneratingAI((prev) => new Set(prev).add(key))
     try {
-      const response = await fetch('/api/ai/generate-jksk-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName: selectedStudent.name,
-          domainName,
-          skills: ratedSkills,
-          ratingScale: activeTab === 'progress_report' ? 'DBIN' : 'BGDVNI',
-          gradeLevel: classData?.grade || 'JK',
-          documentType: activeTab,
-          learningSkills: activeTab === 'report_card'
-            ? LEARNING_SKILL_NAMES.filter((n) => learningSkills[n]).map((n) => ({
-                name: n,
-                rating: learningSkills[n],
-              }))
-            : undefined,
-          term: term || 'Current Term',
-        }),
+      const response = await aiFetch('/api/ai/generate-jksk-comment', {
+        studentName: selectedStudent.name,
+        domainName,
+        skills: ratedSkills,
+        ratingScale: activeTab === 'progress_report' ? 'DBIN' : 'BGDVNI',
+        gradeLevel: classData?.grade || 'JK',
+        documentType: activeTab,
+        learningSkills: activeTab === 'report_card'
+          ? LEARNING_SKILL_NAMES.filter((n) => learningSkills[n]).map((n) => ({
+              name: n,
+              rating: learningSkills[n],
+            }))
+          : undefined,
+        term: term || 'Current Term',
       })
 
       if (!response.ok) throw new Error('Failed to generate comment')

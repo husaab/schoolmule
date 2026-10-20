@@ -46,6 +46,7 @@ import {
   otherKindergartenDoc,
   type KindergartenFields,
 } from '@/lib/kindergartenSave'
+import { aiFetch } from '@/services/aiClient'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -295,18 +296,14 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
 
     setGeneratingAI((prev) => new Set(prev).add(key))
     try {
-      const response = await fetch('/api/ai/generate-jksk-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName: selectedStudent.name,
-          domainName: subjectName,
-          skills: ratedStandards,
-          ratingScale: activeTab === 'progress_report' ? 'EGSNINA' : 'EPDVEMNI',
-          gradeLevel: 'SK',
-          documentType: activeTab,
-          term: term || 'Current Term',
-        }),
+      const response = await aiFetch('/api/ai/generate-jksk-comment', {
+        studentName: selectedStudent.name,
+        domainName: subjectName,
+        skills: ratedStandards,
+        ratingScale: activeTab === 'progress_report' ? 'EGSNINA' : 'EPDVEMNI',
+        gradeLevel: 'SK',
+        documentType: activeTab,
+        term: term || 'Current Term',
       })
 
       if (!response.ok) throw new Error('Failed to generate comment')

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireStaffSession } from '@/lib/server/aiSession'
 
 // POST /api/ai/analytics/report-composer
 // Body: { context, sections: string[], audience, schoolName, termName }
@@ -7,6 +8,10 @@ import { NextRequest, NextResponse } from 'next/server'
 const ALL_SECTIONS = ['Overview', 'Highlights', 'Areas of Concern', 'Recommendations'] as const
 
 export async function POST(request: NextRequest) {
+  // Staff with analytics only: this spends the OpenAI key (lib/server/aiSession).
+  const auth = await requireStaffSession(request, { permission: 'analytics' })
+  if (!auth.ok) return auth.response
+
   try {
     const body = await request.json()
     const { context, sections, audience, schoolName, termName, scope } = body

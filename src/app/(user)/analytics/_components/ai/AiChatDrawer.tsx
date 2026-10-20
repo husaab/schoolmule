@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAnalyticsStore } from '@/store/useAnalyticsStore'
 import { ChatMessage } from '@/services/types/analytics'
+import { aiFetch } from '@/services/aiClient'
 
 interface AiChatDrawerProps {
   isOpen: boolean
@@ -50,14 +51,10 @@ const AiChatDrawer: React.FC<AiChatDrawerProps> = ({ isOpen, onClose }) => {
     setStreaming(true)
 
     try {
-      const res = await fetch('/api/ai/analytics/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context: serializedContext,
-          messages: history.slice(0, -1),
-          newMessage: trimmed,
-        }),
+      const res = await aiFetch('/api/ai/analytics/chat', {
+        context: serializedContext,
+        messages: history.slice(0, -1),
+        newMessage: trimmed,
       })
 
       if (!res.ok || !res.body) {

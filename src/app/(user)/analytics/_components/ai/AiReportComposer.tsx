@@ -21,6 +21,7 @@ import { TermPayload } from '@/services/types/term'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
 import StudentPicker, { PickerStudent } from '../StudentPicker'
 import SearchableSelect from '@/components/ui/SearchableSelect'
+import { aiFetch } from '@/services/aiClient'
 
 const scopeTriggerCls =
   'px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 focus:ring-cyan-500'
@@ -118,17 +119,13 @@ const AiReportComposer: React.FC<AiReportComposerProps> = ({
   const generate = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/ai/analytics/report-composer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context: serializedContext,
-          sections,
-          audience,
-          schoolName,
-          termName,
-          scope: scopeLabel,
-        }),
+      const res = await aiFetch('/api/ai/analytics/report-composer', {
+        context: serializedContext,
+        sections,
+        audience,
+        schoolName,
+        termName,
+        scope: scopeLabel,
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to generate report')

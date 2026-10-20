@@ -14,6 +14,7 @@ import {
 import { SnapshotData, SnapshotStudent, AtRiskResult } from '@/services/types/analytics'
 import { computeAtRiskScore, coverageTitle, shortCoverage } from '@/lib/analyticsUtils'
 import { UseAnalyticsParams } from '../../_hooks/useAnalyticsParams'
+import { aiFetch } from '@/services/aiClient'
 
 interface AtRiskWatchlistProps {
   snapshot: SnapshotData | null
@@ -44,21 +45,17 @@ const StudentCard: React.FC<{ student: ScoredStudent; params: UseAnalyticsParams
     setLoadingExplain(true)
     setExplainError(false)
     try {
-      const res = await fetch('/api/ai/analytics/at-risk-explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName: student.studentName,
-          gradePercent: student.overallAvg,
-          attendancePercent: student.attendancePct,
-          missingWorkCount: student.missingCount,
-          trajectoryDelta: 0,
-          riskScore: student.risk.score,
-          riskFlags: student.risk.flags,
-          classContext: student.lowestSubject
-            ? `Grade ${student.gradeLevel}; weakest subject ${student.lowestSubject} at ${student.lowestPct}%`
-            : `Grade ${student.gradeLevel}`,
-        }),
+      const res = await aiFetch('/api/ai/analytics/at-risk-explain', {
+        studentName: student.studentName,
+        gradePercent: student.overallAvg,
+        attendancePercent: student.attendancePct,
+        missingWorkCount: student.missingCount,
+        trajectoryDelta: 0,
+        riskScore: student.risk.score,
+        riskFlags: student.risk.flags,
+        classContext: student.lowestSubject
+          ? `Grade ${student.gradeLevel}; weakest subject ${student.lowestSubject} at ${student.lowestPct}%`
+          : `Grade ${student.gradeLevel}`,
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
