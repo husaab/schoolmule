@@ -7,6 +7,7 @@
 import type {
   AccountStatus,
   ClassroomSettings,
+  ClassroomSettingsInput,
   GradeCode,
   SignInMethod,
   StudentAccountRow,
@@ -28,6 +29,24 @@ export const gradeLabel = (grade: string): string => (grade === 'JK' || grade ==
 
 /** Option label for a grade picker: 'JK', 'SK', 'Grade 1'… */
 export const GRADE_OPTIONS = GRADE_CODES.map((g) => ({ value: g, label: gradeLabel(g) }))
+
+/**
+ * The classroom settings form's values from the saved settings. The parents'
+ * weekly summary is off when a server too old to send it answers.
+ */
+export const classroomSettingsInput = (s: ClassroomSettings): ClassroomSettingsInput => ({
+  enabled: s.enabled,
+  loginFromGrade: s.loginFromGrade,
+  qrUntilGrade: s.qrUntilGrade,
+  studentEmailFromGrade: s.studentEmailFromGrade,
+  parentsReadPrivateComments: s.parentsReadPrivateComments,
+  summaryDow: s.summaryDow,
+  parentSummary: s.parentSummary ?? false,
+  studentPhotos: s.studentPhotos,
+  consentNoticeVersion: s.consentNoticeVersion,
+  studentEmailDomains: s.studentEmailDomains ?? [],
+  studentSignIn: s.studentSignIn ?? 'google_or_password',
+})
 
 export const STATUS_LABELS: Record<AccountStatus, string> = {
   not_invited: 'Not invited',

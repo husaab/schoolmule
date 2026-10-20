@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import type { StudentAccountRow, StudentAccountLogin } from '@/services/types/studentAccount'
+import type { ClassroomSettings, StudentAccountRow, StudentAccountLogin } from '@/services/types/studentAccount'
 import {
   chunk,
+  classroomSettingsInput,
   consentText,
   countByStatus,
   filterRows,
@@ -368,5 +369,25 @@ describe('cancelKeepsLogin', () => {
     expect(cancelKeepsLogin(row({ status: 'invited', account: login({ qr: { active: true, issuedAt: '2026-10-15T14:00:00.000Z', voidedAt: null } }), invite }))).toBe(true)
     expect(cancelKeepsLogin(row({ status: 'invited', account: login({ lastLoginAt: '2026-10-15T14:00:00.000Z' }), invite }))).toBe(true)
     expect(cancelKeepsLogin(row({ status: 'active', account: login(), signInMethod: 'card', invite }))).toBe(true)
+  })
+})
+
+describe('classroomSettingsInput', () => {
+  const saved: ClassroomSettings = {
+    enabled: false, loginFromGrade: '1', qrUntilGrade: '3', studentEmailFromGrade: '1', parentsReadPrivateComments: true,
+    summaryDow: 5, studentPhotos: false, consentNoticeVersion: '2026-10', studentEmailDomains: ['students.example.org'],
+    studentSignIn: 'google_only', updatedAt: '2026-10-19T12:00:00.000Z',
+  }
+
+  it('copies every saved setting into the form, the weekly summary switch included', () => {
+    expect(classroomSettingsInput({ ...saved, parentSummary: true })).toEqual({
+      enabled: false, loginFromGrade: '1', qrUntilGrade: '3', studentEmailFromGrade: '1', parentsReadPrivateComments: true,
+      summaryDow: 5, parentSummary: true, studentPhotos: false, consentNoticeVersion: '2026-10',
+      studentEmailDomains: ['students.example.org'], studentSignIn: 'google_only',
+    })
+  })
+
+  it('reads the weekly summary as off when the server does not send it yet', () => {
+    expect(classroomSettingsInput(saved).parentSummary).toBe(false)
   })
 })

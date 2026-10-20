@@ -16,6 +16,7 @@ import TermAddModal from '@/components/terms/add/termAddModal'
 import TermEditModal from '@/components/terms/edit/termEditModal'
 import TermDeleteModal from '@/components/terms/delete/termDeleteModal'
 import SchoolYearsSection from '@/components/school-years/SchoolYearsSection'
+import ClassroomSettingsCard from '@/components/studentAccounts/ClassroomSettingsCard'
 
 const SchoolSettingsPage = () => {
   const router = useRouter()
@@ -460,6 +461,9 @@ const SchoolSettingsPage = () => {
               )}
             </div>
           </div>
+
+          {/* Classroom & parent emails: the same settings as Student accounts → Classroom settings */}
+          <ClassroomSettingsCard />
 
           {/* School Years Section */}
           <SchoolYearsSection />

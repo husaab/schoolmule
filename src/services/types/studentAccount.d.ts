@@ -8,7 +8,7 @@ export type GradeCode = 'JK' | 'SK' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | 
 export type AccountStatus = 'not_invited' | 'invited' | 'active' | 'archived' | 'not_eligible';
 
 export interface ClassroomSettings {
-  /** Student sign-in on or off for the whole school. */
+  /** Student sign-in (the student portal) on or off for the whole school. */
   enabled: boolean;
   loginFromGrade: GradeCode;
   qrUntilGrade: GradeCode;
@@ -17,7 +17,10 @@ export interface ClassroomSettings {
   parentsReadPrivateComments: boolean;
   /** 0 = Sunday … 6 = Saturday. */
   summaryDow: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  /** The parents' weekly summary, its own switch (apart from student sign-in). Absent from older servers. */
+  parentSummary?: boolean;
   studentPhotos: boolean;
+  /** Recorded with each consent; no longer shown or edited. */
   consentNoticeVersion: string;
   /** The domains of the school's student addresses ([] = no domain checks). */
   studentEmailDomains: string[];

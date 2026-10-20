@@ -289,8 +289,7 @@ export default function InviteStudentsModal({ isOpen, onClose, rows, settings, o
               className="mt-0.5 h-4 w-4 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
             <span className="text-sm text-slate-700">
-              I confirm the school has a parent or guardian&apos;s consent for these students to use SchoolMule (notice{' '}
-              {settings.consentNoticeVersion}).
+              I confirm the school has a parent or guardian&apos;s consent for these students to use SchoolMule.
             </span>
           </label>
         )}
