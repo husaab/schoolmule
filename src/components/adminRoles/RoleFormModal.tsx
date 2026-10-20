@@ -100,7 +100,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({ isOpen, onClose, catalog,
   const subtitle = readOnly
     ? 'Built-in roles are fixed. Create a custom role for anything in between.'
     : isEdit
-      ? `${holdersLabel(role?.userCount ?? 0)} ${role?.userCount === 1 ? 'has' : 'have'} this role. Changes apply to them right away.`
+      ? `${holdersLabel(role?.userCount ?? 0)} ${(role?.userCount ?? 0) > 1 ? 'have' : 'has'} this role. Changes apply to them right away.`
       : 'Choose what this role can open and do. Assign it to staff from the Users page.'
 
   return (
