@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PERMISSIONS,
   TEACHER_DEFAULT,
+  ROUTE_RULES,
   accessInfo,
   can,
   canAny,
@@ -141,6 +142,13 @@ describe('every page is a deliberate decision', () => {
   it('no admin page relies on the unknown-page catch-all', () => {
     // A failure here means a new /admin-panel page needs its own ROUTE_RULES entry.
     expect(GUARDED_ROUTES.filter((p) => isAdminPanelFallback(matchRoute(p)))).toEqual([])
+  })
+
+  it('every rule names a page that exists (no typos)', () => {
+    const dead = ROUTE_RULES.filter(
+      (r) => !GUARDED_ROUTES.some((p) => (r.exact ? p === r.path : p === r.path || p.startsWith(`${r.path}/`))),
+    ).map((r) => r.path)
+    expect(dead).toEqual([])
   })
 
   it('both homes are open to everyone, so routing home can never loop', () => {
