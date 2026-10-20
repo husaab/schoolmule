@@ -10,12 +10,14 @@ interface ChildRowEditorProps {
   index: number
   onChange: (childId: string, field: keyof ChildDraft, value: string) => void
   onRemove: (childId: string) => void
+  /** False for the column being turned into a multiple assessment: it holds the scores. */
+  canRemove?: boolean
 }
 
 const inputClass =
   'w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent'
 
-const ChildRowEditor: React.FC<ChildRowEditorProps> = ({ child, index, onChange, onRemove }) => {
+const ChildRowEditor: React.FC<ChildRowEditorProps> = ({ child, index, onChange, onRemove, canRemove = true }) => {
   return (
     <div
       className={`flex flex-wrap sm:flex-nowrap gap-2 items-center p-2 rounded-lg border ${
@@ -71,14 +73,18 @@ const ChildRowEditor: React.FC<ChildRowEditorProps> = ({ child, index, onChange,
           className={inputClass}
         />
       </div>
-      <button
-        type="button"
-        onClick={() => onRemove(child.assessmentId)}
-        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
-        title="Remove this individual assessment"
-      >
-        <XMarkIcon className="w-4 h-4" />
-      </button>
+      {canRemove ? (
+        <button
+          type="button"
+          onClick={() => onRemove(child.assessmentId)}
+          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
+          title="Remove this individual assessment"
+        >
+          <XMarkIcon className="w-4 h-4" />
+        </button>
+      ) : (
+        <span className="w-7 shrink-0" aria-hidden="true" />
+      )}
     </div>
   )
 }

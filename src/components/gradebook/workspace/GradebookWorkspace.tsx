@@ -699,10 +699,11 @@ export default function GradebookWorkspace({
     else setStandaloneAssessmentId(a.assessmentId)
   }
 
-  // Name / points / max score / date edited from the column window. The
-  // header, the Total column and the score clamp all read `assessments`, so a
-  // merge is enough — no refetch. A lower max score pulls a typed value down
-  // with it, so a 95 typed against /100 is not saved against /50.
+  // Name / points / max score / date edited from the column window (a move
+  // into a category, or a new category, arrives as the class's whole list).
+  // The header, the Total column and the score clamp all read `assessments`,
+  // so a merge is enough — no refetch. A lower max score pulls a typed value
+  // down with it, so a 95 typed against /100 is not saved against /50.
   const applyAssessmentMutation = (result: AssessmentMutation) => {
     const local = pendingMap()
     result.updated.forEach((u) => {
@@ -1161,7 +1162,17 @@ export default function GradebookWorkspace({
             setStandaloneAssessmentId(null)
             openPublishModal(targets)
           }}
-          onAssessmentMutated={applyAssessmentMutation}
+          onAssessmentMutated={(result) => {
+            applyAssessmentMutation(result)
+            // Moved into a category, or made one: it is no longer a column of
+            // its own, so its window closes and the grid regroups.
+            const self = result.updated.find((u) => u.assessmentId === standaloneAssessment.assessmentId)
+            if (self?.parentAssessmentId) {
+              void autosave.flush()
+              setStandaloneAssessmentId(null)
+              void refreshScoresMatrix()
+            }
+          }}
         />
       )}
 

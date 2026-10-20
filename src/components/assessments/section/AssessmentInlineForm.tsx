@@ -7,6 +7,7 @@ import type { AssessmentPayload } from '@/services/types/assessment'
 import Spinner from '@/components/Spinner'
 import ChildRowEditor from './ChildRowEditor'
 import { useAssessmentForm, AssessmentMutation } from './useAssessmentForm'
+import { countsTowardOptions, moveSummary } from '@/lib/assessmentGroups'
 
 interface AssessmentInlineFormProps {
   mode: 'add' | 'edit'
@@ -22,7 +23,10 @@ const fieldClass =
 
 /**
  * Inline add/edit form for an assessment (incl. "Multiple" parent + children).
- * Replaces the old stacked add/edit modals with an in-place editor.
+ * Replaces the old stacked add/edit modals with an in-place editor. Editing an
+ * assessment that isn't a category also offers "Counts toward" (on its own or
+ * inside a category) and, when it counts on its own, "Make this a multiple
+ * assessment".
  */
 const AssessmentInlineForm: React.FC<AssessmentInlineFormProps> = ({
   mode,
@@ -36,6 +40,14 @@ const AssessmentInlineForm: React.FC<AssessmentInlineFormProps> = ({
 
   const parentPointsMissing =
     form.isParent && (!form.weightPoints || parseFloat(form.weightPoints) <= 0)
+  // Regrouping is for an existing assessment that isn't a category.
+  const regroupable = mode === 'edit' && !!assessment && !assessment.isParent
+  const towardOptions = regroupable ? countsTowardOptions(allAssessments) : []
+  const summary = regroupable && assessment ? moveSummary(allAssessments, assessment, form.countsToward) : null
+  // An item inside a category: its points are set from the category's own Edit.
+  const category = assessment?.parentAssessmentId
+    ? allAssessments.find((a) => a.assessmentId === assessment.parentAssessmentId)
+    : undefined
 
   return (
     <form
@@ -57,25 +69,37 @@ const AssessmentInlineForm: React.FC<AssessmentInlineFormProps> = ({
         </div>
 
         {/* Points toward final grade */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Points toward final grade
-          </label>
-          <input
-            type="number"
-            required
-            value={form.weightPoints}
-            onChange={(e) => form.setWeightPointsMirrored(e.target.value)}
-            className={fieldClass}
-            placeholder="e.g. 15"
-            min={0}
-            step={0.01}
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            How many points this assessment contributes to the final grade — all of a
-            class&apos;s assessments together should total 100 points
-          </p>
-        </div>
+        {category ? (
+          <div>
+            <p className="block text-sm font-medium text-slate-700 mb-1.5">Points toward final grade</p>
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700">
+              {Number(form.weightPoints) || 0} of {category.name}&apos;s {Number(category.weightPoints) || 0}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Change how {category.name}&apos;s points are shared from its own Edit.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Points toward final grade
+            </label>
+            <input
+              type="number"
+              required
+              value={form.weightPoints}
+              onChange={(e) => form.setWeightPointsMirrored(e.target.value)}
+              className={fieldClass}
+              placeholder="e.g. 15"
+              min={0}
+              step={0.01}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              How many points this assessment contributes to the final grade — all of a
+              class&apos;s assessments together should total 100 points
+            </p>
+          </div>
+        )}
 
         {/* Maximum score — standalone only */}
         {!form.isParent && (
@@ -114,19 +138,50 @@ const AssessmentInlineForm: React.FC<AssessmentInlineFormProps> = ({
         </div>
       </div>
 
-      {/* Multiple-assessment toggle — only choosable at creation time */}
-      {mode === 'add' && (
+      {/* Counts toward: on its own, or inside a category (a multiple assessment) */}
+      {regroupable && towardOptions.length > 1 && !form.converting && (
+        <div>
+          <label htmlFor="assessment-counts-toward" className="block text-sm font-medium text-slate-700 mb-1.5">
+            Counts toward
+          </label>
+          <select
+            id="assessment-counts-toward"
+            value={form.countsToward}
+            onChange={(e) => form.setCountsToward(e.target.value)}
+            className={`${fieldClass} cursor-pointer sm:max-w-md`}
+          >
+            {towardOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p className={`text-xs mt-1 ${summary ? 'text-cyan-800' : 'text-slate-500'}`}>
+            {summary ??
+              'Choose a category (a multiple assessment) to move it inside one. It keeps its points, so grades stay the same.'}
+          </p>
+        </div>
+      )}
+
+      {/* Multiple-assessment toggle: when adding, or for an assessment that counts on its own */}
+      {(mode === 'add' || form.canConvert) && (
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={form.isParent}
-            onChange={(e) => form.setIsParent(e.target.checked)}
+            onChange={(e) => (mode === 'add' ? form.setIsParent(e.target.checked) : form.setMultiple(e.target.checked))}
             className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
           />
           <span className="text-sm font-medium text-slate-700">
             Make this a multiple assessment (grouped sub-assessments)
           </span>
         </label>
+      )}
+      {form.converting && assessment && (
+        <p className="-mt-2 text-xs text-slate-500">
+          &quot;{assessment.name}&quot; becomes the first item inside it, with its scores. Add more items
+          below, then share the points between them.
+        </p>
       )}
 
       {/* Warning if points not filled for multiple assessment */}
@@ -179,6 +234,7 @@ const AssessmentInlineForm: React.FC<AssessmentInlineFormProps> = ({
                   index={index}
                   onChange={form.updateChild}
                   onRemove={form.removeChild}
+                  canRemove={!(form.converting && child.assessmentId === assessment?.assessmentId)}
                 />
               ))}
             </div>

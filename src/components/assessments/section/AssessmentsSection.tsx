@@ -250,6 +250,12 @@ const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMuta
                   )
                 }
 
+                // An item inside this category being edited: its form shows in place of its row.
+                const editingChild =
+                  rowMode.kind === 'editing'
+                    ? childAssessments.find((child) => child.assessmentId === rowMode.assessmentId)
+                    : undefined
+
                 return (
                   <AssessmentRow
                     key={a.assessmentId}
@@ -259,6 +265,27 @@ const AssessmentsSection: React.FC<AssessmentsSectionProps> = ({ classId, onMuta
                       setRowMode({ kind: 'editing', assessmentId: a.assessmentId })
                       setComposerOpen(false)
                     }}
+                    onEditChild={(child) => {
+                      setRowMode({ kind: 'editing', assessmentId: child.assessmentId })
+                      setComposerOpen(false)
+                    }}
+                    childEditor={
+                      editingChild
+                        ? {
+                            assessmentId: editingChild.assessmentId,
+                            form: (
+                              <AssessmentInlineForm
+                                mode="edit"
+                                classId={classId}
+                                assessment={editingChild}
+                                allAssessments={assessments}
+                                onSuccess={applyMutation}
+                                onCancel={() => setRowMode({ kind: 'view' })}
+                              />
+                            ),
+                          }
+                        : null
+                    }
                     onDelete={() => {
                       setRowMode({ kind: 'deleting', assessmentId: a.assessmentId })
                       setComposerOpen(false)

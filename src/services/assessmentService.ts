@@ -5,6 +5,7 @@ import {
   AssessmentPayload,
   AssessmentResponse,
   AllAssessmentsResponse,
+  AssessmentRegroupResponse,
   CreateAssessmentRequest,
   ParentAssessmentCreateResponse,
 } from './types/assessment'
@@ -69,6 +70,40 @@ export const updateAssessment = async (
     body: payload,
   })
 }
+
+const regroupPath = (classId: string, assessmentId: string, action: 'move' | 'make-category') =>
+  `/classroom/classes/${encodeURIComponent(classId)}/assessments/${encodeURIComponent(assessmentId)}/${action}`
+
+/**
+ * Move an assessment into a category, or out on its own (categoryId null). It
+ * keeps its points; the categories it joins and leaves grow and shrink.
+ * POST /classroom/classes/:classId/assessments/:id/move
+ */
+export const moveAssessment = async (
+  classId: string,
+  assessmentId: string,
+  categoryId: string | null
+): Promise<AssessmentRegroupResponse> =>
+  apiClient<AssessmentRegroupResponse>(regroupPath(classId, assessmentId, 'move'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: { categoryId },
+  })
+
+/**
+ * Turn an assessment that counts on its own into a multiple assessment that
+ * holds it (same name, points and place).
+ * POST /classroom/classes/:classId/assessments/:id/make-category
+ */
+export const makeAssessmentCategory = async (
+  classId: string,
+  assessmentId: string
+): Promise<AssessmentRegroupResponse> =>
+  apiClient<AssessmentRegroupResponse>(regroupPath(classId, assessmentId, 'make-category'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: {},
+  })
 
 /**
  * Delete an assessment by its ID

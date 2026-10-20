@@ -37,6 +37,16 @@ export interface AllAssessmentsResponse {
 }
 
 /**
+ * A move into/out of a category, or a new category over an assessment:
+ * the class's whole list after the change (and the new category's id).
+ */
+export interface AssessmentRegroupResponse {
+  status: string
+  data: { assessments: AssessmentPayload[]; categoryId?: string }
+  message?: string
+}
+
+/**
  * Response for creating parent assessment with children
  */
 export interface ParentAssessmentCreateResponse {

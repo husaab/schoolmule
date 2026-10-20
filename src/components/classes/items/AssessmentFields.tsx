@@ -47,7 +47,9 @@ export default function AssessmentFields(props: ItemFieldsProps) {
             "JK and SK are graded on skills, so there's no gradebook column to add here."
           ) : (
             <>
-              No categories yet. Add one in <CategoriesLink classId={classId} /> first.
+              No categories yet. A category is a multiple assessment that holds several. Add one in{' '}
+              <CategoriesLink classId={classId} />, or edit an assessment there and tick &ldquo;Make this a multiple
+              assessment&rdquo;.
             </>
           )}
         </p>
@@ -108,6 +110,14 @@ export default function AssessmentFields(props: ItemFieldsProps) {
               />
             </LabeledField>
           </div>
+          {!standalone && !kindergarten && categories.length > 0 && (
+            // What "Counts toward" lists, and how to add work under a single assessment.
+            <p className="-mt-1.5 text-xs leading-relaxed text-slate-500">
+              &ldquo;Counts toward&rdquo; lists categories: multiple assessments that hold several, like {categories[0].name}. To
+              add work under a single assessment, edit it in <CategoriesLink classId={classId} /> and tick &ldquo;Make this a
+              multiple assessment&rdquo;.
+            </p>
+          )}
           <LabeledField label="Note for students and parents" name="instructions" optional error={errors.instructions}>
             <textarea
               id={fieldId('instructions')}

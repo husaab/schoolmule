@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   batchUpdateAssessments,
   createAssessment,
+  getAssessmentsByClass,
+  makeAssessmentCategory,
+  moveAssessment,
   updateAssessment,
 } from '@/services/assessmentService'
 import type {
@@ -12,6 +15,8 @@ import type {
   CreateAssessmentRequest,
 } from '@/services/types/assessment'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { ON_ITS_OWN, canBecomeCategory } from '@/lib/assessmentGroups'
+import { replaceAllMutation } from '@/lib/assessmentMutation'
 
 export interface AssessmentMutation {
   updated: AssessmentPayload[]
@@ -48,6 +53,12 @@ const nextTempId = () => `temp-${Date.now()}-${tempIdCounter++}`
  * Shared state + validation + submit logic behind the inline assessment form.
  * This is the only place on the class edit page that writes assessments —
  * weightPercent is deprecated and intentionally never written here.
+ *
+ * Editing an assessment that isn't a category can also regroup it: "Counts
+ * toward" moves it into a category, between categories or out on its own
+ * (it keeps its points), and "Make this a multiple assessment" turns one that
+ * counts on its own into a category whose first item is the assessment
+ * itself, scores and all (lib/assessmentGroups).
  */
 export function useAssessmentForm({
   mode,
@@ -66,6 +77,8 @@ export function useAssessmentForm({
   const [maxScoreTouched, setMaxScoreTouched] = useState(false)
   const [date, setDate] = useState<string>('')
   const [isParent, setIsParent] = useState(false)
+  // Where it counts: ON_ITS_OWN or a category id (edit only, not for a category).
+  const [countsToward, setCountsToward] = useState<string>(ON_ITS_OWN)
   const [childrenData, setChildrenData] = useState<ChildDraft[]>([])
   const [childPointsError, setChildPointsError] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
@@ -79,6 +92,7 @@ export function useAssessmentForm({
     setMaxScoreTouched(true)
     setDate(assessment.date ? assessment.date.split('T')[0] : '')
     setIsParent(assessment.isParent)
+    setCountsToward(assessment.parentAssessmentId || ON_ITS_OWN)
 
     if (assessment.isParent) {
       const childAssessments = allAssessments.filter(
@@ -109,6 +123,22 @@ export function useAssessmentForm({
       setChildrenData([])
     }
   }, [mode, isParent])
+
+  // Editing an assessment that counts on its own, with "multiple" ticked.
+  const converting = mode === 'edit' && !!assessment && !assessment.isParent && isParent
+  const canConvert = mode === 'edit' && !!assessment && canBecomeCategory(assessment) && countsToward === ON_ITS_OWN
+
+  // "Make this a multiple assessment" while editing: the assessment itself is
+  // the first item (its scores stay with it), worth its current points.
+  const setMultiple = (checked: boolean) => {
+    setIsParent(checked)
+    if (mode !== 'edit' || !assessment || assessment.isParent) return
+    setChildrenData(
+      checked
+        ? [{ assessmentId: assessment.assessmentId, name: name.trim() || assessment.name, weightPoints, maxScore, sortOrder: 1, date }]
+        : []
+    )
+  }
 
   const activeChildren = useMemo(
     () => childrenData.filter((child) => !child.toDelete),
@@ -204,7 +234,7 @@ export function useAssessmentForm({
     }
 
     if (isParent) {
-      if (mode === 'add' && activeChildren.length === 0) {
+      if ((mode === 'add' || converting) && activeChildren.length === 0) {
         showNotification('Multiple assessments must have individual assessments', 'error')
         return false
       }
@@ -275,49 +305,87 @@ export function useAssessmentForm({
     }
   }
 
+  // A category and its items in one transactional call. Previously this
+  // deleted removed children, then created new ones, then updated the rest as
+  // three separate requests — so a failure after step 1 left the deletions
+  // committed with no way back.
+  const childrenToDelete = childrenData.filter((child) => child.toDelete && !child.isNew)
+  const saveCategory = (categoryId: string) => {
+    const newChildren = childrenData.filter((child) => child.isNew && !child.toDelete)
+    const existingChildren = childrenData.filter((c) => !c.toDelete && !c.isNew)
+    return batchUpdateAssessments({
+      deleteIds: childrenToDelete.map((child) => child.assessmentId),
+      creates: newChildren.map((newChild) => ({
+        classId,
+        name: newChild.name.trim(),
+        weightPoints: parseFloat(newChild.weightPoints),
+        maxScore: parseFloat(newChild.maxScore),
+        parentAssessmentId: categoryId,
+        sortOrder: newChild.sortOrder,
+        isParent: false,
+        date: newChild.date || null,
+      })),
+      updates: [
+        {
+          assessmentId: categoryId,
+          name: name.trim(),
+          weightPoints: Number(weightPoints),
+          maxScore: undefined, // parents have no max score
+          date: date || null,
+        },
+        ...existingChildren.map((child) => ({
+          assessmentId: child.assessmentId,
+          name: child.name.trim(),
+          weightPoints: parseFloat(child.weightPoints),
+          maxScore: parseFloat(child.maxScore),
+          sortOrder: child.sortOrder,
+          date: child.date || null,
+        })),
+      ],
+    })
+  }
+
+  // The class's list from the server: after a regroup several rows changed.
+  const reloadedList = async (fallback: AssessmentPayload[]) => {
+    const res = await getAssessmentsByClass(classId).catch(() => null)
+    return res?.status === 'success' ? res.data : fallback
+  }
+
+  // An assessment that counts on its own becomes a multiple assessment holding it.
+  const submitConvert = async (current: AssessmentPayload) => {
+    const made = await makeAssessmentCategory(classId, current.assessmentId)
+    const categoryId = made.data?.categoryId
+    if (made.status !== 'success' || !categoryId) {
+      showNotification(made.message || "It couldn't become a multiple assessment", 'error')
+      return
+    }
+    let saved = false
+    try {
+      saved = (await saveCategory(categoryId)).status === 'success'
+    } catch {
+      saved = false
+    }
+    onSuccess({ ...replaceAllMutation(allAssessments, await reloadedList(made.data.assessments)), needsRefetch: false })
+    showNotification(
+      saved
+        ? `"${name.trim()}" is now a multiple assessment`
+        : `"${name.trim()}" is now a multiple assessment, but its items didn't all save. Edit it to try again.`,
+      saved ? 'success' : 'error'
+    )
+  }
+
   const submitEdit = async () => {
     if (!assessment) return
     const trimmedName = name.trim()
     const parsedWeightPoints = Number(weightPoints)
 
-    if (assessment.isParent && childrenData.length > 0) {
-      const childrenToDelete = childrenData.filter((child) => child.toDelete && !child.isNew)
-      const newChildren = childrenData.filter((child) => child.isNew && !child.toDelete)
-      const existingChildren = childrenData.filter((c) => !c.toDelete && !c.isNew)
+    if (converting) {
+      await submitConvert(assessment)
+      return
+    }
 
-      // One transactional call. Previously this deleted removed children, then
-      // created new ones, then updated the rest as three separate requests — so
-      // a failure after step 1 left the deletions committed with no way back.
-      const res = await batchUpdateAssessments({
-        deleteIds: childrenToDelete.map((child) => child.assessmentId),
-        creates: newChildren.map((newChild) => ({
-          classId: assessment.classId,
-          name: newChild.name.trim(),
-          weightPoints: parseFloat(newChild.weightPoints),
-          maxScore: parseFloat(newChild.maxScore),
-          parentAssessmentId: assessment.assessmentId,
-          sortOrder: newChild.sortOrder,
-          isParent: false,
-          date: newChild.date || null,
-        })),
-        updates: [
-          {
-            assessmentId: assessment.assessmentId,
-            name: trimmedName,
-            weightPoints: parsedWeightPoints,
-            maxScore: undefined, // parents have no max score
-            date: date || null,
-          },
-          ...existingChildren.map((child) => ({
-            assessmentId: child.assessmentId,
-            name: child.name.trim(),
-            weightPoints: parseFloat(child.weightPoints),
-            maxScore: parseFloat(child.maxScore),
-            sortOrder: child.sortOrder,
-            date: child.date || null,
-          })),
-        ],
-      })
+    if (assessment.isParent && childrenData.length > 0) {
+      const res = await saveCategory(assessment.assessmentId)
 
       if (res.status !== 'success') {
         showNotification(res.message || 'Failed to update assessments', 'error')
@@ -331,7 +399,7 @@ export function useAssessmentForm({
       })
       showNotification('Assessment updated successfully', 'success')
     } else {
-      // Standalone update
+      // Standalone (or an item inside a category) update, then the move if "Counts toward" changed
       const res = await updateAssessment(assessment.assessmentId, {
         name: trimmedName,
         weightPoints: parsedWeightPoints,
@@ -342,8 +410,20 @@ export function useAssessmentForm({
         showNotification(res.message || 'Failed to update assessment', 'error')
         return
       }
-      onSuccess({ updated: [res.data], deletedIds: [], needsRefetch: false })
-      showNotification('Assessment updated successfully', 'success')
+      if (countsToward === (assessment.parentAssessmentId || ON_ITS_OWN)) {
+        onSuccess({ updated: [res.data], deletedIds: [], needsRefetch: false })
+        showNotification('Assessment updated successfully', 'success')
+        return
+      }
+      const moved = await moveAssessment(classId, assessment.assessmentId, countsToward || null)
+      if (moved.status !== 'success') {
+        onSuccess({ updated: [res.data], deletedIds: [], needsRefetch: false })
+        showNotification(moved.message || "Saved, but it couldn't be moved. Try again.", 'error')
+        return
+      }
+      onSuccess({ ...replaceAllMutation(allAssessments, moved.data.assessments), needsRefetch: false })
+      const target = moved.data.assessments.find((a) => a.assessmentId === countsToward)
+      showNotification(target ? `"${trimmedName}" now counts toward ${target.name}` : `"${trimmedName}" now counts on its own`, 'success')
     }
   }
 
@@ -356,7 +436,11 @@ export function useAssessmentForm({
       else await submitEdit()
     } catch (err) {
       console.error(`Error ${mode === 'add' ? 'creating' : 'updating'} assessment:`, err)
-      showNotification(`Error ${mode === 'add' ? 'creating' : 'updating'} assessment`, 'error')
+      // The server's reason (e.g. "Choose one of this class's categories.") beats a generic line.
+      showNotification(
+        err instanceof Error && err.message ? err.message : `Error ${mode === 'add' ? 'creating' : 'updating'} assessment`,
+        'error'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -377,6 +461,10 @@ export function useAssessmentForm({
     },
     date, setDate,
     isParent, setIsParent,
+    setMultiple,
+    converting,
+    canConvert,
+    countsToward, setCountsToward,
     // children
     childrenData,
     activeChildren,

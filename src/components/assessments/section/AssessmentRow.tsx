@@ -1,7 +1,7 @@
 // File: src/components/assessments/section/AssessmentRow.tsx
 'use client'
 
-import React from 'react'
+import React, { type ReactNode } from 'react'
 import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import type { AssessmentPayload } from '@/services/types/assessment'
 
@@ -12,6 +12,10 @@ interface AssessmentRowProps {
   onDelete: () => void
   /** Dim + disable actions while another row is being edited */
   actionsDisabled: boolean
+  /** Edit one item inside this category (name, max score, date, where it counts). */
+  onEditChild: (child: AssessmentPayload) => void
+  /** The item being edited and its form, shown in place of its row. */
+  childEditor?: { assessmentId: string; form: ReactNode } | null
 }
 
 /** Read-only row for a parent or standalone assessment, with its children below. */
@@ -21,6 +25,8 @@ const AssessmentRow: React.FC<AssessmentRowProps> = ({
   onEdit,
   onDelete,
   actionsDisabled,
+  onEditChild,
+  childEditor,
 }) => {
   return (
     <div className="space-y-2">
@@ -77,28 +83,40 @@ const AssessmentRow: React.FC<AssessmentRowProps> = ({
       {/* Child Assessments */}
       {a.isParent && childAssessments.length > 0 && (
         <div className="ml-6 space-y-1">
-          {childAssessments.map((child) => (
-            <div
-              key={child.assessmentId}
-              className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-300">└─</span>
-                  <p className="font-medium text-slate-700 text-sm">{child.name}</p>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
-                    Individual
-                  </span>
+          {childAssessments.map((child) =>
+            childEditor?.assessmentId === child.assessmentId ? (
+              <div key={child.assessmentId}>{childEditor.form}</div>
+            ) : (
+              <div
+                key={child.assessmentId}
+                className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-300">└─</span>
+                    <p className="font-medium text-slate-700 text-sm">{child.name}</p>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+                      Individual
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 ml-6 mt-1 text-xs text-slate-400">
+                    <span>{child.weightPoints || child.weightPercent || 0} pts</span>
+                    {child.maxScore && <span>Max: {child.maxScore}</span>}
+                    <span>{child.date ? child.date.split('T')[0] : 'No date'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 ml-6 mt-1 text-xs text-slate-400">
-                  <span>{child.weightPoints || child.weightPercent || 0} pts</span>
-                  {child.maxScore && <span>Max: {child.maxScore}</span>}
-                  <span>{child.date ? child.date.split('T')[0] : 'No date'}</span>
-                </div>
+                <button
+                  onClick={() => onEditChild(child)}
+                  disabled={actionsDisabled}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-cyan-700 border border-cyan-200 rounded-lg hover:bg-cyan-50 transition-colors cursor-pointer text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Edit, or move it into another category or out on its own"
+                >
+                  <PencilSquareIcon className="w-3.5 h-3.5" />
+                  Edit
+                </button>
               </div>
-              <span className="text-xs text-slate-400 italic">Edit via parent</span>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </div>

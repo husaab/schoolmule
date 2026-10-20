@@ -26,3 +26,12 @@ export function mergeAssessmentMutation(
   })
   return next
 }
+
+/**
+ * A move or a new category answers with the class's whole list: every row in
+ * it is updated, and a row it no longer has (an emptied category) is deleted.
+ */
+export function replaceAllMutation(prev: AssessmentPayload[], next: AssessmentPayload[]): AssessmentMutationResult {
+  const kept = new Set(next.map((a) => a.assessmentId))
+  return { updated: next, deletedIds: prev.filter((a) => !kept.has(a.assessmentId)).map((a) => a.assessmentId) }
+}
