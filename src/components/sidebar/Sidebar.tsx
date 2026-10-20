@@ -25,21 +25,14 @@ import {
   PresentationChartLineIcon,
   UserCircleIcon,
   IdentificationIcon,
-  TableCellsIcon,
   SparklesIcon,
   TrophyIcon,
-  CogIcon,
-  PhotoIcon,
   CalendarDaysIcon,
   Squares2X2Icon,
   ChatBubbleLeftRightIcon,
-  ChatBubbleOvalLeftEllipsisIcon,
   InboxIcon,
-  UsersIcon,
   BanknotesIcon,
-  CurrencyDollarIcon,
-  KeyIcon,
-  LockClosedIcon
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useSyncExternalStore, Fragment } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -56,6 +49,7 @@ import { roleLabel } from '@/components/adminUsers/userDisplay'
 import { useRememberedHref } from '@/hooks/useFilterParams'
 import { useParentClassesSeen } from '@/lib/parentClassesSeen'
 import { accessInfo, canOpenPath } from '@/lib/permissions'
+import { ADMIN_PANEL_OVERVIEW, adminPanelNavFor } from '@/lib/adminPanelNav'
 
 interface NavLink {
   href: string;
@@ -92,45 +86,6 @@ const parentLinks: NavLink[] = [
 const supportLinks: NavLink[] = [
   { href: '/support', label: 'Help & Support', icon: QuestionMarkCircleIcon },
   { href: '/contact-us', label: 'Contact', icon: EnvelopeIcon }
-];
-
-type PanelLink = NavLink & {
-  exact?: boolean;
-  /** Open to all staff: listed in the dropdown when it exists, never the reason it exists. */
-  everyone?: boolean;
-};
-
-// The Admin Panel dropdown, in groups. Every item is filtered by the route
-// rules; a group with nothing left loses its heading, and the dropdown
-// exists only when at least one gated tool in it opens for the user.
-const adminPanelGroups: { label: string; items: PanelLink[] }[] = [
-  {
-    label: 'People',
-    items: [
-      { href: '/admin-panel/users', label: 'Users', icon: UsersIcon },
-      { href: '/admin-panel/roles', label: 'Roles', icon: LockClosedIcon },
-      { href: '/admin-panel/student-accounts', label: 'Student accounts', icon: KeyIcon },
-      { href: '/admin-panel/approvals', label: 'User Approvals', icon: ShieldCheckIcon },
-      { href: '/admin-panel/relations', label: 'Parent Relations', icon: UserGroupIcon },
-      { href: '/admin-panel/messages', label: 'All Messages', icon: ChatBubbleOvalLeftEllipsisIcon },
-    ],
-  },
-  {
-    label: 'School setup',
-    items: [
-      { href: '/admin-panel/school-settings', label: 'School Settings', icon: CogIcon },
-      { href: '/admin-panel/school-calendar', label: 'School Calendar', icon: CalendarDaysIcon },
-      { href: '/admin-panel/school-assets', label: 'School Assets', icon: PhotoIcon },
-    ],
-  },
-  {
-    label: 'Planning',
-    items: [
-      { href: '/admin-panel/schedule-planner', label: 'Schedule Planner', icon: TableCellsIcon },
-      { href: '/school-schedule', label: 'School Schedule', icon: CalendarDaysIcon, exact: true, everyone: true },
-      { href: '/admin-panel/agendas', label: 'Agenda Editor', icon: BookOpenIcon },
-    ],
-  },
 ];
 
 // The Gradebook item left the sidebar (it is each class's Grades tab now).
@@ -195,10 +150,8 @@ const Sidebar = () => {
   const canStudentViews = allowed('/student-views');
   const canReportCards = allowed('/report-cards/generate');
   const hasToolsBlock = canGeneralAttendance || canClassAttendance || canReports || canStudentViews || canReportCards;
-  const panelGroups = adminPanelGroups
-    .map((g) => ({ ...g, items: g.items.filter((i) => allowed(i.href)) }))
-    .filter((g) => g.items.length > 0);
-  const showAdminPanel = panelGroups.some((g) => g.items.some((i) => !i.everyone));
+  const adminPanel = adminPanelNavFor(user);
+  const showAdminPanel = adminPanel.show;
   const mainLinks = user?.role === 'PARENT' ? parentLinks : teacherLinks.filter((l) => allowed(l.href));
   // School Schedule sits in the Admin Panel dropdown when there is one; otherwise it is a top-level link.
   const isAdminPanelPath =
@@ -538,10 +491,10 @@ const Sidebar = () => {
                 isActive={isAdminPanelPath}
               >
                 {/* Overview stays pinned first */}
-                {allowed('/admin-panel') && (
-                  <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
+                {adminPanel.overview && (
+                  <SubNavItem href={ADMIN_PANEL_OVERVIEW} label="Overview" icon={Squares2X2Icon} exact />
                 )}
-                {panelGroups.map((group) => (
+                {adminPanel.groups.map((group) => (
                   <Fragment key={group.label}>
                     <SubNavGroup label={group.label} />
                     {group.items.map((item) => (
