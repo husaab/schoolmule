@@ -7,8 +7,9 @@
 // it sits at the bottom of the banner. `actions` is where the student and
 // parent variants put "Message {teacher}"; the teacher page passes none.
 // `compact` (the Grades tab) shrinks the banner to a slim bar so the grid
-// starts high on the page. With a tab bar the header is sticky: scrolling
-// slides it up under the navbar until only the tabs show (classStickyHeader).
+// starts high on the page. With a tab bar, the breadcrumb and the tabs stay
+// on screen while the page scrolls: the breadcrumb sticks under the navbar and
+// the banner slides up behind it until only the tabs show (classStickyHeader).
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -16,7 +17,7 @@ import { ChevronRightIcon } from '@heroicons/react/24/outline'
 import BackLink from '@/components/shared/BackLink'
 import ClassIcon from '@/components/classes/identity/ClassIcon'
 import { CLASS_COLORS } from '@/lib/classIdentity'
-import { classHeaderStickyTop } from '@/lib/classStickyHeader'
+import { CLASS_CRUMB_PX, NAVBAR_PX, classBannerStickyTop } from '@/lib/classStickyHeader'
 import { classTitle, headerMeta } from '@/lib/classesHome'
 import type { ClassPageData } from '@/services/types/classroom'
 
@@ -51,15 +52,15 @@ export default function ClassHeader({
     if (el && el.complete && el.naturalWidth === 0) setFailedUrl(identity.bannerUrl)
   }
 
-  // The sticky top depends on the header's height, which changes with the
+  // The banner's sticky top depends on its height, which changes with the
   // width (the meta line wraps) and between the full and slim banners.
-  const headerRef = useRef<HTMLElement>(null)
+  const bannerRef = useRef<HTMLElement>(null)
   const [stickyTop, setStickyTop] = useState<number | null>(null)
   const sticky = !!children
   useEffect(() => {
-    const el = headerRef.current
+    const el = bannerRef.current
     if (!sticky || !el) return
-    const measure = () => setStickyTop(classHeaderStickyTop(el.offsetHeight))
+    const measure = () => setStickyTop(classBannerStickyTop(el.offsetHeight))
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
@@ -67,12 +68,12 @@ export default function ClassHeader({
   }, [sticky])
 
   return (
-    <header
-      ref={headerRef}
-      className={sticky ? 'sticky z-30' : undefined}
-      style={sticky && stickyTop != null ? { top: stickyTop } : undefined}
-    >
-      <div className="flex min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-6 py-4 text-[15px] lg:px-8">
+    <>
+      {/* The breadcrumb stays under the navbar; the banner slides up behind it (z-40 over z-30). */}
+      <div
+        className={`flex min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-6 text-[15px] lg:px-8 ${sticky ? 'sticky z-40' : ''}`}
+        style={{ height: CLASS_CRUMB_PX, ...(sticky ? { top: NAVBAR_PX } : {}) }}
+      >
         <BackLink to={backTo} className="shrink-0 text-slate-500 transition-colors hover:text-slate-800">
           {backLabel}
         </BackLink>
@@ -80,44 +81,50 @@ export default function ClassHeader({
         <h1 className="truncate text-lg font-semibold text-slate-900">{classTitle(cls.grade, cls.subject)}</h1>
       </div>
 
-      <div className={`relative overflow-hidden ${color.tint} ${color.ink}`}>
-        {showImage && (
-          // eslint-disable-next-line @next/next/no-img-element -- static SVG or a public school-assets upload
-          <img
-            ref={watch}
-            src={identity.bannerUrl}
-            alt=""
-            // On a phone the art sits behind the title, so it is faded there.
-            className="absolute inset-0 h-full w-full object-cover object-right opacity-35 sm:opacity-100"
-            onError={() => setFailedUrl(identity.bannerUrl)}
-          />
-        )}
-        <div
-          className={`relative flex flex-col px-6 lg:px-8 ${compact ? 'gap-3 pt-4' : 'max-w-[1180px] gap-5 pt-7'} ${
-            children ? '' : compact ? 'pb-4' : 'pb-7'
-          }`}
-        >
-          <div className={`flex flex-wrap justify-between gap-4 ${compact ? 'items-center' : 'items-start'}`}>
-            <div className={`flex min-w-0 items-center ${compact ? 'gap-3' : 'gap-4'}`}>
-              <ClassIcon
-                identity={identity}
-                size={compact ? 40 : 60}
-                className={`${compact ? 'border-2' : 'border-[3px]'} border-white shadow-[0_2px_6px_rgba(15,23,42,0.08)]`}
-              />
-              <div className={`flex min-w-0 ${compact ? 'flex-wrap items-baseline gap-x-3 gap-y-0.5' : 'flex-col gap-1'}`}>
-                <h2
-                  className={`font-display font-semibold leading-tight ${compact ? 'text-[22px] sm:text-2xl' : 'text-[28px] sm:text-[34px]'}`}
-                >
-                  {cls.subject}
-                </h2>
-                <span className={compact ? 'text-sm' : 'text-[15px]'}>{headerMeta(cls, data.teachers)}</span>
+      <header
+        ref={bannerRef}
+        className={sticky ? 'sticky z-30' : undefined}
+        style={sticky && stickyTop != null ? { top: stickyTop } : undefined}
+      >
+        <div className={`relative overflow-hidden ${color.tint} ${color.ink}`}>
+          {showImage && (
+            // eslint-disable-next-line @next/next/no-img-element -- static SVG or a public school-assets upload
+            <img
+              ref={watch}
+              src={identity.bannerUrl}
+              alt=""
+              // On a phone the art sits behind the title, so it is faded there.
+              className="absolute inset-0 h-full w-full object-cover object-right opacity-35 sm:opacity-100"
+              onError={() => setFailedUrl(identity.bannerUrl)}
+            />
+          )}
+          <div
+            className={`relative flex flex-col px-6 lg:px-8 ${compact ? 'gap-3 pt-4' : 'max-w-[1180px] gap-5 pt-7'} ${
+              children ? '' : compact ? 'pb-4' : 'pb-7'
+            }`}
+          >
+            <div className={`flex flex-wrap justify-between gap-4 ${compact ? 'items-center' : 'items-start'}`}>
+              <div className={`flex min-w-0 items-center ${compact ? 'gap-3' : 'gap-4'}`}>
+                <ClassIcon
+                  identity={identity}
+                  size={compact ? 40 : 60}
+                  className={`${compact ? 'border-2' : 'border-[3px]'} border-white shadow-[0_2px_6px_rgba(15,23,42,0.08)]`}
+                />
+                <div className={`flex min-w-0 ${compact ? 'flex-wrap items-baseline gap-x-3 gap-y-0.5' : 'flex-col gap-1'}`}>
+                  <h2
+                    className={`font-display font-semibold leading-tight ${compact ? 'text-[22px] sm:text-2xl' : 'text-[28px] sm:text-[34px]'}`}
+                  >
+                    {cls.subject}
+                  </h2>
+                  <span className={compact ? 'text-sm' : 'text-[15px]'}>{headerMeta(cls, data.teachers)}</span>
+                </div>
               </div>
+              {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+            {children}
           </div>
-          {children}
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   )
 }
