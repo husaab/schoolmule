@@ -38,6 +38,17 @@ interface SignupFormProps {
 }
 
 const inputClass = 'w-full pl-12 pr-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400'
+const noticeLink = 'font-semibold text-cyan-700 underline-offset-2 hover:underline'
+
+// The server's refusals for an address that already has an account
+// (EMAIL_TAKEN, ACCOUNT_INVITED, ACCOUNT_ARCHIVED), shown under the field.
+type EmailNotice = 'taken' | 'invited' | 'archived'
+const EMAIL_NOTICES: Record<string, EmailNotice> = {
+  EMAIL_TAKEN: 'taken',
+  ACCOUNT_INVITED: 'invited',
+  ACCOUNT_ARCHIVED: 'archived',
+}
+const emailNoticeFor = (code: string | null): EmailNotice | null => (code && EMAIL_NOTICES[code]) || null
 
 /**
  * Account form scoped to a single school and role. Both come from the route
@@ -52,8 +63,8 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
   const router = useRouter()
   const showNotification = useNotificationStore(state => state.showNotification)
   const [showPassword, setShowPassword] = useState(false)
-  // The address already has an account: point to sign-in and reset instead.
-  const [emailTaken, setEmailTaken] = useState(false)
+  // The address already has an account: the way in that works for it.
+  const [emailNotice, setEmailNotice] = useState<EmailNotice | null>(null)
 
   const {
     register,
@@ -88,8 +99,9 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
         router.replace('/verify-email')
       }
     } catch (err) {
-      if (isApiError(err) && err.code === 'EMAIL_TAKEN') {
-        setEmailTaken(true)
+      const notice = isApiError(err) ? emailNoticeFor(err.code) : null
+      if (notice) {
+        setEmailNotice(notice)
         return
       }
       // The server's words when it refuses for a reason the person can act on.
@@ -156,17 +168,31 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
               id="email"
               type="email"
               placeholder={isParent ? 'you@example.com' : 'you@school.edu'}
-              {...register('email', { required: 'Email is required', onChange: () => setEmailTaken(false) })}
+              {...register('email', { required: 'Email is required', onChange: () => setEmailNotice(null) })}
               className={inputClass}
             />
           </div>
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
-          {emailTaken && (
+          {emailNotice && (
             <p role="alert" className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] leading-snug text-amber-900">
-              You already have an account with this email.{' '}
-              <Link href="/login" className="font-semibold text-cyan-700 underline-offset-2 hover:underline">Sign in</Link>
-              {' '}or{' '}
-              <Link href="/forgot-password" className="font-semibold text-cyan-700 underline-offset-2 hover:underline">reset your password</Link>.
+              {emailNotice === 'taken' && (
+                <>
+                  You already have an account with this email.{' '}
+                  <Link href="/login" className={noticeLink}>Sign in</Link>
+                  {' '}or{' '}
+                  <Link href="/forgot-password" className={noticeLink}>reset your password</Link>.
+                </>
+              )}
+              {emailNotice === 'invited' && (
+                <>
+                  You&apos;ve already been invited with this email. Use the link in your invite email to set your
+                  password, or{' '}
+                  <Link href="/forgot-password" className={noticeLink}>get a new link</Link>.
+                </>
+              )}
+              {emailNotice === 'archived' && (
+                <>This account has been archived. Contact your school admin.</>
+              )}
             </p>
           )}
         </div>
