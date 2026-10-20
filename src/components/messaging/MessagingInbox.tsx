@@ -5,12 +5,14 @@ import { ChatBubbleLeftRightIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
 import { listConversations } from '@/services/messagingService'
 import type { ConversationItem, ListFilters, SenderRole, Thread } from '@/services/types/messaging'
+import type { AskPreset } from '@/lib/askLink'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import ConversationList, { type ListView } from './ConversationList'
 import ConversationThread from './ConversationThread'
 import NewConversationModal from './NewConversationModal'
 import { toneClasses, type Tone } from './tones'
+import { useAskLink } from './useAskLink'
 
 interface MessagingInboxProps {
   tone: Tone
@@ -36,7 +38,8 @@ const LIST_REFRESH_MS = 30_000
 /**
  * The two-pane inbox shared by the staff and parent pages. The open thread
  * lives in the URL (?thread=) so emails and chips can deep-link straight to
- * it. On phones only one pane shows at a time.
+ * it; a parent email's "Ask the teacher about this" opens New message already
+ * set up (useAskLink). On phones only one pane shows at a time.
  */
 const MessagingInbox: React.FC<MessagingInboxProps> = ({
   tone,
@@ -68,6 +71,12 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
   const [items, setItems] = useState<ConversationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [newOpen, setNewOpen] = useState(false)
+  const [newPreset, setNewPreset] = useState<AskPreset | undefined>(undefined)
+  const openAsk = useCallback((preset: AskPreset) => {
+    setNewPreset(preset)
+    setNewOpen(true)
+  }, [])
+  useAskLink(urlFilters, role === 'PARENT' && !hideNewMessage, openAsk)
 
   const filters = useMemo<ListFilters>(
     () => ({
@@ -135,7 +144,10 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
               <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Conversations</span>
               <button
                 type="button"
-                onClick={() => setNewOpen(true)}
+                onClick={() => {
+                  setNewPreset(undefined)
+                  setNewOpen(true)
+                }}
                 className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium ${t.primary} cursor-pointer`}
               >
                 <PlusIcon className="h-3.5 w-3.5" /> New message
@@ -190,6 +202,7 @@ const MessagingInbox: React.FC<MessagingInboxProps> = ({
           tone={tone}
           role={role}
           classId={newMessageClassId}
+          preset={newPreset}
           onCreated={onCreated}
         />
       )}

@@ -208,6 +208,8 @@ export interface ParentTargetAssessment {
 export interface ParentTargetClass {
   classId: string;
   subject: string;
+  /** The class's lead teacher, who a General message about the class goes to. */
+  teacherId: string | null;
   teacherName: string | null;
   assessments: ParentTargetAssessment[];
 }

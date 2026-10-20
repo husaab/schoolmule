@@ -32,6 +32,8 @@ interface NewConversationModalProps {
     /** "Ask about this": lock the recipient to the announcement's author and prefill the subject. */
     teacherId?: string
     title?: string
+    /** Parent General message about one class (an email's "Ask the teacher about this"), sent while that teacher is the recipient. */
+    classId?: string
     announcementId?: string
     announcementScopeLabel?: string
     authorName?: string
@@ -251,6 +253,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
             teacherId: isParent ? teacherId : (me?.id as string),
             title: title.trim(),
             ...(!isParent && staffClassId ? { classId: staffClassId } : {}),
+            ...(isParent && preset?.classId && teacherId === preset.teacherId ? { classId: preset.classId } : {}),
             ...(isParent && preset?.announcementId ? { announcementId: preset.announcementId } : {}),
             body,
             files,

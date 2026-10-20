@@ -436,6 +436,25 @@ describe('landingFor / safeNextPath', () => {
   })
 })
 
+describe("a parent email's portal link opened signed out", () => {
+  const nextOf = (detour: string | null) => new URL(detour!, 'https://app.example').searchParams.get('next')
+
+  it('goes to sign-in carrying the page, and sign-in lands the parent there', () => {
+    expect(signInDetourFor('/parent/grades', '')).toBe('/login?next=%2Fparent%2Fgrades')
+    const ask = '?tab=conversations&ask=11111111-1111-4111-8111-111111111111&askClass=22222222-2222-4222-8222-222222222222'
+    const detour = signInDetourFor('/parent/messages', ask)
+    expect(nextOf(detour)).toBe(`/parent/messages${ask}`)
+    expect(landingFor(parent(), nextOf(detour))).toBe(`/parent/messages${ask}`)
+    expect(nextOf(signInDetourFor('/parent/messages', '?tab=announcements&announcement=a1&ack=1'))).toBe('/parent/messages?tab=announcements&announcement=a1&ack=1')
+  })
+
+  it('leaves pages outside the parent portal going to the front page', () => {
+    expect(signInDetourFor('/dashboard', '?thread=t1')).toBeNull()
+    expect(signInDetourFor('/settings', '')).toBeNull()
+    expect(signInDetourFor('/parentish', '')).toBeNull()
+  })
+})
+
 describe('an email\'s ?set= link opened signed out', () => {
   const signedOut: RouteState = { hasToken: false, user: { id: null, role: null, isVerifiedEmail: false, isVerifiedSchool: false } }
 
@@ -455,10 +474,9 @@ describe('an email\'s ?set= link opened signed out', () => {
     )
   })
 
-  it('ignores a value it does not know, a missing value, and every other page', () => {
-    expect(signInDetourFor('/parent/notifications', '?set=weekly')).toBeNull()
-    expect(signInDetourFor('/parent/notifications', '')).toBeNull()
-    expect(signInDetourFor('/parent/dashboard', '?set=daily')).toBeNull()
+  it('drops a value it does not know but keeps the page, and leaves staff pages alone', () => {
+    expect(signInDetourFor('/parent/notifications', '?set=weekly')).toBe('/login?next=%2Fparent%2Fnotifications')
+    expect(signInDetourFor('/parent/notifications', '')).toBe('/login?next=%2Fparent%2Fnotifications')
     expect(signInDetourFor('/dashboard', '?set=off')).toBeNull()
   })
 

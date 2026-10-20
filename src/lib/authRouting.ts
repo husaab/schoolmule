@@ -172,16 +172,21 @@ export const isAccessDenied = (path: string, user: RouteUser): boolean =>
   (user.role === 'ADMIN' || user.role === 'TEACHER') &&
   !canOpenPath(path, user)
 
-// The weekly email's one-click links ("Get it daily", "Turn it off") open the
-// parent's email preferences with ?set=. Opened signed out, such a link goes to
-// sign-in carrying the choice (?next=), so it is applied once the parent is in;
-// every other signed-out visitor to a guarded page still goes to '/'.
+// Parent emails link into the parent portal: grades, a conversation, "Got it",
+// "Ask the teacher about this", and the weekly email's one-click "Get it
+// daily" / "Turn it off" (?set=). Opened signed out, such a link goes to
+// sign-in carrying the page (?next=), so the parent lands where the email
+// pointed once in. Email preferences carry only a choice sign-in knows; every
+// other signed-out visitor to a guarded page still goes to '/'.
 const PARENT_PREFS_PATH = '/parent/notifications'
-export const signInDetourFor = (path: string, search: string): string | null => {
-  if (path !== PARENT_PREFS_PATH) return null
+const prefsQuery = (search: string) => {
   const set = parseSetParam(new URLSearchParams(search).get('set'))
-  if (!set) return null
-  const next = safeNextPath(`${PARENT_PREFS_PATH}?set=${set}`)
+  return set ? `?set=${set}` : ''
+}
+export const signInDetourFor = (path: string, search: string): string | null => {
+  if (!underPrefix(path, '/parent')) return null
+  const query = path === PARENT_PREFS_PATH ? prefsQuery(search) : search
+  const next = safeNextPath(`${path}${query}`)
   return next ? `/login?next=${encodeURIComponent(next)}` : null
 }
 

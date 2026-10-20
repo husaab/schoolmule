@@ -8,6 +8,7 @@
 // theirs. sessionStorage keeps two tabs from fighting and empties with the tab.
 
 import { STUDENT_PROFILE_PARAMS } from './studentProfileUrl'
+import { ASK_LINK_PARAMS } from './askLink'
 
 export const FILTER_MEMORY_PREFIX = 'sm.filters.v1:'
 
@@ -28,6 +29,8 @@ export const DEFAULT_TRANSIENT_KEYS: readonly string[] = [
   'google',
   // The student profile modal, open over any page (see lib/studentProfileUrl)
   ...Object.values(STUDENT_PROFILE_PARAMS),
+  // An email's "Ask the teacher about this" (see lib/askLink)
+  ...Object.values(ASK_LINK_PARAMS),
 ]
 
 /** The subset of the Storage interface the memory needs; sessionStorage fits. */
