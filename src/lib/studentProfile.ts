@@ -15,8 +15,13 @@ export const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
   { key: 'messages', label: 'Messages' },
 ]
 
-export const parseTab = (value: string | null | undefined): ProfileTab =>
-  PROFILE_TABS.some((t) => t.key === value) ? (value as ProfileTab) : 'overview'
+/** The tabs a viewer gets: the Grades tab needs `analytics` (its data is the analytics student detail). */
+export const profileTabsFor = ({ grades }: { grades: boolean }): { key: ProfileTab; label: string }[] =>
+  grades ? PROFILE_TABS : PROFILE_TABS.filter((t) => t.key !== 'grades')
+
+/** The tab named in the URL, or Overview when it is unknown or not one of `tabs` (e.g. ?profileTab=grades without analytics). */
+export const parseTab = (value: string | null | undefined, tabs: { key: ProfileTab }[] = PROFILE_TABS): ProfileTab =>
+  tabs.some((t) => t.key === value) ? (value as ProfileTab) : 'overview'
 
 const round1 = (v: number) => Math.round(v * 10) / 10
 

@@ -29,8 +29,10 @@ interface OverviewTabProps {
   gradebookLink: GradebookLink
   onOpenClass: (classId: string) => void
   onTab: (tab: ProfileTab) => void
-  /** Edit the student record; null when archived. */
+  /** Edit the student record; null when archived or the viewer can't. */
   onEdit: (() => void) | null
+  /** Holds `analytics`. Without it the progress keeps attendance, classes and reports and drops every grade. */
+  showGrades: boolean
   /** Term picker (and its loading hint), shown above the progress. */
   termControls: React.ReactNode
   /** Shown in place of the progress while grades load or after they fail. */
@@ -50,11 +52,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onOpenClass,
   onTab,
   onEdit,
+  showGrades,
   termControls,
   gradesFallback,
   gradesPending,
 }) => {
   const competency = overview.gradingMode === 'competency'
+  // No percentages to show: skills-based grades, or a viewer without analytics.
+  const plain = competency || !showGrades
   const termClasses = overview.enrollments.filter((e) => e.termId === term?.termId)
   const delta = termDelta(overview.terms, term?.termId ?? null)
   const marks = useMemo(() => recentMarks(detail), [detail])
@@ -93,13 +98,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       <ProfileSection overview={overview} onEdit={onEdit} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/70 pt-6">
-        <h2 className="text-lg font-semibold text-slate-900">Progress</h2>
-        {termControls}
+        <h2 className="text-lg font-semibold text-slate-900">{showGrades ? 'Progress' : term ? `This term · ${term.name}` : 'This term'}</h2>
+        {showGrades && termControls}
       </div>
 
-      {gradesFallback ?? (
+      {(showGrades ? gradesFallback : null) ?? (
         <div className={`space-y-6 transition-opacity ${gradesPending ? 'opacity-60' : ''}`}>
-          {risk && risk.tier !== 'low' && (
+          {showGrades && risk && risk.tier !== 'low' && (
             <div
               className={`flex items-center gap-3 rounded-2xl border px-5 py-3.5 ${
                 risk.tier === 'high' ? 'border-rose-100 bg-rose-50' : 'border-amber-100 bg-amber-50'
@@ -126,7 +131,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {competency ? (
+            {plain ? (
               <>
                 {attendanceCard}
                 <StatCard
@@ -186,10 +191,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               <Card
                 title={term ? `Classes · ${term.name}` : 'Classes'}
                 subtitle={
-                  competency ? 'Open a gradebook to see skill ratings' : 'Bar = the student’s grade, tick = the class average. Click a class for every mark.'
+                  competency
+                    ? 'Open a gradebook to see skill ratings'
+                    : !showGrades
+                      ? 'The classes they are enrolled in this term'
+                      : 'Bar = the student’s grade, tick = the class average. Click a class for every mark.'
                 }
                 action={
-                  analyticsHref && !competency ? (
+                  analyticsHref && !plain ? (
                     <Link href={analyticsHref} className={linkClass}>
                       Open in Analytics →
                     </Link>
@@ -197,12 +206,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 }
                 flush
               >
-                {competency || !detail ? (
+                {plain || !detail ? (
                   <ClassLinkList
                     classes={termClasses}
                     gradebookLink={gradebookLink}
                     linkLabel="Gradebook →"
-                    fallback={competency ? 'Skills-based' : 'Not yet graded'}
+                    fallback={competency ? 'Skills-based' : showGrades ? 'Not yet graded' : undefined}
                   />
                 ) : (
                   <ul className="divide-y divide-slate-50 pb-2">
@@ -237,7 +246,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 )}
               </Card>
 
-              {!competency && (
+              {!plain && (
                 <Card title="Recent marks" subtitle="Newest graded and missing work across every class" flush>
                   {marks.length === 0 ? (
                     <EmptyState icon={ChartBarIcon} title="No marks yet this term" />
@@ -271,7 +280,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
 
             <div className="space-y-6">
-              {!competency && (
+              {!plain && (
                 <Card title="Term by term" subtitle="Solid line: average · dashed: attendance">
                   {trend.length === 0 ? (
                     <p className="py-6 text-center text-sm text-slate-400">Nothing graded yet this year</p>

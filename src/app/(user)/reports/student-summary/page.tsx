@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import { getAllStudents } from '@/services/studentService'
@@ -22,6 +23,7 @@ import { currentTermClasses, classPickerOptions } from '@/lib/classListFilters'
 
 const StudentSummaryContent = () => {
   const user = useUserStore((state) => state.user)
+  const schoolWide = can(user, 'report_cards')
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
   const { get, setParams } = useFilterParams()
@@ -45,14 +47,9 @@ const StudentSummaryContent = () => {
     if (!user?.school || !user?.id) return
 
     try {
-      let response
-      if (user.role === 'ADMIN') {
-        console.log("user is an admin")
-        response = await getAllClasses(user.school)
-      } else {
-        console.log("user is an user")
-        response = await getClassesByTeacherId(user.id)
-      }
+      // Report cards and reports are school-wide for report_cards holders
+      // (teachers included, D6); anyone else picks from their own classes.
+      const response = schoolWide ? await getAllClasses(user.school) : await getClassesByTeacherId(user.id)
 
       if (response.status === 'success') {
         setClasses(response.data)
@@ -61,7 +58,7 @@ const StudentSummaryContent = () => {
       console.error('Error loading classes:', error)
       showNotification('Error loading classes', 'error')
     }
-  }, [user?.school, user?.id, user?.role, showNotification, selectedYearId]) // refetch when the selected school year changes
+  }, [user?.school, user?.id, schoolWide, showNotification, selectedYearId]) // refetch when the selected school year changes
 
   const loadStudents = useCallback(async () => {
     if (!user?.school) return

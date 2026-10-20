@@ -130,6 +130,13 @@ export const hasTeachingBaseline = (user: AccessUser | null | undefined): boolea
 export const effectiveStaffRole = (user: AccessUser | null | undefined, key: Permission): 'ADMIN' | 'TEACHER' =>
   can(user, key) ? 'ADMIN' : 'TEACHER'
 
+/**
+ * System student views, and anyone's view, are managed by admin accounts that
+ * hold `students` (the API's rule); everyone else manages the views they own.
+ */
+export const canManageAllStudentViews = (user: AccessUser | null | undefined): boolean =>
+  user?.role === 'ADMIN' && can(user, 'students')
+
 // ── Route rules ────────────────────────────────────────────────────────────
 
 export type Rule =

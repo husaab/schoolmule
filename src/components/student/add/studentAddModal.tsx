@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore';
+import { can } from '@/lib/permissions';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import Modal from '../../shared/modal';
 import { createStudent } from '@/services/studentService';
@@ -25,7 +26,8 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
   const [submitting, setSubmitting] = useState(false);
 
   const user = useUserStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  // The student's sign-in email is part of their account: `users` (Student accounts).
+  const canSetStudentEmail = can(user, 'users');
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
@@ -79,7 +81,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       healthCardNumber: values.healthCardNumber || null,
       medicalNotes: values.medicalNotes || null,
       // Admins only: any other role's body must not carry the key at all.
-      ...(isAdmin && values.studentEmail.trim() && { studentEmail: values.studentEmail.trim().toLowerCase() })
+      ...(canSetStudentEmail && values.studentEmail.trim() && { studentEmail: values.studentEmail.trim().toLowerCase() })
     };
 
     setSubmitting(true);
@@ -117,7 +119,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             onChange={setField}
             teachers={teachers}
             idPrefix="student-add"
-            showStudentEmail={isAdmin}
+            showStudentEmail={canSetStudentEmail}
           />
         </ModalBody>
 

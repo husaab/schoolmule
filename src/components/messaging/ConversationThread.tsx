@@ -25,6 +25,7 @@ import { parentItemHref } from '@/lib/portalRoutes'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import Composer from './Composer'
 import MessageBubble from './MessageBubble'
 import ThreadContextCard from './ThreadContextCard'
@@ -410,7 +411,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
               canEdit={
                 row.message.senderId === user.id && Date.now() - new Date(row.message.createdAt).getTime() < EDIT_WINDOW_MS
               }
-              canDelete={row.message.senderId === user.id || role === 'ADMIN'}
+              canDelete={row.message.senderId === user.id || can(user, 'messages.all')}
               onEdit={(body) => edit(row.message, body)}
               onDelete={() => remove(row.message)}
             />

@@ -11,6 +11,7 @@ import StudentUnarchiveModal from '@/components/student/archive/studentUnarchive
 import { getAllStudents, getArchivedStudents } from '@/services/studentService';
 import { StudentPayload } from '@/services/types/student';
 import { useUserStore } from '@/store/useUserStore';
+import { effectiveStaffRole } from '@/lib/permissions';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, AcademicCapIcon, UserIcon, ArchiveBoxIcon, ArchiveBoxArrowDownIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
@@ -440,7 +441,7 @@ const StudentsContent = () => {
                         isOpen={messageTarget !== null}
                         onClose={() => setMessageTarget(null)}
                         tone="staff"
-                        role={user?.role === 'ADMIN' ? 'ADMIN' : 'TEACHER'}
+                        role={effectiveStaffRole(user, 'messages.all')}
                         preset={messageTarget ? { studentId: messageTarget.studentId, mode: 'general' } : undefined}
                         onCreated={(thread) => {
                             setMessageTarget(null)

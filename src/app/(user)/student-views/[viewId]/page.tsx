@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import { useUserStore } from '@/store/useUserStore'
+import { canManageAllStudentViews } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import EmailCertificatesModal from '@/components/student-views/email/EmailCertificatesModal'
 import SingleEmailCertificateModal from '@/components/student-views/email/SingleEmailCertificateModal'
@@ -145,10 +146,10 @@ export default function StudentViewDetailPage() {
     )
   }
 
-  // Admins can edit system views; everyone else can only edit views they own.
+  // Admins with `students` can edit system views; everyone else can only edit views they own.
   const canEdit =
     (!view.isSystem && view.ownerUserId === user?.id) ||
-    (view.isSystem && user?.role === 'ADMIN')
+    (view.isSystem && canManageAllStudentViews(user))
 
   return (
     <div className="min-h-screen bg-slate-50">

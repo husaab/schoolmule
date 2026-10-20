@@ -31,8 +31,13 @@ const isParentView = (view: string) => view === 'PARENT'
 const dotClass = (view: string) =>
   isParentView(view) ? 'from-amber-400 to-orange-400' : 'from-cyan-500 to-teal-500'
 
-const staffBlurb = (view: string) =>
-  view === 'ADMIN' ? 'Everything, including the admin panel' : 'Classes, gradebook, attendance'
+// A restricted admin (an access role) gets what the role allows, not "everything".
+const staffBlurb = (view: string, accessRoleName?: string | null) =>
+  view === 'ADMIN'
+    ? accessRoleName
+      ? `What ${accessRoleName} allows`
+      : 'Everything, including the admin panel'
+    : 'Classes, gradebook, attendance'
 
 const childrenBlurb = (children: ChildLite[] | null) => {
   if (children === null) return 'Your linked children'
@@ -75,7 +80,7 @@ const ViewSwitcher: React.FC<{ variant: 'label' | 'card' }> = ({ variant }) => {
   if (!dual) {
     return (
       <p className="text-xs text-slate-500">
-        {user.role === 'ADMIN' ? 'Administrator' : user.role === 'PARENT' ? 'Parent Portal' : 'Teacher Portal'}
+        {user.role === 'ADMIN' ? (user.accessRole?.name ?? 'Administrator') : user.role === 'PARENT' ? 'Parent Portal' : 'Teacher Portal'}
       </p>
     )
   }
@@ -180,7 +185,7 @@ const LabelSwitch: React.FC = () => {
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium">{viewLabelFor(view).replace(' view', '')}</span>
                     <span className="block truncate text-xs text-slate-500">
-                      {amber ? childrenBlurb(children) : staffBlurb(view)}
+                      {amber ? childrenBlurb(children) : staffBlurb(view, user.accessRole?.name)}
                     </span>
                   </span>
                   {active && <CheckIcon className="h-4 w-4 flex-shrink-0" />}

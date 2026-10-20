@@ -11,6 +11,7 @@ import {
   orderAssessments,
   ordinal,
   parseTab,
+  profileTabsFor,
   recentMarks,
   relationLabel,
   subjectTermGrid,
@@ -47,6 +48,14 @@ describe('parseTab', () => {
     expect(parseTab('grades')).toBe('grades')
     expect(parseTab('nope')).toBe('overview')
     expect(parseTab('')).toBe('overview')
+  })
+
+  it('sends ?profileTab=grades to Overview for a viewer without analytics', () => {
+    const tabs = profileTabsFor({ grades: false })
+    expect(tabs.map((t) => t.key)).toEqual(['overview', 'attendance', 'reports', 'messages'])
+    expect(parseTab('grades', tabs)).toBe('overview')
+    expect(parseTab('attendance', tabs)).toBe('attendance')
+    expect(profileTabsFor({ grades: true }).map((t) => t.key)).toContain('grades')
   })
 })
 

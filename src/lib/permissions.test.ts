@@ -6,6 +6,7 @@ import {
   accessInfo,
   can,
   canAny,
+  canManageAllStudentViews,
   canOpenPath,
   effectiveStaffRole,
   hasTeachingBaseline,
@@ -93,6 +94,14 @@ describe('accessInfo', () => {
     expect(hasTeachingBaseline(restrictedAdmin([], true))).toBe(true)
     // Missing teachesClasses on an ADMIN reads as "teaches nothing".
     expect(hasTeachingBaseline({ role: 'ADMIN', isFullAdmin: false, permissions: [] })).toBe(false)
+  })
+
+  it('system student views need an admin account holding students', () => {
+    expect(canManageAllStudentViews(officeStaffTestUser)).toBe(true)
+    expect(canManageAllStudentViews(legacyAdmin)).toBe(true)
+    expect(canManageAllStudentViews(restrictedAdmin(['users']))).toBe(false)
+    // Teachers hold students but manage only their own views, as before.
+    expect(canManageAllStudentViews(builtInTeacher)).toBe(false)
   })
 
   it('effectiveStaffRole is ADMIN only with the area key', () => {

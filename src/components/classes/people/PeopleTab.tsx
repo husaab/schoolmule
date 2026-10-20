@@ -44,6 +44,7 @@ import type { ClassroomSettings, StudentAccountRow } from '@/services/types/stud
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { effectiveStaffRole } from '@/lib/permissions'
 import PeopleStudentsTable from './PeopleStudentsTable'
 import PeopleTeachersCard from './PeopleTeachersCard'
 import { useClassPeople } from './useClassPeople'
@@ -62,7 +63,8 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
   const { open: openProfile } = useStudentProfile()
   const notify = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
-  const role = useUserStore((s) => s.user.role)
+  // "Message guardians" acts as an admin (every conversation, no term gate) only with messages.all.
+  const messageRole = useUserStore((s) => effectiveStaffRole(s.user, 'messages.all'))
   const { data, error, loading, reload, patchStudent } = useClassPeople(classId)
   // False for a teacher looking at a past school year's class: it reads, it does not change accounts.
   const canEdit = page.permissions.canEdit
@@ -298,7 +300,7 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
         isOpen={messageFor !== null}
         onClose={() => setMessageFor(null)}
         tone="staff"
-        role={role === 'ADMIN' ? 'ADMIN' : 'TEACHER'}
+        role={messageRole}
         classId={classId}
         preset={messageFor ? { studentId: messageFor.studentId, mode: 'general' } : undefined}
         onCreated={(thread) => {

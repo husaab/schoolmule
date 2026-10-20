@@ -21,6 +21,7 @@ import type { ClassPayload } from '@/services/types/class'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { canAny } from '@/lib/permissions'
 import type { SenderRole } from '@/services/types/messaging'
 import { useFilterParams } from '@/hooks/useFilterParams'
 
@@ -88,6 +89,7 @@ const StaffMessagesPage: React.FC = () => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const [classes, setClasses] = useState<ClassPayload[]>([])
   const [activeTermName, setActiveTermName] = useState<string | undefined>()
+  const allClasses = canAny(user, ['messages.all', 'announcements.school'])
 
   useEffect(() => {
     if (!user.id || !user.school) return
@@ -95,8 +97,10 @@ const StaffMessagesPage: React.FC = () => {
     getAllClasses(user.school)
       .then((res) => {
         if (cancelled) return
+        // Every class for whoever sees every conversation or announces to any
+        // class; the classes they teach otherwise.
         const mine = (res.data ?? []).filter(
-          (c) => user.role === 'ADMIN' || c.teacherId === user.id || c.additionalTeachers?.some((t) => t.teacherId === user.id),
+          (c) => allClasses || c.teacherId === user.id || c.additionalTeachers?.some((t) => t.teacherId === user.id),
         )
         setClasses(mine)
       })
@@ -111,7 +115,7 @@ const StaffMessagesPage: React.FC = () => {
     return () => {
       cancelled = true
     }
-  }, [user.id, user.role, user.school, selectedYearId])
+  }, [user.id, allClasses, user.school, selectedYearId])
 
   const role = (user.role as SenderRole) || 'TEACHER'
 

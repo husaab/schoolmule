@@ -12,6 +12,7 @@ import type { AnnouncementDetail as Detail, AnnouncementItem } from '@/services/
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import AnnouncementScopeChip from './AnnouncementScopeChip'
 import ReadReceipts from './ReadReceipts'
 import { shortName } from './StudentPicker'
@@ -179,7 +180,7 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
             ackCount={detail.ackCount ?? 0}
             receipts={detail.receipts}
             emails={detail.emails}
-            canRetry={user.role === 'ADMIN'}
+            canRetry={can(user, 'announcements.school')}
             onRetry={retry}
           />
         )}

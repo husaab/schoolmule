@@ -7,7 +7,10 @@
 // The view (tab, term, open class) comes from the URL through the host, so
 // refresh and shared links restore it; every change goes back through
 // onView. Grades come from the same engine as analytics, so "Open in
-// Analytics" always shows matching numbers.
+// Analytics" always shows matching numbers. They are the analytics student
+// detail, so without `analytics` the Grades tab, the term picker and the
+// Overview's grade pieces go and the grades are never fetched; the record,
+// attendance, reports and messages stay.
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -26,7 +29,8 @@ import { useStudentProfileStore } from '@/store/useStudentProfileStore'
 import { getStudentOverview, getStudentTermGrades } from '@/services/studentProfileService'
 import { listConversations } from '@/services/messagingService'
 import { isApiError } from '@/services/apiClient'
-import { gradebookHref, parseTab, type ProfileTab } from '@/lib/studentProfile'
+import { gradebookHref, parseTab, profileTabsFor, type ProfileTab } from '@/lib/studentProfile'
+import { accessInfo, effectiveStaffRole } from '@/lib/permissions'
 import type { OpenStudentProfile, StudentProfileView } from '@/lib/studentProfileUrl'
 import type { ConversationItem } from '@/services/types/messaging'
 import type { StudentOverview, StudentTermGrades } from '@/services/types/studentProfile'
@@ -55,7 +59,11 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
   const showNotification = useNotificationStore((s) => s.showNotification)
   const notifyChanged = useStudentProfileStore((s) => s.notifyChanged)
 
-  const tab = parseTab(view.tab)
+  const access = accessInfo(user)
+  const hasAnalytics = access.permissions.has('analytics')
+  const canManageStudent = access.permissions.has('students')
+  const tabs = profileTabsFor({ grades: hasAnalytics })
+  const tab = parseTab(view.tab, tabs)
   const termParam = view.term || null
   const openClassId = view.classId || null
 
@@ -92,9 +100,10 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
 
   // ── One term's grades; runs alongside the overview (the server picks the default term) ──
   const [grades, setGrades] = useState<StudentTermGrades | null>(null)
-  const [gradesLoading, setGradesLoading] = useState(true)
+  const [gradesLoading, setGradesLoading] = useState(hasAnalytics)
   const [gradesFailed, setGradesFailed] = useState(false)
   useEffect(() => {
+    if (!hasAnalytics) return
     let cancelled = false
     setGradesLoading(true)
     setGradesFailed(false)
@@ -117,7 +126,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
     }
     // onView is only used on failure; keying on it would refetch whenever the URL moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, termParam, reloadKey])
+  }, [studentId, termParam, reloadKey, hasAnalytics])
 
   // ── Guardian conversations the viewer can see (year-scoped like the inbox) ──
   const [threads, setThreads] = useState<ConversationItem[] | null>(null)
@@ -165,7 +174,6 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
 
   const student = overview.student
   const archived = Boolean(student.isArchived)
-  const isAdmin = user.role === 'ADMIN'
   const numeric = overview.gradingMode === 'numeric'
 
   // The picker shows the chosen term at once; the content keeps the last
@@ -177,32 +185,38 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
   const gradesPending = !gradesFailed && (gradesLoading || (grades != null && grades.termId !== termId))
 
   const analyticsLink = (classId?: string): string | null => {
-    if (!numeric || archived || !shownTermId) return null
+    if (!hasAnalytics || !numeric || archived || !shownTermId) return null
     return classId
       ? `/analytics?view=class&classId=${encodeURIComponent(classId)}&termId=${encodeURIComponent(shownTermId)}`
       : `/analytics?view=student&studentId=${encodeURIComponent(studentId)}&termId=${encodeURIComponent(shownTermId)}`
   }
-  // Admins open any gradebook; a teacher only their own class's.
-  const gradebookLink: GradebookLink = (e) => (isAdmin || (e.teacherId != null && e.teacherId === user.id) ? gradebookHref(e.classId, e.grade) : null)
+  // classes.all opens any gradebook; everyone else only their own class's.
+  const gradebookLink: GradebookLink = (e) =>
+    access.permissions.has('classes.all') || (e.teacherId != null && e.teacherId === user.id) ? gradebookHref(e.classId, e.grade) : null
 
   const goTab = (next: ProfileTab) => onView({ tab: next === 'overview' ? null : next, classId: null })
   const openClass = (classId: string) => onView({ tab: 'grades', classId })
   const pickTerm = (id: string) => onView({ term: id === overview.defaultTermId ? null : id, classId: null })
 
   const studentAnalytics = analyticsLink()
+  // Changing the record (edit, archive, delete) is the student directory's: `students`.
   const menuItems: MenuItem[] = [
     ...(studentAnalytics ? [{ key: 'analytics', label: 'Open in Analytics', icon: ChartBarIcon, onSelect: () => router.push(studentAnalytics) }] : []),
-    archived
-      ? { key: 'restore', label: 'Restore student', icon: ArchiveBoxIcon, onSelect: () => setModal('unarchive') }
-      : { key: 'archive', label: 'Archive student', icon: ArchiveBoxArrowDownIcon, onSelect: () => setModal('archive') },
-    { key: 'delete', label: 'Delete student', icon: TrashIcon, danger: true, onSelect: () => setModal('delete') },
+    ...(canManageStudent
+      ? [
+          archived
+            ? { key: 'restore', label: 'Restore student', icon: ArchiveBoxIcon, onSelect: () => setModal('unarchive') }
+            : { key: 'archive', label: 'Archive student', icon: ArchiveBoxArrowDownIcon, onSelect: () => setModal('archive') },
+          { key: 'delete', label: 'Delete student', icon: TrashIcon, danger: true, onSelect: () => setModal('delete') },
+        ]
+      : []),
   ]
 
   const openThreads = threads?.filter((t) => t.status === 'open').length ?? 0
 
   // Shared by Overview (above its progress) and Grades (at the top).
   const termControls =
-    overview.terms.length > 0 ? (
+    hasAnalytics && overview.terms.length > 0 ? (
       <div className="flex flex-wrap items-center gap-3">
         <TermPicker terms={overview.terms} value={termId} onChange={pickTerm} />
         {gradesPending && (
@@ -233,11 +247,12 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
     <div className="min-h-full bg-slate-50">
       <ProfileHeader
         student={student}
+        tabs={tabs}
         tab={tab}
         onTab={goTab}
         tabBadges={{ messages: openThreads, grades: numeric ? detail?.overall.missingCount : undefined }}
         onMessage={() => setModal('message')}
-        onEdit={() => setModal('edit')}
+        onEdit={canManageStudent ? () => setModal('edit') : undefined}
         menuItems={menuItems}
       />
 
@@ -251,7 +266,8 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
             gradebookLink={gradebookLink}
             onOpenClass={openClass}
             onTab={goTab}
-            onEdit={archived ? null : () => setModal('edit')}
+            onEdit={archived || !canManageStudent ? null : () => setModal('edit')}
+            showGrades={hasAnalytics}
             termControls={termControls}
             gradesFallback={gradesFallback}
             gradesPending={dimGrades}
@@ -282,7 +298,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
             threads={threads}
             loading={threadsLoading}
             error={threadsError}
-            isAdmin={isAdmin}
+            isAdmin={access.permissions.has('messages.all')}
             archived={archived}
             onNew={() => setModal('message')}
           />
@@ -307,7 +323,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ view, onView, onClose }
         isOpen={modal === 'message'}
         onClose={() => setModal(null)}
         tone="staff"
-        role={isAdmin ? 'ADMIN' : 'TEACHER'}
+        role={effectiveStaffRole(user, 'messages.all')}
         preset={{ studentId, mode: 'general' }}
         onCreated={() => {
           // Stay on the profile: the new thread shows up on its Messages tab.

@@ -6,6 +6,7 @@ import Modal from '@/components/shared/modal'
 import { Field, ModalBody, ModalHeader, inputClass, selectClass } from '@/components/shared/modalKit'
 import { useSelectedChildStore } from '@/store/useSelectedChildStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createConversation, getParentTargets, getStaffRoster, getStaffTargets, getStaffTargetsForStudent } from '@/services/messagingService'
@@ -209,11 +210,13 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
     (fromAnnouncement && teacherId ? { userId: teacherId, name: preset?.authorName ?? 'the author', via: 'Announcement' } : null)
 
   // Threads may only be started about current-term classes. The backend
-  // enforces this; here it shapes the hints and, for a teacher opening the
-  // picker from a past-term gradebook, blocks sending up front.
+  // enforces this; here it shapes the hints and, for staff opening the
+  // picker from a past-term gradebook, blocks sending up front. Holders of
+  // messages.all (every conversation in the school) are exempt, as before
+  // for admins.
   const currentTerm = (isParent ? parentTargets?.currentTerm : rosterMode ? roster?.currentTerm : staffTargets?.currentTerm) ?? null
   const pastTermClass = !isParent && Boolean(classId) && staffTargets?.inCurrentTerm === false
-  const blockedByTerm = pastTermClass && role === 'TEACHER'
+  const blockedByTerm = pastTermClass && (role === 'TEACHER' || role === 'ADMIN') && !can(me, 'messages.all')
 
   const ready =
     !blockedByTerm &&

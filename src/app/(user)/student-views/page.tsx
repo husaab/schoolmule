@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { canManageAllStudentViews } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { listStudentViews, deleteStudentView } from '@/services/studentViewService'
@@ -198,7 +199,7 @@ function StudentViewsDashboardContent() {
               views={flatTabViews}
               query={query}
               currentUserId={user?.id || ''}
-              currentUserRole={user?.role || ''}
+              canManageAll={canManageAllStudentViews(user)}
               onDelete={handleDelete}
               variant={tab === 'system' ? 'featured' : 'default'}
             />
@@ -223,7 +224,7 @@ function StudentViewsDashboardContent() {
                         key={v.viewId}
                         view={v}
                         currentUserId={user?.id || ''}
-                        currentUserRole={user?.role || ''}
+                        canManageAll={canManageAllStudentViews(user)}
                         onDelete={handleDelete}
                         variant="featured"
                       />
@@ -258,7 +259,7 @@ function StudentViewsDashboardContent() {
                         key={v.viewId}
                         view={v}
                         currentUserId={user?.id || ''}
-                        currentUserRole={user?.role || ''}
+                        canManageAll={canManageAllStudentViews(user)}
                         onDelete={handleDelete}
                       />
                     ))}
@@ -281,7 +282,7 @@ function StudentViewsDashboardContent() {
                         key={v.viewId}
                         view={v}
                         currentUserId={user?.id || ''}
-                        currentUserRole={user?.role || ''}
+                        canManageAll={canManageAllStudentViews(user)}
                         onDelete={handleDelete}
                       />
                     ))}
@@ -347,7 +348,7 @@ function FlatTab({
   views,
   query,
   currentUserId,
-  currentUserRole,
+  canManageAll,
   onDelete,
   variant,
 }: {
@@ -355,7 +356,8 @@ function FlatTab({
   views: StudentViewPayload[]
   query: string
   currentUserId: string
-  currentUserRole: string
+  /** Admin accounts with `students`: edit system views and delete any view. */
+  canManageAll: boolean
   onDelete: (v: StudentViewPayload) => void
   variant: 'default' | 'featured'
 }) {
@@ -387,7 +389,7 @@ function FlatTab({
           key={v.viewId}
           view={v}
           currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
+          canManageAll={canManageAll}
           onDelete={onDelete}
           variant={variant}
         />
@@ -459,18 +461,19 @@ function SectionEmpty({ children }: { children: React.ReactNode }) {
 function ViewCard({
   view,
   currentUserId,
-  currentUserRole,
+  canManageAll,
   onDelete,
   variant = 'default',
 }: {
   view: StudentViewPayload
   currentUserId: string
-  currentUserRole: string
+  /** Admin accounts with `students`: edit system views and delete any view. */
+  canManageAll: boolean
   onDelete: (v: StudentViewPayload) => void
   variant?: 'default' | 'featured'
 }) {
   const isOwner = view.ownerUserId === currentUserId && !view.isSystem
-  const isAdmin = currentUserRole === 'ADMIN'
+  const isAdmin = canManageAll
   const canEdit = isOwner || (view.isSystem && isAdmin)
   // Admins can now delete any view in their school, including system views.
   // Non-admins still only delete what they own.

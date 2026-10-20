@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import CriteriaBuilder from '@/components/studentViews/CriteriaBuilder'
 import { useUserStore } from '@/store/useUserStore'
+import { canManageAllStudentViews } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
@@ -46,7 +47,7 @@ export default function NewStudentViewPage() {
   const [isShared, setIsShared] = useState(false)
   const [isSystem, setIsSystem] = useState(false)
   const [criteria, setCriteria] = useState<StudentViewCriteria>(DEFAULT_CRITERIA)
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = canManageAllStudentViews(user)
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [subjects, setSubjects] = useState<string[]>([])
   const [sourceName, setSourceName] = useState<string | null>(null)

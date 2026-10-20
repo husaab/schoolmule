@@ -45,6 +45,7 @@ import type { TermPayload } from '@/services/types/term'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore, useSelectedYear } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 
 interface LoadResult {
   /** Which year and archived setting the answer is for. */
@@ -68,12 +69,16 @@ const CardSkeleton = () => (
 function ClassesHomeContent() {
   const user = useUserStore((s) => s.user)
   const school = user.school ?? ''
-  const isAdmin = user.role === 'ADMIN'
+  // classes.all sees every class (the admin board: grade sections, subject
+  // and teacher filters); everyone else sees the classes they teach. The
+  // server scopes the cards the same way.
+  const isAdmin = can(user, 'classes.all')
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const selectedYear = useSelectedYear()
   // Every staff member adds, duplicates, archives and deletes classes, as
-  // before; a past school year is read-only for teachers.
-  const canWrite = isAdmin || selectedYear?.isActive !== false
+  // before; a past school year is read-only unless they set the school up
+  // (an admin account with school_setup, as the API requires).
+  const canWrite = (user.role === 'ADMIN' && can(user, 'school_setup')) || selectedYear?.isActive !== false
   const showNotification = useNotificationStore((s) => s.showNotification)
 
   const { get, setParams } = useFilterParams()

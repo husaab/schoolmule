@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore';
+import { can } from '@/lib/permissions';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import Modal from '../../shared/modal';
 import { updateStudent } from '@/services/studentService';
@@ -46,7 +47,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
   const [submitting, setSubmitting] = useState(false);
 
   const user = useUserStore((state) => state.user);
-  const isAdmin = user?.role === 'ADMIN';
+  // The student's sign-in email is part of their account: `users` (Student accounts).
+  const canSetStudentEmail = can(user, 'users');
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
@@ -105,7 +107,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
     // The student's own address: admins only (the server refuses the key from
     // anyone else), and only when it changed, so an edit never touches it by accident.
     const nextStudentEmail = values.studentEmail.trim().toLowerCase();
-    if (isAdmin && nextStudentEmail !== (student.studentEmail || '').toLowerCase()) {
+    if (canSetStudentEmail && nextStudentEmail !== (student.studentEmail || '').toLowerCase()) {
       updateData.studentEmail = nextStudentEmail || null;
     }
 
@@ -140,7 +142,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
             onChange={setField}
             teachers={teachers}
             idPrefix="student-edit"
-            showStudentEmail={isAdmin}
+            showStudentEmail={canSetStudentEmail}
           />
         </ModalBody>
 

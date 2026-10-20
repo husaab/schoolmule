@@ -12,16 +12,19 @@ import type { StudentProfileStudent } from '@/services/types/studentProfile'
 
 interface ProfileHeaderProps {
   student: StudentProfileStudent
+  /** The tabs this viewer gets (no Grades without analytics). */
+  tabs?: { key: ProfileTab; label: string }[]
   tab: ProfileTab
   onTab: (tab: ProfileTab) => void
   /** Small counts beside a tab label, e.g. open threads. */
   tabBadges?: Partial<Record<ProfileTab, number>>
   onMessage: () => void
-  onEdit: () => void
+  /** Edit the record; omitted for a viewer who can't (no `students`). */
+  onEdit?: () => void
   menuItems: MenuItem[]
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabBadges = {}, onMessage, onEdit, menuItems }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tabs = PROFILE_TABS, tab, onTab, tabBadges = {}, onMessage, onEdit, menuItems }) => {
   const archived = Boolean(student.isArchived)
   const gradeLabel = student.grade ? getGradeDisplayName(student.grade) : 'No grade'
   const avatar = studentAvatar(student)
@@ -104,16 +107,18 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
                 <span className="sm:hidden">Message</span>
                 <span className="hidden sm:inline">Message guardians</span>
               </button>
-              <button
-                onClick={onEdit}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600"
-              >
-                <PencilIcon className="h-4 w-4" />
-                Edit
-              </button>
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
             </>
           )}
-          <MenuButton items={menuItems} label="More actions" />
+          {menuItems.length > 0 && <MenuButton items={menuItems} label="More actions" />}
         </div>
       </div>
 
@@ -121,7 +126,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tab, onTab, tabB
         className="sticky top-14 z-10 flex gap-1 overflow-x-auto border-b border-slate-100 bg-white pl-3 pr-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Student profile sections"
       >
-        {PROFILE_TABS.map((t) => {
+        {tabs.map((t) => {
           const active = t.key === tab
           const badge = tabBadges[t.key]
           return (

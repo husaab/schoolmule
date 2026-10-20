@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useUserStore } from '@/store/useUserStore';
+import { canAny } from '@/lib/permissions';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -19,6 +20,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const ClassAttendanceDashboardContent = () => {
   const user = useUserStore((state) => state.user);
+  const seesAllClasses = canAny(user, ['attendance.classes', 'classes.all']);
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
   const router = useRouter();
   const { get, setParams } = useFilterParams();
@@ -33,7 +35,8 @@ const ClassAttendanceDashboardContent = () => {
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
-    if (user.role === 'ADMIN') {
+    // Every class for attendance.classes or classes.all; the classes they teach otherwise.
+    if (seesAllClasses) {
       getAllClasses(user.school!).then((res) => {
         if (res.status === 'success') {
           setClasses(res.data);
@@ -52,7 +55,7 @@ const ClassAttendanceDashboardContent = () => {
         setLoading(false);
       });
     }
-  }, [user?.id, user.role, user.school, selectedYearId]); // refetch when the selected school year changes
+  }, [user?.id, seesAllClasses, user.school, selectedYearId]); // refetch when the selected school year changes
 
   // A class exists once per term; only the active term's belong on this page.
   useEffect(() => {

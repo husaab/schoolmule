@@ -6,6 +6,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import CriteriaBuilder from '@/components/studentViews/CriteriaBuilder'
 import { useUserStore } from '@/store/useUserStore'
+import { canManageAllStudentViews } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
@@ -103,8 +104,8 @@ export default function EditStudentViewPage() {
     )
   }
 
-  // System views are editable only by admins. Non-admins see a friendly notice.
-  if (view.isSystem && user?.role !== 'ADMIN') {
+  // System views are editable only by admins with `students`. Everyone else sees a friendly notice.
+  if (view.isSystem && !canManageAllStudentViews(user)) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Sidebar />
@@ -118,7 +119,7 @@ export default function EditStudentViewPage() {
     )
   }
 
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = canManageAllStudentViews(user)
   // Only include isSystem in the PATCH body when an admin actually flipped it.
   // If unchanged, leave it out so the backend takes the no-op COALESCE path.
   const systemFlagChanged =
