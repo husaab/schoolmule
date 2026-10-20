@@ -1,9 +1,8 @@
 'use client'
 
-import { FC, useEffect, useState } from 'react'
+import { FC, useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { validateResetToken, resetPassword } from '@/services/passwordService'
 import NavBar from '@/components/prenavbar/navbar/Navbar'
@@ -17,6 +16,18 @@ import {
 } from '@heroicons/react/24/outline'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { safeNextPath } from '@/lib/authRouting'
+import { minPasswordLength, passwordRuleFrom, resetFailure, type PasswordRule } from '@/lib/passwordReset'
+
+// checking → ready (the form), or one of three cards: a dead link, a school
+// that signs in with Google only, or a check that never got an answer.
+type LinkState =
+  | { state: 'checking' }
+  | { state: 'ready'; rule: PasswordRule }
+  | { state: 'dead' }
+  | { state: 'blocked'; message: string }
+  | { state: 'unreachable'; message: string }
+
+const UNREACHABLE = 'Check your connection and try again.'
 
 const ResetPasswordPage: FC = () => {
   const searchParams = useSearchParams()
@@ -32,25 +43,30 @@ const ResetPasswordPage: FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [isValidToken, setIsValidToken] = useState<boolean | null>(null)
+  const [link, setLink] = useState<LinkState>({ state: 'checking' })
+  const rule: PasswordRule = link.state === 'ready' ? link.rule : 'standard'
+  const minLength = minPasswordLength(rule)
+
+  const checkLink = useCallback(async () => {
+    if (!token) {
+      setLink({ state: 'dead' })
+      return
+    }
+    setLink({ state: 'checking' })
+    try {
+      const response = await validateResetToken(token)
+      setLink({ state: 'ready', rule: passwordRuleFrom(response.data?.passwordRule) })
+    } catch (err) {
+      const failure = resetFailure(err)
+      if (failure.kind === 'dead_link') setLink({ state: 'dead' })
+      else if (failure.kind === 'blocked') setLink({ state: 'blocked', message: failure.message })
+      else setLink({ state: 'unreachable', message: failure.kind === 'message' ? failure.message : UNREACHABLE })
+    }
+  }, [token])
 
   useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const response = await validateResetToken(token)
-        setIsValidToken(response.success)
-        if (!response.success) {
-          notify(response.message || 'Invalid or expired token.', 'error')
-        }
-      } catch {
-        setIsValidToken(false)
-        notify('Something went wrong validating the token.', 'error')
-      }
-    }
-
-    if (token) checkToken()
-    else setIsValidToken(false)
-  }, [token, notify])
+    checkLink()
+  }, [checkLink])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,22 +75,23 @@ const ResetPasswordPage: FC = () => {
       return
     }
 
-    if (newPassword.length < 6) {
-      notify('Password must be at least 6 characters.', 'error')
+    if (newPassword.length < minLength) {
+      notify(`Password must be at least ${minLength} characters.`, 'error')
       return
     }
 
     setLoading(true)
     try {
-      const response = await resetPassword(token, newPassword)
-      if (response.success) {
-        notify(isInvite ? 'Password set. You can now log in.' : 'Password reset successfully. You can now log in.', 'success')
-        router.push(next ? `/login?next=${encodeURIComponent(next)}` : '/login')
-      } else {
-        notify(response.message || 'Failed to reset password.', 'error')
-      }
-    } catch {
-      notify('Server error. Please try again later.', 'error')
+      await resetPassword(token, newPassword)
+      notify(isInvite ? 'Password set. You can now log in.' : 'Password reset successfully. You can now log in.', 'success')
+      router.push(next ? `/login?next=${encodeURIComponent(next)}` : '/login')
+    } catch (err) {
+      // The link can die while the form is open (15 minutes, or used in
+      // another tab); a refused password keeps the form and says why.
+      const failure = resetFailure(err)
+      if (failure.kind === 'dead_link') setLink({ state: 'dead' })
+      else if (failure.kind === 'blocked') setLink({ state: 'blocked', message: failure.message })
+      else notify(failure.kind === 'message' ? failure.message : 'Something went wrong. Please try again.', 'error')
     } finally {
       setLoading(false)
     }
@@ -98,7 +115,7 @@ const ResetPasswordPage: FC = () => {
           </Link>
 
           <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-            {isValidToken === null ? (
+            {link.state === 'checking' ? (
               // Loading state
               <div className="text-center py-8">
                 <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6 animate-pulse">
@@ -106,7 +123,42 @@ const ResetPasswordPage: FC = () => {
                 </div>
                 <p className="text-slate-600">{isInvite ? 'Checking your invite link...' : 'Validating your reset link...'}</p>
               </div>
-            ) : isValidToken === false ? (
+            ) : link.state === 'blocked' ? (
+              // A school that signs students in with Google: no password to set
+              <div className="text-center py-4">
+                <div className="w-20 h-20 rounded-full bg-cyan-50 flex items-center justify-center mx-auto mb-6">
+                  <KeyIcon className="w-10 h-10 text-cyan-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                  Sign in with Google
+                </h2>
+                <p className="text-slate-600 mb-6">{link.message}</p>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-semibold rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg"
+                >
+                  Go to sign in
+                </Link>
+              </div>
+            ) : link.state === 'unreachable' ? (
+              // The check never got an answer; the link itself may be fine
+              <div className="text-center py-4">
+                <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-6">
+                  <ExclamationTriangleIcon className="w-10 h-10 text-amber-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                  We couldn&apos;t check your link
+                </h2>
+                <p className="text-slate-600 mb-6">{link.message}</p>
+                <button
+                  type="button"
+                  onClick={checkLink}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-semibold rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg cursor-pointer"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : link.state === 'dead' ? (
               // Invalid token state
               <div className="text-center py-4">
                 <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
@@ -157,13 +209,15 @@ const ResetPasswordPage: FC = () => {
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={minLength}
+                        autoComplete="new-password"
                         placeholder="••••••••"
                         className="w-full pl-12 pr-12 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(prev => !prev)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
                         {showPassword ? (
@@ -190,6 +244,7 @@ const ResetPasswordPage: FC = () => {
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
                         required
+                        autoComplete="new-password"
                         placeholder="••••••••"
                         className="w-full pl-12 pr-4 py-3 text-slate-800 bg-white border-2 border-slate-200 rounded-xl focus:border-cyan-500 focus:ring-0 focus:outline-none transition-colors placeholder:text-slate-400"
                       />
@@ -203,11 +258,16 @@ const ResetPasswordPage: FC = () => {
                   <div className="bg-slate-50 rounded-xl p-4">
                     <p className="text-sm font-medium text-slate-700 mb-2">Password requirements:</p>
                     <div className="flex items-center gap-2 text-sm">
-                      <CheckIcon className={`w-4 h-4 ${newPassword.length >= 6 ? 'text-emerald-500' : 'text-slate-300'}`} />
-                      <span className={newPassword.length >= 6 ? 'text-slate-700' : 'text-slate-400'}>
-                        At least 6 characters
+                      <CheckIcon className={`w-4 h-4 ${newPassword.length >= minLength ? 'text-emerald-500' : 'text-slate-300'}`} />
+                      <span className={newPassword.length >= minLength ? 'text-slate-700' : 'text-slate-400'}>
+                        At least {minLength} characters
                       </span>
                     </div>
+                    {rule === 'student' && (
+                      <p className="mt-1.5 pl-6 text-sm text-slate-500">
+                        Not your name, your email address or an easy word like &ldquo;password&rdquo;
+                      </p>
+                    )}
                   </div>
 
                   <button

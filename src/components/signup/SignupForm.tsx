@@ -1,11 +1,13 @@
 'use client'
 
 import { FC, useState } from 'react'
+import Link from 'next/link'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { GoogleAuthResponse, RegisterRequest, RegisterResponse } from '@/services/types/auth'
 import { register as registerUser } from '@/services/authService'
+import { isApiError } from '@/services/apiClient'
 import { startSession } from '@/services/sessionSync'
 import { homeFor } from '@/lib/authRouting'
 import GoogleSignIn from '@/components/auth/GoogleSignIn'
@@ -50,6 +52,8 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
   const router = useRouter()
   const showNotification = useNotificationStore(state => state.showNotification)
   const [showPassword, setShowPassword] = useState(false)
+  // The address already has an account: point to sign-in and reset instead.
+  const [emailTaken, setEmailTaken] = useState(false)
 
   const {
     register,
@@ -83,8 +87,13 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
         startSession(response.data)
         router.replace('/verify-email')
       }
-    } catch {
-      showNotification('Sign up failed', 'error')
+    } catch (err) {
+      if (isApiError(err) && err.code === 'EMAIL_TAKEN') {
+        setEmailTaken(true)
+        return
+      }
+      // The server's words when it refuses for a reason the person can act on.
+      showNotification(isApiError(err) && err.status < 500 && err.message ? err.message : 'Sign up failed', 'error')
     }
   }
 
@@ -147,11 +156,19 @@ const SignupForm: FC<SignupFormProps> = ({ school, role }) => {
               id="email"
               type="email"
               placeholder={isParent ? 'you@example.com' : 'you@school.edu'}
-              {...register('email', { required: 'Email is required' })}
+              {...register('email', { required: 'Email is required', onChange: () => setEmailTaken(false) })}
               className={inputClass}
             />
           </div>
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+          {emailTaken && (
+            <p role="alert" className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] leading-snug text-amber-900">
+              You already have an account with this email.{' '}
+              <Link href="/login" className="font-semibold text-cyan-700 underline-offset-2 hover:underline">Sign in</Link>
+              {' '}or{' '}
+              <Link href="/forgot-password" className="font-semibold text-cyan-700 underline-offset-2 hover:underline">reset your password</Link>.
+            </p>
+          )}
         </div>
 
         {/* Password Row */}

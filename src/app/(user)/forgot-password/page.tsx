@@ -2,7 +2,6 @@
 
 import { FC, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { requestPasswordReset } from '@/services/passwordService'
 import { isApiError } from '@/services/apiClient'
@@ -35,7 +34,12 @@ const ForgotPasswordPage: FC = () => {
     } catch (err) {
       // The server's own words when it refuses for a reason the person can act on
       // (no account, a student who hasn't set up yet, a Google-only school, too many tries).
-      notify(isApiError(err) && err.status < 500 && err.message ? err.message : 'Internal server error.', 'error')
+      notify(
+        isApiError(err) && err.status < 500 && err.message
+          ? err.message
+          : "We couldn't send the email right now. Please try again in a few minutes.",
+        'error'
+      )
     } finally {
       setLoading(false)
     }

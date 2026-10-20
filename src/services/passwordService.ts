@@ -1,6 +1,9 @@
 import apiClient from './apiClient';
 
 type PasswordResetResponse = { success: boolean; message: string };
+type ValidateResetTokenResponse = PasswordResetResponse & {
+  data?: { passwordRule?: 'student' | 'standard' };
+};
 
 /**
  * Request password reset by email
@@ -18,12 +21,12 @@ export const requestPasswordReset = async (
 };
 
 /**
- * Validate the password reset token
+ * Validate the password reset token; a live link names its password rule
  */
 export const validateResetToken = async (
   token: string
-): Promise<PasswordResetResponse> => {
-  return apiClient<PasswordResetResponse>(
+): Promise<ValidateResetTokenResponse> => {
+  return apiClient<ValidateResetTokenResponse>(
     `/auth/validate-reset-token?token=${encodeURIComponent(token)}`
   );
 };
