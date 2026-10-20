@@ -1,6 +1,7 @@
 // services/authService.ts
 import apiClient from './apiClient';
 import { LoginResponse, LoginRequest, RegisterRequest, RegisterResponse, GoogleAuthRequest, GoogleAuthResponse } from './types/auth';
+import type { StudentRequestBody } from './types/studentRequest';
 import type { SchoolYear } from './types/schoolYear';
 
 // Token management functions
@@ -55,6 +56,17 @@ export const inspectStudentInvite = (token: string) =>
   apiClient<{ success: boolean; message: string; data: StudentInviteInfo }>('/auth/student-invite', {
     method: 'POST',
     body: { token },
+  });
+
+/**
+ * POST /auth/student-request — a student with no account asks their school
+ * for one (/signup/[school]/student). The same answer whether or not anything
+ * was stored; refusals the student can fix come back as ApiErrors with a code.
+ */
+export const requestStudentAccount = (body: StudentRequestBody) =>
+  apiClient<{ status: 'success'; data: { received: true } }>('/auth/student-request', {
+    method: 'POST',
+    body,
   });
 
 /** Set up, but the school hasn't opened sign-in for this student yet. */

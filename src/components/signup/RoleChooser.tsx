@@ -1,11 +1,12 @@
 'use client'
 
 // Step 2 of signup: who are you? Parents are the common case, so that card is
-// first and filled; teachers and staff get the quieter outlined one.
+// first and filled; teachers and staff, and students (who ask for an account
+// rather than make one), get the quieter outlined ones.
 
 import { FC } from 'react'
 import Link from 'next/link'
-import { AcademicCapIcon, ArrowRightIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { AcademicCapIcon, ArrowRightIcon, PencilSquareIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 
 interface RoleChooserProps {
   /** e.g. "/signup/alhaadiacademy" */
@@ -43,6 +44,22 @@ const RoleChooser: FC<RoleChooserProps> = ({ basePath }) => (
         <span className="block text-base font-semibold text-slate-900">Teacher or staff</span>
         <span className="block text-sm text-slate-600">
           Classes, gradebook, attendance and your schedule.
+        </span>
+      </span>
+      <ArrowRightIcon className="h-5 w-5 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+
+    <Link
+      href={`${basePath}/student`}
+      className="group flex items-center gap-4 rounded-2xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+    >
+      <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+        <PencilSquareIcon className="h-6 w-6" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold text-slate-900">Student</span>
+        <span className="block text-sm text-slate-600">
+          Ask your school for an account for your classes and work.
         </span>
       </span>
       <ArrowRightIcon className="h-5 w-5 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />

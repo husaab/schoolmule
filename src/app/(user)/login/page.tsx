@@ -9,8 +9,6 @@ import { isApiError } from '@/services/apiClient'
 import { startSession } from '@/services/sessionSync'
 import type { LoginResponse } from '@/services/types/auth'
 import GoogleSignIn from '@/components/auth/GoogleSignIn'
-import QrCardSignIn from '@/components/auth/QrCardSignIn'
-import Modal from '@/components/shared/modal'
 import { LOGIN_NOTICE_PARAM, LOGIN_NOTICE_APPROVED } from '@/lib/loginNotice'
 import { landingFor } from '@/lib/authRouting'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -25,8 +23,7 @@ import {
   ChartBarIcon,
   UserGroupIcon,
   DocumentTextIcon,
-  CheckCircleIcon,
-  QrCodeIcon
+  CheckCircleIcon
 } from '@heroicons/react/24/outline'
 
 interface LoginFormInputs {
@@ -85,31 +82,6 @@ const features = [
   { icon: UserGroupIcon, text: 'Parent Portal' },
   { icon: DocumentTextIcon, text: 'Report Cards' }
 ]
-
-// A student with a printed QR card signs in by scanning it here (or on /qr):
-// the camera reads the card in the app, so its secret never becomes a link.
-const ScanCardButton: FC = () => {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
-      >
-        <QrCodeIcon className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-        Student with a sign-in card? Scan my card
-      </button>
-      <Modal isOpen={open} onClose={() => setOpen(false)} title="Scan my card" size="sm">
-        <div className="flex flex-col gap-4 text-center">
-          <p className="text-sm text-slate-600">Hold the code on your card up to the camera.</p>
-          {/* Mounted only while open: closing the window stops the camera. */}
-          {open && <QrCardSignIn autoStart emailFallback="none" onCancel={() => setOpen(false)} />}
-        </div>
-      </Modal>
-    </>
-  )
-}
 
 const LoginPage: FC = () => {
   return (
@@ -176,13 +148,16 @@ const LoginPage: FC = () => {
                 <LoginNotice />
               </Suspense>
               <LoginForm />
-              <ScanCardButton />
 
               <p className="text-center mt-8 text-sm text-slate-600">
                 Don&apos;t have an account?{' '}
                 <Link href="/signup" className="text-cyan-600 hover:text-cyan-700 font-semibold">
-                  Sign up for free
+                  Sign up
                 </Link>
+              </p>
+              {/* Students sign in with the same form; this is for one who has no account yet. */}
+              <p className="text-center mt-2 text-xs text-slate-500">
+                Student? Choose your school on the sign-up page, then &ldquo;I am a student&rdquo; to ask for an account.
               </p>
             </div>
           </div>

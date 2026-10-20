@@ -105,7 +105,7 @@ const GoogleSignIn: FC<GoogleSignInProps> = (props) => {
             </p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Link href="/signup" className="font-semibold text-cyan-700 hover:text-cyan-800">
-                Find your school to sign up
+                Find your school to sign up or request a student account
               </Link>
               <span className="text-amber-700/60" aria-hidden="true">·</span>
               <button

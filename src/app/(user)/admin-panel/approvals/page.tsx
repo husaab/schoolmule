@@ -3,6 +3,9 @@
 // Approvals: everyone who signed up for this school and is waiting to be let
 // in, plus the signups that were declined. Approving fixes the role they
 // picked, links a parent to their children and emails them, all in one step.
+// Students' account requests sit under Students (and below the signups in
+// All): approving one matches it to the student's existing record and sends
+// the normal student invite.
 // Signups who haven't verified their email sit in their own section below the
 // queue: they can't be approved yet, but the admin can resend or vouch.
 
@@ -18,8 +21,14 @@ import ApprovalDeclineModal from '@/components/adminApprovals/ApprovalDeclineMod
 import ApprovalRestoreModal from '@/components/adminApprovals/ApprovalRestoreModal'
 import ApprovalRenameModal from '@/components/adminApprovals/ApprovalRenameModal'
 import ApprovalVerifyEmailModal from '@/components/adminApprovals/ApprovalVerifyEmailModal'
+import StudentRequestsTable from '@/components/adminApprovals/StudentRequestsTable'
+import StudentRequestReviewModal from '@/components/adminApprovals/StudentRequestReviewModal'
+import StudentRequestConfirmModal, { type RequestAction } from '@/components/adminApprovals/StudentRequestConfirmModal'
 import { RoleBadge, UserAvatar, formatDate } from '@/components/adminUsers/userDisplay'
 import { changeSignupRole, getApprovals, resendVerification } from '@/services/adminApprovalService'
+import { getStudentRequests } from '@/services/studentRequestService'
+import type { StudentRequest } from '@/services/types/studentRequest'
+import { matchesRequest, splitRequests } from '@/lib/studentRequests'
 import { isApiError } from '@/services/apiClient'
 import { ApprovalUser, SignupRole } from '@/services/types/adminApproval'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -39,12 +48,13 @@ import {
 } from '@heroicons/react/24/outline'
 
 type Tab = 'pending' | 'declined'
-type RoleFilter = 'ALL' | SignupRole
+type RoleFilter = 'ALL' | SignupRole | 'STUDENT'
 
 const ROLE_TABS: { value: RoleFilter; label: string }[] = [
   { value: 'ALL', label: 'All' },
   { value: 'TEACHER', label: 'Teachers' },
   { value: 'PARENT', label: 'Parents' },
+  { value: 'STUDENT', label: 'Students' },
 ]
 
 // Who the school already has on file for this email. Approving links them;
@@ -76,6 +86,7 @@ const ApprovalsContent = () => {
   const filters = useFilterParams()
   const { get, setParams } = filters
   const [users, setUsers] = useState<ApprovalUser[]>([])
+  const [studentRequests, setStudentRequests] = useState<StudentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,12 +101,19 @@ const ApprovalsContent = () => {
   const [verifying, setVerifying] = useState<ApprovalUser | null>(null)
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null)
   const [resendingId, setResendingId] = useState<string | null>(null)
+  const [reviewingRequest, setReviewingRequest] = useState<StudentRequest | null>(null)
+  const [requestAction, setRequestAction] = useState<{ action: RequestAction; request: StudentRequest } | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const res = await getApprovals()
+      // Student requests can't block the signups: an empty list if they fail.
+      const [res, requests] = await Promise.all([
+        getApprovals(),
+        getStudentRequests().catch(() => null),
+      ])
       setUsers(res.data)
+      setStudentRequests(requests?.data.requests ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load approvals')
     } finally {
@@ -113,14 +131,17 @@ const ApprovalsContent = () => {
   const pending = useMemo(() => users.filter((u) => !u.isArchived && u.isVerified !== false), [users])
   const declined = useMemo(() => users.filter((u) => u.isArchived), [users])
   const pool = tab === 'pending' ? pending : declined
+  const requests = useMemo(() => splitRequests(studentRequests), [studentRequests])
+  const requestPool = tab === 'pending' ? requests.pending : requests.declined
 
-  const countRoles = (list: ApprovalUser[]) => ({
-    total: list.length,
+  const countRoles = (list: ApprovalUser[], students: StudentRequest[]) => ({
+    total: list.length + students.length,
     TEACHER: list.filter((u) => u.role === 'TEACHER').length,
     PARENT: list.filter((u) => u.role === 'PARENT').length,
+    STUDENT: students.length,
   })
-  const pendingCounts = useMemo(() => countRoles(pending), [pending])
-  const counts = useMemo(() => countRoles(pool), [pool])
+  const pendingCounts = useMemo(() => countRoles(pending, requests.pending), [pending, requests.pending])
+  const counts = useMemo(() => countRoles(pool, requestPool), [pool, requestPool])
 
   // The search and role filter apply to the unverified section too.
   const matches = useCallback(
@@ -133,8 +154,14 @@ const ApprovalsContent = () => {
     },
     [roleFilter, search]
   )
-  const filtered = useMemo(() => pool.filter(matches), [pool, matches])
+  const filtered = useMemo(() => (roleFilter === 'STUDENT' ? [] : pool.filter(matches)), [pool, matches, roleFilter])
   const filteredUnverified = useMemo(() => unverified.filter(matches), [unverified, matches])
+  const filteredRequests = useMemo(
+    () => (roleFilter === 'ALL' || roleFilter === 'STUDENT' ? requestPool.filter((r) => matchesRequest(r, search)) : []),
+    [requestPool, roleFilter, search],
+  )
+  const upsertRequest = (saved: StudentRequest | null, requestId: string) =>
+    setStudentRequests((prev) => (saved ? prev.map((r) => (r.requestId === requestId ? saved : r)) : prev.filter((r) => r.requestId !== requestId)))
 
   // Single-user responses (role change, rename, decline) don't recompute the
   // children on file, so keep what the list already knows.
@@ -179,9 +206,9 @@ const ApprovalsContent = () => {
 
   const hasFilters = search || roleFilter !== 'ALL'
 
-  const emptyKind = tab === 'pending' && pending.length === 0
+  const emptyKind = tab === 'pending' && pending.length + requests.pending.length === 0
     ? 'caughtUp'
-    : tab === 'declined' && declined.length === 0
+    : tab === 'declined' && declined.length + requests.declined.length === 0
       ? 'nothingDeclined'
       : 'noMatch'
   const EMPTY = {
@@ -189,7 +216,7 @@ const ApprovalsContent = () => {
       icon: CheckCircleIcon,
       iconClassName: 'text-emerald-400',
       title: 'All caught up',
-      description: 'New signups appear here once they verify their email. You get an email too.',
+      description: 'New signups appear here once they verify their email, and student requests as soon as they ask. You get an email too.',
     },
     nothingDeclined: {
       icon: InboxIcon,
@@ -216,7 +243,7 @@ const ApprovalsContent = () => {
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">User Approvals</h1>
               <p className="text-slate-500 mt-1">
-                People who signed up for your school and are waiting to be let in
+                People who signed up for your school, and students asking for accounts
               </p>
             </div>
             <Link
@@ -228,16 +255,17 @@ const ApprovalsContent = () => {
           </div>
 
           {/* Stats */}
-          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
             <StatTile
               label="Waiting for approval"
-              value={pending.length}
-              tone={pending.length > 0 ? 'warn' : 'good'}
+              value={pendingCounts.total}
+              tone={pendingCounts.total > 0 ? 'warn' : 'good'}
               loading={loading}
             />
             <StatTile label="Parents waiting" value={pendingCounts.PARENT} loading={loading} />
             <StatTile label="Teachers waiting" value={pendingCounts.TEACHER} loading={loading} />
-            <StatTile label="Declined" value={declined.length} tone="muted" loading={loading} />
+            <StatTile label="Students waiting" value={pendingCounts.STUDENT} loading={loading} />
+            <StatTile label="Declined" value={declined.length + requests.declined.length} tone="muted" loading={loading} />
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
@@ -254,7 +282,7 @@ const ApprovalsContent = () => {
                     }`}
                   >
                     Pending
-                    <span className="font-mono tabular-nums text-xs text-slate-400">{pending.length}</span>
+                    <span className="font-mono tabular-nums text-xs text-slate-400">{pending.length + requests.pending.length}</span>
                   </button>
                   <button
                     role="tab"
@@ -266,7 +294,7 @@ const ApprovalsContent = () => {
                   >
                     <ArchiveBoxXMarkIcon className="h-4 w-4" />
                     Declined
-                    <span className="font-mono tabular-nums text-xs text-slate-400">{declined.length}</span>
+                    <span className="font-mono tabular-nums text-xs text-slate-400">{declined.length + requests.declined.length}</span>
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Filter by role">
@@ -320,7 +348,7 @@ const ApprovalsContent = () => {
                   </button>
                 }
               />
-            ) : filtered.length === 0 ? (
+            ) : filtered.length === 0 && filteredRequests.length === 0 ? (
               <EmptyState
                 icon={EMPTY.icon}
                 iconClassName={EMPTY.iconClassName}
@@ -338,6 +366,8 @@ const ApprovalsContent = () => {
                 }
               />
             ) : (
+              <>
+              {filtered.length > 0 && (
               <div className="max-h-[calc(100vh-24rem)] min-h-[16rem] overflow-auto">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#f1f5f9]">
@@ -462,6 +492,19 @@ const ApprovalsContent = () => {
                   </tbody>
                 </table>
               </div>
+              )}
+              {filteredRequests.length > 0 && (
+                <StudentRequestsTable
+                  rows={filteredRequests}
+                  tab={tab}
+                  heading={roleFilter === 'ALL' && filtered.length > 0}
+                  onReview={setReviewingRequest}
+                  onDecline={(request) => setRequestAction({ action: 'decline', request })}
+                  onRestore={(request) => setRequestAction({ action: 'restore', request })}
+                  onDelete={(request) => setRequestAction({ action: 'delete', request })}
+                />
+              )}
+              </>
             )}
           </div>
 
@@ -551,6 +594,23 @@ const ApprovalsContent = () => {
           onClose={() => setRestoring(null)}
           user={restoring}
           onRestored={upsert}
+        />
+      )}
+      {reviewingRequest && (
+        <StudentRequestReviewModal
+          request={reviewingRequest}
+          onClose={() => setReviewingRequest(null)}
+          onApproved={(id) => upsertRequest(null, id)}
+          onStale={load}
+        />
+      )}
+      {requestAction && (
+        <StudentRequestConfirmModal
+          action={requestAction.action}
+          request={requestAction.request}
+          onClose={() => setRequestAction(null)}
+          onDone={(saved) => upsertRequest(saved, requestAction.request.requestId)}
+          onStale={load}
         />
       )}
       {verifying && (

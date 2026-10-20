@@ -1,9 +1,10 @@
 import type { SignupRole } from '@/services/types/adminApproval'
 
-// Words for each signup page. The chooser and the two role pages share one
-// layout (SignupShell); only the copy changes, so it lives here in one place.
+// Words for each signup page. The chooser, the two role pages and the
+// student request page share one layout (SignupShell); only the copy changes,
+// so it lives here in one place.
 
-export type SignupVariant = 'directory' | 'chooser' | 'parent' | 'teacher'
+export type SignupVariant = 'directory' | 'chooser' | 'parent' | 'teacher' | 'student'
 
 export interface SignupCopy {
   /** Small uppercase label above the school name (pages that show a school). */
@@ -19,7 +20,7 @@ export const SIGNUP_COPY: Record<SignupVariant, SignupCopy> = {
   directory: {
     heading: 'Find',
     accent: 'your school',
-    blurb: 'Pick your school to create a parent or staff account. Every account is approved by the school.',
+    blurb: 'Pick your school to create a parent or staff account, or to ask for a student account. Every account is approved by the school.',
     benefits: [
       'Parents follow their children\u2019s progress',
       'Teachers manage classes, grades and attendance',
@@ -35,7 +36,7 @@ export const SIGNUP_COPY: Record<SignupVariant, SignupCopy> = {
     benefits: [
       'Parents follow their children’s progress',
       'Teachers manage classes, grades and attendance',
-      'Report cards and progress reports in one place',
+      'Students see their classes, work and grades',
       'Your school admin approves every account',
     ],
   },
@@ -61,6 +62,18 @@ export const SIGNUP_COPY: Record<SignupVariant, SignupCopy> = {
       'Class and homeroom attendance',
       'Report card and progress report comments',
       'Your schedule and school calendar',
+    ],
+  },
+  student: {
+    eyebrow: 'Student account',
+    heading: 'Your classes, work and grades on',
+    accent: 'SchoolMule',
+    blurb: 'Ask your school for an account. Once they approve it, you get an email to set it up.',
+    benefits: [
+      'Your classes and what’s due',
+      'Turn in work and see feedback',
+      'Your grades as teachers publish them',
+      'Sign in with Google or your school email',
     ],
   },
 }
