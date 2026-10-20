@@ -1,10 +1,12 @@
 // File: src/app/(user)/classes/page.tsx
 // The Classes home (the Teacher-Home board): the caller's classes as cards
-// (or the dense grade-grouped List), with To review, Coming up and Drafts &
-// scheduled beside them. A whole card opens the class; its ⋮ menu changes the
-// banner, opens Settings, copies the class to the next term, messages the
-// parents or archives it. Filters live in the URL: view, term, archived and,
-// for admins, subject, grade and teacher.
+// (or the dense List), with To review, Coming up and Drafts & scheduled
+// beside them. Every card says its grade; a teacher's cards are one grid in
+// grade order, an admin's sit under grade sections (classGradeSections). A
+// whole card opens the class; its ⋮ menu changes the banner, opens Settings,
+// copies the class to the next term, messages the parents, archives it or
+// unarchives it. Filters live in the URL: view, term, grade, archived and,
+// for admins, subject and teacher.
 'use client'
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
@@ -14,17 +16,26 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import ClassAddModal from '@/components/classes/add/classAddModal'
 import ClassDeleteModal from '@/components/classes/delete/classDeleteModal'
 import ClassDuplicateModal from '@/components/classes/duplicate/classDuplicateModal'
-import ClassListFilters from '@/components/classes/ClassListFilters'
 import ClassIdentityModal from '@/components/classes/identity/ClassIdentityModal'
 import ArchiveClassModal from '@/components/classes/home/ArchiveClassModal'
 import ClassCardGrid from '@/components/classes/home/ClassCardGrid'
 import ClassListView from '@/components/classes/home/ClassListView'
 import ClassesHomeHeader, { type ClassesView } from '@/components/classes/home/ClassesHomeHeader'
+import ClassesToolbar from '@/components/classes/home/ClassesToolbar'
 import ComingUpPanel from '@/components/classes/home/ComingUpPanel'
 import DraftsPanel from '@/components/classes/home/DraftsPanel'
 import ToReviewPanel from '@/components/classes/home/ToReviewPanel'
+import { useCollapsedGrades } from '@/hooks/useCollapsedGrades'
 import { useFilterParams } from '@/hooks/useFilterParams'
-import { gradeOptions, knownOrAll, subjectOptions, teacherOptions } from '@/lib/classListFilters'
+import {
+  allCollapsed,
+  cardLabels,
+  filterByGrade,
+  gradeFilterOptions,
+  layoutClasses,
+  layoutKeys,
+} from '@/lib/classGradeSections'
+import { knownOrAll, subjectOptions, teacherOptions } from '@/lib/classListFilters'
 import { cardAsClassPayload, classTitle, filterCards, gradeShort, homeSummary, termLabel } from '@/lib/classesHome'
 import { getClassCards, unarchiveClass } from '@/services/classroomService'
 import { getTermsBySchool } from '@/services/termService'
@@ -68,7 +79,7 @@ function ClassesHomeContent() {
   const { get, setParams } = useFilterParams()
   const view: ClassesView = get('view') === 'list' ? 'list' : 'cards'
   const term = get('term', 'active')
-  const showArchived = view === 'list' && get('archived') === '1'
+  const showArchived = get('archived') === '1'
 
   // ───── Classes ─────
   const fetchKey = `${selectedYearId ?? ''}|${showArchived ? 'archived' : 'active'}`
@@ -133,24 +144,39 @@ function ClassesHomeContent() {
   const payloads = pool.map((c) => cardAsClassPayload(c, school))
   const subjects = subjectOptions(payloads)
   const teachers = teacherOptions(payloads)
-  const grades = gradeOptions(payloads)
-  // Subject, grade and teacher are admin filters; a stale value that matches
-  // no option would silently empty the page while its control reads "All".
+  // The Grade row shows once the classes span two grades. Subject and teacher
+  // are admin filters. A stale value that matches no option (a remembered
+  // grade the teacher no longer teaches) would silently empty the page while
+  // its control reads "All", so it falls back to All.
+  const grades = gradeFilterOptions(pool)
+  const grade = grades.length > 1 ? knownOrAll(get('grade'), grades.map((g) => g.value)) : ''
   const filterValues = {
     subject: isAdmin ? knownOrAll(get('subject'), subjects.map((o) => o.value)) : '',
     teacher: isAdmin ? knownOrAll(get('teacher'), teachers.map((o) => o.value)) : '',
-    grade: isAdmin ? knownOrAll(get('grade'), grades.map((g) => String(g.value))) : '',
+    grade: '',
     term,
   }
   const filterOpts = { isAdmin, activeTermName: activeTerm?.name }
-  const shownActive = filterCards(activeCards, filterValues, filterOpts)
-  const shownList = view === 'list' ? filterCards(pool, filterValues, filterOpts) : shownActive
-  const hasAdminFilters = isAdmin && !!(filterValues.subject || filterValues.teacher || filterValues.grade)
+  const shown = filterByGrade(filterCards(pool, filterValues, filterOpts), grade)
+  const shownActive = shown.filter((c) => !c.archivedAt)
+  const hasFilters = !!(grade || filterValues.subject || filterValues.teacher)
+  const layout = layoutClasses(shown, { isAdmin, view })
+  const labels = cardLabels(shown, { isAdmin })
+  const { collapsed, toggle: toggleSection, setMany: setCollapsed } = useCollapsedGrades(school, user.id)
+  const sectionKeys = layoutKeys(layout)
   const classSizes = new Map(allCards.map((c) => [c.classId, c.studentCount]))
   // The server leaves archived classes out of the rails; a class archived
-  // here leaves them at once too.
+  // here leaves them at once too. Twins ("Grade 7 Quran" twice) get their
+  // teacher, or their term, after the class name.
   const archivedIds = new Set(allCards.filter((c) => c.archivedAt).map((c) => c.classId))
-  const live = <T extends { classId: string }>(rows: T[]) => rows.filter((r) => !archivedIds.has(r.classId))
+  const railLabels = cardLabels(activeCards, { isAdmin: false })
+  const live = <T extends { classId: string; classLabel: string }>(rows: T[]) =>
+    rows
+      .filter((r) => !archivedIds.has(r.classId))
+      .map((r) => {
+        const suffix = railLabels.get(r.classId)?.railSuffix
+        return suffix ? { ...r, classLabel: `${r.classLabel} · ${suffix}` } : r
+      })
 
   // ───── Card and row actions ─────
   const [showAdd, setShowAdd] = useState(false)
@@ -181,6 +207,7 @@ function ClassesHomeContent() {
     onChangeBanner: (card: ClassCard) => setIdentityCard(card),
     onCopy: (card: ClassCard) => setDuplicateTarget(cardAsClassPayload(card, school)),
     onArchive: (card: ClassCard) => setArchiveCard(card),
+    onUnarchive: (card: ClassCard) => void unarchive(card),
   }
 
   // ───── Body ─────
@@ -200,7 +227,7 @@ function ClassesHomeContent() {
         </button>
       </div>
     )
-  } else if ((view === 'cards' ? shownActive : shownList).length === 0) {
+  } else if (shown.length === 0) {
     const none = pool.length === 0
     body = (
       <div className="rounded-2xl border border-slate-200/70 bg-white px-6 py-12 text-center">
@@ -213,16 +240,20 @@ function ClassesHomeContent() {
             ? canWrite
               ? 'Add your first class to get started.'
               : 'Classes you teach will show up here.'
-            : 'Try another term or clear the filters.'}
+            : 'Try another term or grade, or clear the filters.'}
         </p>
       </div>
     )
   } else if (view === 'cards') {
-    body = <ClassCardGrid cards={shownActive} grouped={isAdmin} {...cardActions} />
+    body = (
+      <ClassCardGrid layout={layout} labels={labels} collapsed={collapsed} onToggle={toggleSection} {...cardActions} />
+    )
   } else {
     body = (
       <ClassListView
-        cards={shownList}
+        layout={layout}
+        collapsed={collapsed}
+        onToggle={toggleSection}
         canWrite={canWrite}
         unarchivingId={unarchivingId}
         onDuplicate={(card) => setDuplicateTarget(cardAsClassPayload(card, school))}
@@ -237,8 +268,9 @@ function ClassesHomeContent() {
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 lg:p-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:p-6 lg:p-8">
           <ClassesHomeHeader
+            title={isAdmin ? 'All classes' : 'Your classes'}
             summary={homeSummary(termLabel(term, activeTerm?.name), shownActive)}
             term={term}
             terms={terms}
@@ -249,49 +281,46 @@ function ClassesHomeContent() {
             onAdd={canWrite ? () => setShowAdd(true) : undefined}
           />
 
-          {isAdmin && (
-            <div className="rounded-2xl border border-slate-200/70 bg-white p-5">
-              <ClassListFilters
-                values={filterValues}
-                setParams={setParams}
-                subjects={subjects}
-                teachers={teachers}
-                grades={grades}
-                terms={terms}
-                activeTerm={activeTerm}
-                showTeacher
-                showTerm={false}
-              />
-              {hasAdminFilters && (
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="text-sm text-slate-500">
-                    Showing {shownList.length} of {pool.length} classes
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setParams({ grade: null, subject: null, teacher: null })}
-                    className="cursor-pointer text-sm font-medium text-cyan-600 hover:text-cyan-700"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          <ClassesToolbar
+            grades={grades}
+            total={pool.length}
+            grade={grade}
+            onGrade={(v) => setParams({ grade: v || null })}
+            admin={
+              isAdmin
+                ? {
+                    subjects,
+                    subject: filterValues.subject,
+                    onSubject: (v) => setParams({ subject: v || null }),
+                    teachers,
+                    teacher: filterValues.teacher,
+                    onTeacher: (v) => setParams({ teacher: v || null }),
+                  }
+                : undefined
+            }
+            showArchived={showArchived}
+            onShowArchived={(on) => setParams({ archived: on ? '1' : null })}
+            collapse={
+              data && sectionKeys.length > 0
+                ? {
+                    all: allCollapsed(sectionKeys, collapsed),
+                    onToggleAll: () => setCollapsed(sectionKeys, !allCollapsed(sectionKeys, collapsed)),
+                  }
+                : undefined
+            }
+            filtered={
+              hasFilters
+                ? {
+                    shown: shown.length,
+                    total: pool.length,
+                    onClear: () => setParams({ grade: null, subject: null, teacher: null }),
+                  }
+                : undefined
+            }
+          />
 
           <div className="flex flex-wrap items-start gap-6">
             <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-4">
-              {view === 'list' && (
-                <label className="flex items-center gap-2 self-end text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={showArchived}
-                    onChange={(e) => setParams({ archived: e.target.checked ? '1' : null })}
-                    className="h-4 w-4 cursor-pointer accent-cyan-600"
-                  />
-                  Show archived
-                </label>
-              )}
               {body}
             </div>
             {data && (

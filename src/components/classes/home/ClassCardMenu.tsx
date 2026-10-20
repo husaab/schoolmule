@@ -1,6 +1,7 @@
 // src/components/classes/home/ClassCardMenu.tsx
 // A class card's ⋮ menu (the Teacher-Home board): Change banner & color,
 // Class settings, Copy to next term, Message all parents, then Archive class.
+// An archived class's card offers Unarchive class and Class settings.
 // It renders in a body portal so the card grid never clips it, and works
 // from the keyboard. The trigger sits beside the card's link, never inside
 // it, and stops its click so opening the menu never opens the class.
@@ -14,13 +15,15 @@ import { classHref } from '@/lib/classroomRoutes'
 
 interface ClassCardMenuProps {
   classId: string
-  /** "Science, Grade 5 · 22 students", read out on the trigger. */
+  /** "Grade 5 Science, 22 students", read out on the trigger. */
   label: string
   /** False when the viewer may not change the class (a past school year, for teachers). */
   canWrite: boolean
+  archived: boolean
   onChangeBanner: () => void
   onCopy: () => void
   onArchive: () => void
+  onUnarchive: () => void
   className?: string
 }
 
@@ -34,9 +37,11 @@ export default function ClassCardMenu({
   classId,
   label,
   canWrite,
+  archived,
   onChangeBanner,
   onCopy,
   onArchive,
+  onUnarchive,
   className = '',
 }: ClassCardMenuProps) {
   const [open, setOpen] = useState(false)
@@ -128,7 +133,7 @@ export default function ClassCardMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Options for ${label}`}
-        className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 ${className}`}
+        className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-600 outline-none transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:border-cyan-600 focus-visible:ring-[3px] focus-visible:ring-cyan-600 focus-visible:ring-offset-2 aria-expanded:bg-slate-100 aria-expanded:text-slate-900 ${className}`}
       >
         <EllipsisVerticalIcon className="h-5 w-5" />
       </button>
@@ -149,7 +154,12 @@ export default function ClassCardMenu({
             }}
             className="z-[70] flex flex-col rounded-[14px] border border-slate-200 bg-white p-1.5 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.18),0_4px_16px_-4px_rgba(0,0,0,0.08)]"
           >
-            {canWrite && (
+            {archived && canWrite && (
+              <button type="button" role="menuitem" tabIndex={-1} onClick={act(onUnarchive)} className={item}>
+                Unarchive class
+              </button>
+            )}
+            {!archived && canWrite && (
               <button type="button" role="menuitem" tabIndex={-1} onClick={act(onChangeBanner)} className={item}>
                 Change banner &amp; color
               </button>
@@ -163,21 +173,23 @@ export default function ClassCardMenu({
             >
               Class settings
             </Link>
-            {canWrite && (
+            {!archived && canWrite && (
               <button type="button" role="menuitem" tabIndex={-1} onClick={act(onCopy)} className={item}>
                 Copy to next term
               </button>
             )}
-            <Link
-              role="menuitem"
-              tabIndex={-1}
-              href={classHref(classId, 'stream', { compose: '1' })}
-              onClick={() => close()}
-              className={item}
-            >
-              Message all parents
-            </Link>
-            {canWrite && (
+            {!archived && (
+              <Link
+                role="menuitem"
+                tabIndex={-1}
+                href={classHref(classId, 'stream', { compose: '1' })}
+                onClick={() => close()}
+                className={item}
+              >
+                Message all parents
+              </Link>
+            )}
+            {!archived && canWrite && (
               <>
                 <div role="separator" className="mx-1.5 my-1 h-px bg-slate-100" />
                 <button

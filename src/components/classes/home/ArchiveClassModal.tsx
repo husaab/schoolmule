@@ -1,7 +1,7 @@
 // src/components/classes/home/ArchiveClassModal.tsx
 // Confirms archiving a class. An archived class leaves the class cards and
 // students' and parents' class lists; its grades, report cards and messages
-// stay, and it can be unarchived from the List view or its own page.
+// stay, and it can be unarchived from its card (Show archived) or its own page.
 'use client'
 
 import { useState } from 'react'
@@ -50,7 +50,7 @@ export default function ArchiveClassModal({ isOpen, onClose, classId, label, onA
       <ModalBody>
         <ConfirmBody tone="warning">
           It disappears from class cards and from students&apos; and parents&apos; class lists. Grades, report cards
-          and messages stay. You can unarchive it from the List view.
+          and messages stay. You can unarchive it with Show archived.
         </ConfirmBody>
         {error && (
           <p role="alert" className="text-sm text-rose-600">

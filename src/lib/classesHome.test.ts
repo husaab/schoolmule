@@ -3,7 +3,6 @@ import type { ClassCard, ComingUpRow, DraftOrScheduledRow } from '@/services/typ
 import { defaultIdentity } from './classIdentity'
 import {
   cardAsClassPayload,
-  cardMeta,
   cardNextLine,
   classTitle,
   comingUpClassLine,
@@ -12,7 +11,6 @@ import {
   draftWhen,
   filterCards,
   gradeShort,
-  groupCardsByGrade,
   headerMeta,
   homeSummary,
   reviewPill,
@@ -51,17 +49,14 @@ describe('labels', () => {
     expect(gradeShort('SK')).toBe('SK')
   })
 
-  it('reads a card meta line', () => {
-    expect(cardMeta(card())).toBe('Grade 5 · 22 students')
-    expect(cardMeta(card({ grade: 'SK', studentCount: 1 }))).toBe('SK · 1 student')
-  })
-
-  it('sums the header line', () => {
-    expect(homeSummary('Term 1', [card(), card({ studentCount: 19 }), card({ studentCount: 24 }), card()])).toBe(
-      'Term 1 · 4 classes · 87 students',
+  it('sums the header line in classes and grades', () => {
+    expect(homeSummary('Term 1', [card({ grade: '4' }), card(), card({ grade: '6' }), card({ grade: '6' })])).toBe(
+      'Term 1 · 4 classes · 3 grades',
     )
-    expect(homeSummary('Term 1', [card({ studentCount: 1 })])).toBe('Term 1 · 1 class · 1 student')
-    expect(homeSummary('', [])).toBe('0 classes · 0 students')
+    expect(homeSummary('Term 1', [card(), card(), card()])).toBe('Term 1 · 3 classes · Grade 5')
+    expect(homeSummary('Term 1', [card({ grade: 'JK' })])).toBe('Term 1 · 1 class · Junior Kindergarten')
+    expect(homeSummary('Term 1', [])).toBe('Term 1 · 0 classes')
+    expect(homeSummary('', [])).toBe('0 classes')
   })
 
   it('titles a class the way the server labels it', () => {
@@ -205,14 +200,5 @@ describe('filters and grouping', () => {
     expect(filterCards(cards, { ...base, grade: '5' }, { isAdmin: true }).map((c) => c.classId)).toEqual(['g5s', 'g5m'])
     expect(filterCards(cards, { ...base, teacher: 'u2' }, { isAdmin: true }).map((c) => c.classId)).toEqual(['g5s', 'g5m', 'g8s'])
     expect(filterCards(cards, { ...base, term: 'active' }, { isAdmin: false, activeTermName: 'Term 1' }).map((c) => c.classId)).toEqual(['jk', 'g5s', 'g8s'])
-  })
-
-  it('groups cards by grade in the order the server sent them', () => {
-    const groups = groupCardsByGrade(cards)
-    expect(groups.map((g) => [g.grade, g.label, g.cards.map((c) => c.classId)])).toEqual([
-      ['JK', 'Junior Kindergarten', ['jk']],
-      ['5', 'Grade 5', ['g5s', 'g5m']],
-      ['8', 'Grade 8', ['g8s']],
-    ])
   })
 })
