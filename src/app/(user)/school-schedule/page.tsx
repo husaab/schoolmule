@@ -20,6 +20,7 @@ import FilterMenu from '@/components/schedulePlanner/FilterMenu'
 import { useSchoolScheduleStore } from '@/store/useSchoolScheduleStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { useMinuteOfDay } from '@/components/schedulePlanner/useMinuteOfDay'
 import { dayLabel } from '@/components/schedulePlanner/timeUtils'
@@ -60,7 +61,8 @@ const WEEK = 'week'
 
 function SchoolScheduleContent() {
   const user = useUserStore((s) => s.user)
-  const isAdmin = user.role === 'ADMIN'
+  // The planner links are for whoever can open the planner.
+  const canPlan = can(user, 'scheduling')
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const { data, loading, loaded, error, load } = useSchoolScheduleStore()
   const nowMin = useMinuteOfDay()
@@ -153,12 +155,12 @@ function SchoolScheduleContent() {
             icon={CalendarDaysIcon}
             title="No timetable has been published for this school year."
             description={
-              isAdmin
+              canPlan
                 ? 'Publish a schedule from the planner and it appears here for every teacher.'
                 : 'Once an administrator publishes the school timetable, it appears here.'
             }
             action={
-              isAdmin ? (
+              canPlan ? (
                 <Link
                   href="/admin-panel/schedule-planner"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
@@ -475,7 +477,7 @@ function SchoolScheduleContent() {
                   Print
                 </button>
               )}
-              {isAdmin && (
+              {canPlan && (
                 <Link
                   href="/admin-panel/schedule-planner"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"

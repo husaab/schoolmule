@@ -38,7 +38,8 @@ import {
   UsersIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
-  KeyIcon
+  KeyIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useSyncExternalStore, Fragment } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -54,6 +55,7 @@ import { canSwitchViews, viewLabelFor } from '@/lib/viewSwitch'
 import { roleLabel } from '@/components/adminUsers/userDisplay'
 import { useRememberedHref } from '@/hooks/useFilterParams'
 import { useParentClassesSeen } from '@/lib/parentClassesSeen'
+import { accessInfo, canOpenPath } from '@/lib/permissions'
 
 interface NavLink {
   href: string;
@@ -65,6 +67,8 @@ interface DropdownLink extends NavLink {
   subLinks?: NavLink[];
 }
 
+// Staff main links. Each shows only when its page opens for the user
+// (lib/permissions ROUTE_RULES), so a link can never lead to a bounce.
 const teacherLinks: NavLink[] = [
   { href: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { href: '/students', label: 'Students', icon: UserGroupIcon },
@@ -88,6 +92,45 @@ const parentLinks: NavLink[] = [
 const supportLinks: NavLink[] = [
   { href: '/support', label: 'Help & Support', icon: QuestionMarkCircleIcon },
   { href: '/contact-us', label: 'Contact', icon: EnvelopeIcon }
+];
+
+type PanelLink = NavLink & {
+  exact?: boolean;
+  /** Open to all staff: listed in the dropdown when it exists, never the reason it exists. */
+  everyone?: boolean;
+};
+
+// The Admin Panel dropdown, in groups. Every item is filtered by the route
+// rules; a group with nothing left loses its heading, and the dropdown
+// exists only when at least one gated tool in it opens for the user.
+const adminPanelGroups: { label: string; items: PanelLink[] }[] = [
+  {
+    label: 'People',
+    items: [
+      { href: '/admin-panel/users', label: 'Users', icon: UsersIcon },
+      { href: '/admin-panel/roles', label: 'Roles', icon: LockClosedIcon },
+      { href: '/admin-panel/student-accounts', label: 'Student accounts', icon: KeyIcon },
+      { href: '/admin-panel/approvals', label: 'User Approvals', icon: ShieldCheckIcon },
+      { href: '/admin-panel/relations', label: 'Parent Relations', icon: UserGroupIcon },
+      { href: '/admin-panel/messages', label: 'All Messages', icon: ChatBubbleOvalLeftEllipsisIcon },
+    ],
+  },
+  {
+    label: 'School setup',
+    items: [
+      { href: '/admin-panel/school-settings', label: 'School Settings', icon: CogIcon },
+      { href: '/admin-panel/school-calendar', label: 'School Calendar', icon: CalendarDaysIcon },
+      { href: '/admin-panel/school-assets', label: 'School Assets', icon: PhotoIcon },
+    ],
+  },
+  {
+    label: 'Planning',
+    items: [
+      { href: '/admin-panel/schedule-planner', label: 'Schedule Planner', icon: TableCellsIcon },
+      { href: '/school-schedule', label: 'School Schedule', icon: CalendarDaysIcon, exact: true, everyone: true },
+      { href: '/admin-panel/agendas', label: 'Agenda Editor', icon: BookOpenIcon },
+    ],
+  },
 ];
 
 // The Gradebook item left the sidebar (it is each class's Grades tab now).
@@ -134,15 +177,32 @@ const Sidebar = () => {
   // A small "New" pill beside a parent's Classes link until they first open the page.
   const parentClassesSeen = useParentClassesSeen();
 
+  // What this user may open (lib/permissions): every item below asks the
+  // same rules the router enforces.
+  const allowed = (href: string) => canOpenPath(href, user);
+  const isStaff = accessInfo(user).staff;
   const isAttendancePath = pathname.startsWith('/attendance');
   const isReportCardPath = pathname.startsWith('/report-cards');
   const isRegistrationPath = pathname.startsWith('/admin-panel/forms');
   const isSchoolSchedulePath = pathname === '/school-schedule';
-  const isAdmin = user?.role === 'ADMIN';
-  // Admins reach School Schedule through the Admin Panel dropdown; other staff get a top-level link.
-  const isAdminPanelPath =
-    (pathname.startsWith('/admin-panel') && !isRegistrationPath) || (isAdmin && isSchoolSchedulePath);
   const isFinancePath = pathname.startsWith('/finance');
+
+  const canForms = allowed('/admin-panel/forms');
+  const canFinance = allowed('/finance/tuition');
+  const canGeneralAttendance = allowed('/attendance/general');
+  const canClassAttendance = allowed('/attendance/class');
+  const canReports = allowed('/reports');
+  const canStudentViews = allowed('/student-views');
+  const canReportCards = allowed('/report-cards/generate');
+  const hasToolsBlock = canGeneralAttendance || canClassAttendance || canReports || canStudentViews || canReportCards;
+  const panelGroups = adminPanelGroups
+    .map((g) => ({ ...g, items: g.items.filter((i) => allowed(i.href)) }))
+    .filter((g) => g.items.length > 0);
+  const showAdminPanel = panelGroups.some((g) => g.items.some((i) => !i.everyone));
+  const mainLinks = user?.role === 'PARENT' ? parentLinks : teacherLinks.filter((l) => allowed(l.href));
+  // School Schedule sits in the Admin Panel dropdown when there is one; otherwise it is a top-level link.
+  const isAdminPanelPath =
+    (pathname.startsWith('/admin-panel') && !isRegistrationPath) || (showAdminPanel && isSchoolSchedulePath);
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
   const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
@@ -155,14 +215,14 @@ const Sidebar = () => {
     closeSidebar();
   }, [pathname, closeSidebar]);
 
-  // Fetch new submission count for admin badge
+  // The forms' new-submission dot, for whoever can open the forms
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
+    if (canForms) {
       getNewSubmissionCount()
         .then((res) => setNewSubmissionCount(res.data.count))
         .catch(() => {});
     }
-  }, [user?.role, setNewSubmissionCount]);
+  }, [canForms, setNewSubmissionCount]);
 
   // Close sidebar when clicking outside (mobile)
   useEffect(() => {
@@ -180,6 +240,9 @@ const Sidebar = () => {
   }, [sidebarOpen, closeSidebar]);
 
   if (!user) return null
+
+  // A custom access role names what the account does better than its base role.
+  const staffLabel = (isStaff && user.accessRole?.name) || roleLabel(user.role ?? '')
 
   // Nav hrefs re-expand each page's remembered filters (filter memory), so
   // returning to Students via the sidebar shows the grade the user had picked.
@@ -313,7 +376,7 @@ const Sidebar = () => {
         {user?.role === 'PARENT' && <ChildSwitcher />}
 
         {/* Main Links */}
-        {(user?.role === 'PARENT' ? parentLinks : teacherLinks).map(link => (
+        {mainLinks.map(link => (
           <Fragment key={link.href}>
             <NavItem
               href={link.href}
@@ -327,7 +390,7 @@ const Sidebar = () => {
               badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
               pill={link.href === '/parent/classes' && !parentClassesSeen ? 'New' : undefined}
             />
-            {link.href === '/classes' && (user?.role === 'TEACHER' || user?.role === 'ADMIN') && !gradebookHintHidden && (
+            {link.href === '/classes' && isStaff && !gradebookHintHidden && (
               <div className="ml-11 mr-1 flex items-start gap-2 rounded-lg bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
                 <span className="flex-1">Gradebook moved: open a class, then Grades.</span>
                 <button
@@ -345,58 +408,71 @@ const Sidebar = () => {
 
         {user?.role !== 'PARENT' && (
           <>
-            {/* Divider */}
-            <div className="py-3">
-              <div className="border-t border-slate-100" />
-            </div>
+            {hasToolsBlock && (
+              <div className="py-3">
+                <div className="border-t border-slate-100" />
+              </div>
+            )}
 
             {/* Attendance Dropdown */}
-            <DropdownSection
-              label="Attendance"
-              icon={ClipboardDocumentCheckIcon}
-              isOpen={attendanceOpen}
-              onToggle={() => setAttendanceOpen(!attendanceOpen)}
-              isActive={isAttendancePath}
-            >
-              <SubNavItem href="/attendance/general" label="General Attendance" icon={ClipboardDocumentListIcon} />
-              <SubNavItem href="/attendance/class" label="Class Attendance" icon={AcademicCapIcon} />
-            </DropdownSection>
+            {(canGeneralAttendance || canClassAttendance) && (
+              <DropdownSection
+                label="Attendance"
+                icon={ClipboardDocumentCheckIcon}
+                isOpen={attendanceOpen}
+                onToggle={() => setAttendanceOpen(!attendanceOpen)}
+                isActive={isAttendancePath}
+              >
+                {canGeneralAttendance && (
+                  <SubNavItem href="/attendance/general" label="General Attendance" icon={ClipboardDocumentListIcon} />
+                )}
+                {canClassAttendance && (
+                  <SubNavItem href="/attendance/class" label="Class Attendance" icon={AcademicCapIcon} />
+                )}
+              </DropdownSection>
+            )}
 
             {/* Reports */}
-            <NavItem
-              href="/reports"
-              label="Reports"
-              icon={ChartBarIcon}
-              isActive={pathname.startsWith('/reports')}
-            />
+            {canReports && (
+              <NavItem
+                href="/reports"
+                label="Reports"
+                icon={ChartBarIcon}
+                isActive={pathname.startsWith('/reports')}
+              />
+            )}
 
             {/* Student Views — custom filtered lists for awards/recognition */}
-            <NavItem
-              href="/student-views"
-              label="Student Views"
-              icon={TrophyIcon}
-              isActive={pathname.startsWith('/student-views')}
-            />
+            {canStudentViews && (
+              <NavItem
+                href="/student-views"
+                label="Student Views"
+                icon={TrophyIcon}
+                isActive={pathname.startsWith('/student-views')}
+              />
+            )}
 
             {/* Report Cards Dropdown */}
-            <DropdownSection
-              label="Report Cards"
-              icon={DocumentChartBarIcon}
-              isOpen={reportCardOpen}
-              onToggle={() => setReportCardOpen(!reportCardOpen)}
-              isActive={isReportCardPath}
-            >
-              <SubNavItem href="/report-cards/generate" label="Generate" icon={PencilSquareIcon} />
-              <SubNavItem href="/report-cards/view" label="View & Download" icon={EyeIcon} />
-            </DropdownSection>
+            {canReportCards && (
+              <DropdownSection
+                label="Report Cards"
+                icon={DocumentChartBarIcon}
+                isOpen={reportCardOpen}
+                onToggle={() => setReportCardOpen(!reportCardOpen)}
+                isActive={isReportCardPath}
+              >
+                <SubNavItem href="/report-cards/generate" label="Generate" icon={PencilSquareIcon} />
+                <SubNavItem href="/report-cards/view" label="View & Download" icon={EyeIcon} />
+              </DropdownSection>
+            )}
 
             {/* Divider */}
             <div className="py-3">
               <div className="border-t border-slate-100" />
             </div>
 
-            {/* Attendance log: admins manage everyone's, other staff see their own */}
-            {isAdmin ? (
+            {/* Attendance log: staff_attendance holders manage everyone's, other staff see their own */}
+            {allowed('/staff-attendance') ? (
               <NavItem
                 href="/staff-attendance"
                 label="Staff Attendance"
@@ -412,8 +488,8 @@ const Sidebar = () => {
               />
             )}
 
-            {/* School Schedule — the published timetable. Non-admin staff get it here; admins find it under Admin Panel. */}
-            {!isAdmin && (
+            {/* School Schedule — the published timetable. Top-level unless the Admin Panel dropdown carries it. */}
+            {!showAdminPanel && (
               <NavItem
                 href="/school-schedule"
                 label="School Schedule"
@@ -422,62 +498,58 @@ const Sidebar = () => {
               />
             )}
 
-            {/* Admin tools: Forms and Finance stay on the side; everything else lives in the Admin Panel dropdown */}
-            {isAdmin && (
-              <>
-                <DropdownSection
-                  label="Forms"
-                  icon={ClipboardDocumentListIcon}
-                  isOpen={registrationOpen}
-                  onToggle={() => setRegistrationOpen(!registrationOpen)}
-                  isActive={isRegistrationPath}
-                >
-                  <SubNavItem href="/admin-panel/forms" label="Form Builder" icon={PencilSquareIcon} exact />
-                  <div className="relative">
-                    <SubNavItem href="/admin-panel/forms/submissions" label="Submissions" icon={EyeIcon} />
-                    {newSubmissionCount > 0 && (
-                      <span className="absolute top-1/2 -translate-y-1/2 right-2 h-2 w-2 rounded-full bg-rose-400 animate-pulse" />
-                    )}
-                  </div>
-                </DropdownSection>
+            {/* Forms and Finance stay on the side; everything else lives in the Admin Panel dropdown */}
+            {canForms && (
+              <DropdownSection
+                label="Forms"
+                icon={ClipboardDocumentListIcon}
+                isOpen={registrationOpen}
+                onToggle={() => setRegistrationOpen(!registrationOpen)}
+                isActive={isRegistrationPath}
+              >
+                <SubNavItem href="/admin-panel/forms" label="Form Builder" icon={PencilSquareIcon} exact />
+                <div className="relative">
+                  <SubNavItem href="/admin-panel/forms/submissions" label="Submissions" icon={EyeIcon} />
+                  {newSubmissionCount > 0 && (
+                    <span className="absolute top-1/2 -translate-y-1/2 right-2 h-2 w-2 rounded-full bg-rose-400 animate-pulse" />
+                  )}
+                </div>
+              </DropdownSection>
+            )}
 
-                <DropdownSection
-                  label="Finance"
-                  icon={BanknotesIcon}
-                  isOpen={financeOpen}
-                  onToggle={() => setFinanceOpen(!financeOpen)}
-                  isActive={isFinancePath}
-                >
-                  <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
-                </DropdownSection>
+            {canFinance && (
+              <DropdownSection
+                label="Finance"
+                icon={BanknotesIcon}
+                isOpen={financeOpen}
+                onToggle={() => setFinanceOpen(!financeOpen)}
+                isActive={isFinancePath}
+              >
+                <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
+              </DropdownSection>
+            )}
 
-                <DropdownSection
-                  label="Admin Panel"
-                  icon={ShieldCheckIcon}
-                  isOpen={adminPanelOpen}
-                  onToggle={() => setAdminPanelOpen(!adminPanelOpen)}
-                  isActive={isAdminPanelPath}
-                >
+            {showAdminPanel && (
+              <DropdownSection
+                label="Admin Panel"
+                icon={ShieldCheckIcon}
+                isOpen={adminPanelOpen}
+                onToggle={() => setAdminPanelOpen(!adminPanelOpen)}
+                isActive={isAdminPanelPath}
+              >
+                {/* Overview stays pinned first */}
+                {allowed('/admin-panel') && (
                   <SubNavItem href="/admin-panel" label="Overview" icon={Squares2X2Icon} exact />
-
-                  <SubNavGroup label="People" />
-                  <SubNavItem href="/admin-panel/users" label="Users" icon={UsersIcon} />
-                  <SubNavItem href="/admin-panel/student-accounts" label="Student accounts" icon={KeyIcon} />
-                  <SubNavItem href="/admin-panel/approvals" label="User Approvals" icon={ShieldCheckIcon} />
-                  <SubNavItem href="/admin-panel/relations" label="Parent Relations" icon={UserGroupIcon} />
-                  <SubNavItem href="/admin-panel/messages" label="All Messages" icon={ChatBubbleOvalLeftEllipsisIcon} />
-
-                  <SubNavGroup label="School setup" />
-                  <SubNavItem href="/admin-panel/school-settings" label="School Settings" icon={CogIcon} />
-                  <SubNavItem href="/admin-panel/school-calendar" label="School Calendar" icon={CalendarDaysIcon} />
-                  <SubNavItem href="/admin-panel/school-assets" label="School Assets" icon={PhotoIcon} />
-
-                  <SubNavGroup label="Planning" />
-                  <SubNavItem href="/admin-panel/schedule-planner" label="Schedule Planner" icon={TableCellsIcon} />
-                  <SubNavItem href="/school-schedule" label="School Schedule" icon={CalendarDaysIcon} exact />
-                  <SubNavItem href="/admin-panel/agendas" label="Agenda Editor" icon={BookOpenIcon} />
-                </DropdownSection>
-              </>
+                )}
+                {panelGroups.map((group) => (
+                  <Fragment key={group.label}>
+                    <SubNavGroup label={group.label} />
+                    {group.items.map((item) => (
+                      <SubNavItem key={item.href} href={item.href} label={item.label} icon={item.icon} exact={item.exact} />
+                    ))}
+                  </Fragment>
+                ))}
+              </DropdownSection>
             )}
           </>
         )}
@@ -544,9 +616,9 @@ const Sidebar = () => {
             <p className="text-xs text-slate-500 truncate">
               {canSwitchViews(user)
                 ? user.role === 'PARENT'
-                  ? `${viewLabelFor(user.role)} · ${roleLabel(user.baseRole ?? '')} account`
-                  : `${roleLabel(user.role ?? '')} · also a parent`
-                : roleLabel(user.role ?? '')}
+                  ? `${viewLabelFor(user.role)} · ${user.accessRole?.name ?? roleLabel(user.baseRole ?? '')} account`
+                  : `${staffLabel} · also a parent`
+                : staffLabel}
             </p>
           </div>
         </div>

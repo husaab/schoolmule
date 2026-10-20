@@ -5,6 +5,7 @@ import { getStaffBySchool } from '@/services/staffService'
 import { StaffPayload } from '@/services/types/staff'
 import { PhoneIcon, EnvelopeIcon, ClockIcon, EyeIcon, PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import Spinner from '@/components/Spinner'
 import StaffViewModal from './view/StaffViewModal'
 import StaffAddModal from './add/StaffAddModal'
@@ -35,11 +36,11 @@ const StaffList: React.FC<StaffListProps> = ({
   const [editModalOpen, setEditModalOpen] = useState<StaffPayload | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState<StaffPayload | null>(null)
 
-  // Role-based permissions
-  const isParent = user.role === 'PARENT'
-  const isAdmin = user.role === 'ADMIN'
-  const canEdit = !isParent // Teachers and admins can edit
-  const canDelete = isAdmin // Only admins can delete
+  // Staff-directory writes belong to whoever manages accounts (`users`);
+  // everyone else reads it. The API enforces the same.
+  const canManage = can(user, 'users')
+  const canEdit = canManage
+  const canDelete = canManage
 
   const loadStaff = useCallback(async () => {
       if (!school) return

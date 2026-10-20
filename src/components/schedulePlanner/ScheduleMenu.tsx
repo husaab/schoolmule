@@ -16,6 +16,7 @@ import { CalendarDaysIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import { useMyScheduleStore } from '@/store/useMyScheduleStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { dayLabel, formatMin } from './timeUtils'
 import { SCHOOL_SCHEDULE_PATH, closureOn, isoDayOf, sessionsOn } from './myScheduleUtils'
 import { useMinuteOfDay } from './useMinuteOfDay'
@@ -29,6 +30,9 @@ const ScheduleMenu: React.FC = () => {
   const { data, loaded, load } = useMyScheduleStore()
   const nowMin = useMinuteOfDay()
   const isAdmin = user?.role === 'ADMIN'
+  // The planner link is for whoever can open it (scheduling); the rest of
+  // the menu follows the role-shaped schedule endpoints, as before.
+  const canPlan = can(user, 'scheduling')
 
   useEffect(() => {
     if (!user?.id || user.role === 'PARENT') return
@@ -119,7 +123,7 @@ const ScheduleMenu: React.FC = () => {
           <Link
             href={
               isAdmin
-                ? published
+                ? published || !canPlan
                   ? SCHOOL_SCHEDULE_PATH
                   : '/admin-panel/schedule-planner'
                 : '/my-schedule'
@@ -127,7 +131,7 @@ const ScheduleMenu: React.FC = () => {
             onClick={() => setOpen(false)}
             className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm font-medium text-cyan-700 hover:bg-cyan-50"
           >
-            {isAdmin ? (published ? 'View whole-school schedule' : 'Open the schedule planner') : 'View full schedule'}
+            {isAdmin ? (published || !canPlan ? 'View whole-school schedule' : 'Open the schedule planner') : 'View full schedule'}
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
         </div>

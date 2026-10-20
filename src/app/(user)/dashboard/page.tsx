@@ -46,6 +46,7 @@ import AttendanceCard from '@/components/dashboard/AttendanceCard'
 import ThisWeekCard from '@/components/dashboard/ThisWeekCard'
 import AnnouncementsRailCard from '@/components/dashboard/AnnouncementsRailCard'
 import { useDashboardTerms } from '@/components/dashboard/useDashboardTerms'
+import { useAccess } from '@/hooks/useAccess'
 import {
   AcademicCapIcon,
   BookOpenIcon,
@@ -66,6 +67,7 @@ const greetingFor = (date: Date): string => {
 // Header buttons rather than a card: three verbs the user came here to do
 // belong next to the greeting, not below the fold. Each keeps its own hue so
 // the row is scannable by colour, not just by reading three similar labels.
+// Only the ones whose page opens for the user are shown.
 const QUICK_ACTIONS = [
   { href: '/classes', label: 'Open classes', icon: AcademicCapIcon, chip: 'text-cyan-700 bg-cyan-50', hover: 'hover:border-cyan-300 hover:bg-cyan-50/40' },
   { href: '/classes', label: 'Enter grades', icon: BookOpenIcon, chip: 'text-violet-700 bg-violet-50', hover: 'hover:border-violet-300 hover:bg-violet-50/40' },
@@ -179,15 +181,25 @@ const DashboardPage: React.FC = () => {
     }
   }, [user.school, daysWindow, today, selectedYearId])
 
+  // The admin layout (the school's day, school-wide tiles) follows the base
+  // role; what is in it follows the permissions. Without `analytics` the
+  // grades parts go: no Average grade tile, no Academics panel, no analytics
+  // requests, no grade line in the briefing.
+  const access = useAccess()
+  const hasAnalytics = access.can('analytics')
+  const quickActions = QUICK_ACTIONS.filter((a) => access.canOpen(a.href))
+
   // ── Analytics: one request per endpoint per term, started only once the
-  //    summary is on screen. Teachers get their own classes (server-scoped)
-  //    plus the student snapshot for check-ins; admins get the school overview
-  //    compared against the previous term.
+  //    summary is on screen. Teachers get their own classes (server-scoped,
+  //    so not an analytics permission) plus the student snapshot for
+  //    check-ins; admins get the school overview compared against the
+  //    previous term. The overview and the snapshot need `analytics`.
   const { activeTerm, previousTerm, loading: termsLoading } = useDashboardTerms(user.school, selectedYearId)
   const termId = summary && activeTerm ? activeTerm.termId : null
-  const overview = useAnalyticsOverview(termId, isAdmin ? (previousTerm?.termId ?? null) : null)
+  const analyticsTermId = hasAnalytics ? termId : null
+  const overview = useAnalyticsOverview(analyticsTermId, isAdmin ? (previousTerm?.termId ?? null) : null)
   const classesHealth = useAnalyticsClassesHealth(isAdmin ? null : termId)
-  const snapshot = useAnalyticsSnapshot(isAdmin ? null : termId)
+  const snapshot = useAnalyticsSnapshot(isAdmin ? null : analyticsTermId)
   const analyticsPending = termsLoading || (Boolean(activeTerm) && !termId)
 
   if (loading) {
@@ -240,20 +252,22 @@ const DashboardPage: React.FC = () => {
                 {user.school ? ` · ${getSchoolName(user.school)}` : ''}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_ACTIONS.map((a) => (
-                <Link
-                  key={a.label}
-                  href={a.href}
-                  className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white pl-2 pr-3.5 py-1.5 text-sm font-medium text-slate-800 transition-colors ${a.hover}`}
-                >
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${a.chip}`}>
-                    <a.icon className="h-4 w-4" />
-                  </span>
-                  {a.label}
-                </Link>
-              ))}
-            </div>
+            {quickActions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {quickActions.map((a) => (
+                  <Link
+                    key={a.label}
+                    href={a.href}
+                    className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white pl-2 pr-3.5 py-1.5 text-sm font-medium text-slate-800 transition-colors ${a.hover}`}
+                  >
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${a.chip}`}>
+                      <a.icon className="h-4 w-4" />
+                    </span>
+                    {a.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Today: the teacher's own day, or who is where across the school */}
@@ -261,6 +275,12 @@ const DashboardPage: React.FC = () => {
 
           <HeadlineTiles
             isAdmin={isAdmin}
+            links={{
+              students: access.canOpen('/students'),
+              classes: access.canOpen('/classes'),
+              attendance: access.canOpen('/attendance/general'),
+            }}
+            hasAnalytics={hasAnalytics}
             summary={summary}
             today={today}
             termId={termId}
@@ -275,19 +295,22 @@ const DashboardPage: React.FC = () => {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6 items-start">
             <div className="xl:col-span-2 space-y-4">
               {isAdmin ? (
-                <AcademicsPanel
-                  overview={overview}
-                  termId={termId}
-                  termName={activeTerm?.name ?? null}
-                  previousTermName={previousTerm?.name ?? null}
-                  pending={analyticsPending}
-                  hasTerm={Boolean(activeTerm)}
-                />
+                hasAnalytics && (
+                  <AcademicsPanel
+                    overview={overview}
+                    termId={termId}
+                    termName={activeTerm?.name ?? null}
+                    previousTermName={previousTerm?.name ?? null}
+                    pending={analyticsPending}
+                    hasTerm={Boolean(activeTerm)}
+                  />
+                )
               ) : (
                 <MyClassesPanel
                   classesHealth={classesHealth}
                   snapshot={snapshot}
                   overview={overview}
+                  hasAnalytics={hasAnalytics}
                   termId={termId}
                   termName={activeTerm?.name ?? null}
                   pending={analyticsPending}
@@ -306,9 +329,12 @@ const DashboardPage: React.FC = () => {
 
             <div className="space-y-4">
               <AnnouncementsRailCard />
-              {user.school && <ThisWeekCard school={user.school} isAdmin={isAdmin} />}
+              {user.school && (
+                <ThisWeekCard school={user.school} showCalendarLink={access.canOpen('/admin-panel/school-calendar')} />
+              )}
               {user.school && (
                 <DailyBriefing
+                  includeGrades={hasAnalytics}
                   summary={summary}
                   trend={trend}
                   schoolName={getSchoolName(user.school)}

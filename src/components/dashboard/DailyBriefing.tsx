@@ -10,6 +10,8 @@ import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import type { AttendanceTrendPoint, DashboardSummaryData } from '@/services/types/dashboard'
 
 interface DailyBriefingProps {
+  /** Holds `analytics`. Without it the model is never told the grade average. */
+  includeGrades: boolean
   summary: DashboardSummaryData
   trend: AttendanceTrendPoint[]
   schoolName: string
@@ -40,12 +42,17 @@ const buildContext = (p: DailyBriefingProps): string => {
     `Attendance this week: ${pct(p.summary.weeklyAttendance)}`,
     `Attendance this month: ${pct(p.summary.monthlyAttendance)}`,
     // Graded work only: a null average means nothing has been marked yet, so
-    // the model must not read it as 0% or as a decline.
-    `Average student grade: ${
-      typeof p.summary.averageStudentGrade === 'number'
-        ? `${p.summary.averageStudentGrade.toFixed(1)}% (over graded work only; work not yet graded carries no weight)`
-        : 'No graded work yet'
-    }`,
+    // the model must not read it as 0% or as a decline. Left out entirely
+    // for someone without analytics (the server strips the figure for them).
+    ...(p.includeGrades
+      ? [
+          `Average student grade: ${
+            typeof p.summary.averageStudentGrade === 'number'
+              ? `${p.summary.averageStudentGrade.toFixed(1)}% (over graded work only; work not yet graded carries no weight)`
+              : 'No graded work yet'
+          }`,
+        ]
+      : []),
     `Report cards generated: ${p.summary.reportCardsCount ?? 0}`,
     `Weekly timetable published: ${p.hasPublishedSchedule ? 'yes' : 'no'}`,
     `Daily attendance history: ${history}`,
@@ -53,8 +60,9 @@ const buildContext = (p: DailyBriefingProps): string => {
 }
 
 const DailyBriefing: React.FC<DailyBriefingProps> = (props) => {
-  const { schoolCode, today } = props
-  const cacheKey = `dashboard_briefing_${schoolCode}_${today}`
+  const { schoolCode, today, includeGrades } = props
+  // A briefing written with the grade average must never be shown to someone without analytics.
+  const cacheKey = `dashboard_briefing_${schoolCode}_${today}${includeGrades ? '' : '_nogrades'}`
 
   const [briefing, setBriefing] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

@@ -16,8 +16,8 @@ import { RowsSkeleton } from './DashboardSkeletons'
 
 interface ThisWeekCardProps {
   school: string
-  /** Only admins have a calendar page to link to. */
-  isAdmin: boolean
+  /** Link to the calendar editor: only for those who can open it (school_setup). */
+  showCalendarLink: boolean
 }
 
 const BADGE: Record<CalendarEventCategory, { label: string; className: string }> = {
@@ -37,7 +37,7 @@ const when = (e: CalendarEventPayload): string => {
   return `${format(start, 'EEE d')}–${format(day(endIso), 'EEE d')}`
 }
 
-const ThisWeekCard: React.FC<ThisWeekCardProps> = ({ school, isAdmin }) => {
+const ThisWeekCard: React.FC<ThisWeekCardProps> = ({ school, showCalendarLink }) => {
   const [events, setEvents] = useState<CalendarEventPayload[] | null>(null)
   const [error, setError] = useState(false)
 
@@ -72,7 +72,7 @@ const ThisWeekCard: React.FC<ThisWeekCardProps> = ({ school, isAdmin }) => {
           'MMM d'
         )}`}
         action={
-          isAdmin ? (
+          showCalendarLink ? (
             <Link
               href="/admin-panel/school-calendar"
               className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-800"

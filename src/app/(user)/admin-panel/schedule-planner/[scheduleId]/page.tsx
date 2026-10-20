@@ -9,6 +9,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useRememberedHref } from '@/hooks/useFilterParams'
 import { useSchedulePlannerStore, sessionKey } from '@/store/useSchedulePlannerStore'
@@ -100,7 +101,9 @@ const ScheduleWorkspacePage = () => {
   // Load config + (existing draft or clean slate)
   useEffect(() => {
     if (!hasHydrated) return
-    if (user?.role !== 'ADMIN') {
+    // The planner needs `scheduling` (AuthGuard already enforces it; this
+    // also stops the requests below for a session that just lost it).
+    if (!can(user, 'scheduling')) {
       router.replace('/dashboard')
       return
     }

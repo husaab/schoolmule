@@ -2,6 +2,7 @@
 
 import { useUserStore } from '@/store/useUserStore'
 import { useSelectedYear, useYearStoreHydrated } from '@/store/useSchoolYearStore'
+import { can } from '@/lib/permissions'
 
 // Inline navbar chip shown while a non-active school year is selected.
 // Lives inside the navbar's action row (next to the year selector) so it
@@ -14,8 +15,10 @@ export default function PastYearBanner() {
   if (!hasHydrated) return null
   if (!selected || selected.isActive) return null
 
+  // Past-year writes need school setup (and an admin account); the API
+  // refuses everyone else, so their banner says read-only.
   const suffix =
-    user?.role === 'ADMIN'
+    user?.role === 'ADMIN' && can(user, 'school_setup')
       ? ' (past year — edits apply to that year)'
       : user?.role === 'PARENT'
         ? ''

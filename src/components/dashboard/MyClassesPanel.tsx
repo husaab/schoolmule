@@ -24,6 +24,8 @@ interface MyClassesPanelProps {
   classesHealth: HookState<ClassesHealthData>
   snapshot: HookState<SnapshotData>
   overview: HookState<OverviewData>
+  /** Holds `analytics`. Without it the analytics links and the check-in list (the snapshot) go; their own classes stay. */
+  hasAnalytics: boolean
   termId: string | null
   termName: string | null
   pending: boolean
@@ -46,6 +48,7 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
   classesHealth,
   snapshot,
   overview,
+  hasAnalytics,
   termId,
   termName,
   pending,
@@ -153,13 +156,15 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
           title="My classes"
           hint={`${termName} · click a class to open its gradebook`}
           action={
-            <Link
-              href={analyticsHref({ termId })}
-              className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-800"
-            >
-              Open analytics
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
+            hasAnalytics ? (
+              <Link
+                href={analyticsHref({ termId })}
+                className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-800"
+              >
+                Open analytics
+                <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            ) : undefined
           }
         />
         <div className="overflow-x-auto -mx-1">
@@ -211,7 +216,7 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${hasAnalytics ? 'xl:grid-cols-2' : ''}`}>
         <Card>
           <SectionHeader
             title="Class averages"
@@ -232,40 +237,42 @@ const MyClassesPanel: React.FC<MyClassesPanelProps> = ({
             />
           )}
         </Card>
-        <Card>
-          <SectionHeader title="Students to check in on" hint="From grades, attendance and missing work" />
-          {snapshot.loading ? (
-            <RowsSkeleton rows={4} bare />
-          ) : snapshot.error ? (
-            <p className="text-sm text-slate-500 py-4 text-center">Couldn&apos;t load student signals.</p>
-          ) : checkIns.length === 0 ? (
-            <p className="text-sm text-slate-500 py-6 text-center">No one in your classes needs a check-in right now.</p>
-          ) : (
-            <ul>
-              {checkIns.map((s) => (
-                <li key={s.studentId} className="border-b border-slate-100 last:border-0">
-                  <Link
-                    href={analyticsHref({ view: 'student', studentId: s.studentId, termId })}
-                    className="flex items-center justify-between gap-3 py-2 rounded-lg hover:bg-cyan-50/40 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{s.studentName}</p>
-                      <p className="text-xs text-slate-500 tabular-nums truncate">
-                        Gr {s.gradeLevel}
-                        {s.overallAvg != null ? ` · ${s.overallAvg}%` : ''}
-                        {s.attendancePct != null ? ` · att ${s.attendancePct}%` : ''}
-                        {s.missingCount > 0 ? ` · ${s.missingCount} marked missing` : ''}
-                      </p>
-                    </div>
-                    <span className={`shrink-0 text-[10px] font-bold uppercase rounded-full px-2 py-0.5 border ${TIER[s.risk.tier]}`}>
-                      {s.risk.tier}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {hasAnalytics && (
+          <Card>
+            <SectionHeader title="Students to check in on" hint="From grades, attendance and missing work" />
+            {snapshot.loading ? (
+              <RowsSkeleton rows={4} bare />
+            ) : snapshot.error ? (
+              <p className="text-sm text-slate-500 py-4 text-center">Couldn&apos;t load student signals.</p>
+            ) : checkIns.length === 0 ? (
+              <p className="text-sm text-slate-500 py-6 text-center">No one in your classes needs a check-in right now.</p>
+            ) : (
+              <ul>
+                {checkIns.map((s) => (
+                  <li key={s.studentId} className="border-b border-slate-100 last:border-0">
+                    <Link
+                      href={analyticsHref({ view: 'student', studentId: s.studentId, termId })}
+                      className="flex items-center justify-between gap-3 py-2 rounded-lg hover:bg-cyan-50/40 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{s.studentName}</p>
+                        <p className="text-xs text-slate-500 tabular-nums truncate">
+                          Gr {s.gradeLevel}
+                          {s.overallAvg != null ? ` · ${s.overallAvg}%` : ''}
+                          {s.attendancePct != null ? ` · att ${s.attendancePct}%` : ''}
+                          {s.missingCount > 0 ? ` · ${s.missingCount} marked missing` : ''}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-[10px] font-bold uppercase rounded-full px-2 py-0.5 border ${TIER[s.risk.tier]}`}>
+                        {s.risk.tier}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
     </>
   )

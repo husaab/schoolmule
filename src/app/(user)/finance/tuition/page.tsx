@@ -31,6 +31,7 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useSchoolYearStore, useYearStoreHydrated } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useFilterParams } from '@/hooks/useFilterParams'
@@ -83,9 +84,9 @@ function TuitionContent() {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const { get, setParams } = useFilterParams()
 
-  // Admin only: AuthGuard redirects everyone else, but not before the first
-  // render, so gate every finance request on the role too.
-  const ready = yearHydrated && !!user.id && user.role === 'ADMIN'
+  // Finance holders only: AuthGuard redirects everyone else, but not before
+  // the first render, so gate every finance request on the permission too.
+  const ready = yearHydrated && !!user.id && can(user, 'finance')
   const { status, error: statusError, refresh: refreshStatus } = useQboSyncStatus(ready)
 
   // "Connect QuickBooks" round-trips through Intuit back to this page.

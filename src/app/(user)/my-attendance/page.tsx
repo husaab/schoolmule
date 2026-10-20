@@ -9,6 +9,7 @@ import Link from 'next/link'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import Spinner from '@/components/Spinner'
 import StatTile from '@/components/ui/StatTile'
 import EmptyState from '@/components/ui/EmptyState'
@@ -155,8 +156,8 @@ function MyAttendanceContent() {
                 </span>
               )}
             </p>
-            {/* Admins land here from Staff Attendance; give them the way back. */}
-            {user.role === 'ADMIN' && (
+            {/* Staff Attendance managers land here from it; give them the way back. */}
+            {can(user, 'staff_attendance') && (
               <Link
                 href="/staff-attendance"
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-cyan-300 hover:text-cyan-700 transition-colors"

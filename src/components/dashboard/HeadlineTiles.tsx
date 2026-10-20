@@ -4,6 +4,8 @@
 // explains it. Admins see the school; teachers see their own classes, read
 // from the classes-health endpoint (server-scoped, so nothing here decides
 // what a teacher may see — it only decides what is worth showing them).
+// A tile only links to a page the user can open, and the grade tiles need
+// `analytics` (the office keeps its counts and attendance without them).
 
 import React from 'react'
 import StatTile, { toneForRate, toneForScore } from '@/components/ui/StatTile'
@@ -14,6 +16,10 @@ import { analyticsHref, attendanceHref } from './dashboardPaths'
 
 interface HeadlineTilesProps {
   isAdmin: boolean
+  /** Which of the tiles' pages the user can open; a tile without one is a plain count. */
+  links: { students: boolean; classes: boolean; attendance: boolean }
+  /** Holds `analytics`: the average-grade tiles show only then. */
+  hasAnalytics: boolean
   summary: DashboardSummaryData
   /** yyyy-MM-dd, for the attendance deep link. */
   today: string
@@ -36,6 +42,8 @@ const NO_GRADED_WORK = 'No graded work yet'
 
 const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
   isAdmin,
+  links,
+  hasAnalytics,
   summary,
   today,
   termId,
@@ -55,31 +63,33 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
 
   if (isAdmin) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatTile label="Students" value={summary.totalStudents || 0} href="/students" />
-        <StatTile label="Classes" value={summary.totalClasses || 0} href="/classes" />
+      <div className={`grid grid-cols-2 gap-3 mb-6 ${hasAnalytics ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        <StatTile label="Students" value={summary.totalStudents || 0} href={links.students ? '/students' : undefined} />
+        <StatTile label="Classes" value={summary.totalClasses || 0} href={links.classes ? '/classes' : undefined} />
         <StatTile
           label="Here today"
           value={rate(summary.todaysAttendance)}
           tone={rateTone(summary.todaysAttendance)}
-          href={attendanceHref(today)}
+          href={links.attendance ? attendanceHref(today) : undefined}
           sub={`week ${rate(summary.weeklyAttendance)} · month ${rate(summary.monthlyAttendance)}`}
         />
-        <StatTile
-          label="Average grade"
-          value={score(avgShown)}
-          tone={toneForScore(avgShown)}
-          href={analyticsHref({ termId })}
-          loading={pending || overview.loading}
-          delta={delta}
-          sub={
-            overview.data?.school.stats
-              ? `median ${overview.data.school.stats.median.toFixed(1)}%`
-              : !pending && !overview.loading && avgShown == null
-                ? NO_GRADED_WORK
-                : undefined
-          }
-        />
+        {hasAnalytics && (
+          <StatTile
+            label="Average grade"
+            value={score(avgShown)}
+            tone={toneForScore(avgShown)}
+            href={analyticsHref({ termId })}
+            loading={pending || overview.loading}
+            delta={delta}
+            sub={
+              overview.data?.school.stats
+                ? `median ${overview.data.school.stats.median.toFixed(1)}%`
+                : !pending && !overview.loading && avgShown == null
+                  ? NO_GRADED_WORK
+                  : undefined
+            }
+          />
+        )}
       </div>
     )
   }
@@ -92,28 +102,30 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
   const loading = pending || classesHealth.loading
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-      <StatTile label="My students" value={studentCount} href="/students" loading={loading} />
-      <StatTile label="My classes" value={classes.length} href="/classes" loading={loading} />
-      <StatTile
-        label="My average"
-        value={score(myAvg)}
-        tone={toneForScore(myAvg)}
-        href={analyticsHref({ termId })}
-        loading={loading}
-        sub={
-          !loading && myAvg == null
-            ? NO_GRADED_WORK
-            : schoolAvg != null
-              ? `school ${schoolAvg.toFixed(1)}%`
-              : undefined
-        }
-      />
+    <div className={`grid grid-cols-2 gap-3 mb-6 ${hasAnalytics ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+      <StatTile label="My students" value={studentCount} href={links.students ? '/students' : undefined} loading={loading} />
+      <StatTile label="My classes" value={classes.length} href={links.classes ? '/classes' : undefined} loading={loading} />
+      {hasAnalytics && (
+        <StatTile
+          label="My average"
+          value={score(myAvg)}
+          tone={toneForScore(myAvg)}
+          href={analyticsHref({ termId })}
+          loading={loading}
+          sub={
+            !loading && myAvg == null
+              ? NO_GRADED_WORK
+              : schoolAvg != null
+                ? `school ${schoolAvg.toFixed(1)}%`
+                : undefined
+          }
+        />
+      )}
       <StatTile
         label="Missing work"
         value={missing}
         tone={loading || !classes.length ? 'neutral' : missing === 0 ? 'good' : 'warn'}
-        href="/classes"
+        href={links.classes ? '/classes' : undefined}
         loading={loading}
         sub="marked missing across your classes"
       />

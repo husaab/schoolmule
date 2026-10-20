@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { useUserStore } from '@/store/useUserStore'
+import { can } from '@/lib/permissions'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { getPlannerConfig, listSchedules } from '@/services/schedulePlannerService'
@@ -68,7 +69,9 @@ const SchedulePlannerContent = () => {
       setLoading(false)
       return
     }
-    if (user.role !== 'ADMIN') {
+    // The planner needs `scheduling` (AuthGuard already enforces it; this
+    // also stops the requests below for a session that just lost it).
+    if (!can(user, 'scheduling')) {
       router.replace('/dashboard')
       return
     }

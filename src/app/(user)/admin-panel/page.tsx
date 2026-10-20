@@ -3,8 +3,11 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon, LockClosedIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
+import { useAccess } from '@/hooks/useAccess';
 
+// Every card is filtered by the route rules (lib/permissions), the same
+// ones the sidebar and the router read, so a card never leads to a bounce.
 const adminLinks = [
   {
     href: '/admin-panel/users',
@@ -14,6 +17,15 @@ const adminLinks = [
     color: 'bg-cyan-500',
     bgColor: 'from-cyan-50 to-sky-50',
     borderColor: 'border-cyan-100',
+  },
+  {
+    href: '/admin-panel/roles',
+    label: 'Roles & Permissions',
+    description: 'Create custom roles and choose what each member of staff can see and do.',
+    icon: LockClosedIcon,
+    color: 'bg-violet-500',
+    bgColor: 'from-violet-50 to-purple-50',
+    borderColor: 'border-violet-100',
   },
   {
     href: '/admin-panel/student-accounts',
@@ -41,6 +53,15 @@ const adminLinks = [
     color: 'bg-blue-500',
     bgColor: 'from-blue-50 to-indigo-50',
     borderColor: 'border-blue-100',
+  },
+  {
+    href: '/admin-panel/messages',
+    label: 'All Messages',
+    description: 'Every conversation between parents and staff at your school, to read and reply to.',
+    icon: ChatBubbleOvalLeftEllipsisIcon,
+    color: 'bg-sky-500',
+    bgColor: 'from-sky-50 to-blue-50',
+    borderColor: 'border-sky-100',
   },
   {
     href: '/admin-panel/school-settings',
@@ -126,6 +147,9 @@ const adminLinks = [
 ];
 
 const AdminPanelPage = () => {
+  const { fullAdmin, canOpen } = useAccess();
+  const visibleLinks = adminLinks.filter((link) => canOpen(link.href));
+
   return (
     <>
       <Navbar />
@@ -148,7 +172,7 @@ const AdminPanelPage = () => {
 
           {/* Admin Links Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {adminLinks.map((link) => (
+            {visibleLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -178,30 +202,32 @@ const AdminPanelPage = () => {
             ))}
           </div>
 
-          {/* Info Card */}
-          <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Admin Access</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+          {/* Info Card: only true for full admins; everyone else sees what their role opens above */}
+          {fullAdmin && (
+            <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Admin Access</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                  </div>
+                  <span className="text-slate-600">Full user management control</span>
                 </div>
-                <span className="text-slate-600">Full user management control</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                  </div>
+                  <span className="text-slate-600">Configure school settings</span>
                 </div>
-                <span className="text-slate-600">Configure school settings</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-violet-500 rounded-full" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-violet-500 rounded-full" />
+                  </div>
+                  <span className="text-slate-600">Manage academic terms</span>
                 </div>
-                <span className="text-slate-600">Manage academic terms</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </>
