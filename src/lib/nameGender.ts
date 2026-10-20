@@ -3,24 +3,27 @@
 // see (Arabic, Persian, South Asian, Turkish and English, in their usual
 // spellings) almost always say it plainly. A name that is used for both, or
 // that isn't listed, is unknown: better the neutral avatar than a wrong one.
+// The exceptions are names used for both that at our schools only women carry
+// (Ala, Alaa, Nahid: teachers and a mother); those are listed as girls'.
 // Only the first word counts; the next one is usually the father's name.
 
 export type NameGender = 'female' | 'male'
 
 const FEMALE = new Set(
-  `aaliyah abeer abigail abir adiba adina afaf afra afrah ahlam aicha aisha aiza aleena alexandra alia alice alicia aliya
-  aliyah alya amal amanda amani amelia amina aminah amira amna anam angela anisa anna aqsa areej arij arwa asala asiya
-  asiyah asma asmaa asra ava aya ayat ayesha aysha aybaniz azada azadeh azza bana banin batool batoul batul bella bushra
-  charlotte chloe christina clara dalal dalia dana dania darine delaram dima dina doaa dua duaa elena eliana elizabeth
+  `aaliyah abeer abigail abir adiba adina afaf afra afrah afsheen ahlam aicha aisha aiza ala alaa aleena alexandra alia
+  alice alicia aliya aliyah alya amal amana amanah amanda amani amelia amina aminah amira amna anam angela anisa anna aqsa
+  areej arij arwa asala asiya asiyah asma asmaa asra ava aya ayat ayesha aysha aybaniz azada azadeh azza bana banin
+  batool batoul batul beenish bella benish bushra charlotte chloe christina clara dalal dalia dana dania darine delaram
+  dima dina doaa doha dua duaa duha elena eliana elizabeth
   ella eman emily emma eram esra esraa eva farah fatemeh fatima fatimah fatma fatme fizza ghadeer ghadir ghina grace
   hadeel hafsa hajar hala hana hanaa hanan haniya haniyah hannah hawra hawraa hayat heba hiba hoda huda iman inaya
-  isabella isra israa jamila jana janna jannah jasmine jenna jennifer jessica joelle julia jumana katherine kawsar
+  isabella isra israa jamila jana janna jannah jannat jannatte jasmine jenna jennifer jessica joelle julia jumana katherine kawsar
   kawthar kauthar khadija khadijah kholoud kulthum laila lama lamia lana lara larissa latifa laura layal layla lea leah
   leila lily lina limar lojain loujain lubna lucy lujain lulwa lyna lynn madina maha mahdiya mahdiyah maheen maisa
   majida mala malaak malak manal maria mariam mariem mariyam marwa maryam maryem masa masooma masuma masoumeh maya
-  mayar maysa meryem mia mila mina mira mona muna nada nadia nadine nahla naia najla nargis narges narjes narjis nasrin
+  mayar maysa meryem mia mila mina mira mona muna nada nadia nadine nahid nahida nahla naia najla nargis narges narjes narjis nasrin
   natalie nawal nayla nazanin nesrine nicole nisreen noor nora noura nouran nour nuha olivia qamar rabab rachel raghad
-  rahaf rahma rana rania rasha rawan rawya rebecca reem rihab rim rima rokaya roqaya roqayya rose roya ruba ruby rula
+  rahaf rahma rana rania rasha rawan rawya rebecca reem reham rihab riham rim rima rokaya roqaya roqayya rose roya ruba ruby rula
   ruqaya ruqayya ruqayyah rusul sabah sabrina safa safaa safiya safiyya sahar saja sakina sakinah salma samah samar
   samira sana sanaa sara saraa sarah sawsan sayeda sayyeda sayyida selena seyeda shahd shaima shaimaa shereen shirin
   siham sima simaa sofia soha sophia sophie stephanie suha sukaina sukayna sumaya sumayya syeda tala tamara tasneem

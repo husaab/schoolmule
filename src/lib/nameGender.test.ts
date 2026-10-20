@@ -9,6 +9,11 @@ describe('nameGender', () => {
       expect(nameGender(`${first} Example`)).toBe('male')
   })
 
+  it('reads Ala, Alaa and Nahid as girls’ names: at our schools only women carry them', () => {
+    for (const first of ['Ala', 'Alaa', "Ala'a", 'Nahid', 'Afsheen', 'Beenish', 'Doha', 'Riham'])
+      expect(nameGender(`${first} Example`)).toBe('female')
+  })
+
   it('reads only the first name, never the father’s name after it', () => {
     expect(nameGender('Zahraa Hassan Example')).toBe('female')
     expect(nameGender('Jamal Fatima Example')).toBe('male')
