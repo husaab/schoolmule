@@ -2,6 +2,7 @@
 'use client'
 
 import React from 'react'
+import { CLASS_STICKY_BOTTOM_PX } from '@/lib/classStickyHeader'
 
 export interface SectionNavItem {
   id: string
@@ -18,14 +19,17 @@ interface SectionNavProps {
 
 /**
  * In-page "On this page" navigator. Desktop: sticky vertical rail beside the
- * content. Mobile: sticky horizontal chip bar under the navbar. Items are
- * buttons (not anchors) so the JS-driven offset scroll isn't fought by the
- * browser's native hash jump.
+ * content. Mobile: sticky horizontal chip bar under the class tabs (which stay
+ * on screen under the navbar). Items are buttons (not anchors) so the
+ * JS-driven offset scroll isn't fought by the browser's native hash jump.
  */
 const SectionNav: React.FC<SectionNavProps> = ({ sections, activeId, onNavigate, variant }) => {
   if (variant === 'mobile') {
     return (
-      <div className="lg:hidden sticky top-20 z-10 -mx-6 px-6 py-2 bg-slate-50/95 backdrop-blur border-b border-slate-100 overflow-x-auto">
+      <div
+        className="lg:hidden sticky z-10 -mx-6 px-6 py-2 bg-slate-50/95 backdrop-blur border-b border-slate-100 overflow-x-auto"
+        style={{ top: CLASS_STICKY_BOTTOM_PX }}
+      >
         <div className="flex gap-2 w-max">
           {sections.map(({ id, label, icon: Icon }) => (
             <button
@@ -47,7 +51,7 @@ const SectionNav: React.FC<SectionNavProps> = ({ sections, activeId, onNavigate,
   }
 
   return (
-    <nav className="hidden lg:block w-56 shrink-0 sticky top-28 self-start">
+    <nav className="hidden lg:block w-56 shrink-0 sticky self-start" style={{ top: CLASS_STICKY_BOTTOM_PX + 32 }}>
       <p className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
         On this page
       </p>

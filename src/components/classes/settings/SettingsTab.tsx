@@ -27,6 +27,7 @@ import { useScrollSpy } from '@/hooks/useScrollSpy'
 import { useRememberedHref } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import { classTitle } from '@/lib/classesHome'
+import { CLASS_STICKY_BOTTOM_PX } from '@/lib/classStickyHeader'
 import { isJK, isSK } from '@/lib/schoolUtils'
 import { getClassById } from '@/services/classService'
 import { unarchiveClass } from '@/services/classroomService'
@@ -143,7 +144,8 @@ export default function SettingsTab({ classId, data, reload, patchClass, onChang
     [jk, sk],
   )
   const sectionIds = useMemo(() => sections.map((s) => s.id), [sections])
-  const { activeId, scrollTo } = useScrollSpy({ sectionIds })
+  // Sections land just under the class tabs, which stay on screen under the navbar.
+  const { activeId, scrollTo } = useScrollSpy({ sectionIds, offsetPx: CLASS_STICKY_BOTTOM_PX + 20 })
 
   // Deep link (#students, and old edit-page hashes): scroll once the cards have painted.
   const scrolledForHash = useRef(false)

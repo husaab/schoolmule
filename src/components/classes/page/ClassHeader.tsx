@@ -7,14 +7,16 @@
 // it sits at the bottom of the banner. `actions` is where the student and
 // parent variants put "Message {teacher}"; the teacher page passes none.
 // `compact` (the Grades tab) shrinks the banner to a slim bar so the grid
-// starts high on the page.
+// starts high on the page. With a tab bar the header is sticky: scrolling
+// slides it up under the navbar until only the tabs show (classStickyHeader).
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronRightIcon } from '@heroicons/react/24/outline'
 import BackLink from '@/components/shared/BackLink'
 import ClassIcon from '@/components/classes/identity/ClassIcon'
 import { CLASS_COLORS } from '@/lib/classIdentity'
+import { classHeaderStickyTop } from '@/lib/classStickyHeader'
 import { classTitle, headerMeta } from '@/lib/classesHome'
 import type { ClassPageData } from '@/services/types/classroom'
 
@@ -49,8 +51,27 @@ export default function ClassHeader({
     if (el && el.complete && el.naturalWidth === 0) setFailedUrl(identity.bannerUrl)
   }
 
+  // The sticky top depends on the header's height, which changes with the
+  // width (the meta line wraps) and between the full and slim banners.
+  const headerRef = useRef<HTMLElement>(null)
+  const [stickyTop, setStickyTop] = useState<number | null>(null)
+  const sticky = !!children
+  useEffect(() => {
+    const el = headerRef.current
+    if (!sticky || !el) return
+    const measure = () => setStickyTop(classHeaderStickyTop(el.offsetHeight))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [sticky])
+
   return (
-    <header>
+    <header
+      ref={headerRef}
+      className={sticky ? 'sticky z-30' : undefined}
+      style={sticky && stickyTop != null ? { top: stickyTop } : undefined}
+    >
       <div className="flex min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-6 py-4 text-[15px] lg:px-8">
         <BackLink to={backTo} className="shrink-0 text-slate-500 transition-colors hover:text-slate-800">
           {backLabel}
