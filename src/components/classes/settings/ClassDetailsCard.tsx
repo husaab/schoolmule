@@ -6,6 +6,9 @@ import { updateClass } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
 import type { TeacherPayload } from '@/services/types/teacher'
 import type { TermPayload } from '@/services/types/term'
+import { useUserStore } from '@/store/useUserStore'
+import { useAccess } from '@/hooks/useAccess'
+import { pickableTeachers } from '@/lib/classTeacherChoices'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getGradeDisplayName, getGradeOptions, GradeValue } from '@/lib/schoolUtils'
 import {
@@ -37,6 +40,15 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
   readOnly = false,
 }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const selfId = useUserStore((s) => s.user.id)
+  // Handing the class to another teacher is classes.manage (the API's rule);
+  // otherwise an edit keeps the current lead.
+  const { canAny } = useAccess()
+  const leadChoices = pickableTeachers(teachers, {
+    managesClasses: canAny('classes.manage', 'classes.all'),
+    selfId,
+    currentLeadId: classData.teacherId,
+  })
 
   const [isEditing, setIsEditing] = useState(false)
   const [editSubject, setEditSubject] = useState('')
@@ -234,7 +246,7 @@ const ClassDetailsCard: React.FC<ClassDetailsCardProps> = ({
                     <option value="" disabled>
                       Select teacher
                     </option>
-                    {teachers.map((t) => (
+                    {leadChoices.map((t) => (
                       <option key={t.userId} value={t.userId}>
                         {t.fullName}
                       </option>

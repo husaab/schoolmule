@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
+import GatedLink from '@/components/shared/GatedLink'
 import Modal from '@/components/shared/modal'
 import Spinner from '@/components/Spinner'
 import {
@@ -109,14 +109,14 @@ const UserArchiveModal: React.FC<UserArchiveModalProps> = ({ isOpen, onClose, us
             <ul className="mt-2 space-y-1">
               {blockers.classes.map((c) => (
                 <li key={c.classId}>
-                  <Link
+                  <GatedLink
                     href={classHref(c.classId, 'settings')}
                     className="inline-flex items-center gap-1 text-sm font-medium text-rose-800 underline-offset-2 hover:underline"
                   >
                     {getGradeDisplayName(c.grade)} · {c.subject}
                     {c.termName && <span className="font-normal opacity-70"> · {c.termName}</span>}
                     <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                  </Link>
+                  </GatedLink>
                 </li>
               ))}
               {blockers.homeroomStudents > 0 && (

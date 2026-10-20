@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
+import { useAccess } from '@/hooks/useAccess'
+import { pickableTeachers, defaultLead } from '@/lib/classTeacherChoices'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createClass } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
@@ -33,6 +35,9 @@ interface ClassAddModalProps {
 const ClassAddModal: React.FC<ClassAddModalProps> = ({ isOpen, onClose, onAdd }) => {
   const user = useUserStore((state) => state.user)
   const showNotification = useNotificationStore((state) => state.showNotification)
+  // Without classes.manage you create classes you lead yourself (the API's rule).
+  const { canAny } = useAccess()
+  const managesClasses = canAny('classes.manage', 'classes.all')
 
   const [grade, setGrade] = useState<GradeValue | ''>('')
   const [subject, setSubject] = useState('')
@@ -59,7 +64,9 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({ isOpen, onClose, onAdd })
       try {
         const res = await getTeachersBySchool(user.school!)
         if (res.status === 'success') {
-          setTeachers(res.data)
+          const choices = pickableTeachers(res.data, { managesClasses, selfId: user.id })
+          setTeachers(choices)
+          setTeacherId((current) => defaultLead(choices, current))
         } else {
           console.error('Failed to fetch teachers:', res.message)
           showNotification('Failed to load teacher list', 'error')
@@ -91,7 +98,7 @@ const ClassAddModal: React.FC<ClassAddModalProps> = ({ isOpen, onClose, onAdd })
 
     fetchTeachers()
     fetchTerms()
-  }, [isOpen, user?.school, showNotification])
+  }, [isOpen, user?.school, user?.id, managesClasses, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

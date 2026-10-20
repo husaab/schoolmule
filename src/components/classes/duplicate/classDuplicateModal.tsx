@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../../shared/modal'
 import { useUserStore } from '@/store/useUserStore'
+import { useAccess } from '@/hooks/useAccess'
+import { pickableTeachers, defaultLead } from '@/lib/classTeacherChoices'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { duplicateClass } from '@/services/classService'
 import type { ClassPayload } from '@/services/types/class'
@@ -38,6 +40,9 @@ const ClassDuplicateModal: React.FC<ClassDuplicateModalProps> = ({
   onDuplicated,
 }) => {
   const user = useUserStore((state) => state.user)
+  // Without classes.manage a copy is yours to lead (the API's rule).
+  const { canAny } = useAccess()
+  const managesClasses = canAny('classes.manage', 'classes.all')
   const showNotification = useNotificationStore((state) => state.showNotification)
 
   const [grade, setGrade] = useState<GradeValue | ''>(sourceClass.grade)
@@ -61,7 +66,10 @@ const ClassDuplicateModal: React.FC<ClassDuplicateModalProps> = ({
           getTermsBySchool(user.school!),
         ])
 
-        if (teacherRes.status === 'success') setTeachers(teacherRes.data)
+        const choices = teacherRes.status === 'success'
+          ? pickableTeachers(teacherRes.data, { managesClasses, selfId: user.id })
+          : []
+        setTeachers(choices)
 
         let fetchedTerms: TermPayload[] = []
         if (termRes.status === 'success') {
@@ -72,7 +80,7 @@ const ClassDuplicateModal: React.FC<ClassDuplicateModalProps> = ({
         // Pre-fill fields from sourceClass
         setGrade(sourceClass.grade)
         setSubject(sourceClass.subject)
-        setTeacherId(sourceClass.teacherId)
+        setTeacherId(defaultLead(choices, sourceClass.teacherId))
 
         // Default to the next term (by start date) instead of the same term
         const sourceTerm = fetchedTerms.find((t) => t.termId === sourceClass.termId)
@@ -100,7 +108,7 @@ const ClassDuplicateModal: React.FC<ClassDuplicateModalProps> = ({
     }
 
     fetchData()
-  }, [isOpen, user?.school, sourceClass, showNotification])
+  }, [isOpen, user?.school, user?.id, managesClasses, sourceClass, showNotification])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

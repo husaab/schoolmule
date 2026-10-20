@@ -9,7 +9,7 @@ import {
   CheckCircleIcon,
   EllipsisHorizontalIcon,
 } from '@heroicons/react/24/outline'
-import Link from 'next/link'
+import GatedLink from '@/components/shared/GatedLink'
 import type { Message, SenderRole, Thread } from '@/services/types/messaging'
 import {
   deleteMessage,
@@ -317,12 +317,12 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
             {isStaff && conversation.includesStudent && parentsAbsent(participants) && ' · parents are not in this conversation'}
           </p>
           {conversation.classworkItemId && (isStaff ? conversation.classId : true) && (
-            <Link
+            <GatedLink
               href={isStaff ? classItemHref(conversation.classId as string, conversation.classworkItemId) : parentItemHref(conversation.studentId, conversation.classworkItemId)}
               className={`text-xs font-medium ${t.accentText} hover:underline`}
             >
               {isStaff ? 'Open the work and grading' : 'Open the assignment'}
-            </Link>
+            </GatedLink>
           )}
         </div>
         <div className="flex items-center gap-1.5">

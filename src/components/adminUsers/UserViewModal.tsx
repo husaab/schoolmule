@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import GatedLink from '@/components/shared/GatedLink'
 import Modal from '@/components/shared/modal'
 import Spinner from '@/components/Spinner'
 import { Button } from '@/components/shared/modalKit'
@@ -235,7 +236,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
                     <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
                       {details.classes.map((c) => (
                         <li key={c.classId}>
-                          <Link
+                          <GatedLink
                             href={classHref(c.classId)}
                             className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-slate-50"
                           >
@@ -251,7 +252,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
                                 <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-slate-600">Co-teacher</span>
                               )}
                             </span>
-                          </Link>
+                          </GatedLink>
                         </li>
                       ))}
                     </ul>
