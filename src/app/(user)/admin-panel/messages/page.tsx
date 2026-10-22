@@ -238,7 +238,7 @@ const AdminMessagesBody: React.FC = () => {
           tone="staff"
           active={tab}
           onChange={setTab}
-          counts={{ conversations: summary.unreadConversations, announcements: summary.unreadAnnouncements }}
+          counts={{ conversations: summary.attentionConversations, announcements: summary.unreadAnnouncements }}
         />
         {tab === 'announcements' && (
           <button

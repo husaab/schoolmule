@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bubbleKind, displayName, generalKindLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
+import { bubbleKind, displayName, generalKindLabel, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
 import { toneClasses } from './tones'
 
 describe('who is who in a thread with a student', () => {
@@ -120,5 +120,21 @@ describe('the admin\'s table', () => {
     expect(waitingOn({ senderRole: 'TEACHER' }, false)).toBe('parent')
     expect(waitingOn({ senderRole: 'TEACHER' }, true)).toBe('student')
     expect(waitingOn(null, true)).toBeNull()
+  })
+})
+
+describe('the Messages badge', () => {
+  const summary = { unreadConversations: 1, unreadMessages: 4, needsReply: 2, attentionConversations: 2, unreadAnnouncements: 1 }
+
+  it('counts threads waiting on you plus new announcements', () => {
+    expect(inboxBadgeCount(summary)).toBe(3)
+    expect(inboxBadgeCount({ ...summary, attentionConversations: 0, unreadAnnouncements: 0 })).toBe(0)
+  })
+
+  it('says what the number is made of, and never asks a guardian for a reply', () => {
+    expect(inboxBadgeLabel(summary, false)).toBe('1 unread · 2 need your reply · 1 new announcement')
+    expect(inboxBadgeLabel({ ...summary, needsReply: 1, unreadAnnouncements: 2 }, false)).toBe('1 unread · 1 needs your reply · 2 new announcements')
+    expect(inboxBadgeLabel(summary, true)).toBe('1 unread · 1 new announcement')
+    expect(inboxBadgeLabel({ ...summary, unreadConversations: 0, needsReply: 0, unreadAnnouncements: 0 }, false)).toBe('')
   })
 })

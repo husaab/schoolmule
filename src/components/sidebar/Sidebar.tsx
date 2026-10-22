@@ -40,6 +40,7 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
+import { inboxBadgeCount, inboxBadgeLabel } from '@/components/messaging/formatters'
 import { getNewSubmissionCount } from '@/services/registrationService'
 import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
 import ChildSwitcher from '@/components/parent/ChildSwitcher'
@@ -126,7 +127,8 @@ const Sidebar = () => {
 
   const newSubmissionCount = useRegistrationStore((s) => s.newSubmissionCount);
   const setNewSubmissionCount = useRegistrationStore((s) => s.setNewSubmissionCount);
-  const unreadTotal = useMessagingStore((s) => s.summary.unreadConversations + s.summary.unreadAnnouncements);
+  const inboxCount = useMessagingStore((s) => inboxBadgeCount(s.summary));
+  const inboxLabel = useMessagingStore((s) => inboxBadgeLabel(s.summary, user?.role === 'PARENT'));
   // Hidden on the server render; shown after hydration unless dismissed.
   const gradebookHintHidden = useSyncExternalStore(subscribeGradebookHint, readGradebookHintDismissed, () => true);
   // A small "New" pill beside a parent's Classes link until they first open the page.
@@ -199,7 +201,7 @@ const Sidebar = () => {
 
   // Nav hrefs re-expand each page's remembered filters (filter memory), so
   // returning to Students via the sidebar shows the grade the user had picked.
-  const NavItem = ({ href, label, icon: Icon, isActive, badge, pill }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number; pill?: string }) => (
+  const NavItem = ({ href, label, icon: Icon, isActive, badge, badgeTitle, pill }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number; badgeTitle?: string; pill?: string }) => (
     <Link
       href={useRememberedHref(href)}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
@@ -214,7 +216,7 @@ const Sidebar = () => {
         <span className="rounded-full bg-amber-700 px-[7px] py-0.5 text-[10px] font-semibold text-white">{pill}</span>
       )}
       {badge !== undefined && badge > 0 && (
-        <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${user?.role === 'PARENT' ? 'bg-amber-700' : 'bg-cyan-600'}`}>
+        <span title={badgeTitle} className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${user?.role === 'PARENT' ? 'bg-amber-700' : 'bg-cyan-600'}`}>
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -340,7 +342,8 @@ const Sidebar = () => {
                   ? pathname === link.href || pathname.startsWith(link.href + '/')
                   : pathname === link.href
               }
-              badge={link.href === '/messages' || link.href === '/parent/messages' ? unreadTotal : undefined}
+              badge={link.href === '/messages' || link.href === '/parent/messages' ? inboxCount : undefined}
+              badgeTitle={link.href === '/messages' || link.href === '/parent/messages' ? inboxLabel : undefined}
               pill={link.href === '/parent/classes' && !parentClassesSeen ? 'New' : undefined}
             />
             {link.href === '/classes' && isStaff && !gradebookHintHidden && (

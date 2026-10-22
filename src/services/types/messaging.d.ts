@@ -185,6 +185,8 @@ export interface UnreadSummary {
   unreadConversations: number;
   unreadMessages: number;
   needsReply: number;
+  /** What the badge counts: unread threads, plus (staff) open threads waiting on a reply even once read. */
+  attentionConversations: number;
   /** Visible announcements the caller has not opened (never their own). */
   unreadAnnouncements: number;
 }

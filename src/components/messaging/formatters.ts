@@ -1,4 +1,4 @@
-import type { LastMessage, Message, Participant, SenderRole } from '@/services/types/messaging'
+import type { LastMessage, Message, Participant, SenderRole, UnreadSummary } from '@/services/types/messaging'
 
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -153,3 +153,18 @@ export const lastSenderWord = (role: SenderRole): 'Parent' | 'Student' | 'Staff'
  */
 export const waitingOn = (last: Pick<LastMessage, 'senderRole'> | null, withStudent: boolean): 'teacher' | 'parent' | 'student' | null =>
   !last ? null : isFamilyRole(last.senderRole) ? 'teacher' : withStudent ? 'student' : 'parent'
+
+/** What a Messages badge counts: threads waiting on you, plus announcements you have not opened. */
+export const inboxBadgeCount = (s: UnreadSummary): number => s.attentionConversations + s.unreadAnnouncements
+
+/**
+ * What the badge's number is made of, for its tooltip. "Needs your reply" is
+ * staff-only: a guardian's thread where the teacher wrote last is no task.
+ */
+export const inboxBadgeLabel = (s: UnreadSummary, isParent: boolean): string => {
+  const parts: string[] = []
+  if (s.unreadConversations > 0) parts.push(`${s.unreadConversations} unread`)
+  if (!isParent && s.needsReply > 0) parts.push(`${s.needsReply} ${s.needsReply === 1 ? 'needs' : 'need'} your reply`)
+  if (s.unreadAnnouncements > 0) parts.push(`${s.unreadAnnouncements} new announcement${s.unreadAnnouncements === 1 ? '' : 's'}`)
+  return parts.join(' · ')
+}

@@ -12,7 +12,7 @@ import { listConversations } from '@/services/messagingService'
 import type { ConversationItem } from '@/services/types/messaging'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useUserStore } from '@/store/useUserStore'
-import { formatListStamp } from './formatters'
+import { formatListStamp, inboxBadgeCount, inboxBadgeLabel } from './formatters'
 
 export const inboxPathFor = (role: string | null | undefined) => (role === 'PARENT' ? '/parent/messages' : '/messages')
 
@@ -55,8 +55,8 @@ const InboxBell: React.FC = () => {
 
   const isParent = user.role === 'PARENT'
   const inbox = inboxPathFor(user.role)
-  const count = summary.unreadConversations + summary.unreadAnnouncements
-  const label = count > 0 ? `Messages, ${count} unread` : 'Messages'
+  const count = inboxBadgeCount(summary)
+  const label = count > 0 ? `Messages, ${inboxBadgeLabel(summary, isParent)}` : 'Messages'
 
   return (
     <div ref={rootRef} className="relative">
