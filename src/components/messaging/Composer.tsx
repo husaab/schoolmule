@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { CheckIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep'
+import { isTouchKeyboard, shouldSendOnKey } from '@/lib/enterToSend'
 import { ACCEPT_ATTR, MAX_BODY, MAX_FILES, fileProblem, isImage } from './formatters'
 import { toneClasses, type Tone } from './tones'
 
@@ -22,7 +23,8 @@ interface ComposerProps {
 
 /**
  * The message box: text, attachments as removable chips, limits spelled out
- * next to the attach button. Enter sends, Shift+Enter breaks a line. Pictures
+ * next to the attach button. Enter sends on a computer (Shift+Enter breaks a
+ * line); on a phone Return breaks a line (src/lib/enterToSend.ts). Pictures
  * are resized first (src/lib/uploadPrep.ts), then every file is validated here
  * with the same rules as the server, so a bad pick is refused before it
  * uploads and a big phone photo goes up small instead of being refused.
@@ -130,7 +132,7 @@ const Composer: React.FC<ComposerProps> = ({
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
+          if (shouldSendOnKey(e.nativeEvent, isTouchKeyboard())) {
             e.preventDefault()
             void send()
           }

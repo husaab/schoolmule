@@ -19,6 +19,7 @@ import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { toneClasses } from '@/components/messaging/tones'
 import { useLoad } from '@/hooks/useLoad'
 import { defaultIdentity } from '@/lib/classIdentity'
+import { isTouchKeyboard, shouldSendOnKey } from '@/lib/enterToSend'
 import { studentItemHref } from '@/lib/portalRoutes'
 import {
   BODY_MAX,
@@ -354,7 +355,7 @@ export default function StudentThread({ conversationId, userId, classes, preview
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (shouldSendOnKey(e.nativeEvent, isTouchKeyboard())) {
                 e.preventDefault()
                 void send()
               }
