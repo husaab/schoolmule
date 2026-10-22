@@ -31,6 +31,8 @@ export interface StudentPayload {
   address: string | null;
   healthCardNumber: string | null;
   medicalNotes: string | null;
+  /** null = not set (existing students were prefilled from their first name where it was clear). */
+  gender?: 'male' | 'female' | null;
   /**
    * The student's own address (their SchoolMule sign-in once invited).
    * Admin-only to set: the server refuses any other role's body that carries

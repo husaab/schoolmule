@@ -14,13 +14,15 @@ import {
   selectClass,
 } from '@/components/shared/modalKit'
 import { inviteSchoolUser, updateSchoolUser } from '@/services/adminUserService'
-import { SchoolRole, SchoolUser, UpdateSchoolUserRequest } from '@/services/types/adminUser'
+import { Honorific, SchoolRole, SchoolUser, UpdateSchoolUserRequest } from '@/services/types/adminUser'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useAccess } from '@/hooks/useAccess'
 import { useAccessRoles } from '@/hooks/useAccessRoles'
 import { PencilSquareIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { ROLE_OPTIONS, accessRoleLabel } from './userDisplay'
+
+const HONORIFICS: Honorific[] = ['Mr.', 'Ms.', 'Mrs.', 'Dr.']
 
 interface UserFormModalProps {
   isOpen: boolean
@@ -46,6 +48,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
   const [role, setRole] = useState<SchoolRole>('TEACHER')
   const [hasAccess, setHasAccess] = useState(true)
   const [staffTitle, setStaffTitle] = useState('')
+  /** '' = no title: parents see the plain name. */
+  const [honorific, setHonorific] = useState<Honorific | ''>('')
   /** '' = the built-in Admin or Teacher. */
   const [accessRoleId, setAccessRoleId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -58,6 +62,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
     setRole(user?.role ?? 'TEACHER')
     setHasAccess(user?.isVerifiedSchool ?? true)
     setStaffTitle(user?.staffTitle ?? '')
+    setHonorific(user?.honorific ?? '')
     setAccessRoleId(user?.accessRoleId ?? '')
   }, [isOpen, user])
 
@@ -79,6 +84,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           role,
           isVerifiedSchool: hasAccess,
           staffTitle: role === 'ADMIN' ? staffTitle.trim() : '',
+          honorific: role === 'PARENT' ? null : honorific || null,
         }
         if (fullAdmin && !isSelf && nextAccessRoleId !== (user.accessRoleId ?? null)) payload.accessRoleId = nextAccessRoleId
         const res = await updateSchoolUser(user.userId, payload)
@@ -90,6 +96,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           lastName: lastName.trim(),
           email: email.trim(),
           role,
+          honorific: role === 'PARENT' ? null : honorific || null,
           ...(fullAdmin && nextAccessRoleId ? { accessRoleId: nextAccessRoleId } : {}),
         })
         notify(
@@ -144,6 +151,25 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
                 />
               </Field>
             </FieldRow>
+            {role !== 'PARENT' && (
+              <Field
+                label="Salutation"
+                htmlFor="user-honorific"
+                hint={`Parents see "${[honorific, firstName.trim() || 'First', lastName.trim() || 'Last'].filter(Boolean).join(' ')}" in emails and the parent portal.`}
+              >
+                <select
+                  id="user-honorific"
+                  className={selectClass}
+                  value={honorific}
+                  onChange={(e) => setHonorific(e.target.value as Honorific | '')}
+                >
+                  <option value="">None</option>
+                  {HONORIFICS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             {!isEdit && (
               <Field label="Email" htmlFor="user-email" required hint="The invite is sent here, and it's their login.">
                 <input

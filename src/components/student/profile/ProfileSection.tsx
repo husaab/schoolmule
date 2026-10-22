@@ -24,6 +24,7 @@ const ProfileSection: React.FC<{
   const address = clean(s.address)
   const healthCard = clean(s.healthCardNumber)
   const medical = clean(s.medicalNotes)
+  const gender = s.gender === 'female' ? 'Female' : s.gender === 'male' ? 'Male' : null
   const emergency = clean(s.emergencyContact)
 
   return (
@@ -100,6 +101,10 @@ const ProfileSection: React.FC<{
                   ) : (
                     <span className="text-slate-400">No date of birth</span>
                   )}
+                </p>
+                <p className="flex items-center gap-2">
+                  <UserIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                  {gender ? <span className="text-slate-700">{gender}</span> : <span className="text-slate-400">Gender not set</span>}
                 </p>
                 <p className="flex items-center gap-2">
                   <IdentificationIcon className="h-4 w-4 flex-shrink-0 text-slate-400" />

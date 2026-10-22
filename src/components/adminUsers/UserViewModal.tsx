@@ -121,7 +121,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <UserAvatar user={user} size="lg" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-xl font-semibold text-slate-900">{user.fullName}</h2>
+              <h2 className="truncate text-xl font-semibold text-slate-900">{[user.honorific, user.fullName].filter(Boolean).join(' ')}</h2>
               {isSelf && <span className="text-xs font-medium text-slate-400">(you)</span>}
             </div>
             <a

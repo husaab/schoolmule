@@ -39,6 +39,7 @@ const toFormValues = (student: StudentPayload): StudentFormValues => ({
   emergencyContact: student.emergencyContact || '',
   address: student.address || '',
   medicalNotes: student.medicalNotes || '',
+  gender: student.gender || '',
 });
 
 const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, student, onUpdate }) => {
@@ -102,7 +103,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       dateOfBirth: values.dateOfBirth || null,
       address: values.address || null,
       healthCardNumber: values.healthCardNumber || null,
-      medicalNotes: values.medicalNotes || null
+      medicalNotes: values.medicalNotes || null,
+      gender: values.gender || null,
     };
     // The student's own address: admins only (the server refuses the key from
     // anyone else), and only when it changed, so an edit never touches it by accident.

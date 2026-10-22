@@ -40,6 +40,7 @@ export interface StudentFormValues {
   emergencyContact: string
   address: string
   medicalNotes: string
+  gender: '' | 'male' | 'female'
 }
 
 export const emptyStudentForm: StudentFormValues = {
@@ -59,6 +60,7 @@ export const emptyStudentForm: StudentFormValues = {
   emergencyContact: '',
   address: '',
   medicalNotes: '',
+  gender: '',
 }
 
 interface StudentFormFieldsProps {
@@ -143,6 +145,21 @@ const StudentFormFields: React.FC<StudentFormFieldsProps> = ({
               onChange={(e) => onChange('healthCardNumber', e.target.value)}
               className={`${inputClass} font-mono`}
             />
+          </Field>
+        </FieldRow>
+
+        <FieldRow>
+          <Field label="Gender" htmlFor={id('gender')}>
+            <select
+              id={id('gender')}
+              value={values.gender}
+              onChange={(e) => onChange('gender', e.target.value as StudentFormValues['gender'])}
+              className={selectClass}
+            >
+              <option value="">Not set</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
           </Field>
         </FieldRow>
 

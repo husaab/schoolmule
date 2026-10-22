@@ -16,6 +16,8 @@ export interface SchoolUser {
   role: SchoolRole;
   /** Admins only: the title parents see when they message them (e.g. "Principal"). null = parents can't message them. */
   staffTitle: string | null;
+  /** Staff only: Mr. | Ms. | Mrs. | Dr. before the name parents see ("Ms. Doha Chahade"); null = plain name. */
+  honorific?: Honorific | null;
   /** The custom access role (RBAC); null for the built-in Admin or Teacher. Optional until the backend sends it. */
   accessRoleId?: string | null;
   accessRoleName?: string | null;
@@ -64,7 +66,10 @@ export interface ArchiveBlockers {
   homeroomStudents: number;
 }
 
+export type Honorific = 'Mr.' | 'Ms.' | 'Mrs.' | 'Dr.';
+
 export interface InviteUserRequest {
+  honorific?: Honorific | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -80,6 +85,8 @@ export interface UpdateSchoolUserRequest {
   isVerifiedSchool: boolean;
   /** Admins only; empty or omitted clears it. Ignored for other roles. */
   staffTitle?: string;
+  /** Omitted keeps the stored title; null clears it. */
+  honorific?: Honorific | null;
   /** Full admins only. null clears it (back to the built-in); omitted leaves it unchanged. */
   accessRoleId?: string | null;
 }

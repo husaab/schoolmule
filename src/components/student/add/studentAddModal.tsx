@@ -80,6 +80,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       address: values.address || null,
       healthCardNumber: values.healthCardNumber || null,
       medicalNotes: values.medicalNotes || null,
+      gender: values.gender || null,
       // Admins only: any other role's body must not carry the key at all.
       ...(canSetStudentEmail && values.studentEmail.trim() && { studentEmail: values.studentEmail.trim().toLowerCase() })
     };
