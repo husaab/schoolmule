@@ -277,6 +277,16 @@ describe('Publish to N students', () => {
     )
   })
 
+  it('says the parents are being emailed when the publish queued their emails', () => {
+    const nameOf = (id: string) => ({ s1: 'Amal', s2: 'Sami' })[id] ?? 'the student'
+    expect(publishOutcome({
+      publishedStudentIds: ['s1', 's2'], skipped: [], assessmentPublished: false, delivery: { batchId: 'b1', families: 2, noEmail: 0 },
+    }, nameOf).message).toBe('Published 2 grades. Emailing 2 families.')
+    expect(publishOutcome({
+      publishedStudentIds: ['s1'], skipped: [], assessmentPublished: true, delivery: { batchId: 'b1', families: 0, noEmail: 1 },
+    }, nameOf).message).toBe("Published Amal's grade.")
+  })
+
   it('reports what happened', () => {
     const nameOf = (id: string) => ({ s1: 'Amal', s2: 'Sami' })[id] ?? 'the student'
     expect(publishOutcome({ publishedStudentIds: ['s1'], skipped: [], assessmentPublished: true }, nameOf)).toEqual({

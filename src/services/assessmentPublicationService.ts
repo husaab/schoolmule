@@ -7,6 +7,8 @@ import {
   UnpublishResponse,
   PublicationHistoryResponse,
   UpdatePublicationCommentResponse,
+  BatchDeliveryResponse,
+  RetryDeliveryResponse,
 } from './types/assessmentPublication'
 
 const base = (classId: string) =>
@@ -58,7 +60,8 @@ export const sendPublishPreviewEmail = async (
 }
 
 /**
- * Publish assessments and email the affected guardians.
+ * Publish assessments; the affected guardians' emails are queued with it and
+ * sent shortly after (see getBatchDelivery).
  * POST /assessment-publications/classes/:classId/publish
  */
 export const publishAssessments = async (
@@ -118,4 +121,29 @@ export const getPublicationHistory = async (
   if (opts.offset != null) params.set('offset', String(opts.offset))
   const query = params.toString() ? `?${params.toString()}` : ''
   return apiClient<PublicationHistoryResponse>(`${base(classId)}/history${query}`)
+}
+
+/**
+ * Each family's email of one publish: queued, sent, failed or skipped.
+ * GET /assessment-publications/classes/:classId/batches/:batchId/delivery
+ */
+export const getBatchDelivery = async (
+  classId: string,
+  batchId: string
+): Promise<BatchDeliveryResponse> => {
+  return apiClient<BatchDeliveryResponse>(`${base(classId)}/batches/${encodeURIComponent(batchId)}/delivery`)
+}
+
+/**
+ * Send a publish's failed emails again, to the addresses on file now.
+ * POST /assessment-publications/classes/:classId/batches/:batchId/retry
+ */
+export const retryBatchEmails = async (
+  classId: string,
+  batchId: string
+): Promise<RetryDeliveryResponse> => {
+  return apiClient<RetryDeliveryResponse, Record<string, never>>(
+    `${base(classId)}/batches/${encodeURIComponent(batchId)}/retry`,
+    { method: 'POST', body: {} }
+  )
 }

@@ -9,6 +9,7 @@
 import { dayLabel } from '@/lib/classStream'
 import { classTitle } from '@/lib/classesHome'
 import type { GradePatch, GradeStatus, GradingCounts, GradingLabel, GradingRow, PublishGradesResult } from '@/services/types/grading'
+import { emailingLine } from '@/lib/emailDelivery'
 
 const TZ = 'America/Toronto'
 
@@ -439,8 +440,12 @@ export function publishOutcome(
   earlier: ReadonlySet<string> = new Set(),
 ): { tone: 'success' | 'info'; message: string } {
   const published = result.publishedStudentIds
+  // A queued publish says who it is emailing; an older server's in-request send, what failed.
+  const families = result.delivery?.families ?? 0
   const failedEmails = result.emailSummary?.failed ?? 0
-  const emailNote = failedEmails > 0 ? ` ${plural(failedEmails, "email didn't send", "emails didn't send")}.` : ''
+  const emailNote = families > 0
+    ? ` ${emailingLine(families)}.`
+    : failedEmails > 0 ? ` ${plural(failedEmails, "email didn't send", "emails didn't send")}.` : ''
   const noun = linked ? 'grade' : 'feedback'
   const leftOut = result.skipped.filter((s) => s.reason === 'draft_predates_work' || earlier.has(s.studentId))
   const leftOutNote =

@@ -153,7 +153,10 @@ export interface PublishGradesResult {
   skipped: { studentId: string; reason: PublishSkipReason }[]
   /** The column was published by this call (its first publish). */
   assessmentPublished: boolean
+  /** Servers from before the email queue: what was sent inside the request. */
   emailSummary?: GradingEmailSummary
+  /** What the publish queued for parents (null: nothing to email, e.g. no gradebook column). */
+  delivery?: { batchId: string | null; families: number; noEmail: number } | null
   /** Mark missing and Excuse: every student whose status changed. */
   updatedStudentIds?: string[]
 }

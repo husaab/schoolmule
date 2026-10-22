@@ -62,13 +62,62 @@ export interface PublishEmailSummary {
   notificationError?: string
 }
 
+/** What a publish queued: the parents' emails go out from the queue, not the request. */
+export interface PublishDelivery {
+  batchId: string
+  /** Students whose guardians get an email ("Emailing N families"). */
+  families: number
+  /** Students with no guardian email on file. */
+  noEmail: number
+}
+
 export interface PublishResult {
   batchId: string
   classId: string
   publishedAssessmentIds: string[]
   cascadedChildIds: string[]
   skippedUngradedChildIds: string[]
+  /** Servers from before the email queue omit it (they sent inside the request). */
+  delivery?: PublishDelivery
+  /** The old, sent-in-the-request summary; a queued publish fills it with placeholders. */
   emailSummary: PublishEmailSummary
+}
+
+/** One email's state: queued, sent, failed (Retry), or skipped (with why). */
+export type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export interface DeliveryRecipient {
+  email: string
+  status: DeliveryStatus
+  error: string | null
+  reason: string | null
+  sentAt: string | null
+}
+
+/** A student's emails: `status` is the worst of their addresses (queued, then failed). */
+export interface DeliveryStudent {
+  studentId: string
+  studentName: string | null
+  status: DeliveryStatus
+  /** Why nothing was sent (no guardian email on file, unpublished before it was sent…). */
+  reason: string | null
+  recipients: DeliveryRecipient[]
+}
+
+export interface BatchDelivery {
+  batchId: string
+  /** Per student. */
+  counts: Record<DeliveryStatus, number>
+  students: DeliveryStudent[]
+}
+
+export interface RetryDeliveryResult extends BatchDelivery {
+  /** Failed emails queued again. */
+  requeued: number
+  /** Addresses added since, now queued. */
+  added: number
+  /** Failed addresses no longer on file, dropped. */
+  dropped: number
 }
 
 export interface UnpublishResult {
@@ -85,7 +134,8 @@ export interface PublicationHistoryEntry {
   createdAt: string
   triggeredBy: { userId: string; name: string | null } | null
   assessments: { assessmentId: string; name: string; isParent: boolean }[]
-  emailSummary: { sent: number; failed: number; skipped: number }
+  /** Per student. `queued` publishes (since the email queue) also count what is still waiting. */
+  emailSummary: { sent: number; failed: number; skipped: number; pending?: number; queued?: boolean }
 }
 
 /** What a "send me a preview" produced. */
@@ -103,6 +153,8 @@ export type PublishPreviewResponse = AssessmentPublicationResponse<PublishPrevie
 export type PublishResponse = AssessmentPublicationResponse<PublishResult>
 export type UnpublishResponse = AssessmentPublicationResponse<UnpublishResult>
 export type PublicationHistoryResponse = AssessmentPublicationResponse<PublicationHistoryEntry[]>
+export type BatchDeliveryResponse = AssessmentPublicationResponse<BatchDelivery>
+export type RetryDeliveryResponse = AssessmentPublicationResponse<RetryDeliveryResult>
 export type UpdatePublicationCommentResponse = AssessmentPublicationResponse<{
   assessmentId: string
   comment: string | null

@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import { ClockIcon, PlusIcon } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import SavedPill from '@/components/gradebook/SavedPill'
 import GradebookWorkspace from '@/components/gradebook/workspace/GradebookWorkspace'
@@ -20,6 +20,7 @@ import SKGradebookWorkspace from '@/components/gradebook/workspace/SKGradebookWo
 import ReportCardCommentsWorkspace from '@/components/gradebook/workspace/ReportCardCommentsWorkspace'
 import ProgressCommentsWorkspace from '@/components/gradebook/workspace/ProgressCommentsWorkspace'
 import AssessmentsSection from '@/components/assessments/section/AssessmentsSection'
+import PublishHistoryModal from '@/components/gradebook/publish/PublishHistoryModal'
 import { useScoreAutosave, type AutosaveStatus } from '@/hooks/useScoreAutosave'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { useFilterParams } from '@/hooks/useFilterParams'
@@ -62,6 +63,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
 
   // The gradebook components take the class as /classes/:id returns it.
   const [loaded, setLoaded] = useState<LoadedClass | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const load = useCallback(() => {
     getClassById(classId).then(
       (res) => setLoaded({ classId, data: res.data, error: null }),
@@ -210,6 +212,14 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
           <SavedPill status={pillStatus} failedCount={failedCount} onRetry={retryAll} onDiscard={discardAll} />
           <button
             type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
+          >
+            <ClockIcon className="h-4 w-4" aria-hidden="true" />
+            Publish history
+          </button>
+          <button
+            type="button"
             onClick={() => void createAssessment()}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-cyan-600 px-3.5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
           >
@@ -236,6 +246,8 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
           <ProgressCommentsWorkspace classId={classId} classData={classData} onOpenSub={selectSub} />
         )}
       </div>
+
+      <PublishHistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} classId={classId} />
     </div>
   )
 }

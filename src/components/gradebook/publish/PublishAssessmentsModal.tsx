@@ -23,6 +23,8 @@ import {
 } from '@/services/assessmentPublicationService'
 import Spinner from '@/components/Spinner'
 import Modal from '@/components/shared/modal'
+import DeliveryList from '@/components/gradebook/publish/DeliveryList'
+import { emailingLine } from '@/lib/emailDelivery'
 
 interface PublishAssessmentsModalProps {
   isOpen: boolean
@@ -57,6 +59,11 @@ const allDrafts = (n: number) => (n === 1 ? 'the 1 draft' : `all ${n} drafts`)
  *
  * Built on the shared Modal, so a click outside or Escape closes it too —
  * except while a publish or unpublish is in flight.
+ *
+ * Publishing queues the parents' emails rather than sending them: the
+ * result says "Emailing N families" and lists each family's email as the
+ * queue sends it, with Retry for any that didn't send. Closing the window
+ * doesn't stop them.
  */
 const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
   isOpen,
@@ -243,7 +250,7 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
       closeOnEscape
       style="w-full max-w-2xl"
       maxHeightClass="max-h-[90vh]"
-      ariaLabel={result ? 'Publish results' : 'Publish'}
+      ariaLabel={result ? 'Published' : 'Publish'}
     >
       {/* Header (the Modal's own X sits top right) */}
       <div className="flex items-start justify-between gap-4 p-6 pr-14 border-b border-slate-100">
@@ -253,11 +260,13 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
           </span>
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-slate-900">
-              {result ? 'Publish results' : 'Publish'}
+              {result ? 'Published' : 'Publish'}
             </h2>
             <p className="text-sm text-slate-500">
               {result
-                ? `${result.emailSummary.sent} of ${result.emailSummary.attempted} notification${result.emailSummary.attempted === 1 ? '' : 's'} sent`
+                ? result.delivery
+                  ? 'Grades are live for students and parents.'
+                  : `${result.emailSummary.sent} of ${result.emailSummary.attempted} notification${result.emailSummary.attempted === 1 ? '' : 's'} sent`
                 : `${assessments.length} assessment${assessments.length === 1 ? '' : 's'} selected`}
             </p>
             {!result && (
@@ -281,7 +290,13 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
           </div>
         )}
 
-        {result ? (
+        {result?.delivery ? (
+          <DeliveryList
+            classId={classId}
+            batchId={result.delivery.batchId}
+            initialLine={emailingLine(result.delivery.families)}
+          />
+        ) : result ? (
           <ul className="divide-y divide-slate-100">
             {result.emailSummary.results.map((r) => (
               <li key={r.studentId} className="py-2.5 flex items-center justify-between gap-3">
