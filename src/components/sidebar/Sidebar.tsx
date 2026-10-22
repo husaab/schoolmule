@@ -557,10 +557,16 @@ const Sidebar = () => {
         </div>
       </nav>
 
-      {/* User Info Footer. For staff who are also parents it names the active
-          view and carries the switch; this is the only placement on phones. */}
+      {/* User Info Footer. The card opens Settings (photo, avatar, password).
+          For staff who are also parents it names the active view and carries
+          the switch; this is the only placement on phones. */}
       <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
-        <div className="flex items-center gap-3">
+        <Link
+          href="/settings"
+          title="Profile and settings"
+          aria-current={pathname === '/settings' ? 'page' : undefined}
+          className="-m-2 flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+        >
           <Avatar
             name={user.fullName || user.username || 'You'}
             avatar={user.avatar}
@@ -577,7 +583,7 @@ const Sidebar = () => {
                 : staffLabel}
             </p>
           </div>
-        </div>
+        </Link>
         <ViewSwitcher variant="card" />
       </div>
     </aside>
