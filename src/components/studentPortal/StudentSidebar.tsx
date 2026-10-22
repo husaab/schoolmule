@@ -157,7 +157,7 @@ function StudentUserCard() {
   return (
     <div ref={cardRef} className="relative shrink-0 border-t border-slate-100 p-4">
       <div className="flex items-center gap-3">
-        <Avatar name={name || 'You'} avatar={shownAvatar} photoUrl={photoUrl} size={40} />
+        <Avatar student name={name || 'You'} avatar={shownAvatar} photoUrl={photoUrl} size={40} />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-slate-900">{name}</span>
           <span className="truncate text-xs text-slate-500">
@@ -226,6 +226,7 @@ function StudentUserCard() {
         title="Your avatar"
         subtitle="Your teachers see it next to your name."
         name={name}
+        student
         value={ownAvatar}
         onSave={save}
       />

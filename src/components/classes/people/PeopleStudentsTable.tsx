@@ -45,7 +45,7 @@ export default function PeopleStudentsTable({ students, busyId, onAction, canEdi
             return (
               <div key={student.studentId} role="row" className={`${GRID} border-t border-slate-100 py-2.5 text-sm`}>
                 <span className="flex min-w-0 items-center gap-3">
-                  <Avatar name={student.name} avatar={student.avatar} photoUrl={student.photoUrl} size={38} />
+                  <Avatar student name={student.name} avatar={student.avatar} photoUrl={student.photoUrl} size={38} />
                   <span className="truncate font-medium text-slate-900">{student.name}</span>
                 </span>
                 <span className="min-w-0">

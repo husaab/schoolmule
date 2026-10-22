@@ -5,7 +5,7 @@
 'use client'
 
 import { useId } from 'react'
-import { AVATAR_BGS, AVATAR_SKINS, AVATAR_STYLES } from '@/lib/avatar'
+import { AVATAR_BGS, AVATAR_SKINS, AVATAR_SKIN_ORDER, AVATAR_STYLES } from '@/lib/avatar'
 import type { AvatarSpec } from '@/services/types/profile'
 import Avatar from './Avatar'
 
@@ -77,7 +77,8 @@ export default function AvatarPicker({
             Skin tone
           </span>
           <div className="flex flex-wrap gap-2.5" role="group" aria-labelledby={`${id}-skin`}>
-            {AVATAR_SKINS.map((skin, i) => {
+            {AVATAR_SKIN_ORDER.map((i) => {
+              const skin = AVATAR_SKINS[i]
               const on = value.skin === i
               return (
                 <button
@@ -85,7 +86,7 @@ export default function AvatarPicker({
                   type="button"
                   aria-label={skin.label}
                   aria-pressed={on}
-                  onClick={() => onChange({ ...value, skin: i as AvatarSpec['skin'] })}
+                  onClick={() => onChange({ ...value, skin: i })}
                   style={{ backgroundColor: skin.hex }}
                   className={`h-11 w-11 cursor-pointer rounded-full border-[3px] p-0 ring-1 ring-slate-200 ${
                     on ? selectedRing : 'border-white'

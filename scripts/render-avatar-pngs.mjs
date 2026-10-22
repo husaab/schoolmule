@@ -1,5 +1,5 @@
 // scripts/render-avatar-pngs.mjs
-// Renders every avatar (6 styles x 5 skin tones x 8 backgrounds) plus the
+// Renders every avatar (6 styles x 6 skin tones x 8 backgrounds) plus the
 // neutral one to 96x96 PNGs in public/email/avatars/, for emails, which can't
 // draw inline SVG. The drawing comes from src/lib/avatar.ts, the same code
 // the app renders with, so the two can't drift. Re-run after changing

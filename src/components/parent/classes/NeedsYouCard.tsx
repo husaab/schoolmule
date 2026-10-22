@@ -63,7 +63,7 @@ export default function NeedsYouCard({ items, kids, onGotIt, onAsk, phoneChildId
               <span className="flex min-w-0 items-center gap-3">
                 <span className="flex shrink-0 -space-x-2">
                   {about.slice(0, 2).map((c) => (
-                    <Avatar key={c.studentId} name={c.name} avatar={c.avatar} photoUrl={c.photoUrl} size={28} className="ring-2 ring-white" />
+                    <Avatar student key={c.studentId} name={c.name} avatar={c.avatar} photoUrl={c.photoUrl} size={28} className="ring-2 ring-white" />
                   ))}
                 </span>
                 <span className="flex min-w-0 flex-col">
@@ -87,7 +87,7 @@ export default function NeedsYouCard({ items, kids, onGotIt, onAsk, phoneChildId
             className={`flex-wrap items-center justify-between gap-3 rounded-[14px] border border-rose-200 bg-white px-3.5 py-3 ${hiddenOnPhone ? 'hidden md:flex' : 'flex'}`}
           >
             <span className="flex min-w-0 items-center gap-3">
-              <Avatar name={kid?.name ?? 'Child'} avatar={kid?.avatar ?? null} photoUrl={kid?.photoUrl} size={28} />
+              <Avatar student name={kid?.name ?? 'Child'} avatar={kid?.avatar ?? null} photoUrl={kid?.photoUrl} size={28} />
               <span className="flex min-w-0 flex-col">
                 {item.itemId ? (
                   <Link href={parentItemHref(item.studentId, item.itemId)} className="text-[15px] font-medium text-slate-900 hover:underline">

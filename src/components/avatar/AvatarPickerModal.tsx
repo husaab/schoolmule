@@ -22,6 +22,8 @@ interface AvatarPickerModalProps {
   onSave: (avatar: AvatarSpec) => Promise<void>
   /** Whose avatar this is, shown under the preview. */
   name?: string
+  /** A student's: with no saved avatar the picker starts on the light pink one their name draws. */
+  student?: boolean
   photosAllowed?: boolean
   /** "Use a photo instead": the modal closes first. */
   onUsePhoto?: () => void
@@ -35,10 +37,11 @@ export default function AvatarPickerModal({
   value,
   onSave,
   name,
+  student = false,
   photosAllowed = false,
   onUsePhoto,
 }: AvatarPickerModalProps) {
-  const start = (): AvatarSpec => (isAvatarSpec(value) ? value : drawnAvatar(name) ?? DEFAULT_AVATAR)
+  const start = (): AvatarSpec => (isAvatarSpec(value) ? value : drawnAvatar(name, { student }) ?? DEFAULT_AVATAR)
   const [draft, setDraft] = useState<AvatarSpec>(start)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

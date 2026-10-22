@@ -54,7 +54,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tabs = PROFILE_T
             condensed ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
           }`}
         >
-          <Avatar name={student.name} avatar={avatar} photoUrl={student.photoUrl} size={32} />
+          <Avatar student name={student.name} avatar={avatar} photoUrl={student.photoUrl} size={32} />
           <p className="truncate font-semibold text-slate-900">{student.name}</p>
           <span className="hidden flex-shrink-0 rounded-md bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-700 sm:inline">{gradeLabel}</span>
           {archived && <span className="flex-shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">Archived</span>}
@@ -64,7 +64,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ student, tabs = PROFILE_T
       <div className="relative flex flex-col gap-5 border-b border-slate-100 bg-gradient-to-br from-cyan-50 via-white to-teal-50 py-6 pl-5 pr-14 sm:pl-6 md:flex-row md:items-center md:justify-between md:pr-16">
         <div ref={sentinel} className="pointer-events-none absolute inset-x-0 bottom-14 h-px" />
         <div className="flex min-w-0 items-center gap-4">
-          <Avatar name={student.name} avatar={avatar} photoUrl={student.photoUrl} size={64} className="shadow-sm ring-4 ring-white" />
+          <Avatar student name={student.name} avatar={avatar} photoUrl={student.photoUrl} size={64} className="shadow-sm ring-4 ring-white" />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-bold text-slate-900">{student.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">

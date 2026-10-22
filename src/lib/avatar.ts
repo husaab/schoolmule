@@ -33,8 +33,15 @@ const data = shapesData as unknown as {
 /** The styles in picker order. */
 export const AVATAR_STYLES: { id: AvatarStyle; label: string }[] = data.styles.map(({ id, label }) => ({ id, label }))
 
-/** Skin tones, light to dark; an avatar's `skin` is an index into this list. */
+/**
+ * Skin tones; an avatar's `skin` is an index into this list. Append-only, so
+ * a saved avatar keeps its tone when one is added: the list is not in
+ * lightness order, AVATAR_SKIN_ORDER is.
+ */
 export const AVATAR_SKINS: { hex: string; label: string }[] = data.skins.map(([hex, label]) => ({ hex, label }))
+
+/** The skin tones light to dark, as the picker shows them (indexes into AVATAR_SKINS). */
+export const AVATAR_SKIN_ORDER: AvatarSpec['skin'][] = [5, 0, 1, 2, 3, 4]
 
 /** Backgrounds; `ink` colors the shirt and the hijab scarf. An avatar's `bg` indexes this list. */
 export const AVATAR_BGS: { bg: string; ink: string; label: string }[] = data.bgs.map(([bg, ink, label]) => ({

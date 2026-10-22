@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AVATAR_BGS,
   AVATAR_SKINS,
+  AVATAR_SKIN_ORDER,
   AVATAR_STYLES,
   DEFAULT_AVATAR,
   avatarSvgString,
@@ -15,7 +16,7 @@ import {
 // keeps the same style list in utils/avatar.js and validates against it.
 
 const STYLE_IDS = ['short', 'long', 'hijab', 'kufi', 'beard', 'curly'] as const
-const SKINS = [0, 1, 2, 3, 4] as const
+const SKINS = [0, 1, 2, 3, 4, 5] as const
 const BGS = [0, 1, 2, 3, 4, 5, 6, 7] as const
 const allSpecs: AvatarSpec[] = STYLE_IDS.flatMap((style) =>
   SKINS.flatMap((skin) => BGS.map((bg) => ({ style, skin, bg }))),
@@ -35,12 +36,18 @@ describe('avatar constants', () => {
     ])
   })
 
-  it('lists five skin tones and eight backgrounds', () => {
-    expect(AVATAR_SKINS.map((s) => s.hex)).toEqual(['#f1c9a5', '#d9a77c', '#b5835a', '#8d5a3b', '#6b4226'])
-    expect(AVATAR_SKINS.map((s) => s.label)).toEqual(['Light', 'Medium light', 'Medium', 'Medium dark', 'Dark'])
+  it('lists six skin tones and eight backgrounds', () => {
+    // Append-only: a saved avatar's `skin` is an index, so a new tone goes last.
+    expect(AVATAR_SKINS.map((s) => s.hex)).toEqual(['#f1c9a5', '#d9a77c', '#b5835a', '#8d5a3b', '#6b4226', '#f6d3c4'])
+    expect(AVATAR_SKINS.map((s) => s.label)).toEqual(['Light', 'Medium light', 'Medium', 'Medium dark', 'Dark', 'Light pink'])
     expect(AVATAR_BGS.map((b) => b.label)).toEqual(['Mint', 'Blue', 'Pink', 'Sun', 'Lime', 'Indigo', 'Peach', 'Slate'])
     expect(AVATAR_BGS[0]).toEqual({ bg: '#ccfbf1', ink: '#0f766e', label: 'Mint' })
     expect(AVATAR_BGS[7]).toEqual({ bg: '#e2e8f0', ink: '#334155', label: 'Slate' })
+  })
+
+  it('shows the skin tones light to dark in the picker, light pink first', () => {
+    expect(AVATAR_SKIN_ORDER).toEqual([5, 0, 1, 2, 3, 4])
+    expect([...AVATAR_SKIN_ORDER].sort()).toEqual(AVATAR_SKINS.map((_, i) => i))
   })
 
   it('starts the picker on the board default (short, medium light, blue)', () => {
@@ -106,7 +113,7 @@ describe('resolveShapes', () => {
   it('shows the neutral avatar for anything that is not a valid avatar', () => {
     const bad = [
       { style: 'mohawk', skin: 0, bg: 0 },
-      { style: 'short', skin: 5, bg: 0 },
+      { style: 'short', skin: 6, bg: 0 },
       { style: 'short', skin: 0, bg: 8 },
       { style: 'short', skin: -1, bg: 0 },
       { style: 'short', skin: 1.5, bg: 0 },
@@ -130,9 +137,9 @@ describe('resolveShapes', () => {
 
 describe('isAvatarSpec', () => {
   it('accepts exactly the valid values', () => {
-    expect(isAvatarSpec({ style: 'curly', skin: 4, bg: 7 })).toBe(true)
+    expect(isAvatarSpec({ style: 'curly', skin: 5, bg: 7 })).toBe(true)
     expect(isAvatarSpec({ style: 'curly', skin: 0, bg: 0 })).toBe(true)
-    expect(isAvatarSpec({ style: 'curly', skin: 5, bg: 0 })).toBe(false)
+    expect(isAvatarSpec({ style: 'curly', skin: 6, bg: 0 })).toBe(false)
     expect(isAvatarSpec({ style: 'bald', skin: 0, bg: 0 })).toBe(false)
     expect(isAvatarSpec(null)).toBe(false)
     expect(isAvatarSpec(undefined)).toBe(false)
@@ -158,8 +165,8 @@ describe('avatarSvgString', () => {
     expect(svg).toContain('#f1f5f9')
   })
 
-  it('differs for every one of the 240 avatars', () => {
-    expect(new Set(allSpecs.map((s) => avatarSvgString(s))).size).toBe(240)
+  it('differs for every one of the 288 avatars', () => {
+    expect(new Set(allSpecs.map((s) => avatarSvgString(s))).size).toBe(288)
   })
 })
 

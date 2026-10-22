@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isAvatarSpec } from './avatar'
-import { drawnAvatar, studentAvatar } from './studentAvatar'
+import { STUDENT_SKIN, drawnAvatar, studentAvatar } from './studentAvatar'
 
 const girls = ['Fatima', 'Zahraa', 'Maryam', 'Zeinab', 'Batoul', 'Noor', 'Emily'].flatMap((first) =>
   Array.from({ length: 30 }, (_, i) => `${first} Example ${i}`),
@@ -23,11 +23,20 @@ describe('studentAvatar', () => {
     expect(studentAvatar({ name: '  fatima   EXAMPLE ' })).toEqual(studentAvatar({ name: 'Fatima Example' }))
   })
 
-  it('draws only valid avatars, spread across skin tones and backgrounds', () => {
+  it('draws only valid avatars, every student in light pink, spread across backgrounds', () => {
     const avatars = [...girls, ...boys].map((name) => studentAvatar({ name })!)
     for (const avatar of avatars) expect(isAvatarSpec(avatar)).toBe(true)
-    expect(new Set(avatars.map((a) => a.skin)).size).toBe(5)
+    expect(new Set(avatars.map((a) => a.skin))).toEqual(new Set([STUDENT_SKIN]))
     expect(new Set(avatars.map((a) => a.bg)).size).toBe(8)
+  })
+
+  it('spreads adults over the original five tones, never light pink, unchanged from before', () => {
+    const adults = [...girls, ...boys].map((name) => drawnAvatar(name)!)
+    expect(new Set(adults.map((a) => a.skin))).toEqual(new Set([0, 1, 2, 3, 4]))
+    expect(drawnAvatar('Maryam Example')).toEqual({ style: 'hijab', skin: 2, bg: 1 })
+    expect(drawnAvatar('Hassan Example')).toEqual({ style: 'short', skin: 4, bg: 5 })
+    expect(drawnAvatar('Fatima Example')).toEqual({ style: 'hijab', skin: 0, bg: 5 })
+    expect(drawnAvatar('Ali Example')).toEqual({ style: 'short', skin: 3, bg: 1 })
   })
 
   it('shows the neutral avatar when the name does not say girl or boy', () => {
@@ -51,8 +60,10 @@ describe('studentAvatar', () => {
     expect(drawnAvatar('Maryam Example')?.style).toBe('hijab')
     expect(drawnAvatar('Hassan Example')?.style).toBe('short')
     expect(drawnAvatar('Hassan Example')).toEqual(drawnAvatar(' hassan  EXAMPLE'))
-    expect(drawnAvatar('Fatima Example')).toEqual(studentAvatar({ name: 'Fatima Example' }))
+    expect(drawnAvatar('Fatima Example', { student: true })).toEqual(studentAvatar({ name: 'Fatima Example' }))
+    expect(drawnAvatar('Fatima Example', { student: true })).toEqual({ ...drawnAvatar('Fatima Example'), skin: STUDENT_SKIN })
     expect(drawnAvatar('Teacher One')).toBeNull()
+    expect(drawnAvatar('Test Student', { student: true })).toBeNull()
     expect(drawnAvatar(null)).toBeNull()
   })
 })

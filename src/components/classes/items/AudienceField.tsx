@@ -109,7 +109,7 @@ export default function AudienceField({ classId, studentCount, audience, student
                     onChange={() => toggle(s.studentId)}
                     className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-cyan-600"
                   />
-                  <Avatar name={s.name} avatar={s.avatar} photoUrl={s.photoUrl} size={26} />
+                  <Avatar student name={s.name} avatar={s.avatar} photoUrl={s.photoUrl} size={26} />
                   <span className="min-w-0 flex-1 truncate">{s.name}</span>
                 </label>
               </li>

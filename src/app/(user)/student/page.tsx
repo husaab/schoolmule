@@ -99,7 +99,7 @@ export default function StudentHomePage() {
               aria-label="Change your avatar"
               className="shrink-0 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-default md:hidden"
             >
-              <Avatar name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} />
+              <Avatar student name={name} avatar={ownAvatar ?? data.student.avatar} photoUrl={photoUrl} size={44} />
             </button>
           </div>
 
@@ -137,6 +137,7 @@ export default function StudentHomePage() {
         title="Your avatar"
         subtitle="Your teachers see it next to your name."
         name={name}
+        student
         value={ownAvatar}
         onSave={save}
       />

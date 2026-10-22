@@ -285,7 +285,7 @@ const StudentsContent = () => {
                                                 >
                                                     <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50 px-4 py-3 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         <div className="flex items-center gap-2">
-                                                            <Avatar name={student.name} avatar={studentAvatar(student)} photoUrl={student.photoUrl} size={32} />
+                                                            <Avatar student name={student.name} avatar={studentAvatar(student)} photoUrl={student.photoUrl} size={32} />
                                                             <div>
                                                                 <StudentNameLink
                                                                     studentId={student.studentId}

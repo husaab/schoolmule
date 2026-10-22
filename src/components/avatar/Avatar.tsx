@@ -2,7 +2,8 @@
 // The one way a person is pictured in SchoolMule: their photo when they have
 // one, otherwise the illustrated avatar they picked (style, skin tone,
 // background), otherwise one drawn from their name (lib/studentAvatar), else
-// the neutral one. Never initials. `neutral` forces the neutral avatar.
+// the neutral one. Never initials. `neutral` forces the neutral avatar;
+// `student` draws a student's (light pink) rather than an adult's.
 'use client'
 
 import { createElement, useState } from 'react'
@@ -21,9 +22,11 @@ interface AvatarProps {
   className?: string
   /** No pick shows the blank neutral avatar rather than one drawn from the name. */
   neutral?: boolean
+  /** A student: with no pick, draw the student avatar (light pink skin). */
+  student?: boolean
 }
 
-export default function Avatar({ name, avatar = null, photoUrl = null, size = 32, className = '', neutral = false }: AvatarProps) {
+export default function Avatar({ name, avatar = null, photoUrl = null, size = 32, className = '', neutral = false, student = false }: AvatarProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   // Server names can be missing (a removed sender): never let that throw.
   const label = (name ?? '').trim() || 'Avatar'
@@ -60,7 +63,7 @@ export default function Avatar({ name, avatar = null, photoUrl = null, size = 32
       aria-label={label}
       className={`${box} overflow-hidden`}
     >
-      {resolveShapes(isAvatarSpec(avatar) ? avatar : neutral ? null : drawnAvatar(name)).map((shape, i) =>
+      {resolveShapes(isAvatarSpec(avatar) ? avatar : neutral ? null : drawnAvatar(name, { student })).map((shape, i) =>
         createElement(shape.tag, { key: i, ...reactAttrs(shape.attrs) })
       )}
     </svg>

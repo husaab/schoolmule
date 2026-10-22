@@ -1,5 +1,5 @@
 {
-  "skins": [["#f1c9a5", "Light"], ["#d9a77c", "Medium light"], ["#b5835a", "Medium"], ["#8d5a3b", "Medium dark"], ["#6b4226", "Dark"]],
+  "skins": [["#f1c9a5", "Light"], ["#d9a77c", "Medium light"], ["#b5835a", "Medium"], ["#8d5a3b", "Medium dark"], ["#6b4226", "Dark"], ["#f6d3c4", "Light pink"]],
   "bgs": [["#ccfbf1", "#0f766e", "Mint"], ["#dbeafe", "#1d4ed8", "Blue"], ["#fce7f3", "#be185d", "Pink"], ["#fef3c7", "#b45309", "Sun"], ["#ecfccb", "#4d7c0f", "Lime"], ["#e0e7ff", "#4338ca", "Indigo"], ["#ffedd5", "#c2410c", "Peach"], ["#e2e8f0", "#334155", "Slate"]],
   "styles": [
     {

@@ -6,8 +6,8 @@ export type AvatarStyle = 'short' | 'long' | 'hijab' | 'kufi' | 'beard' | 'curly
 /** An illustrated avatar. A person with no avatar (null) shows the neutral one. */
 export interface AvatarSpec {
   style: AvatarStyle
-  /** Index into the five skin tones, light to dark. */
-  skin: 0 | 1 | 2 | 3 | 4
+  /** Index into the six skin tones (AVATAR_SKINS; light-to-dark order is AVATAR_SKIN_ORDER). */
+  skin: 0 | 1 | 2 | 3 | 4 | 5
   /** Index into the eight background colors. */
   bg: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 }

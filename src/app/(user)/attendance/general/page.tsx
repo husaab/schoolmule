@@ -329,7 +329,7 @@ function GeneralAttendanceContent() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <Avatar name={student.name} avatar={student.avatar} photoUrl={student.photoUrl} size={36} />
+                              <Avatar student name={student.name} avatar={student.avatar} photoUrl={student.photoUrl} size={36} />
                               <div>
                                 <p className="font-medium text-slate-900"><StudentNameLink studentId={student.studentId}>{student.name}</StudentNameLink></p>
                                 <p className="text-slate-500 text-sm">Grade {student.grade}</p>

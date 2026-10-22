@@ -104,7 +104,7 @@ export default function ParentClassesOverview({ onOpenChild }: ParentClassesOver
                       on ? 'border-amber-200 bg-amber-50 font-medium text-slate-900' : 'border-stone-200 bg-white text-slate-700'
                     }`}
                   >
-                    <Avatar name={k.name} avatar={k.avatar} photoUrl={k.photoUrl} size={32} />
+                    <Avatar student name={k.name} avatar={k.avatar} photoUrl={k.photoUrl} size={32} />
                     {firstNameOf(k.name)}
                   </button>
                 )

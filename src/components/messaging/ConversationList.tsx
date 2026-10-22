@@ -72,7 +72,7 @@ const Row: React.FC<{
         <span className={`mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ${unread ? t.badge : 'bg-slate-200'}`} aria-hidden />
       ) : (
         // The student's pick when the server sends it (M7), else the neutral one.
-        <Avatar name={item.studentName} avatar={item.studentAvatar ?? null} photoUrl={item.studentPhotoUrl} size={36} />
+        <Avatar student name={item.studentName} avatar={item.studentAvatar ?? null} photoUrl={item.studentPhotoUrl} size={36} />
       )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">

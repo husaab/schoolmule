@@ -158,7 +158,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
     <div className={`group flex items-end gap-2.5 ${mine ? 'flex-row-reverse' : ''}`}>
       {!mine && (
         <span title={senderLabel} className="flex flex-shrink-0">
-          <Avatar name={message.senderName} avatar={message.senderAvatar} photoUrl={message.senderPhotoUrl} size={32} />
+          <Avatar student={message.senderRole === 'STUDENT'} name={message.senderName} avatar={message.senderAvatar} photoUrl={message.senderPhotoUrl} size={32} />
         </span>
       )}
       <div className={`flex max-w-[78%] flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>

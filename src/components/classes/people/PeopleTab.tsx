@@ -326,6 +326,7 @@ const PeopleTab: FC<ClassTabProps> = ({ classId, data: page }) => {
         title={avatarFor ? `Change avatar for ${avatarFor.name}` : 'Change avatar'}
         subtitle={avatarFor ? avatarPickerSubtitle(avatarFor) : undefined}
         name={avatarFor?.name}
+        student
         value={avatarFor?.avatar ?? null}
         onSave={saveAvatar}
       />

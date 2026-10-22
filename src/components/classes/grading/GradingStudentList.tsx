@@ -79,7 +79,7 @@ export default function GradingStudentList({ rows, counts, filter, onFilter, sel
                   selected ? 'bg-cyan-50' : 'hover:bg-slate-50'
                 }`}
               >
-                <Avatar name={row.name} avatar={row.avatar} photoUrl={row.photoUrl} size={36} />
+                <Avatar student name={row.name} avatar={row.avatar} photoUrl={row.photoUrl} size={36} />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex items-center gap-1.5 truncate text-sm font-medium text-slate-900">
                     <span className="truncate">{row.name}</span>
