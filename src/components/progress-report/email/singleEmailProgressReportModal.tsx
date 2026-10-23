@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/components/shared/modal';
+import ReportEmailProgress from '@/components/report-emails/ReportEmailProgress';
 import { EnvelopeIcon, PaperAirplaneIcon, UserIcon, ChatBubbleLeftRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { sendReportEmail, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview, validateEmailAddresses } from '@/services/reportEmailService';
 import { getStudentById } from '@/services/studentService';
@@ -36,6 +37,8 @@ export default function SingleEmailProgressReportModal({
   
   // UI state
   const [loading, setLoading] = useState(false);
+  // The queued send this window follows once Send is pressed.
+  const [runId, setRunId] = useState<string | null>(null);
   const [fetchingStudent, setFetchingStudent] = useState(true);
   const [student, setStudent] = useState<StudentPayload | null>(null);
   
@@ -92,6 +95,7 @@ export default function SingleEmailProgressReportModal({
   }, [isOpen, studentId, fetchStudentData]);
 
   const resetForm = () => {
+    setRunId(null);
     setEmailAddresses([]);
     setCcAddresses([]);
     setCustomHeader('');
@@ -164,7 +168,10 @@ export default function SingleEmailProgressReportModal({
 
       const response = await sendReportEmail(payload);
 
-      if (response.status === 'success') {
+      if (response.status === 'queued' && 'runId' in response) {
+        // Queued: the email goes out from the server's queue at once; this window follows it.
+        setRunId(response.runId);
+      } else if (response.status === 'success') {
         showNotification(`Progress report email sent successfully to ${emailAddresses.length} recipient${emailAddresses.length > 1 ? 's' : ''}`, 'success');
         onEmailSent?.();
         onClose();
@@ -199,7 +206,20 @@ export default function SingleEmailProgressReportModal({
 
         {/* Content */}
         <div className="text-black">
-          {fetchingStudent ? (
+          {runId ? (
+            <div className="space-y-6">
+              <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailSent} />
+              <div className="flex justify-end border-t border-gray-200 pt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : fetchingStudent ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-gray-600">Loading student information...</span>

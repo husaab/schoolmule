@@ -5,7 +5,9 @@ import {
   ReportEmailResponse,
   BulkReportEmailResponse,
   ReportEmailHistoryResponse,
-  StudentEmailHistoryResponse
+  StudentEmailHistoryResponse,
+  ReportEmailRunResponse,
+  ReportEmailRunsResponse
 } from "./types/reportEmails";
 
 /**
@@ -34,6 +36,40 @@ export const sendBulkReportEmails = async (
     headers: { 'Content-Type': 'application/json' },
     body: payload
   });
+};
+
+/**
+ * One send's emails, student by student (it is queued; follow it while any wait).
+ * GET /api/report-emails/runs/:runId
+ */
+export const getReportEmailRun = async (runId: string): Promise<ReportEmailRunResponse> => {
+  return apiClient<ReportEmailRunResponse>(`/report-emails/runs/${encodeURIComponent(runId)}`);
+};
+
+/**
+ * Send a send's failed emails again (to the parents on file now).
+ * POST /api/report-emails/runs/:runId/retry
+ */
+export const retryReportEmailRun = async (runId: string): Promise<ReportEmailRunResponse> => {
+  return apiClient<ReportEmailRunResponse, Record<string, never>>(`/report-emails/runs/${encodeURIComponent(runId)}/retry`, {
+    method: 'POST',
+    body: {}
+  });
+};
+
+/**
+ * The school's latest sends with their counts, newest first.
+ * GET /api/report-emails/runs?reportType=&term=&limit=
+ */
+export const listReportEmailRuns = async (
+  opts: { reportType?: 'progress_report' | 'report_card'; term?: string; limit?: number } = {}
+): Promise<ReportEmailRunsResponse> => {
+  const params = new URLSearchParams();
+  if (opts.reportType) params.set('reportType', opts.reportType);
+  if (opts.term) params.set('term', opts.term);
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return apiClient<ReportEmailRunsResponse>(`/report-emails/runs${query}`);
 };
 
 /**

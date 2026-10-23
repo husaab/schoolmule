@@ -53,3 +53,25 @@ export function studentDeliveryLabel(student: DeliveryStudent): { tone: Delivery
 
 /** The failed emails a Retry would send again. */
 export const failedCount = (counts: DeliveryCounts | null | undefined): number => counts?.failed ?? 0
+
+const reportNoun = (reportType: 'progress_report' | 'report_card', n: number) =>
+  `${reportType === 'progress_report' ? 'progress report' : 'report card'}${n === 1 ? '' : 's'}`
+
+/**
+ * A report card send's progress, per student: "Sending report cards · 37 of
+ * 83" while any wait, then "Sent 82 report cards · 1 didn't send", with how
+ * many had nothing to send (no report, no parent email). `pct` fills the bar.
+ */
+export function sendProgress(counts: DeliveryCounts, reportType: 'progress_report' | 'report_card') {
+  const total = counts.pending + counts.sent + counts.failed + counts.skipped
+  const done = total - counts.pending
+  const pct = total === 0 ? 100 : Math.round((done / total) * 100)
+  const skipped = counts.skipped > 0 ? ` · ${counts.skipped} not sent` : ''
+  const failed = counts.failed > 0 ? ` · ${counts.failed} didn't send` : ''
+  const line = counts.pending > 0
+    ? `Sending ${reportNoun(reportType, total)} · ${done} of ${total}`
+    : counts.sent > 0
+      ? `Sent ${counts.sent} ${reportNoun(reportType, counts.sent)}${failed}${skipped}`
+      : `Nothing sent${failed}${skipped}`
+  return { done, total, pct, line, finished: counts.pending === 0 }
+}

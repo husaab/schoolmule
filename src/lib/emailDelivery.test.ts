@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deliveryLine, emailingLine, failedCount, familiesLabel, isDelivering, studentDeliveryLabel } from './emailDelivery'
+import { deliveryLine, emailingLine, failedCount, familiesLabel, isDelivering, sendProgress, studentDeliveryLabel } from './emailDelivery'
 import type { DeliveryStudent } from '@/services/types/assessmentPublication'
 
 const counts = (c: Partial<Record<'pending' | 'sent' | 'failed' | 'skipped', number>>) => ({
@@ -47,5 +47,17 @@ describe('emailDelivery', () => {
     expect(studentDeliveryLabel(student({ status: 'failed', recipients: [recipient('b@example.com', 'failed')] })).text).toBe("Didn't send")
     expect(studentDeliveryLabel(student({ status: 'skipped', reason: 'No guardian email on file' })).text).toBe('No guardian email on file')
     expect(studentDeliveryLabel(student({ status: 'skipped' })).text).toBe('Not sent')
+  })
+
+  it("says how far a report card send is, then what went and what didn't", () => {
+    expect(sendProgress(counts({ pending: 46, sent: 35, failed: 1, skipped: 1 }), 'report_card')).toEqual({
+      done: 37, total: 83, pct: 45, line: 'Sending report cards · 37 of 83', finished: false,
+    })
+    expect(sendProgress(counts({ sent: 81, failed: 1, skipped: 1 }), 'report_card').line).toBe(
+      "Sent 81 report cards · 1 didn't send · 1 not sent",
+    )
+    expect(sendProgress(counts({ sent: 1 }), 'progress_report')).toMatchObject({ line: 'Sent 1 progress report', pct: 100, finished: true })
+    expect(sendProgress(counts({ skipped: 2 }), 'report_card').line).toBe('Nothing sent · 2 not sent')
+    expect(sendProgress(counts({ pending: 1 }), 'progress_report').line).toBe('Sending progress report · 0 of 1')
   })
 })

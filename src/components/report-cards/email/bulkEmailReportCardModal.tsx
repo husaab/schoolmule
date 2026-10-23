@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/modal';
+import ReportEmailProgress from '@/components/report-emails/ReportEmailProgress';
 import { PaperAirplaneIcon, UsersIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, FunnelIcon } from '@heroicons/react/24/outline';
-import { sendBulkReportEmails, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview } from '@/services/reportEmailService';
+import { sendBulkReportEmails, listReportEmailRuns, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendBulkReportEmailPayload, BulkReportEmailResponse, BulkReportEmailResult } from '@/services/types/reportEmails';
 import { getGradeNumericValue } from '@/lib/schoolUtils';
@@ -52,6 +53,10 @@ export default function BulkEmailReportCardModal({
 
   // UI state
   const [loading, setLoading] = useState(false);
+  // The queued send this window follows: the one just made, or one still
+  // going when the window was opened (closing never stops a send).
+  const [runId, setRunId] = useState<string | null>(null);
+  const [resumed, setResumed] = useState(false);
   const [results, setResults] = useState<BulkReportEmailResult[] | null>(null);
   const [summary, setSummary] = useState<{ total: number; sent: number; failed: number; duration: string } | null>(null);
 
@@ -88,9 +93,29 @@ export default function BulkEmailReportCardModal({
       setCcInput('');
       setResults(null);
       setSummary(null);
+      setRunId(null);
+      setResumed(false);
       // Reset selections
       setSelectedStudentIds([]);
     }
+  }, [isOpen, term]);
+
+  // A send of this term still going (the window was closed mid-send): follow it.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    let cancelled = false;
+    listReportEmailRuns({ reportType: 'report_card', term, limit: 1 })
+      .then((res) => {
+        const latest = res.data?.[0];
+        if (!cancelled && latest && latest.counts.pending > 0) {
+          setRunId(latest.runId);
+          setResumed(true);
+        }
+      })
+      .catch(() => { /* nothing to resume */ });
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, term]);
 
   const handleCcInputChange = (value: string) => {
@@ -191,7 +216,15 @@ export default function BulkEmailReportCardModal({
 
       const response: BulkReportEmailResponse = await sendBulkReportEmails(payload);
 
-      if (response.status === 'completed') {
+      if (response.status === 'queued') {
+        // Queued: the emails go out from the server's queue now; this window follows them.
+        setRunId(response.runId);
+        const { queued, skipped } = response.summary;
+        showNotification(
+          `Sending ${queued} report card email${queued === 1 ? '' : 's'}${skipped ? ` · ${skipped} with nothing to send` : ''}`,
+          'success'
+        );
+      } else if (response.status === 'completed') {
         setResults(response.results);
         setSummary(response.summary);
 
@@ -251,7 +284,34 @@ export default function BulkEmailReportCardModal({
 
         {/* Content */}
         <div className="text-black">
-          {results ? (
+          {runId ? (
+            <div className="space-y-6">
+              {resumed && (
+                <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                  A send for {term} is still going. It keeps going if you close this window.
+                </p>
+              )}
+              <ReportEmailProgress runId={runId} reportType="report_card" onFinished={onEmailsSent} />
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-6">
+                {resumed && (
+                  <button
+                    type="button"
+                    onClick={() => { setRunId(null); setResumed(false); }}
+                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    New send
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          ) : results ? (
             /* Results View */
             <div className="space-y-6">
               {/* Summary */}
