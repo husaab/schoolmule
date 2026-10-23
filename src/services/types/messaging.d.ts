@@ -61,6 +61,8 @@ export interface ConversationItem {
   lastMessage: LastMessage | null;
   /** Admin lists only: a digest email for this thread failed after retries. */
   emailFailed?: boolean;
+  /** Admin lists only: the reply reminders sent for this thread; null when there were none. */
+  replyReminders?: ReplyReminderBadges | null;
   /** The student is in this thread (they wrote it, or it is about their work); their guardians are in it too unless it is hidden from them. */
   includesStudent: boolean;
   /** Set on a thread about one piece of classwork ("Messages about this work"); null otherwise. */
@@ -323,3 +325,14 @@ export type MarkReadResponse = MessagingResponse<{ lastReadAt: string | null }>;
 export type SetStatusResponse = MessagingResponse<{ status: ConversationStatus }>;
 export type SetMutedResponse = MessagingResponse<{ muted: boolean }>;
 export type AttachmentUrlResponse = MessagingResponse<{ url: string; fileName: string; mimeType: string }>;
+
+/**
+ * Reply reminders sent for a conversation (backend services/replyReminders):
+ * teacher reminders sent (0-2), when everyone with All messages access was
+ * told, when the parent got their one nudge.
+ */
+export interface ReplyReminderBadges {
+  reminders: number;
+  officeToldAt: string | null;
+  nudgedAt: string | null;
+}

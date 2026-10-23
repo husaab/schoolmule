@@ -241,6 +241,23 @@ export function ClassroomSettingsFields({ form, set, domainsText, setDomainsText
           onChange={(v) => set('parentsReadPrivateComments', v)}
         />
       </FormSection>
+
+      <FormSection label="Message reminders">
+        <Toggle
+          id="classroom-reply-reminders"
+          label="Remind teachers about unanswered parent messages"
+          hint="When a parent writes and nobody at school has replied, the teacher gets a reminder on school days 2 and 4. If there's still no reply, everyone with All messages access is told on day 5. Each email includes the full message and goes out at 7 am."
+          checked={form.replyReminders ?? false}
+          onChange={(v) => set('replyReminders', v)}
+        />
+        <Toggle
+          id="classroom-parent-nudge"
+          label="Nudge parents once about unanswered teacher messages"
+          hint="When a teacher writes and nobody in the family has replied after 2 school days, each parent with a SchoolMule account gets one email with the message, at 7 am. Covers teacher messages from the last 14 days."
+          checked={form.parentNudge ?? false}
+          onChange={(v) => set('parentNudge', v)}
+        />
+      </FormSection>
     </div>
   )
 }

@@ -32,7 +32,8 @@ export const GRADE_OPTIONS = GRADE_CODES.map((g) => ({ value: g, label: gradeLab
 
 /**
  * The classroom settings form's values from the saved settings. The parents'
- * weekly summary is off when a server too old to send it answers.
+ * weekly summary and the reply reminders are off when a server too old to
+ * send them answers.
  */
 export const classroomSettingsInput = (s: ClassroomSettings): ClassroomSettingsInput => ({
   enabled: s.enabled,
@@ -42,6 +43,8 @@ export const classroomSettingsInput = (s: ClassroomSettings): ClassroomSettingsI
   parentsReadPrivateComments: s.parentsReadPrivateComments,
   summaryDow: s.summaryDow,
   parentSummary: s.parentSummary ?? false,
+  replyReminders: s.replyReminders ?? false,
+  parentNudge: s.parentNudge ?? false,
   studentPhotos: s.studentPhotos,
   consentNoticeVersion: s.consentNoticeVersion,
   studentEmailDomains: s.studentEmailDomains ?? [],

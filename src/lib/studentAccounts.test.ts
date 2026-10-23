@@ -379,15 +379,15 @@ describe('classroomSettingsInput', () => {
     studentSignIn: 'google_only', updatedAt: '2026-10-19T12:00:00.000Z',
   }
 
-  it('copies every saved setting into the form, the weekly summary switch included', () => {
-    expect(classroomSettingsInput({ ...saved, parentSummary: true })).toEqual({
+  it('copies every saved setting into the form, the weekly summary and reply reminder switches included', () => {
+    expect(classroomSettingsInput({ ...saved, parentSummary: true, replyReminders: true, parentNudge: true })).toEqual({
       enabled: false, loginFromGrade: '1', qrUntilGrade: '3', studentEmailFromGrade: '1', parentsReadPrivateComments: true,
-      summaryDow: 5, parentSummary: true, studentPhotos: false, consentNoticeVersion: '2026-10',
+      summaryDow: 5, parentSummary: true, replyReminders: true, parentNudge: true, studentPhotos: false, consentNoticeVersion: '2026-10',
       studentEmailDomains: ['students.example.org'], studentSignIn: 'google_only',
     })
   })
 
-  it('reads the weekly summary as off when the server does not send it yet', () => {
-    expect(classroomSettingsInput(saved).parentSummary).toBe(false)
+  it('reads the weekly summary and the reply reminders as off when the server does not send them yet', () => {
+    expect(classroomSettingsInput(saved)).toMatchObject({ parentSummary: false, replyReminders: false, parentNudge: false })
   })
 })

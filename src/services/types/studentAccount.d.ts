@@ -19,6 +19,14 @@ export interface ClassroomSettings {
   summaryDow: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** The parents' weekly summary, its own switch (apart from student sign-in). Absent from older servers. */
   parentSummary?: boolean;
+  /**
+   * A parent's message nobody at school answered: the teacher is reminded on
+   * school days 2 and 4, then everyone with All messages access is told on
+   * day 5. Absent from older servers.
+   */
+  replyReminders?: boolean;
+  /** A teacher's message nobody in the family answered: each parent is emailed once after 2 school days. Absent from older servers. */
+  parentNudge?: boolean;
   studentPhotos: boolean;
   /** Recorded with each consent; no longer shown or edited. */
   consentNoticeVersion: string;

@@ -22,9 +22,17 @@ import type { ConversationItem } from '@/services/types/messaging'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
 import { formatListStamp, isFamilyRole, lastSenderWord, waitingOn } from '@/components/messaging/formatters'
+import { replyReminderBadges, type ReplyReminderTone } from '@/lib/replyReminderBadges'
 
 type StatusFilter = 'open' | 'waiting' | 'resolved'
 const WAITING_HOURS = 48
+// Reply reminders: the teacher was reminded (amber), the office was told
+// (orange: escalated, not failed; rose is for failures), the parent was nudged (slate).
+const BADGE_TONES: Record<ReplyReminderTone, string> = {
+  reminded: 'border-amber-200 bg-amber-50 text-amber-800',
+  office: 'border-orange-300 bg-orange-100 text-orange-900',
+  nudged: 'border-slate-200 bg-slate-50 text-slate-600',
+}
 
 const hoursSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 3_600_000
 
@@ -206,6 +214,11 @@ const ConversationsOversight: React.FC = () => {
                         {c.emailFailed && (
                           <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-px text-[10px] font-medium text-rose-700">Email failed</span>
                         )}
+                        {replyReminderBadges(c.replyReminders).map((b) => (
+                          <span key={b.key} className={`rounded-full border px-2 py-px text-[10px] font-medium ${BADGE_TONES[b.key]}`}>
+                            {b.label}
+                          </span>
+                        ))}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
