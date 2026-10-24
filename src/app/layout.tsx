@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto, Outfit } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import { WEBSITE_REDIRECT_SCRIPT } from "@/lib/websiteVisit";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -63,6 +64,8 @@ export default function RootLayout({
             url: "https://schoolmule.ca"
           })}
         </Script>
+        {/* Before anything paints: a signed-in user arriving at the website goes to their home page (lib/websiteVisit). */}
+        <script dangerouslySetInnerHTML={{ __html: WEBSITE_REDIRECT_SCRIPT }} />
       </head>
       <body
         className={`${roboto.variable} ${outfit.variable} antialiased`}

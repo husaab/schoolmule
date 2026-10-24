@@ -5,9 +5,10 @@
 // (authRouting.test.ts): every redirect must land on a page that does not
 // redirect again. That property is what makes redirect loops impossible.
 //
-// AuthGuard wraps only src/app/(user). The marketing pages, public forms and
-// '/' sit outside it, so the rules below for those paths only matter when a
-// (user) page links or redirects to them.
+// AuthGuard wraps only src/app/(user). The website pages (WEBSITE_PATHS) sit
+// outside it and ask lib/websiteVisit instead, which applies these same rules
+// unless the user chose to browse the website. Public forms only meet these
+// rules when a (user) page links or redirects to them.
 //
 // Order of precedence:
 //   1. No token: only public pages; everything else goes to '/'.
@@ -51,9 +52,13 @@ export type RouteState = {
   user: RouteUser
 }
 
+// The marketing website (src/app/(prelogin)). Privacy and Terms are not
+// listed: they are reference pages anyone may read, signed in or not.
+export const WEBSITE_PATHS = ['/', '/about', '/product', '/contact', '/demo']
+
 // Pages a signed-out visitor may open. A signed-in user on one of these is
 // sent home (they are entry points, not destinations).
-const AUTH_ENTRY_PATHS = ['/', '/login', '/signup', '/about', '/product', '/contact', '/demo', '/forgot-password', '/reset-password']
+const AUTH_ENTRY_PATHS = [...WEBSITE_PATHS, '/login', '/signup', '/forgot-password', '/reset-password']
 
 // The email link must work in any browser, signed in or not.
 const VERIFY_EMAIL_PATHS = ['/verify-email', '/verify-email-token']

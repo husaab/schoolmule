@@ -106,7 +106,8 @@ const NotFoundPage: FC = () => {
           {/* Help text */}
           <p className="mt-10 text-sm text-slate-500">
             Need help?{' '}
-            <Link href="/contact" className="text-cyan-600 hover:text-cyan-700 font-medium underline underline-offset-2">
+            {/* Signed in, the website's /contact would send them home: use the in-app page. */}
+            <Link href={isLoggedIn ? '/contact-us' : '/contact'} className="text-cyan-600 hover:text-cyan-700 font-medium underline underline-offset-2">
               Contact our support team
             </Link>
           </p>

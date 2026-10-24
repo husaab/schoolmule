@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useUserStore } from '@/store/useUserStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { signOutLocally } from '@/services/sessionSync'
+import { homeFor } from '@/lib/authRouting'
 import { ArrowRightIcon } from '@heroicons/react/24/outline'
 
 interface NavLinksProps {
@@ -58,7 +59,7 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false, onLinkClick }) => {
 
       {isLoggedIn ? (
         <>
-          <Link href="/dashboard" className={primaryButtonClass} onClick={handleClick}>
+          <Link href={homeFor(user)} className={primaryButtonClass} onClick={handleClick}>
             Dashboard
             {!vertical && <ArrowRightIcon className="w-4 h-4" />}
           </Link>

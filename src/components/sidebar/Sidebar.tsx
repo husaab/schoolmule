@@ -32,7 +32,9 @@ import {
   ChatBubbleLeftRightIcon,
   InboxIcon,
   BanknotesIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  GlobeAltIcon,
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, useSyncExternalStore, Fragment } from 'react';
 import { useUserStore } from '@/store/useUserStore'
@@ -51,6 +53,7 @@ import { useRememberedHref } from '@/hooks/useFilterParams'
 import { useParentClassesSeen } from '@/lib/parentClassesSeen'
 import { accessInfo, canOpenPath } from '@/lib/permissions'
 import { ADMIN_PANEL_OVERVIEW, adminPanelNavFor } from '@/lib/adminPanelNav'
+import { VIEW_WEBSITE_HREF } from '@/lib/websiteVisit'
 
 interface NavLink {
   href: string;
@@ -537,6 +540,19 @@ const Sidebar = () => {
           icon={Cog6ToothIcon}
           isActive={pathname === '/settings'}
         />
+
+        {/* The marketing website, in its own tab: opening it there lets a
+            signed-in user browse it, while this tab stays in the app. */}
+        <a
+          href={VIEW_WEBSITE_HREF}
+          target="_blank"
+          rel="noopener"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        >
+          <GlobeAltIcon className="w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-slate-600" />
+          <span className="text-sm flex-1">SchoolMule website</span>
+          <ArrowTopRightOnSquareIcon className="w-4 h-4 flex-shrink-0 text-slate-300 group-hover:text-slate-500" />
+        </a>
 
         {/* Support Links (Mobile) */}
         <div className="lg:hidden space-y-1.5">
