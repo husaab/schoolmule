@@ -28,16 +28,19 @@ const throwingStorage = () => ({
 type ScriptRun = {
   path: string
   search?: string
+  hash?: string
   local?: ReturnType<typeof memoryStorage> | ReturnType<typeof throwingStorage>
   session?: ReturnType<typeof memoryStorage> | ReturnType<typeof throwingStorage>
 }
 
 // Runs the inline script the way a browser would on a fresh page load.
-const runScript = ({ path, search = '', local = memoryStorage(), session = memoryStorage() }: ScriptRun) => {
+const runScript = ({ path, search = '', hash = '', local = memoryStorage(), session = memoryStorage() }: ScriptRun) => {
   let replacedWith: string | null = null
+  let addressBar: string | null = null
   let hidden = false
   const sandbox: Record<string, unknown> = {
-    location: { pathname: path, search, replace: (url: string) => { replacedWith = url } },
+    location: { pathname: path, search, hash, replace: (url: string) => { replacedWith = url } },
+    history: { state: null, replaceState: (_state: unknown, _title: string, url: string) => { addressBar = url } },
     URLSearchParams,
     localStorage: local,
     sessionStorage: session,
@@ -48,7 +51,13 @@ const runScript = ({ path, search = '', local = memoryStorage(), session = memor
   }
   sandbox.window = sandbox
   vm.runInNewContext(WEBSITE_REDIRECT_SCRIPT, sandbox)
-  return { replacedWith: replacedWith as string | null, hidden, flagged: Boolean(sandbox.__smWebsiteRedirect) }
+  return {
+    replacedWith: replacedWith as string | null,
+    // The URL history.replaceState left in the address bar, or null if untouched.
+    addressBar: addressBar as string | null,
+    hidden,
+    flagged: Boolean(sandbox.__smWebsiteRedirect),
+  }
 }
 
 // What useUserStore persists (zustand persist, { state, version }).
@@ -149,10 +158,24 @@ describe('WEBSITE_REDIRECT_SCRIPT', () => {
     expect(runScript({ path: '/about', local: signedIn(staff) }).replacedWith).toBe('/dashboard')
   })
 
+  it('takes ?website off the address bar once the tab has stored the visit', () => {
+    const opened = (search: string, hash = '') => runScript({ path: '/', search, hash, local: signedIn(staff) }).addressBar
+    expect(opened(`?${VIEW_WEBSITE_PARAM}=1`)).toBe('/')
+    expect(opened(`?${VIEW_WEBSITE_PARAM}=1&utm_source=x`, '#pricing')).toBe('/?utm_source=x#pricing')
+    // Signed out, the visit is stored and the URL cleaned all the same.
+    expect(runScript({ path: '/', search: `?${VIEW_WEBSITE_PARAM}=1` }).addressBar).toBe('/')
+    // Without ?website, or off the website, the address bar is left alone.
+    expect(runScript({ path: '/', search: '?utm_source=x', local: signedIn(staff), session: memoryStorage({ 'sm.websiteVisit': '1' }) }).addressBar).toBeNull()
+    expect(runScript({ path: '/privacy', search: `?${VIEW_WEBSITE_PARAM}=1`, local: signedIn(staff) }).addressBar).toBeNull()
+  })
+
   it('treats blocked storage as "stay", but still honours ?website', () => {
     expect(runScript({ path: '/', local: throwingStorage() }).replacedWith).toBeNull()
     expect(runScript({ path: '/', local: signedIn(staff), session: throwingStorage() }).replacedWith).toBe('/dashboard')
-    expect(runScript({ path: '/', search: `?${VIEW_WEBSITE_PARAM}`, local: signedIn(staff), session: throwingStorage() }).replacedWith).toBeNull()
+    const blocked = runScript({ path: '/', search: `?${VIEW_WEBSITE_PARAM}`, local: signedIn(staff), session: throwingStorage() })
+    expect(blocked.replacedWith).toBeNull()
+    // Nothing remembers the visit, so ?website stays where WebsiteRedirect can see it.
+    expect(blocked.addressBar).toBeNull()
   })
 })
 

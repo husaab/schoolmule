@@ -16,7 +16,8 @@
 import { WEBSITE_PATHS, resolveRedirect, roleHome, type RouteState } from '@/lib/authRouting'
 
 // ?website on a website page starts a visit. It has to be in the URL: a link
-// opened in a new tab starts with empty sessionStorage.
+// opened in a new tab starts with empty sessionStorage. Once the tab has
+// stored the visit, the script takes it back off the address bar.
 export const VIEW_WEBSITE_PARAM = 'website'
 export const VIEW_WEBSITE_HREF = `/?${VIEW_WEBSITE_PARAM}=1`
 
@@ -75,10 +76,13 @@ const scriptConfig = {
 // the onboarding step: AuthGuard there finishes the job (websiteVisit.test.ts
 // checks both end on the same page). Hiding the body keeps the landing page
 // from painting while the next page loads. Any storage error means "stay".
+// A stored ?website comes off the URL before Next starts, and Next takes its
+// first URL from location.href, so it never puts it back. If storage is
+// blocked the param stays: it is then the only record of the visit.
 export const WEBSITE_REDIRECT_SCRIPT = `(function(c){
 if(c.paths.indexOf(location.pathname)<0)return;
-var visiting=new URLSearchParams(location.search).has(c.param);
-try{if(visiting)sessionStorage.setItem(c.visitKey,'1');else visiting=sessionStorage.getItem(c.visitKey)==='1'}catch(e){}
+var q=new URLSearchParams(location.search),visiting=q.has(c.param);
+try{if(visiting){sessionStorage.setItem(c.visitKey,'1');q.delete(c.param);q=q.toString();history.replaceState(history.state,'',location.pathname+(q?'?'+q:'')+location.hash)}else visiting=sessionStorage.getItem(c.visitKey)==='1'}catch(e){}
 if(visiting)return;
 try{
 if(!localStorage.getItem(c.tokenKey))return;
