@@ -144,6 +144,7 @@ One account per person. A TEACHER or ADMIN row linked to a current-year student 
 
 ## Development Conventions
 
+- **Every web change ships to the mobile app too.** When you change a page, component, flow, or a file the app copies (`src/services`, `src/store`, `src/lib`, `src/hooks`), make the same change in `../schoolmule-mobile` in the same session, following `../schoolmule-mobile/docs/PORTING.md`, and move the synced sha in `../schoolmule-mobile/STATUS.md`. Only marketing pages and desktop-only tools the app links out to are exempt. If the app part can't be finished, say so and add it to STATUS.md's next steps.
 - **Every feature must support full CRUD in the UI, not just creation.** Whenever a new entity is added (rules, blocks, teachers, courses, etc.), the frontend must allow creating, editing, AND deleting it from the start — backend PATCH/DELETE endpoints alone are not enough; wire them into the UI in the same change. Never ship a list of items the user can add but not modify.
 
 ## Notes for Future Development
