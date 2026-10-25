@@ -59,11 +59,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'Where is our data stored?',
-    a: 'SchoolMule’s database and files are hosted by Supabase, and the app by Railway, in the United States. Connections to SchoolMule are encrypted.',
-  },
-  {
-    q: 'Is SchoolMule available in French?',
-    a: 'Not yet. SchoolMule is in English today.',
+    a: 'Securely, on Amazon Web Services (AWS) cloud servers. Your school’s information is encrypted on the way to SchoolMule and where it is stored.',
   },
 ]
 
@@ -163,7 +159,7 @@ export default function HomePage() {
             </Link>{' '}
             or{' '}
             <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-              join your school
+              sign up
             </Link>
             .
           </p>

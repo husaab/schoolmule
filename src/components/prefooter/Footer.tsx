@@ -19,7 +19,7 @@ const COLUMNS = [
     title: 'Already a SchoolMule school',
     links: [
       { href: '/login', label: 'Log in' },
-      { href: '/signup', label: 'Join your school' },
+      { href: '/signup', label: 'Sign up' },
     ],
   },
 ]

@@ -25,7 +25,7 @@ function ExistingUsers({ view }: { view: ViewKey }) {
           Log in
         </Link>
         <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-          Join your school
+          Sign up
         </Link>
       </p>
     </div>

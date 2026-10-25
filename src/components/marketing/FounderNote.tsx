@@ -5,14 +5,16 @@ import { cx } from './ui'
 /** The founder's photo, or his initials until a photo is supplied (lib/marketing/site FOUNDER.photo). */
 export function FounderPortrait({ size = 'lg', className }: { size?: 'sm' | 'lg'; className?: string }) {
   const box = size === 'lg' ? 'size-28 rounded-[1.75rem] text-3xl' : 'size-11 rounded-full text-base'
-  if (FOUNDER.photo) {
+  const photo = size === 'lg' ? FOUNDER.photo : FOUNDER.photoSmall
+  if (photo) {
     return (
       <Image
-        src={FOUNDER.photo}
+        src={photo}
         alt={FOUNDER.name}
-        width={size === 'lg' ? 224 : 88}
-        height={size === 'lg' ? 224 : 88}
-        className={cx(box, 'object-cover', className)}
+        width={size === 'lg' ? 112 : 44}
+        height={size === 'lg' ? 112 : 44}
+        sizes={size === 'lg' ? '112px' : '44px'}
+        className={cx(box, 'shrink-0 bg-mist object-cover ring-1 ring-ink/[0.06]', className)}
       />
     )
   }
