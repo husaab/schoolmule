@@ -1,10 +1,17 @@
-'use client'
-
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import LegalPage from '@/components/legal/LegalPage'
+import { pageMetadata } from '@/lib/marketing/seo'
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Terms of Service',
+  description: 'The terms that govern use of SchoolMule by schools and their users.',
+  path: '/terms',
+})
 
 export default function TermsOfServicePage() {
   return (
-    <LegalPage title="Terms of Service" updated="Last updated 2 September 2026">
+    <LegalPage title="Terms of Service" updated="Last updated 25 October 2026">
       <p>
         These terms govern use of SchoolMule. By creating an account or using the service,
         the school and its users agree to them.
@@ -28,7 +35,7 @@ export default function TermsOfServicePage() {
       <p>
         Data a school enters remains the school&apos;s property. We process it to provide the
         service, on the school&apos;s instructions, as described in our{' '}
-        <a href="/privacy">Privacy Policy</a>. We do not sell it, and we do not use it to
+        <Link href="/privacy">Privacy Policy</Link>. We do not sell it, and we do not use it to
         train models or for advertising.
       </p>
       <p>
@@ -57,8 +64,7 @@ export default function TermsOfServicePage() {
 
       <h2>Availability</h2>
       <p>
-        We work to keep the service available and to protect your data, including regular
-        backups. We may perform maintenance, and we may change or discontinue features. We
+        We work to keep the service available and to protect your data. We may perform maintenance, and we may change or discontinue features. We
         will give reasonable notice of a change that materially reduces functionality a
         school depends on.
       </p>

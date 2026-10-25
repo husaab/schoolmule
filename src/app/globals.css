@@ -863,3 +863,82 @@ body {
 .observe-live-dot { animation: observe-pulse 1.6s ease-in-out infinite; }
 @keyframes observe-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .observe-in { animation: observe-in 320ms var(--ease-out-expo) both; }
+
+/* ==========================================================================
+   Marketing website (src/app/(prelogin), components/marketing)
+   The film's look: light and white, brand teal, Outfit with an Instrument
+   Serif italic accent, and one colour per view (office, teachers, parents,
+   students). Text and button fills use the darker "-ink" shades for AA.
+   ========================================================================== */
+
+@theme inline {
+  --color-ink: #0b1324;
+  --color-mist: #f2f8f9;
+  --color-hairline: #e3eaee;
+  --color-brand: #0891b2;
+  --color-brand-ink: #0e7490;
+  --color-brand-deep: #155e75;
+  --color-leaders: #0b3b52;
+  --color-teachers: #0891b2;
+  --color-teachers-ink: #0e7490;
+  --color-parents: #d97706;
+  --color-parents-ink: #b45309;
+  --color-students: #4f46e5;
+  --color-students-ink: #4338ca;
+  --ease-film: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mk {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  color: var(--color-ink);
+}
+
+/* The serif italic accent: one phrase per page heading at most. */
+.mk-accent {
+  /* The variable is set on the website's wrapper (app/(prelogin)/layout), so
+     it is read here rather than through a :root token. */
+  font-family: var(--font-instrument-serif), 'Iowan Old Style', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* The hero's one load sequence: copy rises in, then the film. */
+@keyframes mk-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.mk-rise { animation: mk-rise 700ms var(--ease-film) both; }
+/* Transform only: for the headline and the film, which are the largest paint
+   and must be visible from the first frame. */
+@keyframes mk-lift {
+  from { transform: translateY(14px); }
+  to { transform: none; }
+}
+.mk-lift { animation: mk-lift 800ms var(--ease-film) both; }
+.mk-rise-1 { animation-delay: 60ms; }
+.mk-rise-2 { animation-delay: 140ms; }
+.mk-rise-3 { animation-delay: 220ms; }
+.mk-rise-4 { animation-delay: 360ms; }
+
+/* "Follow one quiz": the screen pushes in toward what matters, like the film's camera. */
+@keyframes mk-push {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+.mk-push { animation: mk-push 5800ms cubic-bezier(0.33, 0, 0.2, 1) both; }
+
+/* Constant progress is linear. */
+@keyframes mk-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.mk-progress { transform-origin: left; animation: mk-progress 5200ms linear both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-rise, .mk-lift, .mk-push, .mk-progress { animation: none; }
+}
+
+/* FAQ disclosure marker */
+.mk-faq summary::-webkit-details-marker { display: none; }
+.mk-faq summary { list-style: none; }

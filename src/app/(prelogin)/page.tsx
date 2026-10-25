@@ -1,617 +1,370 @@
-'use client'
-import { FC, useEffect, useRef } from 'react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import PreNavBar from '@/components/prenavbar/navbar/Navbar'
-import Footer from '@/components/prefooter/Footer'
-import HeroBackground from '@/components/landing/HeroBackground'
+import { ArrowRight } from 'lucide-react'
 import HeroDemoVideo from '@/components/landing/HeroDemoVideo'
-import {
-  CheckCircleIcon,
-  ChartBarIcon,
-  DocumentTextIcon,
-  UserGroupIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  ArrowRightIcon,
-  SparklesIcon,
-} from '@heroicons/react/24/outline'
-import { CheckIcon, StarIcon } from '@heroicons/react/24/solid'
-import Image from 'next/image'
+import CtaBand from '@/components/marketing/CtaBand'
+import DemoLink from '@/components/marketing/DemoLink'
+import Faq, { type FaqItem } from '@/components/marketing/Faq'
+import FeatureRows from '@/components/marketing/FeatureRows'
+import { OPERATIONS } from '@/lib/marketing/features'
+import FounderNote from '@/components/marketing/FounderNote'
+import JsonLd from '@/components/marketing/JsonLd'
+import QuizStory from '@/components/marketing/QuizStory'
+import ReportSamples from '@/components/marketing/ReportSamples'
+import ViewTabs from '@/components/marketing/ViewTabs'
+import WatchFilmButton from '@/components/marketing/film/WatchFilmButton'
+import { PhoneFrame, SampleData, Tray } from '@/components/marketing/frames'
+import { Accent, Container, H1, H2, Lead, Pill, Section, TextLink } from '@/components/marketing/ui'
+import { filmSchema, pageMetadata, softwareSchema } from '@/lib/marketing/seo'
+import { DEMO_MINUTES, PRODUCT_LINKS, USAGE_CLAIM, VIEW_COLOURS } from '@/lib/marketing/site'
 
-// Scroll reveal hook
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null)
+// The homepage. Every section, and why it's here, is in
+// docs/research/landing-revamp/plan.md §3.1.
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('opacity-100', 'translate-y-0')
-            entry.target.classList.remove('opacity-0', 'translate-y-8')
-          }
-        })
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    )
+export const metadata: Metadata = pageMetadata({
+  title: 'SchoolMule: school management for Ontario independent schools',
+  description:
+    'Attendance, grades, report cards and parent messages in one system, with a view for your office, teachers, parents and students. Built for independent schools in Ontario, JK to Grade 8.',
+  path: '/',
+})
 
-    const elements = ref.current?.querySelectorAll('[data-reveal]')
-    elements?.forEach((el) => observer.observe(el))
-
-    return () => observer.disconnect()
-  }, [])
-
-  return ref
-}
-
-const features = [
+const FAQ: FaqItem[] = [
   {
-    icon: UserGroupIcon,
-    title: 'Student Information System',
-    description: 'Centralize all student data, enrollment, grades, and parent contacts in one secure location.',
-    color: 'bg-cyan-50',
-    iconColor: 'text-cyan-600',
-    highlights: ['Student profiles', 'Parent contacts', 'Multi-term tracking']
+    q: 'What does SchoolMule cost?',
+    a: 'Pricing depends on the size of your school. You’ll get an exact number on your demo call.',
   },
   {
-    icon: DocumentTextIcon,
-    title: 'Automated Report Cards',
-    description: 'Generate professional PDF report cards in minutes with integrated teacher feedback.',
-    color: 'bg-emerald-50',
-    iconColor: 'text-emerald-600',
-    highlights: ['One-click generation', 'Bulk processing', 'Custom templates']
+    q: 'Do parents need to download an app?',
+    a: 'No. Families get an email when something new is published, and the link in it signs them in with one tap. SchoolMule works in any browser, on a phone or a computer.',
   },
   {
-    icon: ChartBarIcon,
-    title: 'Smart Analytics',
-    description: 'Real-time insights into attendance, grades, and school performance metrics.',
-    color: 'bg-violet-50',
-    iconColor: 'text-violet-600',
-    highlights: ['Live dashboards', 'Trend analysis', 'Data exports']
+    q: 'Can it make our report card?',
+    a: 'SchoolMule makes report cards for Grades 1 to 8 and skill-based report cards for JK and SK, as PDFs with your school’s logo. If your school uses its own format, bring it to the demo call.',
   },
   {
-    icon: ClockIcon,
-    title: 'Intelligent Scheduling',
-    description: 'Visual schedule builder with conflict detection across all grades and teachers.',
-    color: 'bg-amber-50',
-    iconColor: 'text-amber-600',
-    highlights: ['Drag-and-drop', 'Conflict alerts', 'Multi-grade support']
+    q: 'Can you bring in our current records?',
+    a: 'Yes. Send us your student, family and class lists in whatever form you keep them, and we’ll bring them in.',
   },
   {
-    icon: CurrencyDollarIcon,
-    title: 'Financial Management',
-    description: 'Handle tuition, payments, and invoicing without separate billing software.',
-    color: 'bg-rose-50',
-    iconColor: 'text-rose-600',
-    highlights: ['Auto invoicing', 'Payment tracking', 'Revenue reports']
+    q: 'Will our teachers manage it?',
+    a: 'Teachers start with two things: attendance, and a gradebook that works like a simple spreadsheet and saves as they type. Admins can open any teacher’s view, read-only, to help.',
   },
   {
-    icon: CheckCircleIcon,
-    title: 'Parent Portal',
-    description: 'Keep parents engaged with real-time access to grades, attendance, and communications.',
-    color: 'bg-sky-50',
-    iconColor: 'text-sky-600',
-    highlights: ['Grade access', 'Attendance alerts', 'Direct messaging']
-  }
+    q: 'Does it work with Google Classroom?',
+    a: 'Schools that use Google Classroom can keep it for classwork and use SchoolMule for attendance, grades, report cards and families. SchoolMule also has its own classwork and quizzes when you want them, and staff and students can sign in with Google.',
+  },
+  {
+    q: 'Who can see our school’s information?',
+    a: 'Only people at your school, and only what their role allows. Parents see only their own children, and only grades you have published. Every request is checked on our server.',
+  },
+  {
+    q: 'Where is our data stored?',
+    a: 'SchoolMule’s database and files are hosted by Supabase, and the app by Railway, in the United States. Connections to SchoolMule are encrypted.',
+  },
+  {
+    q: 'Is SchoolMule available in French?',
+    a: 'Not yet. SchoolMule is in English today.',
+  },
 ]
 
-const stats = [
-  { value: '20+', label: 'Hours Saved', sublabel: 'Per week on admin' },
-  { value: '100%', label: 'Faster', sublabel: 'Report card generation' },
-  { value: '99.9%', label: 'Uptime', sublabel: 'Reliability guarantee' },
+const STACK = [
+  { name: 'Registration form', kind: 'Forms', tint: 'bg-violet-700' },
+  { name: 'Grades_FINAL_v3.xlsx', kind: 'XLS', tint: 'bg-emerald-700' },
+  { name: 'Report card template.docx', kind: 'DOC', tint: 'bg-blue-700' },
+  { name: 'Grade 5 parents', kind: 'Chat', tint: 'bg-green-700' },
+  { name: 'Attendance binder', kind: 'Paper', tint: 'bg-amber-700' },
+  { name: 'Inbox, 214 unread', kind: 'Mail', tint: 'bg-rose-700' },
 ]
 
-const WelcomePage: FC = () => {
-  const containerRef = useScrollReveal()
+const RECORD = [
+  ['Math, Quiz 3', '19 / 20'],
+  ['Attendance this term', '34 of 35 days'],
+  ['Messages with family', '1 open, about Quiz 3'],
+  ['Report cards', 'Term 1 PDF'],
+  ['Guardians', 'Amal and Karim Haddad'],
+]
 
+const FIT = [
+  { title: 'Faith studies on the report card', text: 'Quran, Arabic and Islamic Studies sit beside Math and Science, graded the same way.' },
+  { title: 'JK and SK on skills', text: 'Kindergarten report cards rate skills, not percentages, with a comment for each area.' },
+  { title: 'Ontario holidays in staff pay', text: 'Statutory holidays are counted in staff hours automatically.' },
+  { title: 'Photos off until you say so', text: 'Student photos stay hidden until your school turns them on.' },
+]
+
+export default function HomePage() {
   return (
-    <div ref={containerRef} className="bg-white">
-      <PreNavBar />
+    <>
+      <JsonLd data={[softwareSchema, filmSchema('/')]} />
 
-      <main className="w-full overflow-hidden">
-        {/* Hero Section */}
-        <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-28 lg:pb-24">
-          {/* Animated background */}
-          <HeroBackground />
-
-          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto text-center">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-cyan-200 shadow-sm mb-6">
-                <SparklesIcon className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-slate-600">
-                  Trusted by 50+ Schools Nationwide
-                </span>
-              </div>
-
-              {/* Main Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight tracking-tight mb-5">
-                The Complete{' '}
-                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
-                  School Management
-                </span>{' '}
-                Solution
-              </h1>
-
-              {/* Subheadline */}
-              <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-8">
-                Stop juggling multiple systems. SchoolMule streamlines everything from
-                student enrollment to report cards, saving your staff{' '}
-                <span className="font-semibold text-slate-800">hours each week</span>.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-600 to-teal-600 rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                >
-                  Request Demo
-                  <ArrowRightIcon className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-all duration-300"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
+      {/* Hero */}
+      <section aria-labelledby="hero-title" className="relative overflow-hidden bg-gradient-to-b from-mist via-white to-white pt-28 sm:pt-36 lg:pt-40">
+        <Container>
+          <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] xl:gap-16">
+          <div className="grid max-w-[46rem] justify-items-start gap-6">
+            <div className="mk-rise mk-rise-1">
+              <Pill>For Ontario independent schools, JK to Grade 8</Pill>
             </div>
-
-            {/* The film: the hero's centrepiece */}
-            <div className="relative max-w-6xl mx-auto">
+            <H1 id="hero-title" className="mk-lift">
+              Your whole school, <Accent className="text-brand-ink sm:block">in one place.</Accent>
+            </H1>
+            <Lead className="mk-rise mk-rise-2">
+              Attendance, grades, report cards and parent messages in one simple system, with a view for your office, teachers, parents and students.
+            </Lead>
+            <div className="mk-rise mk-rise-3 flex w-full flex-wrap gap-3 max-sm:[&>*]:w-full">
+              <DemoLink from="hero" />
+              <WatchFilmButton from="hero-button" />
+            </div>
+            <p className="mk-rise mk-rise-3 text-[0.95rem] text-slate-600">
+              {USAGE_CLAIM}. Book {DEMO_MINUTES} minutes with the founder.
+            </p>
+          </div>
+          <nav aria-label="SchoolMule for each view" className="mk-rise mk-rise-3 hidden border-t border-hairline lg:block">
+            {PRODUCT_LINKS.filter((l) => l.view).map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-hairline py-3.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30"
+              >
+                <span aria-hidden className={`size-2.5 rounded-full ${VIEW_COLOURS[l.view!].dot}`} />
+                <span>
+                  <span className="block font-semibold text-ink">{l.label}</span>
+                  <span className="block text-sm text-slate-600">{l.blurb}</span>
+                </span>
+                <ArrowRight
+                  aria-hidden
+                  strokeWidth={1.75}
+                  className="size-4 text-slate-400 transition-transform duration-200 ease-film group-hover:translate-x-0.5 group-hover:text-ink"
+                />
+              </Link>
+            ))}
+          </nav>
+          </div>
+          <div className="mt-12 sm:mt-16">
+            <Tray>
               <HeroDemoVideo />
-
-              {/* Glow effect */}
-              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl -z-10" />
-            </div>
+            </Tray>
+            <SampleData className="mt-3" />
           </div>
-        </section>
+        </Container>
+      </section>
 
-        {/* Stats Section */}
-        <section className="py-16 lg:py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-              {stats.map((stat, index) => (
-                <div
-                  key={stat.label}
-                  data-reveal
-                  className="text-center p-8 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 opacity-0 translate-y-8 transition-all duration-700"
-                  style={{ transitionDelay: `${index * 100}ms` }}
+      {/* Four views */}
+      <Section labelledBy="views-title">
+        <Container>
+          <div className="mb-10 grid max-w-3xl gap-4">
+            <H2 id="views-title">Four views. One set of records.</H2>
+            <Lead>Everyone works from the same records, so the grade a teacher enters is the grade a parent sees at home.</Lead>
+          </div>
+          <ViewTabs />
+          <p className="mt-10 text-slate-600">
+            Your school already uses SchoolMule?{' '}
+            <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+              Log in
+            </Link>{' '}
+            or{' '}
+            <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+              join your school
+            </Link>
+            .
+          </p>
+        </Container>
+      </Section>
+
+      {/* Scattered to settled */}
+      <Section tone="mist" labelledBy="settled-title">
+        <Container className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="grid gap-6">
+            <H2 id="settled-title">From scattered to settled.</H2>
+            <Lead>
+              Most small schools run on forms, spreadsheets, email and group chats. SchoolMule puts it all on one record for each student.
+            </Lead>
+            <ul className="flex flex-wrap gap-2.5" aria-label="What many schools use today">
+              {STACK.map((s, i) => (
+                <li
+                  key={s.name}
+                  className={`inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[0.92rem] text-slate-700 shadow-[0_8px_20px_-14px_rgba(11,19,36,0.35)] ring-1 ring-ink/[0.06] ${
+                    i % 2 ? 'sm:rotate-[1.2deg]' : 'sm:-rotate-[1.4deg]'
+                  }`}
                 >
-                  <div className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-xl font-semibold text-slate-800 mb-1">{stat.label}</div>
-                  <div className="text-slate-500">{stat.sublabel}</div>
-                </div>
+                  <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-white ${s.tint}`}>{s.kind}</span>
+                  {s.name}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="py-20 lg:py-28 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Everything You Need to{' '}
-                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
-                  Run Your School
+          <figure className="rounded-[1.375rem] bg-ink/[0.035] p-1.5 ring-1 ring-ink/[0.06]">
+            <div className="grid gap-5 rounded-[1rem] bg-white p-6 shadow-[0_28px_56px_-28px_rgba(11,59,82,0.38)] sm:p-7">
+              <div className="flex items-center gap-4">
+                <span aria-hidden className="grid size-12 place-items-center rounded-full bg-amber-100 font-semibold text-parents-ink">
+                  AH
                 </span>
-              </h2>
-              <p className="text-lg text-slate-600">
-                One platform to eliminate chaos, streamline operations, and improve parent engagement
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {features.map((feature, index) => (
-                <div
-                  key={feature.title}
-                  data-reveal
-                  className="group relative p-6 lg:p-8 bg-white rounded-2xl border border-slate-100 hover:border-cyan-200 hover:shadow-xl transition-all duration-300 opacity-0 translate-y-8"
-                  style={{ transitionDelay: `${index * 100}ms` }}
-                >
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-teal-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                  <div className={`w-14 h-14 rounded-xl ${feature.color} flex items-center justify-center mb-5`}>
-                    <feature.icon className={`w-7 h-7 ${feature.iconColor}`} />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
-                  <p className="text-slate-600 mb-4 leading-relaxed">{feature.description}</p>
-                  <ul className="space-y-2">
-                    {feature.highlights.map((highlight) => (
-                      <li key={highlight} className="flex items-center gap-2 text-sm text-slate-500">
-                        <CheckIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        {highlight}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Screenshot Showcase Section */}
-        <section className="py-20 lg:py-28 bg-slate-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Powerful Features, Beautiful Interface
-              </h2>
-              <p className="text-lg text-slate-600">
-                Designed for educators, by educators
-              </p>
-            </div>
-
-            {/* Feature 1 - Gradebook */}
-            <div className="mb-20 lg:mb-32">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                <div
-                  data-reveal
-                  className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                      </div>
-                      <div className="flex-1 ml-4">
-                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                          schoolmule.ca/gradebook
-                        </div>
-                      </div>
-                    </div>
-                    <div className="relative aspect-video">
-                      <Image
-                        src="/images/GradebookScreenshot.png"
-                        alt="SchoolMule Gradebook"
-                        fill
-                        className="object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-reveal
-                  className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
-                    <ChartBarIcon className="w-4 h-4" />
-                    Smart Gradebook
-                  </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                    Grades Made Simple
-                  </h3>
-                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                    Weighted assessments, automatic calculations, and instant report card generation.
-                    Spend less time on math, more time teaching.
-                  </p>
-                  <ul className="space-y-4">
-                    {['Weighted assessment categories', 'Real-time grade calculations', 'Bulk grade entry capabilities'].map((item) => (
-                      <li key={item} className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <CheckIcon className="w-4 h-4 text-emerald-600" />
-                        </div>
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <div>
+                  <p className="text-lg font-semibold text-ink">Adam Haddad</p>
+                  <p className="text-sm text-slate-600">Grade 5, homeroom Ms. Saleh</p>
                 </div>
               </div>
-            </div>
-
-            {/* Feature 2 - Parent Portal */}
-            <div className="mb-20 lg:mb-32">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                <div
-                  data-reveal
-                  className="opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium mb-4">
-                    <UserGroupIcon className="w-4 h-4" />
-                    Parent Portal
+              <dl className="grid gap-2">
+                {RECORD.map(([k, v]) => (
+                  <div key={k} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 rounded-xl bg-mist px-4 py-3">
+                    <dt className="text-slate-600">{k}</dt>
+                    <dd className="font-semibold tabular-nums text-ink">{v}</dd>
                   </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                    Keep Parents Connected
-                  </h3>
-                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                    Dedicated dashboards showing children&apos;s progress, attendance, and school
-                    communications. Build trust through transparency.
-                  </p>
-                  <ul className="space-y-4">
-                    {['Individual child dashboards', 'Real-time report card access', 'Direct school communication'].map((item) => (
-                      <li key={item} className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                          <CheckIcon className="w-4 h-4 text-violet-600" />
-                        </div>
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div
-                  data-reveal
-                  className="opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                      </div>
-                      <div className="flex-1 ml-4">
-                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                          schoolmule.ca/parent
-                        </div>
-                      </div>
-                    </div>
-                    <div className="relative aspect-video">
-                      <Image
-                        src="/images/ParentPortalScreenshot.png"
-                        alt="SchoolMule Parent Portal"
-                        fill
-                        className="object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature 3 - Attendance */}
-            <div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                <div
-                  data-reveal
-                  className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                    <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                      </div>
-                      <div className="flex-1 ml-4">
-                        <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                          schoolmule.ca/attendance
-                        </div>
-                      </div>
-                    </div>
-                    <div className="relative aspect-video">
-                      <Image
-                        src="/images/AttendanceScreenshot.png"
-                        alt="SchoolMule Attendance"
-                        fill
-                        className="object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div
-                  data-reveal
-                  className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
-                >
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 text-sm font-medium mb-4">
-                    <ClockIcon className="w-4 h-4" />
-                    Attendance Tracking
-                  </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                    Never Miss a Beat
-                  </h3>
-                  <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                    Comprehensive attendance tracking with real-time analytics and automated parent notifications.
-                  </p>
-                  <ul className="space-y-4">
-                    {['General & class-specific attendance', 'Automated absence alerts', 'Compliance report generation'].map((item) => (
-                      <li key={item} className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
-                          <CheckIcon className="w-4 h-4 text-cyan-600" />
-                        </div>
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Analytics Section */}
-        <section className="py-20 lg:py-28 bg-gradient-to-b from-slate-50 to-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="text-center max-w-3xl mx-auto mb-16 opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 text-violet-700 text-sm font-medium mb-4">
-                <ChartBarIcon className="w-4 h-4" />
-                Analytics &amp; Insights
-              </div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Data That{' '}
-                <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
-                  Drives Decisions
-                </span>
-              </h2>
-              <p className="text-lg text-slate-600">
-                Turn everyday school data into clear, visual insight — so you can act before small issues become big ones
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              {/* Screenshot */}
-              <div
-                data-reveal
-                className="order-2 lg:order-1 opacity-0 translate-y-8 transition-all duration-700"
-              >
-                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                  <div className="bg-slate-100 px-4 py-3 flex items-center gap-3 border-b border-slate-200">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                    </div>
-                    <div className="flex-1 ml-4">
-                      <div className="bg-white rounded-md px-4 py-1.5 text-sm text-slate-500 max-w-md">
-                        schoolmule.ca/analytics
-                      </div>
-                    </div>
-                  </div>
-                  <div className="relative aspect-video">
-                    <Image
-                      src="/images/AnalyticsScreenshot.png"
-                      alt="SchoolMule Analytics"
-                      fill
-                      className="object-cover object-top"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Text + stat cards */}
-              <div
-                data-reveal
-                className="order-1 lg:order-2 opacity-0 translate-y-8 transition-all duration-700"
-              >
-                <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                  See the Whole School at a Glance
-                </h3>
-                <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                  Attendance, grades, and enrollment come together in one live dashboard.
-                  Spot trends, flag at-risk students early, and share clear reports with your team in seconds.
-                </p>
-
-                {/* Metric strip */}
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
-                  {[
-                    { value: '96%', label: 'Avg. Attendance' },
-                    { value: '+12%', label: 'Grade Trend' },
-                    { value: '20h', label: 'Saved / Week' },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center"
-                    >
-                      <div className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
-                        {stat.value}
-                      </div>
-                      <div className="text-xs sm:text-sm text-slate-500 mt-1 leading-tight">
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <ul className="space-y-4">
-                  {['Live attendance & enrollment charts', 'Grade distribution & trend analysis', 'At-risk student early alerts'].map((item) => (
-                    <li key={item} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                        <CheckIcon className="w-4 h-4 text-violet-600" />
-                      </div>
-                      <span className="text-slate-700">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonial Section */}
-        <section className="py-20 lg:py-28 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="max-w-4xl mx-auto text-center opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <div className="flex justify-center gap-1 mb-8">
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} className="w-8 h-8 text-amber-400" />
                 ))}
-              </div>
-              <blockquote className="text-2xl sm:text-3xl lg:text-4xl font-medium text-slate-800 leading-relaxed mb-8">
-                &ldquo;SchoolMule has transformed how we operate. What used to take our staff hours
-                now happens with just a few clicks. Our teachers can focus on teaching,
-                not administrative work.&rdquo;
-              </blockquote>
-              <div className="flex items-center justify-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg">
-                  MS
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-slate-800">Majida Shoauib</p>
-                  <p className="text-slate-500">Principal, Al Haadi Islamic School</p>
-                </div>
-              </div>
+              </dl>
             </div>
+            <figcaption className="px-2 pb-1 pt-3 text-xs text-slate-600">One student’s record, from the demo school</figcaption>
+          </figure>
+        </Container>
+      </Section>
+
+      {/* Follow one quiz */}
+      <Section labelledBy="story-title">
+        <Container>
+          <div className="mb-12 grid max-w-3xl gap-4">
+            <H2 id="story-title">Follow one quiz through the school.</H2>
+            <Lead>One grade, from the teacher’s gradebook to a student, a parent, and back as a question.</Lead>
           </div>
-        </section>
+          <QuizStory />
+        </Container>
+      </Section>
 
-        {/* Final CTA Section */}
-        <section className="py-20 lg:py-28 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
-
-          {/* Decorative */}
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-teal-500/20 rounded-full blur-3xl" />
-
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div
-              data-reveal
-              className="max-w-3xl mx-auto text-center opacity-0 translate-y-8 transition-all duration-700"
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-                Ready to Transform Your School?
-              </h2>
-              <p className="text-lg lg:text-xl text-slate-300 mb-10 leading-relaxed">
-                Join forward-thinking schools that have streamlined their operations with SchoolMule.
-                Schedule a personalized demo or start your free trial today.
-              </p>
-
-              <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-slate-900 bg-white rounded-xl hover:bg-slate-100 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                >
-                  Schedule Demo
-                  <ArrowRightIcon className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition-all duration-300"
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-
-              <p className="text-slate-400">
-                Questions? Contact us at{' '}
-                <a href="mailto:info@schoolmule.ca" className="text-cyan-400 hover:text-cyan-300 transition-colors">
-                  info@schoolmule.ca
-                </a>
-              </p>
+      {/* Parents */}
+      <Section labelledBy="parents-title" className="bg-gradient-to-b from-white to-[#fff6ea]">
+        <Container className="grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-7">
+            <div className="grid gap-4">
+              <p className="font-semibold text-parents-ink">For families</p>
+              <H2 id="parents-title">Parents actually use it.</H2>
             </div>
+            <dl className="grid gap-6 sm:grid-cols-2">
+              {[
+                ['No app to install', 'Families get an email when something is new, and sign in from it with one tap.'],
+                ['Only their own child', 'And only the grades you’ve chosen to publish.'],
+                ['The week, in a few lines', 'A short summary of how their child is doing, written by AI and labelled that way.'],
+                ['Questions don’t get lost', 'If a parent’s message goes unanswered, SchoolMule can remind the teacher.'],
+              ].map(([t, d]) => (
+                <div key={t} className="grid gap-1.5 border-t border-parents/30 pt-4">
+                  <dt className="font-semibold text-ink">{t}</dt>
+                  <dd className="leading-relaxed text-slate-600">{d}</dd>
+                </div>
+              ))}
+            </dl>
+            <TextLink href="/for/parents">How it works for parents</TextLink>
           </div>
-        </section>
-      </main>
+          <div className="justify-self-center">
+            <PhoneFrame
+              src="/marketing/screens/parent-phone.jpg"
+              alt="The parent overview on a phone: Amal Haddad’s children, the weekly summary and recent grades"
+            />
+          </div>
+        </Container>
+      </Section>
 
-      <Footer />
-    </div>
+      {/* Report cards */}
+      <Section labelledBy="reports-title">
+        <Container className="grid items-center gap-14 lg:grid-cols-2">
+          <div className="grid gap-6 lg:order-2">
+            <H2 id="reports-title">Report cards without the late nights.</H2>
+            <Lead>
+              Teachers write comments in the gradebook, with a first draft from AI if they want one. Then you make a whole class’s report cards at once, as PDFs with your logo.
+            </Lead>
+            <p className="max-w-xl leading-relaxed text-slate-600">
+              Report cards for Grades 1 to 8, skill-based report cards for JK and SK, and progress reports in the middle of the term.
+            </p>
+          </div>
+          <div className="lg:order-1">
+            <ReportSamples from="home" />
+          </div>
+        </Container>
+      </Section>
+
+      {/* Office */}
+      <Section tone="mist" labelledBy="office-title">
+        <Container>
+          <div className="mb-10 grid max-w-3xl gap-4">
+            <H2 id="office-title">Everything else your office runs on.</H2>
+            <Lead>Open any of them for a closer look.</Lead>
+          </div>
+          <FeatureRows features={OPERATIONS} />
+          <p className="mt-8 max-w-3xl leading-relaxed text-slate-600">
+            Also: online forms and registration, tuition read from QuickBooks Online, analytics with a list of students to check in on, and a guided start to each new school year.
+          </p>
+          <TextLink href="/for/school-leaders" className="mt-5">
+            How it works for school leaders
+          </TextLink>
+        </Container>
+      </Section>
+
+      {/* Fit */}
+      <Section labelledBy="fit-title">
+        <Container>
+          <H2 id="fit-title" className="mb-12 max-w-3xl">
+            Built for schools like yours.
+          </H2>
+          <dl className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+            {FIT.map((f) => (
+              <div key={f.title} className="grid content-start gap-2 border-t-2 border-brand pt-5">
+                <dt className="text-lg font-semibold leading-snug text-ink">{f.title}</dt>
+                <dd className="leading-relaxed text-slate-600">{f.text}</dd>
+              </div>
+            ))}
+          </dl>
+          <TextLink href="/for/islamic-schools" className="mt-10">
+            SchoolMule for Islamic schools
+          </TextLink>
+        </Container>
+      </Section>
+
+      {/* Founder */}
+      <Section tone="mist" labelledBy="founder-title">
+        <Container className="grid max-w-4xl gap-10">
+          <h2 id="founder-title" className="sr-only">
+            Who builds SchoolMule
+          </h2>
+          <FounderNote quote="I build SchoolMule, and I work with every school directly: setting up your classes, your report card and your staff. When something isn’t right, you email me." />
+          <p className="text-slate-600">{USAGE_CLAIM}.</p>
+        </Container>
+      </Section>
+
+      {/* Switching */}
+      <Section labelledBy="switch-title">
+        <Container>
+          <div className="mb-12 grid max-w-3xl gap-4">
+            <H2 id="switch-title">How switching works.</H2>
+            <Lead>No big migration project. Most of it is on us.</Lead>
+          </div>
+          <ol className="grid gap-10 md:grid-cols-3">
+            {[
+              ['Send us what you have', 'Student, family and class lists, in whatever form you keep them. We bring them in.'],
+              ['We set up your year', 'Your terms, subjects, classes and report card, ready before your teachers sign in.'],
+              ['Your school starts', 'Teachers begin with attendance and grades. Families get an email invitation.'],
+            ].map(([t, d], i) => (
+              <li key={t} className="grid content-start gap-3">
+                <span aria-hidden className="grid size-10 place-items-center rounded-full bg-ink text-sm font-semibold text-white tabular-nums">
+                  {i + 1}
+                </span>
+                <h3 className="text-xl font-semibold text-ink">{t}</h3>
+                <p className="leading-relaxed text-slate-600">{d}</p>
+              </li>
+            ))}
+          </ol>
+        </Container>
+      </Section>
+
+      {/* FAQ */}
+      <Section tone="mist" labelledBy="faq-title">
+        <Container className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="grid content-start gap-4">
+            <H2 id="faq-title">Questions principals ask.</H2>
+            <p className="text-slate-600">
+              Something else? <Link href="/contact" className="font-semibold text-brand-ink underline-offset-4 hover:underline">Ask us</Link>.
+            </p>
+          </div>
+          <Faq items={FAQ} />
+        </Container>
+      </Section>
+
+      <CtaBand from="home" />
+    </>
   )
 }
-
-export default WelcomePage

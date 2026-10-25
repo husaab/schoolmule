@@ -20,26 +20,26 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: 'SchoolMule: Student Management System',
+    default: 'SchoolMule: school management for independent schools',
     template: '%s - SchoolMule'
   },
-  description: "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
-  alternates: { canonical: 'https://schoolmule.ca' },
+  description: "Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students. Built for small independent schools in Ontario.",
+  // No site-wide canonical: each marketing page sets its own (lib/marketing/seo).
   robots: { index: true, follow: true },
   applicationName: 'SchoolMule',
-  keywords: ["school management", "student information system", "attendance tracking", "gradebook", "parent portal", "education software"],
   authors: [{ name: "SchoolMule" }],
   metadataBase: new URL('https://schoolmule.ca'),
   openGraph: {
-    title: "SchoolMule: School Management System",
-    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+    title: "SchoolMule: school management for independent schools",
+    description: 'Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students.',
     type: "website",
     siteName: "SchoolMule",
+    locale: "en_CA",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SchoolMule: School Management System",
-    description: 'All-in-one platform for attendance, grading, report cards, and parent communication.',
+    title: "SchoolMule: school management for independent schools",
+    description: 'Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students.',
   },
   icons: {
     icon: '/favicon.ico',

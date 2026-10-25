@@ -1,101 +1,239 @@
 'use client'
-import { FC, useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import NavLinks from '../navlinks/Navlinks';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { FC, useEffect, useId, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { ChevronDown, Menu, X } from 'lucide-react'
+import Logo from '@/components/marketing/Logo'
+import { ArrowDisc, buttonStyles, cx } from '@/components/marketing/ui'
+import { PRODUCT_LINKS, SCHOOL_LINKS, VIEW_COLOURS } from '@/lib/marketing/site'
+import { trackEvent } from '@/components/marketing/film/filmEvents'
+
+// The website's navbar: a floating bar with the one call to action, "Book a
+// demo", always in reach (also on phones). Product opens a menu with the
+// overview first, then the four views, then the school pages.
+//
+// Also used by the sign-in and sign-up pages, so it takes no props.
+
+const NAV = [
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+]
 
 const NavBar: FC = () => {
-  const [scrolled, setScrolled] = useState<boolean>(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [notScrollable, setNotScrollable] = useState<boolean>(false);
+  const pathname = usePathname()
+  const [scrolled, setScrolled] = useState(false)
+  const [productOpen, setProductOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const productRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+  const productId = useId()
 
   useEffect(() => {
-    const checkScrollable = () => {
-      // Check if page is scrollable
-      const isScrollable = document.documentElement.scrollHeight > window.innerHeight;
-      setNotScrollable(!isScrollable);
-    };
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
-    const handleScroll = () => setScrolled(window.pageYOffset > 20);
+  // Close menus on navigation (adjusting state while rendering, not in an effect).
+  const [shownPath, setShownPath] = useState(pathname)
+  if (pathname !== shownPath) {
+    setShownPath(pathname)
+    setProductOpen(false)
+    setMenuOpen(false)
+  }
 
-    // Initial checks
-    handleScroll();
-    checkScrollable();
-
-    // Listen for scroll
-    window.addEventListener('scroll', handleScroll);
-
-    // Listen for resize (content might change scrollability)
-    window.addEventListener('resize', checkScrollable);
-
-    // Also check after a short delay for dynamic content
-    const timeout = setTimeout(checkScrollable, 100);
-
+  // Product menu: close on outside click and Escape.
+  useEffect(() => {
+    if (!productOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!productRef.current?.contains(e.target as Node)) setProductOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProductOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', checkScrollable);
-      clearTimeout(timeout);
-    };
-  }, []);
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [productOpen])
 
-  // Apply white background if scrolled OR if page is not scrollable OR if menu is open
-  const showWhiteBackground = scrolled || notScrollable || isOpen;
+  // Phone menu: lock the page behind it and close on Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    const before = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = before
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  const productActive = pathname === '/product' || pathname?.startsWith('/for/')
+  const linkClass = (active: boolean) =>
+    cx(
+      'rounded-full px-3.5 py-2 text-[0.95rem] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30',
+      active ? 'text-ink' : 'text-slate-600 hover:text-ink',
+    )
 
   return (
-    <nav
-      className={`fixed w-full top-0 z-50 transition-all duration-300 ease-out ${
-        showWhiteBackground
-          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-100'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-28">
-          {/* Logo */}
-          <Link href="/" scroll={false} className="flex items-center group">
-            <Image
-              src="/logo/trimmedlogo.png"
-              alt="SchoolMule Logo"
-              width={180}
-              height={48}
-              quality={100}
-              className="transition-transform duration-300 group-hover:scale-105 h-24 w-auto"
-            />
-          </Link>
+    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-4">
+      <a
+        href="#main"
+        className="sr-only rounded-full bg-white px-4 py-2 font-semibold text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60]"
+      >
+        Skip to content
+      </a>
+      <nav
+        aria-label="Main"
+        className={cx(
+          'mx-auto flex h-16 max-w-[1200px] items-center gap-2 rounded-full pl-4 pr-2 transition-[background-color,box-shadow] duration-300 ease-film sm:pl-5',
+          scrolled || menuOpen
+            ? 'bg-white/90 shadow-[0_10px_30px_-14px_rgba(11,19,36,0.22)] ring-1 ring-ink/[0.07] backdrop-blur-xl'
+            : 'bg-white/70 ring-1 ring-ink/[0.04] backdrop-blur-md',
+        )}
+      >
+        <Logo onClick={() => setMenuOpen(false)} />
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:block">
-            <NavLinks />
+        <div className="ml-6 hidden items-center gap-0.5 lg:flex">
+          <div ref={productRef} className="relative">
+            <button
+              type="button"
+              aria-expanded={productOpen}
+              aria-controls={productId}
+              onClick={() => setProductOpen((o) => !o)}
+              className={cx(linkClass(!!productActive), 'inline-flex items-center gap-1')}
+            >
+              Product
+              <ChevronDown
+                aria-hidden
+                strokeWidth={1.75}
+                className={cx('size-4 transition-transform duration-200 ease-film', productOpen && 'rotate-180')}
+              />
+            </button>
+            <div
+              id={productId}
+              hidden={!productOpen}
+              className="absolute left-0 top-[calc(100%+12px)] w-[34rem] origin-top-left rounded-[1.4rem] bg-white p-2 shadow-[0_24px_60px_-20px_rgba(11,19,36,0.35)] ring-1 ring-ink/[0.07]"
+            >
+              <div className="grid grid-cols-[1.1fr_1fr] gap-1">
+                <div className="grid gap-0.5">
+                  {PRODUCT_LINKS.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      onClick={() => setProductOpen(false)}
+                      className="group grid grid-cols-[auto_1fr] items-start gap-3 rounded-2xl px-3 py-2.5 hover:bg-mist focus-visible:bg-mist focus-visible:outline-none"
+                    >
+                      <span
+                        aria-hidden
+                        className={cx('mt-1.5 size-2.5 rounded-full', l.view ? VIEW_COLOURS[l.view].dot : 'bg-ink')}
+                      />
+                      <span>
+                        <span className="block font-semibold text-ink">{l.label}</span>
+                        <span className="block text-sm text-slate-600">{l.blurb}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+                <div className="grid content-start gap-2 rounded-[1.1rem] bg-mist p-4">
+                  <p className="text-sm font-medium text-slate-600">By school</p>
+                  {SCHOOL_LINKS.map((l) => (
+                    <Link key={l.href} href={l.href} onClick={() => setProductOpen(false)} className="font-semibold text-ink hover:text-brand-ink">
+                      {l.label}
+                    </Link>
+                  ))}
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                    Built for small independent schools in Ontario, from JK to Grade 8.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
+          {NAV.map((l) => (
+            <Link key={l.href} href={l.href} className={linkClass(pathname === l.href)}>
+              {l.label}
+            </Link>
+          ))}
+        </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="p-2 rounded-xl lg:hidden text-slate-700 hover:bg-slate-100 transition-colors"
-            onClick={() => setIsOpen((o) => !o)}
-            aria-label={isOpen ? 'Close menu' : 'Open menu'}
+        <div className="ml-auto flex items-center gap-1.5">
+          <Link href="/login" className={cx(linkClass(pathname === '/login'), 'hidden sm:inline-flex')}>
+            Log in
+          </Link>
+          <Link
+            href="/demo"
+            onClick={() => trackEvent('demo_click', { from: 'navbar' })}
+            className={cx(buttonStyles.primary, 'min-h-11 gap-2 px-4 py-1 text-[0.95rem] sm:pl-5 sm:pr-1')}
           >
-            {isOpen ? (
-              <XMarkIcon className="h-6 w-6" />
-            ) : (
-              <Bars3Icon className="h-6 w-6" />
-            )}
+            Book a demo
+            <span className="hidden sm:contents">
+              <ArrowDisc />
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="grid size-11 place-items-center rounded-full text-ink hover:bg-mist focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 lg:hidden"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? <X className="size-5" strokeWidth={1.75} /> : <Menu className="size-5" strokeWidth={1.75} />}
           </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile Dropdown */}
+      {/* Phone and tablet menu */}
       <div
-        className={`lg:hidden transition-all duration-300 ease-out overflow-hidden ${
-          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        }`}
+        id={menuId}
+        hidden={!menuOpen}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('a')) setMenuOpen(false)
+        }}
+        className="fixed inset-x-0 bottom-0 top-[5.25rem] overflow-y-auto bg-white px-4 pb-10 pt-4 lg:hidden"
       >
-        <div className="bg-white border-t border-slate-100 px-4 py-6 shadow-xl">
-          <NavLinks vertical onLinkClick={() => setIsOpen(false)} />
+        <div className="mx-auto grid max-w-lg gap-1">
+          <p className="px-3 pb-1 text-sm font-medium text-slate-600">Product</p>
+          {PRODUCT_LINKS.map((l, i) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              style={{ animationDelay: `${40 + i * 35}ms` }}
+              className="mk-rise flex items-center gap-3 rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist"
+            >
+              <span aria-hidden className={cx('size-2.5 rounded-full', l.view ? VIEW_COLOURS[l.view].dot : 'bg-ink')} />
+              {l.label}
+            </Link>
+          ))}
+          {SCHOOL_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className="mk-rise flex items-center gap-3 rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist [animation-delay:220ms]">
+              <span aria-hidden className="size-2.5 rounded-full bg-slate-300" />
+              {l.label}
+            </Link>
+          ))}
+          <div className="my-3 h-px bg-hairline" />
+          {NAV.map((l) => (
+            <Link key={l.href} href={l.href} className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
+              {l.label}
+            </Link>
+          ))}
+          <Link href="/login" className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
+            Log in
+          </Link>
+          <Link href="/signup" className="rounded-2xl px-3 py-3 text-base text-slate-600 hover:bg-mist">
+            Your school uses SchoolMule? Join your school
+          </Link>
         </div>
       </div>
-    </nav>
-  );
-};
+    </header>
+  )
+}
 
-export default NavBar;
+export default NavBar

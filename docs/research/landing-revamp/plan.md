@@ -2,7 +2,21 @@
 
 Phase 2 of the website revamp. It turns the research in [README.md](README.md) into a positioning, a site map, page-by-page outlines with draft copy, a visual and motion direction, a call-to-action strategy and an SEO plan. Each decision links to its evidence. Numbers in brackets like **[B7]** point to a pattern in [borrow-list.md](borrow-list.md); **§** points to a README section.
 
-Nothing here is built yet. The decisions marked **FOUNDER** are waiting on answers (see the end).
+## Founder decisions (2026-10-25)
+
+| Question | Decision | Effect on the build |
+|---|---|---|
+| Price | **No price on the site** | No `/pricing` page and no price block; the FAQ says pricing depends on school size and is given on the demo call |
+| Proof | **"In daily use at Ontario schools"** | The only usage claim; no count, no school name, no quote |
+| Trial or demo | **Demo only** | "Start Free Trial" removed everywhere; "Log in" and "Join your school" kept for existing schools |
+| Segments | **All small independent schools + an Islamic schools page** | `/for/islamic-schools` ships; Montessori waits |
+| Founder | **Name and photo** | Founder note and "Book a demo with Hussein"; a photo slot that falls back to initials until a photo is supplied |
+| Security page | **Later, after fixes** | No `/security` page and no nav link yet; Home and the FAQ state only verified facts |
+| Contact email | **info@schoolmule.ca** | Shown on Contact, Demo and the footer |
+
+Defaults taken where no answer was given: the demo is **15 minutes**, because that is what the embedded Calendly event books (its link says `30min`, but the event and the outreach emails say 15); no phone number or mailing address; social links removed until confirmed; no mention of the iOS app; legal-text corrections are made for review and ship only with your approval of the preview.
+
+Sections below that say *(FOUNDER)* are resolved by this table.
 
 ---
 

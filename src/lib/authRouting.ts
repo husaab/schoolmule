@@ -54,7 +54,18 @@ export type RouteState = {
 
 // The marketing website (src/app/(prelogin)). Privacy and Terms are not
 // listed: they are reference pages anyone may read, signed in or not.
-export const WEBSITE_PATHS = ['/', '/about', '/product', '/contact', '/demo']
+export const WEBSITE_PATHS = [
+  '/',
+  '/about',
+  '/product',
+  '/contact',
+  '/demo',
+  '/for/school-leaders',
+  '/for/teachers',
+  '/for/parents',
+  '/for/students',
+  '/for/islamic-schools',
+]
 
 // Pages a signed-out visitor may open. A signed-in user on one of these is
 // sent home (they are entry points, not destinations).
