@@ -21,7 +21,7 @@ All new paths are in `WEBSITE_PATHS` and the sitemap. `/features`, `/book-a-demo
 
 | Decision | Evidence |
 |---|---|
-| One call to action, **Book a demo**, in the nav (phone too), every hero and every closer. "Start Free Trial" is gone; existing schools get Log in and Join your school | No trial exists in the code ([feature verification](notes/feature-verification.md)); your decision; one label everywhere (README pattern table); ClassDojo's "Join your school" [B4] |
+| One call to action, **Book a demo**, in every hero and every closer, and beside **Log in** and **Sign up** in the nav (on phones Book a demo sits at the top of the menu). "Start Free Trial" is gone | No trial exists in the code ([feature verification](notes/feature-verification.md)); your decision; one label everywhere (README pattern table); ClassDojo's "Join your school" [B4] |
 | Hero: who it's for above the headline, a plain headline, the real product right below, the film one tap away with its length | Scout and MySchool region pills [B1]; real product first [B7]; 57% of viewing time is above the fold (NN/g); labelled play button with length (Loom, Toast) [B6] |
 | The film plays as **silent chapter loops** (330 KB on phones to 1 MB) that load only after the page has loaded and when on screen; the full film with sound opens at the right chapter, lists its chapters, and ends on "Book a demo" | Video alone doesn't reliably lift conversion (Unbounce, ~35,000 pages); speed does (Portent, Vodafone); Campfire's chaptered tour [B5]. Today's hero made phones download 10 MB |
 | **Four views. One set of records.** Tabs that each play their role's chapter and link to its page; the same four as links beside the hero on desktop | Role tiles (ClassDojo, Brightwheel) and per-role product switches (Superhuman, Mercury) [B4] |
@@ -31,7 +31,7 @@ All new paths are in `WEBSITE_PATHS` and the sitemap. `/features`, `/book-a-demo
 | **Real report cards** printed by SchoolMule's own templates for the demo school, opening in a modal | Report cards are the most consistent complaint in competitor reviews and nobody shows one [B8] |
 | Office features as a list whose rows open the real screen **in a modal** | Your modal rule; depth one click away (Notion, Vercel) |
 | **Islamic schools page** with specifics, and no Hifz or Arabic-interface claim | Flint's faith pages [B21]; your segment decision; SchoolCues' noun-swapped pages are the anti-pattern |
-| **Founder note** with initials until a photo arrives; the only usage line is "In daily use at Ontario schools" | Real faces and peers build trust [B16, B17]; your decisions |
+| **Founder note** with Hussein's photo; the only usage line is "In daily use at Ontario schools" | Real faces and peers build trust [B16, B17]; your decisions |
 | **How switching works** in three steps; **FAQ** in the order principals ask; the price question answered as "on your demo call" | [B20]; [B23]; your no-price decision |
 | `/product` ends with **what SchoolMule doesn't do yet** | "Be clear in promises" (EdWeek) |
 | **Demo page**: calendar first on phones, the length stated (15 minutes, what the Calendly event actually books), a privacy line beside it, the film and sample report cards as doors for the not-ready | Instant booking [B11]; a privacy line raised sign-ups by half in a controlled test [B12]; Ramp's three doors [B13] |
@@ -93,8 +93,6 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 - "Improvements ship every week" (About).
 - The privacy and terms edits: providers added (Vercel, OpenAI, Intuit QuickBooks, Calendly), a section on what the AI features send, the children's section rewritten for the student portal, "encrypted password" changed to hashed, and "regular backups" removed from the terms.
 
-**To supply:** a square founder photo at `public/marketing/founder.jpg`, then set `FOUNDER.photo` in `src/lib/marketing/site.ts`.
-
 **Product bugs found while building** (not fixed here; they are app and backend work):
 1. **Every school's JK and SK report cards print Al Haadi's website and "Principal: Sr. Majida".** The kindergarten templates (`schoolmule-backend/templates/alHaadiReportCardSKTemplate.js` and the JK one) hard-code them. The images on the site use the demo school's details.
 2. The progress report's legend letters are white on pale colours (unreadable), and its "Common Core Standards" wording is US terminology. The progress report image was kept off the site because of this.
@@ -104,3 +102,8 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 **Later, as you decided:** a security page (after MFA, a longer password minimum and backups), pricing, and a Montessori page.
 
 **Small product idea from the Islamic schools page:** staff titles are limited to Mr., Ms., Mrs. and Dr. Adding Sister, Brother, Ustadh and Ustadha would fit how these schools address staff.
+
+## Changes after the founder's review (2026-10-25)
+- Hussein's headshot in the founder note and the small avatars (`public/marketing/founder.jpg`, `founder-face.jpg`).
+- The navbar has **Log in** and **Sign up** (families and staff who haven't joined yet use the site too), beside a quieter **Book a demo** without the arrow. On phones, Log in and Sign up stay in the bar and Book a demo moves to the top of the menu. "Join your school" is now "Sign up" everywhere.
+- FAQ: "Where is our data stored?" now reads "Securely, on Amazon Web Services (AWS) cloud servers…", encrypted in transit and at rest. The French question is removed. (`/product` still lists "A French or Arabic interface" under what SchoolMule doesn't do yet.)
