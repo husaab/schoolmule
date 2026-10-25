@@ -1,0 +1,12 @@
+/                      perf 91 a11y 100 bp 96 seo 100 LCP 3.5 s CLS 0
+/product               perf 91 a11y 100 bp 96 seo 100 LCP 3.5 s CLS 0
+/for/school-leaders    perf 90 a11y 100 bp 96 seo 100 LCP 3.7 s CLS 0
+/for/teachers          perf 91 a11y 100 bp 96 seo 100 LCP 3.5 s CLS 0
+/for/parents           perf 89 a11y 100 bp 96 seo 100 LCP 3.8 s CLS 0
+/for/students          perf 91 a11y 100 bp 96 seo 100 LCP 3.4 s CLS 0
+/for/islamic-schools   perf 91 a11y 100 bp 96 seo 100 LCP 3.4 s CLS 0
+/about                 perf 94 a11y 100 bp 96 seo 100 LCP 3.1 s CLS 0
+/demo                  perf 94 a11y 100 bp 75 seo 100 LCP 3.1 s CLS 0
+/contact               perf 94 a11y 100 bp 96 seo 100 LCP 3.1 s CLS 0
+/privacy               perf 95 a11y 100 bp 96 seo 100 LCP 2.9 s CLS 0
+/terms                 perf 95 a11y 100 bp 96 seo 100 LCP 2.9 s CLS 0

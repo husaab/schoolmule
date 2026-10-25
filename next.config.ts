@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 60 for small preview thumbnails on the website (components/marketing/ReportSamples).
+  images: { qualities: [60, 75] },
   // Likely guesses at website URLs land on the real pages.
   async redirects() {
     return [

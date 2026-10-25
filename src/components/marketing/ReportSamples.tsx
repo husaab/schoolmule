@@ -87,10 +87,10 @@ export default function ReportSamples({ from }: { from: string }) {
         aria-label="Open sample report cards"
       >
         <span className="relative block aspect-[1700/1900] w-[78%] translate-x-[24%] rotate-[3deg] overflow-hidden rounded-lg bg-white shadow-[0_24px_50px_-28px_rgba(11,19,36,0.45)] ring-1 ring-ink/[0.07] transition-transform duration-300 ease-film group-hover:rotate-[4deg] max-sm:rotate-0 max-sm:translate-x-[18%]">
-          <Image src="/marketing/reports/kindergarten-report.jpg" alt="" fill sizes="(min-width: 640px) 380px, 70vw" className="object-cover object-top" />
+          <Image src="/marketing/reports/kindergarten-report.jpg" alt="" fill quality={60} sizes="(min-width: 640px) 380px, 70vw" className="object-cover object-top" />
         </span>
         <span className="absolute left-0 top-[8%] block aspect-[1700/1700] w-[78%] -rotate-[2deg] overflow-hidden rounded-lg bg-white shadow-[0_30px_60px_-28px_rgba(11,19,36,0.55)] ring-1 ring-ink/[0.07] transition-transform duration-300 ease-film group-hover:-rotate-[3deg] max-sm:rotate-0">
-          <Image src="/marketing/reports/report-card-grade5-p2.jpg" alt="" fill sizes="(min-width: 640px) 380px, 70vw" className="object-cover object-top" />
+          <Image src="/marketing/reports/report-card-grade5-p2.jpg" alt="" fill quality={60} sizes="(min-width: 640px) 380px, 70vw" className="object-cover object-top" />
         </span>
         <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3.5 py-2 text-sm font-semibold text-ink shadow-[0_8px_24px_-12px_rgba(11,19,36,0.5)] ring-1 ring-ink/5">
           <Expand aria-hidden className="size-4" strokeWidth={1.75} />

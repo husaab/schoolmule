@@ -9,6 +9,9 @@ const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
   variable: "--font-roboto",
   display: "swap",
+  // The app's body face. Not preloaded: the website (Outfit) never uses it,
+  // and preloading it there competed with each page's largest paint.
+  preload: false,
 })
 
 const outfit = Outfit({
