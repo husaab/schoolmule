@@ -1,0 +1,64 @@
+{
+  "url": "https://schoolmule.ca/contact",
+  "capturedAt": "2026-10-25T17:43:09.028Z",
+  "status": 200,
+  "finalUrl": "https://schoolmule.ca/contact",
+  "desktop": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "We'd Love to Hear From You"
+    ],
+    "h2": [
+      "Contact Information"
+    ],
+    "navLabels": [
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "info@schoolmule.ca"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 1831
+  },
+  "mobile": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "We'd Love to Hear From You"
+    ],
+    "h2": [
+      "Contact Information"
+    ],
+    "navLabels": [
+      "Open menu",
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "info@schoolmule.ca"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 2777
+  },
+  "ok": true
+}

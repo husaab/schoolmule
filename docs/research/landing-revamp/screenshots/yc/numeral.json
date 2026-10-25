@@ -1,0 +1,89 @@
+{
+  "url": "https://www.numeral.com",
+  "capturedAt": "2026-10-25T17:55:51.210Z",
+  "status": 200,
+  "finalUrl": "https://www.numeral.com/",
+  "desktop": {
+    "title": "Numeral | Sales Tax and VAT Compliance, Solved.",
+    "metaDescription": "We fully manage the headaches of sales tax so you can get back to real work. Get started for free today!",
+    "ogImage": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c/6a73a8ebd77e023c4e326b2b_Globe.png",
+    "h1": [
+      "Sales tax, solved."
+    ],
+    "h2": [
+      "End-to-end compliance done for you.",
+      "Sales tax, VAT and GST compliance in 90+ countries.",
+      "Advanced capabilities for scaling businesses.",
+      "The human layer of Numeral.",
+      "Trusted by over 3,500 customers.",
+      "Tailor-made solutions.",
+      "40+ integrations for a simplified workflow.",
+      "Tax infrastructure to sell globally."
+    ],
+    "navLabels": [
+      "PRICING",
+      "Sign in",
+      "Book a demo"
+    ],
+    "heroCtas": [
+      "home",
+      "Contact Numeral"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c%2F6a70c1459f2ddabd1e84f056_hero-mid-1200.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 10374
+  },
+  "mobile": {
+    "title": "Numeral | Sales Tax and VAT Compliance, Solved.",
+    "metaDescription": "We fully manage the headaches of sales tax so you can get back to real work. Get started for free today!",
+    "ogImage": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c/6a73a8ebd77e023c4e326b2b_Globe.png",
+    "h1": [
+      "Sales tax, solved."
+    ],
+    "h2": [
+      "End-to-end compliance done for you.",
+      "Sales tax, VAT and GST compliance in 90+ countries.",
+      "Advanced capabilities for scaling businesses.",
+      "The human layer of Numeral.",
+      "Trusted by over 3,500 customers.",
+      "Tailor-made solutions.",
+      "40+ integrations for a simplified workflow.",
+      "Tax infrastructure to sell globally."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "home",
+      "Contact Numeral"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c%2F6ac3cfa2291700ae4ff747c3_hero-mobile-hq-1280.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 12375
+  },
+  "ok": true
+}

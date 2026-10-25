@@ -1,0 +1,67 @@
+{
+  "url": "https://www.avoca.ai/demo",
+  "capturedAt": "2026-10-25T17:55:13.045Z",
+  "status": 200,
+  "finalUrl": "https://www.avoca.ai/demo",
+  "desktop": {
+    "title": "Book a Demo | Avoca AI",
+    "metaDescription": "See how Avoca AI answers every call, books jobs, and coaches your team. Schedule a personalized demo in under 2 minutes.",
+    "ogImage": "https://www.avoca.ai/og-default.webp",
+    "h1": [
+      "CAPTURE EVERY LEAD. WIN EVERY CUSTOMER."
+    ],
+    "h2": [
+      "The Industry’s Most Experienced CSR",
+      "Your AI Front Office On One Platform."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "Avoca home",
+      "Get started",
+      "Previous testimonial",
+      "Next testimonial"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://avoca.chilipiper.com/concierge-router/2026-territories?trigger=ThirdPartyForm&timezone=America%2FToronto&sourceUrl=https%3A%2F%2Fwww.avoca.ai%2Fdemo"
+    ],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 4654
+  },
+  "mobile": {
+    "title": "Book a Demo | Avoca AI",
+    "metaDescription": "See how Avoca AI answers every call, books jobs, and coaches your team. Schedule a personalized demo in under 2 minutes.",
+    "ogImage": "https://www.avoca.ai/og-default.webp",
+    "h1": [
+      "CAPTURE EVERY LEAD. WIN EVERY CUSTOMER."
+    ],
+    "h2": [
+      "The Industry’s Most Experienced CSR",
+      "Your AI Front Office On One Platform."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "Avoca home",
+      "Get started"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://avoca.chilipiper.com/concierge-router/2026-territories?trigger=ThirdPartyForm&timezone=America%2FToronto&sourceUrl=https%3A%2F%2Fwww.avoca.ai%2Fdemo"
+    ],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 6043
+  },
+  "ok": true
+}

@@ -1,0 +1,73 @@
+{
+  "url": "https://sycamoreleaf.com/pricing/",
+  "capturedAt": "2026-10-25T17:45:06.829Z",
+  "status": 200,
+  "finalUrl": "https://sycamoreleaf.com/pricing/",
+  "desktop": {
+    "title": "Sycamore Pricing (2026): $4 per student per month, every module included",
+    "metaDescription": "Sycamore is $4 per student per month with all modules included: SIS, gradebook, attendance, admissions, tuition, payments, parent app, and communications. Published, predictable, and flexible.",
+    "ogImage": "https://sycamoreleaf.com/wp-content/uploads/2026/10/sycamore-pricing-og.jpg",
+    "h1": [
+      "One price. Every module. No surprises."
+    ],
+    "h2": [
+      "See how Sycamore stacks up."
+    ],
+    "navLabels": [
+      "Products",
+      "Products Submenu",
+      "Solutions",
+      "Solutions Submenu",
+      "About",
+      "About Submenu",
+      "Media",
+      "Support",
+      "Login",
+      "Toggle search",
+      "Book a Consultation"
+    ],
+    "heroCtas": [
+      "Get a quote",
+      "See pricing examples",
+      "The plan",
+      "What's included",
+      "Transaction fees",
+      "Examples",
+      "Add-ons",
+      "Why this model",
+      "Compare",
+      "FAQ"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 11013
+  },
+  "mobile": {
+    "title": "Sycamore Pricing (2026): $4 per student per month, every module included",
+    "metaDescription": "Sycamore is $4 per student per month with all modules included: SIS, gradebook, attendance, admissions, tuition, payments, parent app, and communications. Published, predictable, and flexible.",
+    "ogImage": "https://sycamoreleaf.com/wp-content/uploads/2026/10/sycamore-pricing-og.jpg",
+    "h1": [
+      "One price. Every module. No surprises."
+    ],
+    "h2": [
+      "See how Sycamore stacks up."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Get a quote",
+      "See pricing examples"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 18968
+  },
+  "ok": true
+}

@@ -1,0 +1,107 @@
+{
+  "url": "https://www.notion.com",
+  "capturedAt": "2026-10-25T17:44:38.604Z",
+  "status": 200,
+  "finalUrl": "https://www.notion.com/",
+  "desktop": {
+    "title": "The AI workspace that works for you. | Notion",
+    "metaDescription": "Build Custom Agents, search across all your apps, and automate busywork. The AI workspace where teams get more done, faster.",
+    "ogImage": "https://www.notion.com/front-static/meta/teams-and-agents.jpg",
+    "h1": [
+      "Where teams and agents Create together."
+    ],
+    "h2": [
+      "AI where your team works.",
+      "Bring everything into one system of record.",
+      "Get answers, instantly—with citations.",
+      "Keep work moving 24/7 with agents.",
+      "Trusted by teams that ship.",
+      "Get started today."
+    ],
+    "navLabels": [
+      "Get Notion free",
+      "Request a demo"
+    ],
+    "heroCtas": [
+      "Notion – Home",
+      "Product",
+      "Resources",
+      "Pricing",
+      "Request a demo",
+      "Log in",
+      "Get Notion free",
+      "OpenAI",
+      "Figma",
+      "Ramp",
+      "Cursor",
+      "Toyota"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://videos.ctfassets.net/spoqsaf9291f/1EL7UZIXfcqngxsNSbL8tR/291f61f56f29dd8e788deaec8561d882/web-homepage-hero-1920x1200_final.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4687
+  },
+  "mobile": {
+    "title": "The AI workspace that works for you. | Notion",
+    "metaDescription": "Build Custom Agents, search across all your apps, and automate busywork. The AI workspace where teams get more done, faster.",
+    "ogImage": "https://www.notion.com/front-static/meta/teams-and-agents.jpg",
+    "h1": [
+      "Where teams and agents Create together."
+    ],
+    "h2": [
+      "AI where your team works.",
+      "Bring everything into one system of record.",
+      "Get answers, instantly—with citations.",
+      "Keep work moving 24/7 with agents.",
+      "Trusted by teams that ship.",
+      "Get started today."
+    ],
+    "navLabels": [
+      "Get Notion free",
+      "Request a demo"
+    ],
+    "heroCtas": [
+      "Notion – Home",
+      "Get Notion free",
+      "Toggle main menu",
+      "OpenAI",
+      "Figma",
+      "Ramp",
+      "Cursor",
+      "Toyota",
+      "Clay",
+      "Vercel",
+      "Faire",
+      "Remote.com"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://videos.ctfassets.net/spoqsaf9291f/1EL7UZIXfcqngxsNSbL8tR/291f61f56f29dd8e788deaec8561d882/web-homepage-hero-1920x1200_final.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4003
+  },
+  "ok": true
+}

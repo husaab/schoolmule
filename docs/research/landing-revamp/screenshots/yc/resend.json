@@ -1,0 +1,184 @@
+{
+  "url": "https://resend.com",
+  "capturedAt": "2026-10-25T17:44:05.688Z",
+  "status": 200,
+  "finalUrl": "https://resend.com/",
+  "desktop": {
+    "title": "Resend · Email for developers",
+    "metaDescription": "The best way to reach humans instead of spam folders. Deliver transactional and marketing emails at scale.",
+    "ogImage": "https://resend.com/static/cover.jpg",
+    "h1": [
+      "Email for developers"
+    ],
+    "h2": [
+      "Integrate this weekend",
+      "First-class developer experience",
+      "Test mode",
+      "Modular webhooks",
+      "Write using a delightful editor",
+      "Go beyond editing",
+      "Contact management",
+      "Broadcast analytics",
+      "Develop emails using React",
+      "Welcome to ACME, user!",
+      "Reach humans, not spam folders",
+      "Everything in your control",
+      "Beyond expectations",
+      "Email reimagined. Available today."
+    ],
+    "navLabels": [
+      "Resend",
+      "Features",
+      "Company",
+      "Enterprise",
+      "Help",
+      "Docs",
+      "AI",
+      "Pricing",
+      "Log in",
+      "Get started"
+    ],
+    "heroCtas": [
+      "What you missed at Resend Forward",
+      "Get started",
+      "Documentation"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://resend.com/static/cube.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-integrate-weekend.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-broadcast.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-react.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-control.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 12319
+  },
+  "mobile": {
+    "title": "Resend · Email for developers",
+    "metaDescription": "The best way to reach humans instead of spam folders. Deliver transactional and marketing emails at scale.",
+    "ogImage": "https://resend.com/static/cover.jpg",
+    "h1": [
+      "Email for developers"
+    ],
+    "h2": [
+      "Integrate this weekend",
+      "First-class developer experience",
+      "Test mode",
+      "Modular webhooks",
+      "Write using a delightful editor",
+      "Go beyond editing",
+      "Contact management",
+      "Broadcast analytics",
+      "Develop emails using React",
+      "Welcome to ACME, user!",
+      "Reach humans, not spam folders",
+      "Everything in your control",
+      "Beyond expectations",
+      "Email reimagined. Available today."
+    ],
+    "navLabels": [
+      "Open main menu"
+    ],
+    "heroCtas": [
+      "What you missed at Resend Forward",
+      "Get started",
+      "Documentation"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://resend.com/static/cube.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-integrate-weekend.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-broadcast.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-react.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": "https://resend.com/static/landing-page/3d-control.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 14146
+  },
+  "ok": true
+}

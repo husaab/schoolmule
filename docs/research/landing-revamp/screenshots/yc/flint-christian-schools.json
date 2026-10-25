@@ -1,0 +1,82 @@
+{
+  "url": "https://flintk12.com/christian-schools",
+  "capturedAt": "2026-10-25T17:58:25.769Z",
+  "status": 200,
+  "finalUrl": "https://flintk12.com/christian-schools",
+  "desktop": {
+    "title": "Flint for Christian schools",
+    "metaDescription": "We believe education is more than academics. Flint helps Christian schools integrate faith and learning without compromising on rigor, safety, or pedagogy.",
+    "ogImage": "https://flintk12.com/images/audiences/parents-social-08c0fc92.png",
+    "h1": [
+      "Flint for Christian schools"
+    ],
+    "h2": [
+      "Why choose Flint for Christian schools",
+      "Spark your students' learning with Flint",
+      "Features built for personalizing learning.",
+      "Creating engaging, faith-based experiences",
+      "Your all-in-one AI for schools platform to personalize learning with ease.",
+      "Why Christian schools choose Flint",
+      "Built for responsible AI in faith-based education",
+      "Improve school wide AI literacy and career readiness",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Solutions",
+      "Outcomes",
+      "Resources",
+      "Pricing",
+      "Login",
+      "Start for free →"
+    ],
+    "heroCtas": [
+      "Get a free trial"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1236324809?title=0&byline=0&portrait=0&share=0&like=0&watch_later=0&play_button_position=center&dnt=1&texttrack=en"
+    ],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage"
+    ],
+    "pageHeight": 9204
+  },
+  "mobile": {
+    "title": "Flint for Christian schools",
+    "metaDescription": "We believe education is more than academics. Flint helps Christian schools integrate faith and learning without compromising on rigor, safety, or pedagogy.",
+    "ogImage": "https://flintk12.com/images/audiences/parents-social-08c0fc92.png",
+    "h1": [
+      "Flint for Christian schools"
+    ],
+    "h2": [
+      "Why choose Flint for Christian schools",
+      "Spark your students' learning with Flint",
+      "Features built for personalizing learning.",
+      "Creating engaging, faith-based experiences",
+      "Your all-in-one AI for schools platform to personalize learning with ease.",
+      "Why Christian schools choose Flint",
+      "Built for responsible AI in faith-based education",
+      "Improve school wide AI literacy and career readiness",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "Get a free trial"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1236324809?title=0&byline=0&portrait=0&share=0&like=0&watch_later=0&play_button_position=center&dnt=1&texttrack=en"
+    ],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage"
+    ],
+    "pageHeight": 13812
+  },
+  "ok": true
+}

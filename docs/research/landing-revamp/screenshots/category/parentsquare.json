@@ -1,0 +1,98 @@
+{
+  "url": "https://www.parentsquare.com",
+  "capturedAt": "2026-10-25T17:43:04.906Z",
+  "status": 200,
+  "finalUrl": "https://www.parentsquare.com/",
+  "desktop": {
+    "title": "K-12 Family Engagement Platform for Schools | ParentSquare",
+    "metaDescription": "The family engagement platform that reaches every family. Communications, websites, attendance, and payments. Trusted by over 42k schools and 22M students.",
+    "ogImage": null,
+    "h1": [
+      "The K-12 family engagement platform built to reach every family"
+    ],
+    "h2": [
+      "We help schools connect with families—all of them",
+      "Engaged families lead to confident, successful students",
+      "Family engagement infrastructure trusted by 42,000+ schools",
+      "Built for schools, designed for families",
+      "Made for how schools actually work",
+      "The platform behind family engagement: All of your tools, one platform",
+      "Latest insights and resources"
+    ],
+    "navLabels": [
+      "Platform",
+      "Solutions",
+      "Resources and Support",
+      "Company",
+      "Get demo",
+      "Sign in"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Explore the platform",
+      "Get a demo"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://s39150.pcdn.co/wp-content/themes/parentsquare/assets/img/home-video-640x330.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "",
+      "WebSite"
+    ],
+    "pageHeight": 10559
+  },
+  "mobile": {
+    "title": "K-12 Family Engagement Platform for Schools | ParentSquare",
+    "metaDescription": "The family engagement platform that reaches every family. Communications, websites, attendance, and payments. Trusted by over 42k schools and 22M students.",
+    "ogImage": null,
+    "h1": [
+      "The K-12 family engagement platform built to reach every family"
+    ],
+    "h2": [
+      "We help schools connect with families—all of them",
+      "Engaged families lead to confident, successful students",
+      "Family engagement infrastructure trusted by 42,000+ schools",
+      "Built for schools, designed for families",
+      "Made for how schools actually work",
+      "The platform behind family engagement: All of your tools, one platform",
+      "Latest insights and resources"
+    ],
+    "navLabels": [
+      "Menu"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Explore the platform",
+      "Get a demo"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://s39150.pcdn.co/wp-content/themes/parentsquare/assets/img/home-video-640x330.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "",
+      "WebSite"
+    ],
+    "pageHeight": 12724
+  },
+  "ok": true
+}

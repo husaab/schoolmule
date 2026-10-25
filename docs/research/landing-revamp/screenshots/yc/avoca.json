@@ -1,0 +1,110 @@
+{
+  "url": "https://www.avoca.ai",
+  "capturedAt": "2026-10-25T17:43:50.590Z",
+  "status": 200,
+  "finalUrl": "https://www.avoca.ai/",
+  "desktop": {
+    "title": "Avoca AI | The AI Workforce for Service Businesses | Avoca AI",
+    "metaDescription": "Always-on agents that answer every call, fill every board, and keep your team focused on the work that matters.",
+    "ogImage": "https://www.avoca.ai/og-default.webp",
+    "h1": [
+      "THE AI FRONT OFFICE FOR SERVICE BUSINESSES THE AI FRONT OFFICE FOR SERVICE BUSINESSES"
+    ],
+    "h2": [
+      "YOUR BUSINESS SCALES ON YOUR TERMS.",
+      "Enterprise-grade security",
+      "EVERY MOMENT, HANDLED."
+    ],
+    "navLabels": [
+      "Avoca home",
+      "Products",
+      "Industries",
+      "Customers",
+      "Resources",
+      "Login",
+      "Book a Demo"
+    ],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "Avoca raises $125M Series B at $1B valuation Read more →",
+      "×",
+      "Book a Demo",
+      "Talk to our AI",
+      "Trusted by 1,000+ Service Leaders",
+      "Enterprise Ready Trust & Security",
+      "ServiceTitan Certified App",
+      "HVAC",
+      "Plumbing",
+      "Electrical",
+      "Auto Repair",
+      "Dealership Auto Repair",
+      "Energy & Fuel Delivery",
+      "Garage Door",
+      "Home Improvement",
+      "Junk Removal & Dumpster Rental",
+      "Movers"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://avoca.chilipiper.com/concierge-router/2026-territories?trigger=ThirdPartyForm&timezone=America%2FToronto&sourceUrl=https%3A%2F%2Fwww.avoca.ai%2F"
+    ],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 4724
+  },
+  "mobile": {
+    "title": "Avoca AI | The AI Workforce for Service Businesses | Avoca AI",
+    "metaDescription": "Always-on agents that answer every call, fill every board, and keep your team focused on the work that matters.",
+    "ogImage": "https://www.avoca.ai/og-default.webp",
+    "h1": [
+      "THE AI FRONT OFFICE FOR SERVICE BUSINESSES THE AI FRONT OFFICE FOR SERVICE BUSINESSES"
+    ],
+    "h2": [
+      "YOUR BUSINESS SCALES ON YOUR TERMS.",
+      "Enterprise-grade security",
+      "EVERY MOMENT, HANDLED."
+    ],
+    "navLabels": [
+      "Avoca home",
+      "Open menu",
+      "Customers",
+      "Dashboard Login"
+    ],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "Avoca raises $125M Series B at $1B valuation Read more →",
+      "Avoca raises $125M Series B at $1B valuation Read more →",
+      "×",
+      "Book a Demo",
+      "Talk to our AI",
+      "HVAC",
+      "Plumbing",
+      "Electrical",
+      "Auto Repair",
+      "Dealership Auto Repair",
+      "Energy & Fuel Delivery",
+      "Garage Door",
+      "Home Improvement",
+      "Junk Removal & Dumpster Rental",
+      "Movers",
+      "Pest Control",
+      "Restoration Services"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://avoca.chilipiper.com/concierge-router/2026-territories?trigger=ThirdPartyForm&timezone=America%2FToronto&sourceUrl=https%3A%2F%2Fwww.avoca.ai%2F"
+    ],
+    "jsonLdTypes": [
+      "",
+      ""
+    ],
+    "pageHeight": 5929
+  },
+  "ok": true
+}

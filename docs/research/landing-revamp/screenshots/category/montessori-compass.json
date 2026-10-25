@@ -1,0 +1,82 @@
+{
+  "url": "https://montessoricompass.com",
+  "capturedAt": "2026-10-25T17:43:04.658Z",
+  "status": 200,
+  "finalUrl": "https://www.montessoricompass.com/",
+  "desktop": {
+    "title": "Montessori Record Keeping Software | Montessori Compass",
+    "metaDescription": "Montessori record keeping software—built to grow with your school. Trusted by thousands of educators, school leaders, & families since 2012. Free 30-day trial.",
+    "ogImage": "https://www.montessoricompass.com/og-default.png",
+    "h1": [
+      "Montessori Record Keeping built for your classroom."
+    ],
+    "h2": [
+      "Clarity in the Classroom. Confidence at Home.",
+      "Montessori Foundation Scope & Sequence—Exclusively in Montessori Compass",
+      "Stay Present. Share Progress. Build Connection.",
+      "When you’re ready for more, discover the all-in-one platform built for Montessori schools.",
+      "Switching is easier than you think.",
+      "Simple, flexible pricing for Montessori schools",
+      "Ready to get started?"
+    ],
+    "navLabels": [
+      "Scope and Sequence",
+      "Growth Suite",
+      "Pricing",
+      "Webinar",
+      "Contact",
+      "Start Your Free 30-Day Trial"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "Login",
+      "Start Your Free 30-Day Trial",
+      "Talk to Us"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 6140
+  },
+  "mobile": {
+    "title": "Montessori Record Keeping Software | Montessori Compass",
+    "metaDescription": "Montessori record keeping software—built to grow with your school. Trusted by thousands of educators, school leaders, & families since 2012. Free 30-day trial.",
+    "ogImage": "https://www.montessoricompass.com/og-default.png",
+    "h1": [
+      "Montessori Record Keeping built for your classroom."
+    ],
+    "h2": [
+      "Clarity in the Classroom. Confidence at Home.",
+      "Montessori Foundation Scope & Sequence—Exclusively in Montessori Compass",
+      "Stay Present. Share Progress. Build Connection.",
+      "When you’re ready for more, discover the all-in-one platform built for Montessori schools.",
+      "Switching is easier than you think.",
+      "Simple, flexible pricing for Montessori schools",
+      "Ready to get started?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "Scope and Sequence",
+      "Growth Suite",
+      "Pricing",
+      "Webinar",
+      "Contact",
+      "Login",
+      "Start Your Free 30-Day Trial"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "Start Your Free 30-Day Trial",
+      "Talk to Us"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 10981
+  },
+  "ok": true
+}

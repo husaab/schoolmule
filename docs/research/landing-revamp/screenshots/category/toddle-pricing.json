@@ -1,0 +1,103 @@
+{
+  "url": "https://www.toddleapp.com/pricing/",
+  "capturedAt": "2026-10-25T17:45:43.971Z",
+  "status": 200,
+  "finalUrl": "https://www.toddleapp.com/pricing/",
+  "desktop": {
+    "title": "Pricing | Toddle",
+    "metaDescription": "Explore LMS Toddle’s flexible pricing plans to find the best fit for your school.",
+    "ogImage": "https://cdn.www.toddleapp.com/wp-content/uploads/2024/10/Pricing-Link-Preview-1.png",
+    "h1": [
+      "Flexible pricing plans tailored to your needs"
+    ],
+    "h2": [
+      "Looking for a free trial?",
+      "Need a custom quote?",
+      "You’re in good company with Toddle"
+    ],
+    "navLabels": [
+      "Features",
+      "Solutions",
+      "Toddle AI",
+      "Resources",
+      "Impact Stories",
+      "Pricing",
+      "Sign in",
+      "Get a demo"
+    ],
+    "heroCtas": [
+      "Close",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "blob:https://www.toddleapp.com/fafe876e-f170-4d3c-bdef-0114eecf5b57"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      "",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 5656
+  },
+  "mobile": {
+    "title": "Pricing | Toddle",
+    "metaDescription": "Explore LMS Toddle’s flexible pricing plans to find the best fit for your school.",
+    "ogImage": "https://cdn.www.toddleapp.com/wp-content/uploads/2024/10/Pricing-Link-Preview-1.png",
+    "h1": [
+      "Flexible pricing plans tailored to your needs"
+    ],
+    "h2": [
+      "Looking for a free trial?",
+      "Need a custom quote?",
+      "You’re in good company with Toddle"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Get a demo",
+      "Features",
+      "Solutions",
+      "Toddle AI",
+      "Resources",
+      "Events",
+      "Learn",
+      "School Success",
+      "Impact Stories",
+      "Pricing",
+      "Book a demo",
+      "Sign In",
+      "Planning Pro",
+      "Advanced",
+      "Ultimate",
+      "Close",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://fast.wistia.com/embed/medias/8q71cp3h7g.m3u8?quality_min=360&quality_max=2160"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      "",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 6562
+  },
+  "ok": true
+}

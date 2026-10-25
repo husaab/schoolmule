@@ -1,0 +1,81 @@
+{
+  "url": "https://www.rippling.com",
+  "capturedAt": "2026-10-25T17:48:18.744Z",
+  "status": 200,
+  "finalUrl": "https://www.rippling.com/en-CA",
+  "desktop": {
+    "title": "Rippling: #1 Workforce Management System | HR, IT, Finance",
+    "metaDescription": "Rippling eliminates the friction from running a business, combining HR, IT, and Finance apps on a unified data platform.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [
+      "Manage your entire workforce on one system"
+    ],
+    "h2": [
+      "Start with the apps you need, or run them all together",
+      "Rippling is the operating system for your entire workforce",
+      "When everything runs on one system, work moves faster",
+      "What’s new at Rippling",
+      "Get a demo—live or on demand",
+      "Request a demo to see Rippling in action"
+    ],
+    "navLabels": [
+      "Products",
+      "Platform",
+      "Solutions",
+      "Global",
+      "Resources",
+      "Pricing",
+      "EN",
+      "Login",
+      "See a demo"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "See Rippling",
+      "Privacy Notice",
+      "Terms apply",
+      "Take a product tour"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Product",
+      "Organization"
+    ],
+    "pageHeight": 8488
+  },
+  "mobile": {
+    "title": "Rippling: #1 Workforce Management System | HR, IT, Finance",
+    "metaDescription": "Rippling eliminates the friction from running a business, combining HR, IT, and Finance apps on a unified data platform.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [
+      "Manage your entire workforce on one system"
+    ],
+    "h2": [
+      "Start with the apps you need, or run them all together",
+      "Rippling is the operating system for your entire workforce",
+      "When everything runs on one system, work moves faster",
+      "What’s new at Rippling",
+      "Get a demo—live or on demand",
+      "Request a demo to see Rippling in action"
+    ],
+    "navLabels": [
+      "Toggle main menu"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "See Rippling",
+      "Privacy Notice",
+      "Terms apply",
+      "Take a product tour"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Product",
+      "Organization"
+    ],
+    "pageHeight": 11758
+  },
+  "ok": true
+}

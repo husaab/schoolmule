@@ -1,0 +1,72 @@
+{
+  "url": "https://scoutforschools.com",
+  "capturedAt": "2026-10-25T17:43:50.575Z",
+  "status": 200,
+  "finalUrl": "https://www.scoutforschools.com/",
+  "desktop": {
+    "title": "Scout — The student information system for innovators",
+    "metaDescription": "Scout is the AI-native student information system for innovative schools — enrollment, compliance, reporting, and student success in one system schools actually love.",
+    "ogImage": "https://www.scoutforschools.com/opengraph-image.png?opengraph-image.22_y2ym-rzrp8.png",
+    "h1": [
+      "The SIS for innovators."
+    ],
+    "h2": [
+      "Agents for every part of your school and district operations.",
+      "Hear from our happy customers",
+      "Save money. Save time. Save headaches.",
+      "For the love",
+      "of learning.",
+      "Expert assistance, any time of day.",
+      "Best-in-class data security.",
+      "Backed by world-class education investors.",
+      "Ready to see Scout in action?"
+    ],
+    "navLabels": [
+      "Scout home",
+      "Platform",
+      "About",
+      "Customer Experience",
+      "Resources",
+      "Careers",
+      "Contact",
+      "Schedule a demo Schedule a demo Schedule a demo"
+    ],
+    "heroCtas": [
+      "Learn more"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9502
+  },
+  "mobile": {
+    "title": "Scout — The student information system for innovators",
+    "metaDescription": "Scout is the AI-native student information system for innovative schools — enrollment, compliance, reporting, and student success in one system schools actually love.",
+    "ogImage": "https://www.scoutforschools.com/opengraph-image.png?opengraph-image.22_y2ym-rzrp8.png",
+    "h1": [
+      "The SIS for innovators."
+    ],
+    "h2": [
+      "Agents for every part of your school and district operations.",
+      "Hear from our happy customers",
+      "Save money. Save time. Save headaches.",
+      "For the love",
+      "of learning.",
+      "Expert assistance, any time of day.",
+      "Best-in-class data security.",
+      "Backed by world-class education investors.",
+      "Ready to see Scout in action?"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Scout home",
+      "Open menu",
+      "Learn more"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 10823
+  },
+  "ok": true
+}

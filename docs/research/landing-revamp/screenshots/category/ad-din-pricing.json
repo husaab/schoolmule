@@ -1,0 +1,61 @@
+{
+  "url": "https://www.ad-din.ca/pricing",
+  "capturedAt": "2026-10-25T17:50:26.357Z",
+  "status": 200,
+  "finalUrl": "https://www.ad-din.ca/pricing",
+  "desktop": {
+    "title": "Ad-Din",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Ad-Din Pricing Calculator"
+    ],
+    "h2": [
+      "Step 1: Masjid Module",
+      "Feature Comparison",
+      "Who pays for subscription?",
+      "Step 1: Masjid Module"
+    ],
+    "navLabels": [
+      "Products",
+      "Resources",
+      "Home",
+      "Pricing",
+      "Log In",
+      "Request a Demo",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Previous",
+      "Next"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 2292
+  },
+  "mobile": {
+    "title": "Ad-Din",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Ad-Din Pricing Calculator"
+    ],
+    "h2": [
+      "Step 1: Masjid Module",
+      "Feature Comparison",
+      "Who pays for subscription?",
+      "Step 1: Masjid Module"
+    ],
+    "navLabels": [
+      "Products",
+      "Resources"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 3339
+  },
+  "ok": true
+}

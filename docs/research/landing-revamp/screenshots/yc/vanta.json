@@ -1,0 +1,68 @@
+{
+  "url": "https://www.vanta.com",
+  "capturedAt": "2026-10-25T17:44:55.260Z",
+  "status": 200,
+  "finalUrl": "https://www.vanta.com/",
+  "desktop": {
+    "title": "SOC 2, HIPAA, ISO 27001, PCI, and GDPR Compliance",
+    "metaDescription": "Vanta automates the complex and time-consuming process of SOC 2, HIPAA, ISO 27001, PCI, and GDPR compliance certification. Automate your security monitoring in weeks instead of months.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Get your compliance together"
+    ],
+    "h2": [
+      "It’s all here",
+      "The Vanta Agent: your 24/7 GRC engineer",
+      "“Vanta helped us unblock our sales cycle for security questionnaires in a scalable, sustainable way.”",
+      "All the frameworks you need",
+      "Built for you",
+      "Proof? We've got proof.",
+      "Vanta named a Leader in The Forrester Wave™: Governance, Risk, and Compliance Platforms, Q2 2026",
+      "Dive into all things Vanta and agentic trust",
+      "The new standard for trust"
+    ],
+    "navLabels": [
+      "🤝 Don’t tackle AI risk alone. Join us at VantaCon"
+    ],
+    "heroCtas": [
+      "home",
+      "Plans",
+      "Log in",
+      "Get a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9625
+  },
+  "mobile": {
+    "title": "SOC 2, HIPAA, ISO 27001, PCI, and GDPR Compliance",
+    "metaDescription": "Vanta automates the complex and time-consuming process of SOC 2, HIPAA, ISO 27001, PCI, and GDPR compliance certification. Automate your security monitoring in weeks instead of months.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Get your compliance together"
+    ],
+    "h2": [
+      "It’s all here",
+      "The Vanta Agent: your 24/7 GRC engineer",
+      "“Vanta helped us unblock our sales cycle for security questionnaires in a scalable, sustainable way.”",
+      "All the frameworks you need",
+      "Built for you",
+      "Proof? We've got proof.",
+      "Vanta named a Leader in The Forrester Wave™: Governance, Risk, and Compliance Platforms, Q2 2026",
+      "Dive into all things Vanta and agentic trust",
+      "The new standard for trust"
+    ],
+    "navLabels": [
+      "Don’t tackle AI risk alone. Join us at VantaCon"
+    ],
+    "heroCtas": [
+      "home"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 13932
+  },
+  "ok": true
+}

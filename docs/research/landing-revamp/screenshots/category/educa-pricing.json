@@ -1,0 +1,61 @@
+{
+  "url": "https://www.geteduca.com/pricing/",
+  "capturedAt": "2026-10-25T17:49:26.359Z",
+  "status": 200,
+  "finalUrl": "https://www.geteduca.com/pricing/",
+  "desktop": {
+    "title": "Pricing - Educa",
+    "metaDescription": null,
+    "ogImage": "https://www.geteduca.com/wp-content/uploads/2023/10/swatch-block.svg",
+    "h1": [
+      "Plans designed to fit your outcomes"
+    ],
+    "h2": [],
+    "navLabels": [
+      "How It Works",
+      "Pricing",
+      "Resources",
+      "About Educa",
+      "Register for a free trial",
+      "Sign In"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Home",
+      "Accept & Close",
+      "Decline"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 2498
+  },
+  "mobile": {
+    "title": "Pricing - Educa",
+    "metaDescription": null,
+    "ogImage": "https://www.geteduca.com/wp-content/uploads/2023/10/swatch-block.svg",
+    "h1": [
+      "Plans designed to fit your outcomes"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Register for a free trial",
+      "Sign In"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Home",
+      "Accept & Close",
+      "Decline"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4462
+  },
+  "ok": true
+}

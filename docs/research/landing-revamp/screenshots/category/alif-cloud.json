@@ -1,0 +1,84 @@
+{
+  "url": "https://www.alifcloud.com/",
+  "capturedAt": "2026-10-25T17:54:12.410Z",
+  "status": 200,
+  "finalUrl": "https://www.alifcloud.com/",
+  "desktop": {
+    "title": "Alif Cloud - Islamic School Management Software | Madrasah & Dugsi Platform",
+    "metaDescription": "Alif Cloud provides Islamic school management software, guides, and resources for madrasah, dugsi, and mosque schools serving Muslim and Somali communities in Minneapolis-St. Paul, Seattle, Columbus, Dallas, Chicago, Toronto, and beyond.",
+    "ogImage": "https://res.cloudinary.com/doa9xmvsa/image/upload/w_1200,h_630,c_pad,b_rgb:0a1628/v1771572020/weblogo_pzoiuf.png",
+    "h1": [
+      "Run Your Islamic School With Clarity and Confidence."
+    ],
+    "h2": [
+      "Running an Islamic School Shouldn't Feel Like Chaos.",
+      "From Overwhelmed to In Control.",
+      "The features schools usually ask about first",
+      "Trusted by Islamic Schools Across North America.",
+      "Built Different. Built for Islamic Schools.",
+      "226 features. Every one of them on every plan.",
+      "Common Questions About Islamic School Software.",
+      "Operate at a Higher Level."
+    ],
+    "navLabels": [
+      "Alif Cloud",
+      "Features",
+      "Solutions",
+      "Pricing",
+      "Islamic Schools",
+      "Blog",
+      "Log in",
+      "Get started free"
+    ],
+    "heroCtas": [
+      "Get started free",
+      "View Pricing"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "WebSite",
+      "Organization",
+      "FAQPage",
+      "FAQPage"
+    ],
+    "pageHeight": 10272
+  },
+  "mobile": {
+    "title": "Alif Cloud - Islamic School Management Software | Madrasah & Dugsi Platform",
+    "metaDescription": "Alif Cloud provides Islamic school management software, guides, and resources for madrasah, dugsi, and mosque schools serving Muslim and Somali communities in Minneapolis-St. Paul, Seattle, Columbus, Dallas, Chicago, Toronto, and beyond.",
+    "ogImage": "https://res.cloudinary.com/doa9xmvsa/image/upload/w_1200,h_630,c_pad,b_rgb:0a1628/v1771572020/weblogo_pzoiuf.png",
+    "h1": [
+      "Run Your Islamic School With Clarity and Confidence."
+    ],
+    "h2": [
+      "Running an Islamic School Shouldn't Feel Like Chaos.",
+      "From Overwhelmed to In Control.",
+      "The features schools usually ask about first",
+      "Trusted by Islamic Schools Across North America.",
+      "Built Different. Built for Islamic Schools.",
+      "226 features. Every one of them on every plan.",
+      "Common Questions About Islamic School Software.",
+      "Operate at a Higher Level."
+    ],
+    "navLabels": [
+      "Alif Cloud"
+    ],
+    "heroCtas": [
+      "Get started free",
+      "View Pricing"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "WebSite",
+      "Organization",
+      "FAQPage",
+      "FAQPage"
+    ],
+    "pageHeight": 19501
+  },
+  "ok": true
+}

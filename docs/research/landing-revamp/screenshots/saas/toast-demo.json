@@ -1,0 +1,88 @@
+{
+  "url": "https://pos.toasttab.com/request-demo",
+  "capturedAt": "2026-10-25T17:47:49.929Z",
+  "status": 200,
+  "finalUrl": "https://pos.toasttab.com/request-demo",
+  "desktop": {
+    "title": "Request Demo | Toast POS",
+    "metaDescription": "Request an online demo and no-pressure quote",
+    "ogImage": "https://d2w1ef2ao9g8r9.cloudfront.net/images/otl.jpg",
+    "h1": [
+      "Trusted by over 180,0002 business locations to power their operations"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Close banner",
+      "Canada (English)",
+      "Continue to United States (English)",
+      "United States (English)",
+      "United States (Spanish)",
+      "United States (Chinese)",
+      "United States (Thai)",
+      "United States (Vietnamese)",
+      "United States (Korean)",
+      "United Kingdom (English)",
+      "Ireland (English)",
+      "Australia (English)",
+      "Toast Homepage",
+      "Sales: (617) 297-1005",
+      "Login"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "1",
+      "Get a Demo",
+      "privacy statement",
+      "Log in",
+      "2",
+      "here",
+      "↩",
+      "↩"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 999
+  },
+  "mobile": {
+    "title": "Request Demo | Toast POS",
+    "metaDescription": "Request an online demo and no-pressure quote",
+    "ogImage": "https://d2w1ef2ao9g8r9.cloudfront.net/images/otl.jpg",
+    "h1": [
+      "Trusted by over 180,0002 business locations to power their operations"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Close banner",
+      "Canada (English)",
+      "Continue to United States (English)",
+      "United States (English)",
+      "United States (Spanish)",
+      "United States (Chinese)",
+      "United States (Thai)",
+      "United States (Vietnamese)",
+      "United States (Korean)",
+      "United Kingdom (English)",
+      "Ireland (English)",
+      "Australia (English)",
+      "Toast Homepage",
+      "(617) 297-1005",
+      "Login"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "1",
+      "Get a Demo",
+      "privacy statement"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 1710
+  },
+  "ok": true
+}

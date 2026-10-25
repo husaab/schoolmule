@@ -1,0 +1,118 @@
+{
+  "url": "https://www.schoolcues.com",
+  "capturedAt": "2026-10-25T17:43:19.646Z",
+  "status": 200,
+  "finalUrl": "https://www.schoolcues.com/",
+  "desktop": {
+    "title": "All-in-One School Management Solutions from SchoolCues",
+    "metaDescription": "All-in-one school management software for small schools with online payments, SIS, gradebook, communications, and more. Call 480-525-7615 for a demo.",
+    "ogImage": "https://www.schoolcues.com/assets-static/images/logo1.webp",
+    "h1": [],
+    "h2": [
+      "Small Schools - Big Ideas",
+      "Stay Connected on the Go!",
+      "School Management Software for Increasing Parent Engagement",
+      "Monthly Engagement Numbers for Schools & Parents",
+      "SchoolCues features an array of powerful modules",
+      "Ideal low-cost solution for small schools",
+      "Our Pricing",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Home",
+      "Customers",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Contact",
+      "Blog",
+      "Schedule a Demo",
+      "Sign in | Sign up",
+      "Schedule a Demo",
+      "Previous",
+      "Next"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://www.schoolcues.com/assets-static/video/schoolcues-video-delivery.mp4"
+      }
+    ],
+    "embeds": [
+      "https://player.vimeo.com/video/511209005?h=0e42e109a5&rel=0"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 9684
+  },
+  "mobile": {
+    "title": "All-in-One School Management Solutions from SchoolCues",
+    "metaDescription": "All-in-one school management software for small schools with online payments, SIS, gradebook, communications, and more. Call 480-525-7615 for a demo.",
+    "ogImage": "https://www.schoolcues.com/assets-static/images/logo1.webp",
+    "h1": [],
+    "h2": [
+      "Small Schools - Big Ideas",
+      "Stay Connected on the Go!",
+      "School Management Software for Increasing Parent Engagement",
+      "Monthly Engagement Numbers for Schools & Parents",
+      "SchoolCues features an array of powerful modules",
+      "Ideal low-cost solution for small schools",
+      "Our Pricing",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Toggle navigation menu",
+      "Home",
+      "Customers",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Contact",
+      "Blog",
+      "Schedule a Demo",
+      "Sign in | Sign up",
+      "Schedule a Demo",
+      "Previous",
+      "Next"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://www.schoolcues.com/assets-static/video/schoolcues-video-delivery.mp4"
+      }
+    ],
+    "embeds": [
+      "https://player.vimeo.com/video/511209005?h=0e42e109a5&rel=0"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 24202
+  },
+  "ok": true
+}

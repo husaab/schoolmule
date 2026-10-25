@@ -1,0 +1,71 @@
+{
+  "url": "https://www.lillio.com",
+  "capturedAt": "2026-10-25T17:43:22.960Z",
+  "status": 200,
+  "finalUrl": "https://www.lillio.com/",
+  "desktop": {
+    "title": "Lillio - The Best Childcare Solution for Daycare Centers | Lillio",
+    "metaDescription": "Lillio is the all-in-one daycare solution with parent messaging, daily reports, check in and more. It's childcare management made easy! Book your demo now.",
+    "ogImage": "https://images.ctfassets.net/x4nvfpejxuu4/3kvPSMfwYaT7JLhnCcA5bE/699b3a8400f269fa7998f80a1ac4fba5/image.png",
+    "h1": [
+      "The only childcare management software built by educators"
+    ],
+    "h2": [
+      "Trusted by thousands of childcare centers",
+      "4.9",
+      "2.1B",
+      "500k",
+      "25K",
+      "What our customers are saying",
+      "Why partner with Lillio",
+      "Ready to see what Lillio can do?"
+    ],
+    "navLabels": [
+      "Pricing",
+      "Log In",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content",
+      "Book a tour of Lillio"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,FAQPage,Review,Review,Review,Review,SoftwareApplication"
+    ],
+    "pageHeight": 5666
+  },
+  "mobile": {
+    "title": "Lillio - The Best Childcare Solution for Daycare Centers | Lillio",
+    "metaDescription": "Lillio is the all-in-one daycare solution with parent messaging, daily reports, check in and more. It's childcare management made easy! Book your demo now.",
+    "ogImage": "https://images.ctfassets.net/x4nvfpejxuu4/3kvPSMfwYaT7JLhnCcA5bE/699b3a8400f269fa7998f80a1ac4fba5/image.png",
+    "h1": [
+      "The only childcare management software built by educators"
+    ],
+    "h2": [
+      "Trusted by thousands of childcare centers",
+      "4.9",
+      "2.1B",
+      "500k",
+      "25K",
+      "What our customers are saying",
+      "Why partner with Lillio",
+      "Ready to see what Lillio can do?"
+    ],
+    "navLabels": [
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content",
+      "Book a tour of Lillio"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,FAQPage,Review,Review,Review,Review,SoftwareApplication"
+    ],
+    "pageHeight": 6970
+  },
+  "ok": true
+}

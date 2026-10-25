@@ -1,0 +1,53 @@
+{
+  "url": "https://www.lillio.com/users/parents",
+  "capturedAt": "2026-10-25T17:48:52.691Z",
+  "status": 200,
+  "finalUrl": "https://www.lillio.com/users/parents",
+  "desktop": {
+    "title": "Daycare App for Parents | Lillio",
+    "metaDescription": "Communicate with your childcare center and receive updates about your child’s day in real time so you never miss those special moments again!",
+    "ogImage": "https://images.ctfassets.net/x4nvfpejxuu4/1UmtuZjWnoogFYD096iglr/2c0708c14bf05c3c0185bb7e2cfe9e6b/shutterstock_1651715212_1.png",
+    "h1": [
+      "Never miss a moment with Lillio"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Pricing",
+      "Log In",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,WebPage"
+    ],
+    "pageHeight": 2458
+  },
+  "mobile": {
+    "title": "Daycare App for Parents | Lillio",
+    "metaDescription": "Communicate with your childcare center and receive updates about your child’s day in real time so you never miss those special moments again!",
+    "ogImage": "https://images.ctfassets.net/x4nvfpejxuu4/1UmtuZjWnoogFYD096iglr/2c0708c14bf05c3c0185bb7e2cfe9e6b/shutterstock_1651715212_1.png",
+    "h1": [
+      "Never miss a moment with Lillio"
+    ],
+    "h2": [
+      "Learn why Lillio is the top-rated childcare app by families!"
+    ],
+    "navLabels": [
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,WebPage"
+    ],
+    "pageHeight": 9472
+  },
+  "ok": true
+}

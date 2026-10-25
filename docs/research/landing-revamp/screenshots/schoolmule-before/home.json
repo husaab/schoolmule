@@ -1,0 +1,94 @@
+{
+  "url": "https://schoolmule.ca/",
+  "capturedAt": "2026-10-25T17:41:48.508Z",
+  "status": 200,
+  "finalUrl": "https://schoolmule.ca/",
+  "desktop": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "The Complete School Management Solution"
+    ],
+    "h2": [
+      "Everything You Need to Run Your School",
+      "Powerful Features, Beautiful Interface",
+      "Data That Drives Decisions",
+      "Ready to Transform Your School?"
+    ],
+    "navLabels": [
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Request Demo",
+      "Start Free Trial",
+      "Watch with sound 1:41"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://schoolmule.ca/videos/schoolmule-demo-1080p.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 7133
+  },
+  "mobile": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "The Complete School Management Solution"
+    ],
+    "h2": [
+      "Everything You Need to Run Your School",
+      "Powerful Features, Beautiful Interface",
+      "Data That Drives Decisions",
+      "Ready to Transform Your School?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Request Demo",
+      "Start Free Trial",
+      "Watch with sound 1:41"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://schoolmule.ca/videos/schoolmule-demo-720p.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 9910
+  },
+  "ok": true
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://www.schoolcues.com/canadian-schools.html",
+  "capturedAt": "2026-10-25T17:52:44.373Z",
+  "status": 200,
+  "finalUrl": "https://www.schoolcues.com/canadian-schools.html",
+  "desktop": {
+    "title": "School Management for Canadian Schools | SchoolCues",
+    "metaDescription": "Affordable school management for Canadian schools. Online admissions, payments & more. Call 480-525-7615 to get started.",
+    "ogImage": null,
+    "h1": [
+      "Low Cost All-in-One School Management System for Canadian Schools"
+    ],
+    "h2": [
+      "Easily manage your Canadian school with a reputable school management solution.",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Home",
+      "Blog",
+      "Contact",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Schedule a Demo",
+      "Admissions and Enrollment for Canadian Schools",
+      "Online Payments for Canadian Schools",
+      "Student Information System for Canadian Schools",
+      "Paperless Gradebook for Canadian Schools",
+      "Easy Parent Engagement for Canadian Schools",
+      "Mobile App for Canadian Schools"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4139
+  },
+  "mobile": {
+    "title": "School Management for Canadian Schools | SchoolCues",
+    "metaDescription": "Affordable school management for Canadian schools. Online admissions, payments & more. Call 480-525-7615 to get started.",
+    "ogImage": null,
+    "h1": [
+      "Low Cost All-in-One School Management System for Canadian Schools"
+    ],
+    "h2": [
+      "Easily manage your Canadian school with a reputable school management solution.",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Home",
+      "Blog",
+      "Contact",
+      "Toggle navigation menu",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Schedule a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 7755
+  },
+  "ok": true
+}

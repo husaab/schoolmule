@@ -1,0 +1,116 @@
+{
+  "url": "https://www.toddleapp.com/",
+  "capturedAt": "2026-10-25T17:43:28.580Z",
+  "status": 200,
+  "finalUrl": "https://www.toddleapp.com/",
+  "desktop": {
+    "title": "LMS (Learning Management System) for K12 Schools | Toddle",
+    "metaDescription": "LMS for K-12 Schools | Plan your curriculum, generate reports, streamline family communication, and much more with Toddle's Learning Management Software.",
+    "ogImage": "https://cdn.www.toddleapp.com/wp-content/uploads/2024/10/Toddle-Website-Homepage-Link-Preview-1-1.png",
+    "h1": [
+      "Teacher-built. AI-powered. More than an LMS."
+    ],
+    "h2": [
+      "2,500+ leading schools & districts around the world run on Toddle",
+      "An open letter from our founder",
+      "One platform for all your teaching & learning workflows",
+      "World’s most powerful AI suite for K-12 schools",
+      "World’s most powerful AI suite for K-12 schools",
+      "Integrate with all your favorite tools",
+      "Impact stories from our users worldwide",
+      "Private. Secure. Reliable.",
+      "Our commitment to sustainability"
+    ],
+    "navLabels": [
+      "Features",
+      "Solutions",
+      "Toddle AI",
+      "Resources",
+      "Impact Stories",
+      "Pricing",
+      "Sign in",
+      "Get a demo"
+    ],
+    "heroCtas": [
+      "Get a demo",
+      "Play Video: Teresa Belisle",
+      "Close",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "blob:https://www.toddleapp.com/d5953f3d-3c11-468d-9e19-7917c820cc60"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      "",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 9841
+  },
+  "mobile": {
+    "title": "LMS (Learning Management System) for K12 Schools | Toddle",
+    "metaDescription": "LMS for K-12 Schools | Plan your curriculum, generate reports, streamline family communication, and much more with Toddle's Learning Management Software.",
+    "ogImage": "https://cdn.www.toddleapp.com/wp-content/uploads/2024/10/Toddle-Website-Homepage-Link-Preview-1-1.png",
+    "h1": [
+      "Teacher-built. AI-powered. More than an LMS."
+    ],
+    "h2": [
+      "2,500+ leading schools & districts around the world run on Toddle",
+      "An open letter from our founder",
+      "One platform for all your teaching & learning workflows",
+      "World’s most powerful AI suite for K-12 schools",
+      "World’s most powerful AI suite for K-12 schools",
+      "Integrate with all your favorite tools",
+      "Impact stories from our users worldwide",
+      "Private. Secure. Reliable.",
+      "Our commitment to sustainability"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Get a demo",
+      "Features",
+      "Solutions",
+      "Toddle AI",
+      "Resources",
+      "Events",
+      "Learn",
+      "School Success",
+      "Impact Stories",
+      "Pricing",
+      "Book a demo",
+      "Sign In",
+      "Get a demo",
+      "Show controls: Teresa Belisle",
+      "Close",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://fast.wistia.com/embed/medias/8q71cp3h7g.m3u8?quality_min=360&quality_max=2160"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      "",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 15851
+  },
+  "ok": true
+}

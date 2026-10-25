@@ -1,0 +1,80 @@
+{
+  "url": "https://factsmgt.com/",
+  "capturedAt": "2026-10-25T17:42:33.661Z",
+  "status": 200,
+  "finalUrl": "https://factsmgt.com/",
+  "desktop": {
+    "title": "FACTS | Modern Solutions for K-12 Schools and More",
+    "metaDescription": "FACTS provides education technology and services that help educators support their schools, faith communities, and corporate businesses.",
+    "ogImage": "https://factsmgt.com/wp-content/uploads/transparent.png",
+    "h1": [
+      "Technology with Heart. Powered by Data."
+    ],
+    "h2": [
+      "Technology With Heart. Impact You Can Measure.",
+      "Our Technology Removes Complexity",
+      "One Connected Intelligence Platform. Every K-12 Environment.",
+      "Looking for something specific?"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Log In Here",
+      "Intelligence",
+      "Programs & Services",
+      "Resources",
+      "Company",
+      "Contact Sales",
+      "Search"
+    ],
+    "heroCtas": [
+      "CONTACT SALES",
+      "WATCH TECHNOLOGY WITH HEART. POWERED BY DATA.'S DEMOS",
+      "Pause"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube-nocookie.com/embed/mToC7qNFyoM?si=SK9Q6vd3i4GQuo1J",
+      "https://player.vimeo.com/video/1107611867?badge=0&autopause=0&player_id=0&app_id=58479&api=1",
+      "https://www.youtube.com/embed/9pC9rDLT5Hg?si=7MOOVUFKA5UBz2rP"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 3735
+  },
+  "mobile": {
+    "title": "FACTS | Modern Solutions for K-12 Schools and More",
+    "metaDescription": "FACTS provides education technology and services that help educators support their schools, faith communities, and corporate businesses.",
+    "ogImage": "https://factsmgt.com/wp-content/uploads/transparent.png",
+    "h1": [
+      "Technology with Heart. Powered by Data."
+    ],
+    "h2": [
+      "Technology With Heart. Impact You Can Measure.",
+      "Our Technology Removes Complexity",
+      "One Connected Intelligence Platform. Every K-12 Environment.",
+      "Looking for something specific?"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Log In Here",
+      "Toggle Menu",
+      "Search"
+    ],
+    "heroCtas": [
+      "CONTACT SALES",
+      "WATCH TECHNOLOGY WITH HEART. POWERED BY DATA.'S DEMOS"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube-nocookie.com/embed/mToC7qNFyoM?si=SK9Q6vd3i4GQuo1J",
+      "https://player.vimeo.com/video/1107611867?badge=0&autopause=0&player_id=0&app_id=58479&api=1",
+      "https://www.youtube.com/embed/9pC9rDLT5Hg?si=7MOOVUFKA5UBz2rP"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 7138
+  },
+  "ok": true
+}

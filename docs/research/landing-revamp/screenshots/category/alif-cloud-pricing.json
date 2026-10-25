@@ -1,0 +1,68 @@
+{
+  "url": "https://www.alifcloud.com/pricing",
+  "capturedAt": "2026-10-25T17:54:48.244Z",
+  "status": 200,
+  "finalUrl": "https://www.alifcloud.com/pricing",
+  "desktop": {
+    "title": "Islamic School Software Pricing | Affordable Plans | Alif Cloud",
+    "metaDescription": "Transparent pricing for Islamic school management software. Small schools start free, and every plan includes every feature, with usage limits as the only difference.",
+    "ogImage": "https://res.cloudinary.com/doa9xmvsa/image/upload/w_1200,h_630,c_pad,b_rgb:0a1628/v1771572020/weblogo_pzoiuf.png",
+    "h1": [
+      "Simple, Transparent Pricing."
+    ],
+    "h2": [
+      "See the cost for your school",
+      "What's inside, area by area",
+      "Worried about the cost? Don't be.",
+      "Frequently Asked Questions"
+    ],
+    "navLabels": [
+      "Alif Cloud",
+      "Features",
+      "Solutions",
+      "Pricing",
+      "Islamic Schools",
+      "Blog",
+      "Log in",
+      "Get started free"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "WebSite",
+      "Organization",
+      "WebPage,SoftwareApplication"
+    ],
+    "pageHeight": 6388
+  },
+  "mobile": {
+    "title": "Islamic School Software Pricing | Affordable Plans | Alif Cloud",
+    "metaDescription": "Transparent pricing for Islamic school management software. Small schools start free, and every plan includes every feature, with usage limits as the only difference.",
+    "ogImage": "https://res.cloudinary.com/doa9xmvsa/image/upload/w_1200,h_630,c_pad,b_rgb:0a1628/v1771572020/weblogo_pzoiuf.png",
+    "h1": [
+      "Simple, Transparent Pricing."
+    ],
+    "h2": [
+      "See the cost for your school",
+      "What's inside, area by area",
+      "Worried about the cost? Don't be.",
+      "Frequently Asked Questions"
+    ],
+    "navLabels": [
+      "Alif Cloud"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "WebSite",
+      "Organization",
+      "WebPage,SoftwareApplication"
+    ],
+    "pageHeight": 10425
+  },
+  "ok": true
+}

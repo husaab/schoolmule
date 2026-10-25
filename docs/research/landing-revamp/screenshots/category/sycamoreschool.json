@@ -1,0 +1,77 @@
+{
+  "url": "https://www.sycamoreschool.com/",
+  "capturedAt": "2026-10-25T17:43:13.443Z",
+  "status": 200,
+  "finalUrl": "https://sycamoreleaf.com/",
+  "desktop": {
+    "title": "All-in-One School Management System | Sycamore Leaf Solutions",
+    "metaDescription": "Discover Sycamore Leaf Solutions, the all-in-one school management system designed to simplify operations and enhance communication for your school.",
+    "ogImage": "https://sycamoreleaf.com/wp-content/uploads/2026/10/sycamore-home-og.jpg",
+    "h1": [
+      "Education software trusted by hundreds of thousands.",
+      "Education software trusted by hundreds of thousands."
+    ],
+    "h2": [
+      "Empowering Schools with Affordable, Comprehensive Management Solutions",
+      "Empowering Schools with Affordable, Comprehensive Management Solutions"
+    ],
+    "navLabels": [
+      "Products",
+      "Products Submenu",
+      "Solutions",
+      "Solutions Submenu",
+      "About",
+      "About Submenu",
+      "Media",
+      "Support",
+      "Login",
+      "Toggle search",
+      "Book a Consultation"
+    ],
+    "heroCtas": [
+      "PAUSE",
+      "DARK",
+      "Release Page →",
+      "01 Global",
+      "02 Reliability",
+      "03 Payments",
+      "04 Academy",
+      "05 Roadmap",
+      "06 Support"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 13202
+  },
+  "mobile": {
+    "title": "All-in-One School Management System | Sycamore Leaf Solutions",
+    "metaDescription": "Discover Sycamore Leaf Solutions, the all-in-one school management system designed to simplify operations and enhance communication for your school.",
+    "ogImage": "https://sycamoreleaf.com/wp-content/uploads/2026/10/sycamore-home-og.jpg",
+    "h1": [
+      "Education software trusted by hundreds of thousands.",
+      "Education software trusted by hundreds of thousands."
+    ],
+    "h2": [
+      "Empowering Schools with Affordable, Comprehensive Management Solutions"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "PAUSE",
+      "DARK",
+      "Release Page →",
+      "01 Global",
+      "02 Reliability",
+      "03 Payments"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 12939
+  },
+  "ok": true
+}

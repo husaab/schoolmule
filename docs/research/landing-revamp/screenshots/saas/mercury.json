@@ -1,0 +1,121 @@
+{
+  "url": "https://mercury.com",
+  "capturedAt": "2026-10-25T17:43:35.418Z",
+  "status": 200,
+  "finalUrl": "https://mercury.com/",
+  "desktop": {
+    "title": "Online Business Banking For Startups, Small Businesses & Scaling Companies",
+    "metaDescription": "Everything you do with money. All in one place. Apply in 10 minutes for business banking that transforms how you operate.",
+    "ogImage": "https://www.datocms-assets.com/115132/1746056008-2025-04-30_fem_homepage-social_1200x630.webp?auto=format&fit=crop&w=1200",
+    "h1": [
+      "Radically different banking"
+    ],
+    "h2": [
+      "Loved by 450K+ of the most ambitious entrepreneurs on the planet",
+      "You’re creating something to stand the test of time. So are we.",
+      "$1B in annualized revenue and 4+ years profitable",
+      "Building banking for the agentic era",
+      "Mercury hits $5.2B valuation",
+      "Banking – redesigned from the ground up.",
+      "Mercury for business",
+      "Mercury for personal",
+      "Disclaimers and footnotes"
+    ],
+    "navLabels": [
+      "Products",
+      "Solutions",
+      "Resources",
+      "About",
+      "Pricing",
+      "Log in",
+      "Open account"
+    ],
+    "heroCtas": [
+      "Footnote 1",
+      "Open account",
+      "Launch demo",
+      "Business banking & more",
+      "Footnote 2",
+      "Footnote 3",
+      "Cards & expense management",
+      "Footnote 4",
+      "Payments & invoicing",
+      "Accounting",
+      "Launch demo"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://mercury.com/videos/hero/hero-scrub-lg.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 13019
+  },
+  "mobile": {
+    "title": "Online Business Banking For Startups, Small Businesses & Scaling Companies",
+    "metaDescription": "Everything you do with money. All in one place. Apply in 10 minutes for business banking that transforms how you operate.",
+    "ogImage": "https://www.datocms-assets.com/115132/1746056008-2025-04-30_fem_homepage-social_1200x630.webp?auto=format&fit=crop&w=1200",
+    "h1": [
+      "Radically different banking"
+    ],
+    "h2": [
+      "Loved by 450K+ of the most ambitious entrepreneurs on the planet",
+      "You’re creating something to stand the test of time. So are we.",
+      "$1B in annualized revenue and 4+ years profitable",
+      "Building banking for the agentic era",
+      "Mercury hits $5.2B valuation",
+      "Banking – redesigned from the ground up.",
+      "Mercury for business",
+      "Mercury for personal",
+      "Disclaimers and footnotes"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Open Menu",
+      "Products",
+      "Solutions",
+      "Resources",
+      "About",
+      "Pricing",
+      "Log in",
+      "Open account",
+      "Footnote 1",
+      "Open account",
+      "Launch demo",
+      "Business banking & more",
+      "Footnote 2",
+      "Footnote 3",
+      "Cards & expense management",
+      "Footnote 4",
+      "Payments & invoicing",
+      "Accounting",
+      "Launch demo"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://mercury.com/videos/hero/hero-scrub-sm.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 16298
+  },
+  "ok": true
+}

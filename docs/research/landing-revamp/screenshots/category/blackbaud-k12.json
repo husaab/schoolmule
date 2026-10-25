@@ -1,0 +1,117 @@
+{
+  "url": "https://k12.blackbaud.com/",
+  "capturedAt": "2026-10-25T17:44:49.050Z",
+  "status": 200,
+  "finalUrl": "https://www.blackbaud.com/who-we-serve/k-12-schools",
+  "desktop": {
+    "title": "K-12 Private School Management Software from Blackbaud",
+    "metaDescription": "With Blackbaud’s intuitive K-12 School Management software, schools can efficiently manage all aspects of their day-to-day operations.",
+    "ogImage": "https://www.blackbaud.com/wp-content/uploads/2023/06/Screenshot-2023-06-23-at-9.31.54-AM.png",
+    "h1": [
+      "Essential K–12 Private School Software—Powered by AI",
+      "Your Privacy is important to us"
+    ],
+    "h2": [
+      "Innovative software to help you manage every aspect of a private or independent school.",
+      "Admissions",
+      "Business Office",
+      "Teachers",
+      "Students",
+      "Families",
+      "Fundraisers",
+      "How do schools use Blackbaud?",
+      "The Leader in Private School Software",
+      "Blackbaud delivers proven results.",
+      "Ready to power your passion?"
+    ],
+    "navLabels": [
+      "Skip to content",
+      "Partners",
+      "Training & Support",
+      "Sign In",
+      "Products",
+      "Solutions",
+      "Why Blackbaud",
+      "Resources",
+      "Blackbaud AI",
+      "Schedule with Sales",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Request a Demo",
+      "Ask About Pricing",
+      "Play Video: Blackbaud K-12 Vision Video",
+      "Play Video: Blackbaud K-12 Vision Video",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "blob:https://www.blackbaud.com/52b0c8a5-ce2c-4bfe-a1f3-7b2eb58db692"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      ""
+    ],
+    "pageHeight": 6408
+  },
+  "mobile": {
+    "title": "K-12 Private School Management Software from Blackbaud",
+    "metaDescription": "With Blackbaud’s intuitive K-12 School Management software, schools can efficiently manage all aspects of their day-to-day operations.",
+    "ogImage": "https://www.blackbaud.com/wp-content/uploads/2023/06/Screenshot-2023-06-23-at-9.31.54-AM.png",
+    "h1": [
+      "Essential K–12 Private School Software—Powered by AI",
+      "Your Privacy is important to us"
+    ],
+    "h2": [
+      "Innovative software to help you manage every aspect of a private or independent school.",
+      "Admissions",
+      "Business Office",
+      "Teachers",
+      "Students",
+      "Families",
+      "Fundraisers",
+      "How do schools use Blackbaud?",
+      "The Leader in Private School Software",
+      "Blackbaud delivers proven results.",
+      "Ready to power your passion?"
+    ],
+    "navLabels": [
+      "Skip to content",
+      "Sign In",
+      "Toggle navigation"
+    ],
+    "heroCtas": [
+      "Request a Demo",
+      "Ask About Pricing",
+      "Show controls: Blackbaud K-12 Vision Video",
+      "Play Video: Blackbaud K-12 Vision Video",
+      "Close"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://fast.wistia.com/embed/medias/ryksd8vkqy.m3u8?quality_min=360&quality_max=2160"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject",
+      ""
+    ],
+    "pageHeight": 8137
+  },
+  "ok": true
+}

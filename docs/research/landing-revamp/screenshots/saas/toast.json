@@ -1,0 +1,270 @@
+{
+  "url": "https://pos.toasttab.com",
+  "capturedAt": "2026-10-25T17:47:40.809Z",
+  "status": 200,
+  "finalUrl": "https://pos.toasttab.com/",
+  "desktop": {
+    "title": "Toast POS",
+    "metaDescription": "Toast is a restaurant point of sale and management system that helps restaurants improve operations, increase sales and create a better guest experience.",
+    "ogImage": "https://d2w1ef2ao9g8r9.cloudfront.net/images/otl.jpg",
+    "h1": [
+      "Built For Busy"
+    ],
+    "h2": [
+      "Get busy. Stay busy. Run busy.",
+      "The power of AI built into your platform, so smarter decisions happen faster",
+      "Data. Decision. Action. Impact.",
+      "Designed for what happens mid-shift",
+      "You’ve got options. We think we’re the best one.",
+      "Where the work gets results",
+      "We help build businesses that last",
+      "The stuff that keeps you up? On it.",
+      "See if we’re your best bet"
+    ],
+    "navLabels": [
+      "Get free insights today",
+      "Previous message",
+      "Next message",
+      "Close banner",
+      "Restaurants",
+      "Retail",
+      "Products",
+      "Pricing",
+      "Resources",
+      "Restaurants",
+      "Login",
+      "Get a Demo",
+      "Restaurants",
+      "Retail",
+      "Products",
+      "Pricing",
+      "Resources",
+      "Search Toast Restaurants",
+      "Login",
+      "Get a Demo",
+      "Call Sales (617) 297-1005"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "How Toast is Built For Busy",
+      "†",
+      "Get Started",
+      "Privacy Statement",
+      "(CA Residents)",
+      "Shop now"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/videos/Busy_10_Edit_web_nf_v002-5.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://videos.ctfassets.net/tgv5pu8pgmos/3NTdT6nHDUezyG7Q1xVxdS/4370d8de2afa7531ed6cfce3f263762c/HP-POS.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://videos.ctfassets.net/tgv5pu8pgmos/1Kw50C7PlQKJlen01EFVlp/625c401c86c38295fe7ade164cdb66f4/HP-Hardware.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/rebel720.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/waterhouse.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/stobys2.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/caribou.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/burger25.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/rebel720.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      "VideoObject",
+      "VideoObject",
+      "VideoObject",
+      "VideoObject",
+      "VideoObject",
+      "VideoObject"
+    ],
+    "pageHeight": 12928
+  },
+  "mobile": {
+    "title": "Toast POS",
+    "metaDescription": "Toast is a restaurant point of sale and management system that helps restaurants improve operations, increase sales and create a better guest experience.",
+    "ogImage": "https://d2w1ef2ao9g8r9.cloudfront.net/images/otl.jpg",
+    "h1": [
+      "Built For Busy"
+    ],
+    "h2": [
+      "Get busy. Stay busy. Run busy.",
+      "The power of AI built into your platform, so smarter decisions happen faster",
+      "Data. Decision. Action. Impact.",
+      "Designed for what happens mid-shift",
+      "You’ve got options. We think we’re the best one.",
+      "Where the work gets results",
+      "We help build businesses that last",
+      "The stuff that keeps you up? On it.",
+      "See if we’re your best bet"
+    ],
+    "navLabels": [
+      "Get free insights today",
+      "Close banner",
+      "Show message 1",
+      "Show message 2",
+      "SALES (617) 297-1005",
+      "Toggle Toast Mobile Navigation",
+      "Restaurants",
+      "Retail",
+      "Products",
+      "Pricing",
+      "Resources",
+      "FEATURED See how Toast works Front of house, back of house, and online seamlessly connect and work in sync.",
+      "Search Toast Restaurants",
+      "Login",
+      "Get a Demo",
+      "Call Sales (617) 297-1005",
+      "Get a Free Demo"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "How Toast is Built For Busy",
+      "Get Started",
+      "Privacy Statement",
+      "(CA Residents)"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/videos/Busy_10_Edit_web_nf_v002-5.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/rebel720.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/waterhouse.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/stobys2.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/caribou.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/burger25.mp4"
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://d2w1ef2ao9g8r9.cloudfront.net/images/homepage/customer-stories/rebel720.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      "VideoObject",
+      "VideoObject",
+      "VideoObject"
+    ],
+    "pageHeight": 13906
+  },
+  "ok": true
+}

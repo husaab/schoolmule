@@ -1,0 +1,109 @@
+{
+  "url": "https://linear.app",
+  "capturedAt": "2026-10-25T17:42:04.569Z",
+  "status": 200,
+  "finalUrl": "https://linear.app/",
+  "desktop": {
+    "title": "Linear – The system for product development",
+    "metaDescription": "Purpose-built for planning and building products with AI agents.",
+    "ogImage": "https://linear.app/api/og/main?title=Linear&v=4",
+    "h1": [
+      "The product development system for teams and agents The product development system for teams and agents"
+    ],
+    "h2": [
+      "A new species of product tool. Purpose-built for modern teams with AI workflows at its core, Linear sets a new standard for planning and building products.",
+      "Intake and integrations",
+      "Planning and monitoring",
+      "AI and automations",
+      "Build, review, and ship",
+      "Changelog",
+      "Built for the future. Available today."
+    ],
+    "navLabels": [
+      "Navigate to home",
+      "Product",
+      "Resources",
+      "Customers",
+      "Pricing",
+      "Now",
+      "Contact",
+      "Log in",
+      "Sign up"
+    ],
+    "heroCtas": [
+      "Skip to content →",
+      "New Loops →",
+      "Linear",
+      "Search workspace",
+      "New issue",
+      "Pulse",
+      "Inbox",
+      "My issues",
+      "Reviews",
+      "Workspace",
+      "Initiatives",
+      "Projects",
+      "More",
+      "Favorites",
+      "Faster app launch",
+      "Remove from favorites",
+      "Issue options",
+      "Previous issue",
+      "Next issue",
+      "Copy issue URL"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9960
+  },
+  "mobile": {
+    "title": "Linear – The system for product development",
+    "metaDescription": "Purpose-built for planning and building products with AI agents.",
+    "ogImage": "https://linear.app/api/og/main?title=Linear&v=4",
+    "h1": [
+      "The product development system for teams and agents The product development system for teams and agents"
+    ],
+    "h2": [
+      "A new species of product tool. Purpose-built for modern teams with AI workflows at its core, Linear sets a new standard for planning and building products.",
+      "Intake and integrations",
+      "Planning and monitoring",
+      "AI and automations",
+      "Build, review, and ship",
+      "Changelog",
+      "Built for the future. Available today."
+    ],
+    "navLabels": [
+      "Navigate to home",
+      "Log in",
+      "Sign up"
+    ],
+    "heroCtas": [
+      "Skip to content →",
+      "New Loops →",
+      "Linear",
+      "Search workspace",
+      "New issue",
+      "Pulse",
+      "Inbox",
+      "My issues",
+      "Reviews",
+      "Workspace",
+      "Initiatives",
+      "Projects",
+      "More",
+      "Favorites",
+      "Faster app launch",
+      "Agent tasks",
+      "Agent Insights",
+      "UI Refresh",
+      "Remove from favorites",
+      "Issue options"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 5876
+  },
+  "ok": true
+}

@@ -1,0 +1,76 @@
+{
+  "url": "https://campfire.ai/product-demo",
+  "capturedAt": "2026-10-25T18:04:51.958Z",
+  "status": 200,
+  "finalUrl": "https://campfire.ai/product-demo",
+  "desktop": {
+    "title": "Campfire Product Demo",
+    "metaDescription": "Campfire is the modern accounting platform that provides core accounting and revenue automation to startups and mid-size tech companies.",
+    "ogImage": "https://cdn.sanity.io/images/zu7n19wi/production/97e3241f607c6a5bfab50ffb0bcdb75b63fd5071-9781x5136.png?rect=0,13,9781,5111&w=1200&h=627&fit=crop&auto=format",
+    "h1": [
+      "Join our weekly demo"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Campfire Homepage",
+      "Products",
+      "Solutions",
+      "Partners",
+      "Customers",
+      "Resources",
+      "Sign In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Save my spot",
+      "Privacy Policy"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "blob:https://campfire.ai/9f625bee-9c27-428a-936f-f4d0b09f6dea"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,SoftwareApplication"
+    ],
+    "pageHeight": 1467
+  },
+  "mobile": {
+    "title": "Campfire Product Demo",
+    "metaDescription": "Campfire is the modern accounting platform that provides core accounting and revenue automation to startups and mid-size tech companies.",
+    "ogImage": "https://cdn.sanity.io/images/zu7n19wi/production/97e3241f607c6a5bfab50ffb0bcdb75b63fd5071-9781x5136.png?rect=0,13,9781,5111&w=1200&h=627&fit=crop&auto=format",
+    "h1": [
+      "Join our weekly demo"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Campfire Homepage",
+      "Open navigation"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://stream.mux.com/rZzgZdrz6F1w4tBGGydaLaq6ydDwxPn2602cykl8R5900.m3u8?min_resolution=720p"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,SoftwareApplication"
+    ],
+    "pageHeight": 2628
+  },
+  "ok": true
+}

@@ -1,0 +1,92 @@
+{
+  "url": "https://www.edsembli.com/",
+  "capturedAt": "2026-10-25T17:42:05.093Z",
+  "status": 200,
+  "finalUrl": "https://sparkrock.com/k12/",
+  "desktop": {
+    "title": "K-12 Ecosystem - Sparkrock",
+    "metaDescription": "Sparkrock’s K12 software ecosystem unifies finance, HR, SIS, and forms/payments so schools can focus on student outcomes with confidence.",
+    "ogImage": "https://sparkrock.com/wp-content/uploads/2025/07/DISSBONE_LOGO.png",
+    "h1": [
+      "Sparkrock Ed K-12 Education Software Ecosystem"
+    ],
+    "h2": [
+      "The K-12 Software Ecosystem Schools Trust",
+      "K-12 ERP",
+      "School Payments and Forms",
+      "Student Information System",
+      "Watch: Sparkrock for K-12",
+      "Why School Boards Choose Sparkrock",
+      "Outcomes That Matter For Schools",
+      "Lower Fees and Less Paperwork: A Better Way to Manage School-Generated Funds",
+      "Sparkrock Success Stories",
+      "Spark Change in Your Schools"
+    ],
+    "navLabels": [
+      "Contact Us",
+      "Support",
+      "About Sparkrock",
+      "GET A DEMO",
+      "Skip to main content",
+      "Who We Serve",
+      "K-12 Ecosystem",
+      "Nonprofit ERP",
+      "Technology",
+      "Knowledge Base"
+    ],
+    "heroCtas": [
+      "REQUEST A DEMO",
+      "Home"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/VMMHJ0kA1g4?feature=oembed",
+      "https://app.hubspot.com/conversations-visitor/39977136/threads/utk/bba233e04779413aa5afd7c5ddf4699d?uuid=6cc314ad3a2747a0a639baad09af3b97&mobile=false&mobileSaf"
+    ],
+    "jsonLdTypes": [
+      "",
+      "LocalBusiness",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 8718
+  },
+  "mobile": {
+    "title": "K-12 Ecosystem - Sparkrock",
+    "metaDescription": "Sparkrock’s K12 software ecosystem unifies finance, HR, SIS, and forms/payments so schools can focus on student outcomes with confidence.",
+    "ogImage": "https://sparkrock.com/wp-content/uploads/2025/07/DISSBONE_LOGO.png",
+    "h1": [
+      "Sparkrock Ed K-12 Education Software Ecosystem"
+    ],
+    "h2": [
+      "The K-12 Software Ecosystem Schools Trust",
+      "K-12 ERP",
+      "School Payments and Forms",
+      "Student Information System",
+      "Watch: Sparkrock for K-12",
+      "Why School Boards Choose Sparkrock",
+      "Outcomes That Matter For Schools",
+      "Lower Fees and Less Paperwork: A Better Way to Manage School-Generated Funds",
+      "Sparkrock Success Stories",
+      "Spark Change in Your Schools"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Menu"
+    ],
+    "heroCtas": [
+      "REQUEST A DEMO"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/VMMHJ0kA1g4?feature=oembed",
+      "https://app.hubspot.com/conversations-visitor/39977136/threads/utk/ee13a020b4e84abb9b15d30459cb8504?uuid=e2bcb4feac204c1caf95fa26228a59af&mobile=true&mobileSafa"
+    ],
+    "jsonLdTypes": [
+      "",
+      "LocalBusiness",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 14177
+  },
+  "ok": true
+}

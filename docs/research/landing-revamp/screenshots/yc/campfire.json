@@ -1,0 +1,94 @@
+{
+  "url": "https://campfire.ai",
+  "capturedAt": "2026-10-25T17:55:13.048Z",
+  "status": 200,
+  "finalUrl": "https://campfire.ai/",
+  "desktop": {
+    "title": "Campfire | The AI-Native ERP",
+    "metaDescription": "Campfire is the AI-native ERP built for lean finance teams. Automate reconciliations, close faster, and scale revenue without adding headcount.",
+    "ogImage": "https://cdn.sanity.io/images/zu7n19wi/production/97e3241f607c6a5bfab50ffb0bcdb75b63fd5071-9781x5136.png?rect=0,13,9781,5111&w=1200&h=627&fit=crop&auto=format",
+    "h1": [
+      "Month end shouldn't take all month"
+    ],
+    "h2": [
+      "The top accounting teams use Campfire for:",
+      "Get to know Campfire",
+      "The AI-native ERP, powered by Accounting Intelligence",
+      "Ask anything and get answers in seconds.",
+      "Built for complexity. Ready for scale.",
+      "Hear from finance teams like yours.",
+      "See what your team could do with Campfire."
+    ],
+    "navLabels": [
+      "Campfire Homepage",
+      "Products",
+      "Solutions",
+      "Partners",
+      "Customers",
+      "Resources",
+      "Sign In",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Try Campfire",
+      "Take a product tour"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "blob:https://campfire.ai/8b8940d1-cfb8-4721-81f0-f8e37bf15a56"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,SoftwareApplication"
+    ],
+    "pageHeight": 8856
+  },
+  "mobile": {
+    "title": "Campfire | The AI-Native ERP",
+    "metaDescription": "Campfire is the AI-native ERP built for lean finance teams. Automate reconciliations, close faster, and scale revenue without adding headcount.",
+    "ogImage": "https://cdn.sanity.io/images/zu7n19wi/production/97e3241f607c6a5bfab50ffb0bcdb75b63fd5071-9781x5136.png?rect=0,13,9781,5111&w=1200&h=627&fit=crop&auto=format",
+    "h1": [
+      "Month end shouldn't take all month"
+    ],
+    "h2": [
+      "The top accounting teams use Campfire for:",
+      "Get to know Campfire",
+      "The AI-native ERP, powered by Accounting Intelligence",
+      "Ask anything and get answers in seconds.",
+      "Built for complexity. Ready for scale.",
+      "Hear from finance teams like yours.",
+      "See what your team could do with Campfire."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Campfire Homepage",
+      "Open navigation",
+      "Try Campfire",
+      "Take a product tour"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://stream.mux.com/rZzgZdrz6F1w4tBGGydaLaq6ydDwxPn2602cykl8R5900.m3u8?min_resolution=720p"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,SoftwareApplication"
+    ],
+    "pageHeight": 12226
+  },
+  "ok": true
+}

@@ -1,0 +1,52 @@
+{
+  "url": "https://www.transparentclassroom.com/pricing?locale=en",
+  "capturedAt": "2026-10-25T17:50:59.310Z",
+  "status": 200,
+  "finalUrl": "https://www.transparentclassroom.com/pricing?locale=en",
+  "desktop": {
+    "title": "Pricing",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Pricing"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Transparent Classroom",
+      "Tour",
+      "Sign in",
+      "Request Trial",
+      "Request a Demo",
+      "info@transparentclassroom.com",
+      "Tour",
+      "Tutorials",
+      "About Us",
+      "Terms of Service"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1039
+  },
+  "mobile": {
+    "title": "Pricing",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Pricing"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Transparent Classroom",
+      "Toggle navigation",
+      "Request a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1341
+  },
+  "ok": true
+}

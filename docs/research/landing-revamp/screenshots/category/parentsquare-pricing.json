@@ -1,0 +1,74 @@
+{
+  "url": "https://www.parentsquare.com/platform/compare-packages/",
+  "capturedAt": "2026-10-25T17:51:08.876Z",
+  "status": 200,
+  "finalUrl": "https://www.parentsquare.com/platform/compare-packages/",
+  "desktop": {
+    "title": "ParentSquare Pricing and Plans | Family Engagement Platform",
+    "metaDescription": "Compare ParentSquare plans and pricing. Bring messaging, attendance, websites, and key workflows together to reach every family and simplify district operations.",
+    "ogImage": null,
+    "h1": [
+      "Flexible packages built for you"
+    ],
+    "h2": [
+      "Extend your impact",
+      "Latest insights and resources"
+    ],
+    "navLabels": [
+      "Platform",
+      "Solutions",
+      "Resources and Support",
+      "Company",
+      "Get demo",
+      "Sign in"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "StudentSquare",
+      "Contact sales",
+      "secure documents",
+      "Community groups",
+      "Contact sales",
+      "Smart Sites",
+      "Virtual Phone",
+      "Contact sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "WebSite",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 3888
+  },
+  "mobile": {
+    "title": "ParentSquare Pricing and Plans | Family Engagement Platform",
+    "metaDescription": "Compare ParentSquare plans and pricing. Bring messaging, attendance, websites, and key workflows together to reach every family and simplify district operations.",
+    "ogImage": null,
+    "h1": [
+      "Flexible packages built for you"
+    ],
+    "h2": [
+      "Extend your impact",
+      "Latest insights and resources"
+    ],
+    "navLabels": [
+      "Menu"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "StudentSquare",
+      "Contact sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "WebSite",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 6615
+  },
+  "ok": true
+}

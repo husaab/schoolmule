@@ -1,0 +1,48 @@
+{
+  "url": "https://www.usepylon.com/interactive-demo/agentic-support",
+  "capturedAt": "2026-10-25T17:55:13.034Z",
+  "status": 200,
+  "finalUrl": "https://www.usepylon.com/interactive-demo/agentic-support",
+  "desktop": {
+    "title": "Agentic Support Interactive Demo | Pylon",
+    "metaDescription": "A self-guided walkthrough of Pylon's agentic support platform: background investigation, suggested replies, tone of voice, and unified customer context.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "Agentic Support"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Enterprise",
+      "Integrations",
+      "Customers",
+      "Pricing",
+      "Sign in",
+      "Book a demo"
+    ],
+    "heroCtas": [
+      "home"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1828
+  },
+  "mobile": {
+    "title": "Agentic Support Interactive Demo | Pylon",
+    "metaDescription": "A self-guided walkthrough of Pylon's agentic support platform: background investigation, suggested replies, tone of voice, and unified customer context.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "Agentic Support"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "home"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1511
+  },
+  "ok": true
+}

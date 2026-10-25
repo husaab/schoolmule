@@ -1,0 +1,85 @@
+{
+  "url": "https://www.montessoricompass.com/canada/",
+  "capturedAt": "2026-10-25T17:49:40.963Z",
+  "status": 200,
+  "finalUrl": "https://www.montessoricompass.com/canada/",
+  "desktop": {
+    "title": "Montessori School Software in Canada — Canadian Data Residency & CAD Pricing | Montessori Compass",
+    "metaDescription": "Montessori Compass for Canadian schools: dedicated Canadian data residency, billing in Canadian dollars, and a Montessori-native platform. Start a free 30-day trial.",
+    "ogImage": "https://www.montessoricompass.com/og-default.png",
+    "h1": [
+      "Montessori Compass for Canadian Schools"
+    ],
+    "h2": [
+      "Your student data stays in Canada.",
+      "Built for Montessori—not adapted to it.",
+      "Switching is easier than you think.",
+      "Simple, flexible pricing for Montessori schools",
+      "See your real cost in Canadian dollars.",
+      "Stay Present. Share Progress. Build Connection.",
+      "Questions from Canadian schools",
+      "Ready to bring Montessori Compass to your Canadian school?"
+    ],
+    "navLabels": [
+      "Scope and Sequence",
+      "Growth Suite",
+      "Pricing",
+      "Webinar",
+      "Contact",
+      "Start Your Free 30-Day Trial"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "Login",
+      "Start Your Free 30-Day Trial",
+      "Talk to Us",
+      "Special offer for enrolled schools"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 8822
+  },
+  "mobile": {
+    "title": "Montessori School Software in Canada — Canadian Data Residency & CAD Pricing | Montessori Compass",
+    "metaDescription": "Montessori Compass for Canadian schools: dedicated Canadian data residency, billing in Canadian dollars, and a Montessori-native platform. Start a free 30-day trial.",
+    "ogImage": "https://www.montessoricompass.com/og-default.png",
+    "h1": [
+      "Montessori Compass for Canadian Schools"
+    ],
+    "h2": [
+      "Your student data stays in Canada.",
+      "Built for Montessori—not adapted to it.",
+      "Switching is easier than you think.",
+      "Simple, flexible pricing for Montessori schools",
+      "See your real cost in Canadian dollars.",
+      "Stay Present. Share Progress. Build Connection.",
+      "Questions from Canadian schools",
+      "Ready to bring Montessori Compass to your Canadian school?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "Scope and Sequence",
+      "Growth Suite",
+      "Pricing",
+      "Webinar",
+      "Contact",
+      "Login",
+      "Start Your Free 30-Day Trial"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "Start Your Free 30-Day Trial",
+      "Talk to Us"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 15552
+  },
+  "ok": true
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://www.schoolcues.com/islamic-schools.html",
+  "capturedAt": "2026-10-25T17:52:30.130Z",
+  "status": 200,
+  "finalUrl": "https://www.schoolcues.com/islamic-schools.html",
+  "desktop": {
+    "title": "Islamic School Management System | SchoolCues",
+    "metaDescription": "All-in-one system for Islamic schools with admissions, payments & more. Low cost, easy to use. Call 480-525-7615 to get started!",
+    "ogImage": null,
+    "h1": [
+      "Low Cost All-in-One School Management System for Islamic Schools"
+    ],
+    "h2": [
+      "Easily manage your Islamic school with a reputable school management solution.",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Home",
+      "Blog",
+      "Contact",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Schedule a Demo",
+      "Admissions and Enrollment for Islamic Schools",
+      "Online Payments for Islamic Schools",
+      "Student Information System for Islamic Schools",
+      "Paperless Gradebook for Islamic Schools",
+      "Easy Parent Engagement for Islamic Schools",
+      "Mobile App for Islamic Schools"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4296
+  },
+  "mobile": {
+    "title": "Islamic School Management System | SchoolCues",
+    "metaDescription": "All-in-one system for Islamic schools with admissions, payments & more. Low cost, easy to use. Call 480-525-7615 to get started!",
+    "ogImage": null,
+    "h1": [
+      "Low Cost All-in-One School Management System for Islamic Schools"
+    ],
+    "h2": [
+      "Easily manage your Islamic school with a reputable school management solution.",
+      "About SchoolCues"
+    ],
+    "navLabels": [
+      "About Us",
+      "Features",
+      "Pricing",
+      "Blog",
+      "Careers"
+    ],
+    "heroCtas": [
+      "Home",
+      "Blog",
+      "Contact",
+      "Toggle navigation menu",
+      "Platform",
+      "Features",
+      "Pricing",
+      "Schedule a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 8025
+  },
+  "ok": true
+}

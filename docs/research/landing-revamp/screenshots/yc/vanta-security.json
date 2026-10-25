@@ -1,0 +1,64 @@
+{
+  "url": "https://www.vanta.com/company/security",
+  "capturedAt": "2026-10-25T17:49:17.646Z",
+  "status": 200,
+  "finalUrl": "https://www.vanta.com/company/security",
+  "desktop": {
+    "title": "Security",
+    "metaDescription": "Vanta is \"security in a box\" for technology companies — we build a suite of simple, effective, and easy-to-deploy tools powerful enough to take a company through full SOC 2 compliance.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Security and privacy at Vanta"
+    ],
+    "h2": [
+      "Vanta’s Security and Privacy teams establish policies and controls, monitor compliance with those controls, and prove our security and compliance to third-party auditors.",
+      "Data protection",
+      "Product security",
+      "Enterprise security",
+      "Data privacy",
+      "Get compliant and build trust—fast"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "home",
+      "Plans",
+      "Log in",
+      "Get a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 6999
+  },
+  "mobile": {
+    "title": "Security",
+    "metaDescription": "Vanta is \"security in a box\" for technology companies — we build a suite of simple, effective, and easy-to-deploy tools powerful enough to take a company through full SOC 2 compliance.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Security and privacy at Vanta"
+    ],
+    "h2": [
+      "Vanta’s Security and Privacy teams establish policies and controls, monitor compliance with those controls, and prove our security and compliance to third-party auditors.",
+      "Data protection",
+      "Product security",
+      "Enterprise security",
+      "Data privacy",
+      "Get compliant and build trust—fast"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "home"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 11930
+  },
+  "ok": true
+}

@@ -1,0 +1,74 @@
+{
+  "url": "https://www.parentsquare.com/solutions/private-charter-schools/",
+  "capturedAt": "2026-10-25T17:50:52.502Z",
+  "status": 200,
+  "finalUrl": "https://www.parentsquare.com/solutions/private-charter-schools/",
+  "desktop": {
+    "title": "Communications for Small & Medium Districts | ParentSquare",
+    "metaDescription": "Attract, engage, and retain families with one platform for communication, websites, forms, and payments — built for private and charter schools.",
+    "ogImage": null,
+    "h1": [
+      "Deliver a family experience that attracts, engages, and retains"
+    ],
+    "h2": [
+      "A family experience that sets your school apart",
+      "Turn engagement into enrollment and retention",
+      "Showcase what makes your school unique",
+      "Latest insights and resources",
+      "Frequently asked questions"
+    ],
+    "navLabels": [
+      "Platform",
+      "Solutions",
+      "Resources and Support",
+      "Company",
+      "Get demo",
+      "Sign in"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Schedule a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "WebSite",
+      "BreadcrumbList",
+      "FAQPage"
+    ],
+    "pageHeight": 6908
+  },
+  "mobile": {
+    "title": "Communications for Small & Medium Districts | ParentSquare",
+    "metaDescription": "Attract, engage, and retain families with one platform for communication, websites, forms, and payments — built for private and charter schools.",
+    "ogImage": null,
+    "h1": [
+      "Deliver a family experience that attracts, engages, and retains"
+    ],
+    "h2": [
+      "A family experience that sets your school apart",
+      "Turn engagement into enrollment and retention",
+      "Showcase what makes your school unique",
+      "Latest insights and resources",
+      "Frequently asked questions"
+    ],
+    "navLabels": [
+      "Menu"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Schedule a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebPage",
+      "WebSite",
+      "BreadcrumbList",
+      "FAQPage"
+    ],
+    "pageHeight": 9592
+  },
+  "ok": true
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://cal.com/pricing",
+  "capturedAt": "2026-10-25T17:47:20.702Z",
+  "status": 200,
+  "finalUrl": "https://cal.com/pricing",
+  "desktop": {
+    "title": "Pricing | Cal.com",
+    "metaDescription": "Start free with Cal.com’s unlimited scheduling or upgrade to Teams, Organizations, or Enterprise for advanced features and compliance.",
+    "ogImage": "https://framerusercontent.com/images/pPSh5HDe1qaySb4R7xBgMHudhU.png",
+    "h1": [
+      "Choose your Cal.com subscription"
+    ],
+    "h2": [
+      "Smarter, simpler scheduling"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Home Cal.com",
+      "Enterprise",
+      "Cal.ai",
+      "Pricing",
+      "Sign in",
+      "Get started",
+      "Pricing",
+      "Talk to sales",
+      "See feature breakdown",
+      "Use for free",
+      "Mobile App",
+      "Browser Extension",
+      "Try for free",
+      "Try for free",
+      "Talk to sales"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://framer.com/edit/beta?framerSiteId=bc7227767b20f032f6b0c5eca6d5f196207f19e615b861e2b14cd0579a235b43&source=cal.com&features=%7B%22editorBarDisableFrameAn"
+    ],
+    "jsonLdTypes": [],
+    "pageHeight": 6591
+  },
+  "mobile": {
+    "title": "Pricing | Cal.com",
+    "metaDescription": "Start free with Cal.com’s unlimited scheduling or upgrade to Teams, Organizations, or Enterprise for advanced features and compliance.",
+    "ogImage": "https://framerusercontent.com/images/pPSh5HDe1qaySb4R7xBgMHudhU.png",
+    "h1": [
+      "Choose your Cal.com subscription"
+    ],
+    "h2": [
+      "Smarter, simpler scheduling"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Home Cal.com",
+      "Sign in",
+      "Get started",
+      "For Individuals Personal scheduling made simple",
+      "For Teams Collaborative scheduling for groups",
+      "For Enterprises Enterprise-level scheduling solutions",
+      "Recruiting",
+      "Sales",
+      "HR",
+      "Education",
+      "Support",
+      "Healthcare",
+      "Telehealth",
+      "Marketing",
+      "Enterprise",
+      "API Build your own integrations with our public API",
+      "Create OAuth Client Integrate Cal.com using OAuth",
+      "App Store Integrate with your favorite apps",
+      "Embed Embed Cal.com into your website",
+      "Out Of Office Schedule time off with ease"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://framer.com/edit/beta?framerSiteId=bc7227767b20f032f6b0c5eca6d5f196207f19e615b861e2b14cd0579a235b43&source=cal.com&features=%7B%22editorBarDisableFrameAn"
+    ],
+    "jsonLdTypes": [],
+    "pageHeight": 5511
+  },
+  "ok": true
+}

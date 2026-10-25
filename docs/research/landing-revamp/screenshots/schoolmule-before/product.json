@@ -1,0 +1,80 @@
+{
+  "url": "https://schoolmule.ca/product",
+  "capturedAt": "2026-10-25T17:42:24.931Z",
+  "status": 200,
+  "finalUrl": "https://schoolmule.ca/product",
+  "desktop": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "Powerful Features, Beautiful Design"
+    ],
+    "h2": [
+      "Complete Student Information System",
+      "Advanced Gradebook System",
+      "Automated Report Card Generation",
+      "Smart Attendance Management",
+      "Integrated Financial Management",
+      "Technical Specifications",
+      "Security & Compliance",
+      "Implementation Process",
+      "Integration Capabilities",
+      "Ongoing Support & Training",
+      "Ready to See SchoolMule in Action?"
+    ],
+    "navLabels": [
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 7953
+  },
+  "mobile": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "Powerful Features, Beautiful Design"
+    ],
+    "h2": [
+      "Complete Student Information System",
+      "Advanced Gradebook System",
+      "Automated Report Card Generation",
+      "Smart Attendance Management",
+      "Integrated Financial Management",
+      "Technical Specifications",
+      "Security & Compliance",
+      "Implementation Process",
+      "Integration Capabilities",
+      "Ongoing Support & Training",
+      "Ready to See SchoolMule in Action?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 12021
+  },
+  "ok": true
+}

@@ -1,0 +1,73 @@
+{
+  "url": "https://www.powerschool.com/",
+  "capturedAt": "2026-10-25T17:42:31.626Z",
+  "status": 200,
+  "finalUrl": "https://www.powerschool.com/",
+  "desktop": {
+    "title": "Home | PowerSchool",
+    "metaDescription": "Power stronger schools with the world's most comprehensive K-12 software. PowerSchool unifies the education ecosystem from home to central office. Learn more.",
+    "ogImage": "https://www.powerschool.com/wp-content/uploads/2026/04/home-featured.jpg",
+    "h1": [
+      "More Power Stronger School"
+    ],
+    "h2": [
+      "Build Your PowerSchool",
+      "When your tools work as one, your school does too",
+      "Already using a PowerSchool product?",
+      "Hear from the voices shaping stronger schools",
+      "An Integrated Platform to Deliver Unparalleled Outcomes"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Talk to an Expert"
+    ],
+    "heroCtas": [
+      "Global Privacy Statement",
+      "Close notification"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1191272013?h=c04654da48&background=1&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0&badge=0",
+      "https://player.vimeo.com/video/1191253164?background=1&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0&badge=0&h=1f02521874",
+      "https://player.vimeo.com/video/1191253165?h=d3a9a7e533&title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4992
+  },
+  "mobile": {
+    "title": "Home | PowerSchool",
+    "metaDescription": "Power stronger schools with the world's most comprehensive K-12 software. PowerSchool unifies the education ecosystem from home to central office. Learn more.",
+    "ogImage": "https://www.powerschool.com/wp-content/uploads/2026/04/home-featured.jpg",
+    "h1": [
+      "More Power Stronger School"
+    ],
+    "h2": [
+      "Build Your PowerSchool",
+      "When your tools work as one, your school does too",
+      "Already using a PowerSchool product?",
+      "Hear from the voices shaping stronger schools",
+      "An Integrated Platform to Deliver Unparalleled Outcomes"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Mobile menu"
+    ],
+    "heroCtas": [
+      "Global Privacy Statement",
+      "Close notification"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1191272013?h=c04654da48&background=1&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0&badge=0",
+      "https://player.vimeo.com/video/1191253164?background=1&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0&badge=0&h=1f02521874",
+      "https://player.vimeo.com/video/1191253165?h=d3a9a7e533&title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 5323
+  },
+  "ok": true
+}

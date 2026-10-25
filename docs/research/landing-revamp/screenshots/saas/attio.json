@@ -1,0 +1,105 @@
+{
+  "url": "https://attio.com",
+  "capturedAt": "2026-10-25T17:43:58.856Z",
+  "status": 200,
+  "finalUrl": "https://attio.com/",
+  "desktop": {
+    "title": "Attio: The CRM for agentic revenue",
+    "metaDescription": "The system for revenue teams to build pipeline, accelerate deals, and grow accounts around the clock.\t",
+    "ogImage": "https://a.storyblok.com/f/234930/1200x630/df480627b4/attio-og-image.jpg",
+    "h1": [
+      "Welcome to agentic revenue.",
+      "Welcome to agentic revenue."
+    ],
+    "h2": [
+      "The intelligent system that never sleeps. Picks up leads at 2am. Catches renewals before they slip. Hands you the answer before you ask.",
+      "Live from day one. Connect your inbox and calendar. Attio learns your business and builds itself around it, before your first agent even gets to work.",
+      "Universal Context™",
+      "All of the signals, none of the noise. Ready to act on.",
+      "All of the signals, none of the noise. Ready to act on.",
+      "SDK. API. MCP. Build anything on Attio.",
+      "Run at any scale. Production-grade for your team and agents.",
+      "Trusted by 30,000+ customers. From first agent to enterprise scale.",
+      "Better as you grow. New features every week to keep pace with you.",
+      "Agentic revenue runs on Attio.",
+      "Platform",
+      "Company",
+      "Import from",
+      "Attio for",
+      "Apps",
+      "Resources"
+    ],
+    "navLabels": [
+      "The new architecture for agentic revenue is here",
+      "Dismiss banner",
+      "Attio homepage",
+      "Platform",
+      "Resources",
+      "Developers",
+      "Customers",
+      "Pricing",
+      "Sign in",
+      "Start for free"
+    ],
+    "heroCtas": [
+      "GTM lessons from Elena Verna and more",
+      "Talk to sales",
+      "Start for free"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebSite",
+      "SoftwareApplication"
+    ],
+    "pageHeight": 17599
+  },
+  "mobile": {
+    "title": "Attio: The CRM for agentic revenue",
+    "metaDescription": "The system for revenue teams to build pipeline, accelerate deals, and grow accounts around the clock.\t",
+    "ogImage": "https://a.storyblok.com/f/234930/1200x630/df480627b4/attio-og-image.jpg",
+    "h1": [
+      "Welcome to agentic revenue.",
+      "Welcome to agentic revenue."
+    ],
+    "h2": [
+      "The intelligent system that never sleeps. Picks up leads at 2am. Catches renewals before they slip. Hands you the answer before you ask.",
+      "Live from day one. Connect your inbox and calendar. Attio learns your business and builds itself around it, before your first agent even gets to work.",
+      "Universal Context™",
+      "All of the signals, none of the noise. Ready to act on.",
+      "All of the signals, none of the noise. Ready to act on.",
+      "SDK. API. MCP. Build anything on Attio.",
+      "Run at any scale. Production-grade for your team and agents.",
+      "Trusted by 30,000+ customers. From first agent to enterprise scale.",
+      "Better as you grow. New features every week to keep pace with you.",
+      "Agentic revenue runs on Attio.",
+      "Platform",
+      "Company",
+      "Import from",
+      "Attio for",
+      "Apps",
+      "Resources"
+    ],
+    "navLabels": [
+      "The new architecture for agentic revenue is here",
+      "Dismiss banner",
+      "Attio homepage",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "GTM lessons from Elena Verna and more",
+      "Send me a demo",
+      "Talk to sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebSite",
+      "SoftwareApplication"
+    ],
+    "pageHeight": 16189
+  },
+  "ok": true
+}

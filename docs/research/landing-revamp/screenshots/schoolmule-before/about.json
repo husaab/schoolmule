@@ -1,0 +1,72 @@
+{
+  "url": "https://schoolmule.ca/about",
+  "capturedAt": "2026-10-25T17:42:39.229Z",
+  "status": 200,
+  "finalUrl": "https://schoolmule.ca/about",
+  "desktop": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "Trusted by Schools Nationwide"
+    ],
+    "h2": [
+      "Eliminating Administrative Burden from Education",
+      "Our Core Values",
+      "Security & Compliance",
+      "What Schools Are Saying",
+      "SchoolMule by the Numbers",
+      "Meet Our Team",
+      "Ready to Join Our Growing Community?"
+    ],
+    "navLabels": [
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 5178
+  },
+  "mobile": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "Trusted by Schools Nationwide"
+    ],
+    "h2": [
+      "Eliminating Administrative Burden from Education",
+      "Our Core Values",
+      "Security & Compliance",
+      "What Schools Are Saying",
+      "SchoolMule by the Numbers",
+      "Meet Our Team",
+      "Ready to Join Our Growing Community?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 8103
+  },
+  "ok": true
+}

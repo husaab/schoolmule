@@ -1,0 +1,81 @@
+{
+  "url": "https://flintk12.com/pricing",
+  "capturedAt": "2026-10-25T17:58:25.769Z",
+  "status": 200,
+  "finalUrl": "https://flintk12.com/pricing",
+  "desktop": {
+    "title": "Pricing",
+    "metaDescription": "Free for teachers, forever. Learn about Flint's pricing and how you can bring personalized learning at scale to your school community and districts.",
+    "ogImage": "https://flintk12.com/images/unique/pricing-08c0fc92.png",
+    "h1": [
+      "Pricing"
+    ],
+    "h2": [
+      "$3,000 / year",
+      "$4,000 / year",
+      "$6,500 / year",
+      "Custom",
+      "Funding shouldn't be a barrier. Let's talk.",
+      "Frequently asked questions",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Solutions",
+      "Outcomes",
+      "Resources",
+      "Pricing",
+      "Login",
+      "Start for free →"
+    ],
+    "heroCtas": [
+      "contact us.",
+      "Contact sales",
+      "Contact sales",
+      "Contact sales",
+      "Contact sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage",
+      "FAQPage"
+    ],
+    "pageHeight": 3600
+  },
+  "mobile": {
+    "title": "Pricing",
+    "metaDescription": "Free for teachers, forever. Learn about Flint's pricing and how you can bring personalized learning at scale to your school community and districts.",
+    "ogImage": "https://flintk12.com/images/unique/pricing-08c0fc92.png",
+    "h1": [
+      "Pricing"
+    ],
+    "h2": [
+      "$3,000 / year",
+      "$4,000 / year",
+      "$6,500 / year",
+      "Custom",
+      "Funding shouldn't be a barrier. Let's talk.",
+      "Frequently asked questions",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "contact us.",
+      "Contact sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage",
+      "FAQPage"
+    ],
+    "pageHeight": 6798
+  },
+  "ok": true
+}

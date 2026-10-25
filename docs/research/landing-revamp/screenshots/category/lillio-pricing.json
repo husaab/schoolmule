@@ -1,0 +1,65 @@
+{
+  "url": "https://www.lillio.com/features/pricing",
+  "capturedAt": "2026-10-25T17:48:38.910Z",
+  "status": 200,
+  "finalUrl": "https://www.lillio.com/features/pricing",
+  "desktop": {
+    "title": "Pricing | Lillio",
+    "metaDescription": "Power Your Childcare Center With the #1 Rated Childcare Platform",
+    "ogImage": null,
+    "h1": [
+      "Power Your Childcare Center With the #1 Rated Childcare Platform"
+    ],
+    "h2": [
+      "Center Management + Billing & Payments",
+      "Lillio Academy",
+      "Lillio Learning Curriculum Kits",
+      "Lillio Learning Digital Curriculum"
+    ],
+    "navLabels": [
+      "Pricing",
+      "Log In",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content",
+      "Get a quote",
+      "Get a quote",
+      "Get a quote",
+      "Get a quote"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,SoftwareApplication"
+    ],
+    "pageHeight": 2134
+  },
+  "mobile": {
+    "title": "Pricing | Lillio",
+    "metaDescription": "Power Your Childcare Center With the #1 Rated Childcare Platform",
+    "ogImage": null,
+    "h1": [
+      "Power Your Childcare Center With the #1 Rated Childcare Platform"
+    ],
+    "h2": [
+      "Center Management + Billing & Payments",
+      "Lillio Academy",
+      "Lillio Learning Curriculum Kits",
+      "Lillio Learning Digital Curriculum"
+    ],
+    "navLabels": [
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to Content"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization,BreadcrumbList,SoftwareApplication"
+    ],
+    "pageHeight": 4305
+  },
+  "ok": true
+}

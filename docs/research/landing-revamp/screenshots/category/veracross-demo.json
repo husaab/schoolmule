@@ -1,0 +1,113 @@
+{
+  "url": "https://www.veracross.com/request-a-demo",
+  "capturedAt": "2026-10-25T17:46:00.636Z",
+  "status": 200,
+  "finalUrl": "https://www.veracross.com/request-a-live-demo/",
+  "desktop": {
+    "title": "Request a Live Veracross Demo | Student Information System",
+    "metaDescription": "See why 500+ schools worldwide rely on Veracross. Request a custom demo to learn how this innovative SIS can benefit your school.",
+    "ogImage": null,
+    "h1": [
+      "Discover the Veracross Difference"
+    ],
+    "h2": [
+      "Meet the Industry-Leading SIS",
+      "How Veracross compares to other SIS platforms",
+      "More Than a Student Information System",
+      "Unifying Schools in 60+ Countries"
+    ],
+    "navLabels": [
+      "Who We Serve",
+      "Meet Veracross 360",
+      "Types of Schools",
+      "Resource Center",
+      "Company",
+      "Get Support",
+      "Request a Demo",
+      "Americas"
+    ],
+    "heroCtas": [
+      "Open cookie settings widget"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://veracross.chilipiper.com/web-data/deanonymization/iframe/?tenantId=magnus.health&parentOrigin=https%3A%2F%2Fwww.veracross.com&debug=error&consentDenied=",
+      "https://veracross.chilipiper.com/chat/loader/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt",
+      "https://veracross.chilipiper.com/chat/widget/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 6012
+  },
+  "mobile": {
+    "title": "Request a Live Veracross Demo | Student Information System",
+    "metaDescription": "See why 500+ schools worldwide rely on Veracross. Request a custom demo to learn how this innovative SIS can benefit your school.",
+    "ogImage": null,
+    "h1": [
+      "Discover the Veracross Difference"
+    ],
+    "h2": [
+      "Meet the Industry-Leading SIS",
+      "How Veracross compares to other SIS platforms",
+      "More Than a Student Information System",
+      "Unifying Schools in 60+ Countries"
+    ],
+    "navLabels": [
+      "Back",
+      "Who We Serve",
+      "Technology Department",
+      "Business Office",
+      "Academics",
+      "Admission Office",
+      "School Leadership",
+      "Development Office",
+      "Health Office",
+      "Marketing & Communications",
+      "Meet Veracross 360",
+      "Veracross 360 Overview",
+      "Academics & Student Life",
+      "Admission & Enrollment",
+      "Development",
+      "Accounting",
+      "Tuition Management",
+      "Student Health & Wellness",
+      "Student Behavior & Motivation",
+      "Marketing",
+      "Portals",
+      "Integrations and API",
+      "AI-Powered Reporting",
+      "Types of Schools",
+      "Private K-12",
+      "Boarding Schools",
+      "International Schools",
+      "Parochial and Others",
+      "Resource Center",
+      "Resource Center",
+      "Transitioning Your SIS Toolkit",
+      "Business Case for a New SIS Toolkit",
+      "Veracross Events",
+      "Company",
+      "Our Story",
+      "Careers",
+      "Trust Center",
+      "Partners",
+      "Search",
+      "Get Support"
+    ],
+    "heroCtas": [
+      "Open cookie settings widget"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://veracross.chilipiper.com/web-data/deanonymization/iframe/?tenantId=magnus.health&parentOrigin=https%3A%2F%2Fwww.veracross.com&debug=error&consentDenied=",
+      "https://veracross.chilipiper.com/chat/loader/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt",
+      "https://veracross.chilipiper.com/chat/widget/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 7031
+  },
+  "ok": true
+}

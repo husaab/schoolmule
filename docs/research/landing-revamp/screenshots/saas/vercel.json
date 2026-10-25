@@ -1,0 +1,71 @@
+{
+  "url": "https://vercel.com",
+  "capturedAt": "2026-10-25T17:42:20.480Z",
+  "status": 200,
+  "finalUrl": "https://vercel.com/",
+  "desktop": {
+    "title": "Agentic Infrastructure - Vercel",
+    "metaDescription": "The autonomous stack for every app and agent.",
+    "ogImage": "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/og-home-not-x.png",
+    "h1": [
+      "Agentic Infrastructure"
+    ],
+    "h2": [
+      "Build agents on infrastructure that thinks like them",
+      "Ship apps that scale from zero to millions instantly"
+    ],
+    "navLabels": [
+      "Vercel",
+      "Products",
+      "Resources",
+      "Enterprise",
+      "Pricing",
+      "Get a Demo",
+      "Log In",
+      "Sign Up"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Deploy now",
+      "Talk to sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "Service",
+      "SoftwareApplication"
+    ],
+    "pageHeight": 5333
+  },
+  "mobile": {
+    "title": "Agentic Infrastructure - Vercel",
+    "metaDescription": "The autonomous stack for every app and agent.",
+    "ogImage": "https://lishhsx6kmthaacj.public.blob.vercel-storage.com/og-home-not-x.png",
+    "h1": [
+      "Agentic Infrastructure"
+    ],
+    "h2": [
+      "Build agents on infrastructure that thinks like them",
+      "Ship apps that scale from zero to millions instantly"
+    ],
+    "navLabels": [
+      "Vercel",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Deploy now",
+      "Talk to sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "Service",
+      "SoftwareApplication"
+    ],
+    "pageHeight": 4981
+  },
+  "ok": true
+}

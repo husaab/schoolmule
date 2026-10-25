@@ -1,0 +1,50 @@
+{
+  "url": "https://www.rippling.com/en-CA/tour-video",
+  "capturedAt": "2026-10-25T17:49:17.692Z",
+  "status": 200,
+  "finalUrl": "https://www.rippling.com/en-CA/tour-video",
+  "desktop": {
+    "title": "See Rippling in Action - Watch a Video Tour of Rippling | Rippling",
+    "metaDescription": "Take a video tour of Rippling today and find out how Rippling helps you manage your entire workforce on one system.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [],
+    "h2": [],
+    "navLabels": [
+      "See Rippling"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "Watch now",
+      "Privacy Notice",
+      "Terms apply",
+      "Play video 10:47"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 1068
+  },
+  "mobile": {
+    "title": "See Rippling in Action - Watch a Video Tour of Rippling | Rippling",
+    "metaDescription": "Take a video tour of Rippling today and find out how Rippling helps you manage your entire workforce on one system.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Skip to main content",
+      "Watch now",
+      "Privacy Notice",
+      "Terms apply"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 1008
+  },
+  "ok": true
+}

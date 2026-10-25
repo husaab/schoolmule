@@ -1,0 +1,81 @@
+{
+  "url": "https://www.blackbaud.com/",
+  "capturedAt": "2026-10-25T17:43:07.613Z",
+  "status": 200,
+  "finalUrl": "https://www.blackbaud.com/",
+  "desktop": {
+    "title": "Leading Software for Nonprofits and Education | Blackbaud",
+    "metaDescription": "Blackbaud delivers AI-powered software for nonprofits, education, foundations, & companies, helping organizations drive greater social impact.",
+    "ogImage": null,
+    "h1": [
+      "AI SOLUTIONS FOR SOCIAL IMPACT",
+      "Your Privacy is important to us"
+    ],
+    "h2": [
+      "Reach more. Raise more. Faster.",
+      "AI that understands how you work. The platform that unites your team and entire workflow.",
+      "Chosen by the teams changing the world",
+      "Real missions. Real results.",
+      "Built around your workflows, not the other way around.",
+      "Built around your workflows, not the other way around.",
+      "RESOURCES",
+      "Move beyond generic AI.",
+      "THE LATEST AT BLACKBAUD",
+      "Accelerate your impact"
+    ],
+    "navLabels": [
+      "Skip to content",
+      "Partners",
+      "Training & Support",
+      "Sign In",
+      "Schedule with Sales",
+      "Request a Demo",
+      "Toggle navigation"
+    ],
+    "heroCtas": [
+      "Request a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 8664
+  },
+  "mobile": {
+    "title": "Leading Software for Nonprofits and Education | Blackbaud",
+    "metaDescription": "Blackbaud delivers AI-powered software for nonprofits, education, foundations, & companies, helping organizations drive greater social impact.",
+    "ogImage": null,
+    "h1": [
+      "AI SOLUTIONS FOR SOCIAL IMPACT",
+      "Your Privacy is important to us"
+    ],
+    "h2": [
+      "Reach more. Raise more. Faster.",
+      "AI that understands how you work. The platform that unites your team and entire workflow.",
+      "Chosen by the teams changing the world",
+      "Real missions. Real results.",
+      "Built around your workflows, not the other way around.",
+      "Built around your workflows, not the other way around.",
+      "RESOURCES",
+      "Move beyond generic AI.",
+      "THE LATEST AT BLACKBAUD",
+      "Accelerate your impact"
+    ],
+    "navLabels": [
+      "Skip to content",
+      "Sign In",
+      "Toggle navigation"
+    ],
+    "heroCtas": [
+      "Request a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 10375
+  },
+  "ok": true
+}

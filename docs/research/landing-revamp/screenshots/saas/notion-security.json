@@ -1,0 +1,72 @@
+{
+  "url": "https://www.notion.com/security",
+  "capturedAt": "2026-10-25T17:48:03.754Z",
+  "status": 200,
+  "finalUrl": "https://www.notion.com/security",
+  "desktop": {
+    "title": "Notion Security & Compliance | SOC 2 Certified, trusted by Enterprises",
+    "metaDescription": "Learn how Notion protects your data with enterprise-grade security, SOC 2 compliance, ISO compliance, and comprehensive trust features. Discover our commitment to security, privacy, and compliance standards that keep your workspace safe.",
+    "ogImage": "https://www.notion.com/front-static/meta/global-evergreen-03.png",
+    "h1": [
+      "Security @ Notion"
+    ],
+    "h2": [
+      "Product Security Controls for You",
+      "Supported by Organization Security Controls",
+      "Compliance",
+      "Availability",
+      "Artificial intelligence (AI) governance",
+      "Privacy",
+      "Learn about our enterprise plan"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Notion – Home",
+      "Product",
+      "Resources",
+      "Pricing",
+      "Request a demo",
+      "Log in",
+      "Get Notion free",
+      "Trust Center",
+      "Security Exhibit",
+      "Shared Responsibility Model",
+      "Data residency for Notion →"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 5928
+  },
+  "mobile": {
+    "title": "Notion Security & Compliance | SOC 2 Certified, trusted by Enterprises",
+    "metaDescription": "Learn how Notion protects your data with enterprise-grade security, SOC 2 compliance, ISO compliance, and comprehensive trust features. Discover our commitment to security, privacy, and compliance standards that keep your workspace safe.",
+    "ogImage": "https://www.notion.com/front-static/meta/global-evergreen-03.png",
+    "h1": [
+      "Security @ Notion"
+    ],
+    "h2": [
+      "Product Security Controls for You",
+      "Supported by Organization Security Controls",
+      "Compliance",
+      "Availability",
+      "Artificial intelligence (AI) governance",
+      "Privacy",
+      "Learn about our enterprise plan"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Notion – Home",
+      "Get Notion free",
+      "Toggle main menu",
+      "Trust Center",
+      "Security Exhibit",
+      "Shared Responsibility Model"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 10513
+  },
+  "ok": true
+}

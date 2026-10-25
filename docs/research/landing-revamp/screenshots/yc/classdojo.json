@@ -1,0 +1,103 @@
+{
+  "url": "https://www.classdojo.com",
+  "capturedAt": "2026-10-25T17:44:25.441Z",
+  "status": 200,
+  "finalUrl": "https://www.classdojo.com/",
+  "desktop": {
+    "title": "ClassDojo | ClassDojo",
+    "metaDescription": "ClassDojo connects K-12 teachers with families. Free classroom communication, behavior tracking, and student portfolios. Used in 95% of US schools.",
+    "ogImage": "https://static.classdojo.com/img/opengraph2026.jpg",
+    "h1": [
+      "Where classrooms become communities"
+    ],
+    "h2": [
+      "Keeping teachers, families, and kids connected",
+      "A world of adventure awaits.",
+      "Our community is our superpower",
+      "Privacy first—always",
+      "Let’s get growing",
+      "ClassDojo",
+      "Preference Center"
+    ],
+    "navLabels": [
+      "Products",
+      "Schools",
+      "Districts",
+      "Families",
+      "🇺🇸",
+      "Log in",
+      "Sign up"
+    ],
+    "heroCtas": [
+      "Skip content",
+      "New for school leaders this back to school. Check it out",
+      "Teacher",
+      "Parent",
+      "Student",
+      "School Leader",
+      "District Leader"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebSite"
+    ],
+    "pageHeight": 6826
+  },
+  "mobile": {
+    "title": "ClassDojo | ClassDojo",
+    "metaDescription": "ClassDojo connects K-12 teachers with families. Free classroom communication, behavior tracking, and student portfolios. Used in 95% of US schools.",
+    "ogImage": "https://static.classdojo.com/img/opengraph2026.jpg",
+    "h1": [
+      "Where classrooms become communities"
+    ],
+    "h2": [
+      "Keeping teachers, families, and kids connected",
+      "A world of adventure awaits.",
+      "Our community is our superpower",
+      "Privacy first—always",
+      "Let’s get growing",
+      "ClassDojo",
+      "Preference Center"
+    ],
+    "navLabels": [
+      "Open menu",
+      "Products",
+      "ClassDojo",
+      "ClassDojo Plus",
+      "Dojo Islands",
+      "Dojo Tutor",
+      "Dojo Sparks",
+      "Schools",
+      "Teachers",
+      "School Leaders NEW",
+      "Resources",
+      "Districts",
+      "Overview",
+      "Roles",
+      "Solutions",
+      "Privacy & Security",
+      "Customer Stories",
+      "Blog & News",
+      "Families",
+      "Select a language…",
+      "Log in",
+      "Sign up",
+      "Get the iPhone app"
+    ],
+    "heroCtas": [
+      "Skip content",
+      "New for school leaders this back to school. Check it out",
+      "Sign up"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "WebSite"
+    ],
+    "pageHeight": 6630
+  },
+  "ok": true
+}

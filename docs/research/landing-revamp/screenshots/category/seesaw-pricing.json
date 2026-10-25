@@ -1,0 +1,72 @@
+{
+  "url": "https://seesaw.com/en-ca/pricing-packages/",
+  "capturedAt": "2026-10-25T17:50:39.353Z",
+  "status": 200,
+  "finalUrl": "https://seesaw.com/en-ca/pricing-packages/",
+  "desktop": {
+    "title": "LMS pricing and packages | Seesaw",
+    "metaDescription": "Discover affordable educational tools with Seesaw. We offer learning management packages that will empower teachers to enhance student learning and engagement.",
+    "ogImage": "https://seesaw.com/wp-content/uploads/2025/09/GISD-social-media-thumbnail.png",
+    "h1": [
+      "Seesaw Can Fit Your Needs"
+    ],
+    "h2": [
+      "Premium Supplemental Curriculum",
+      "Seesaw Supports 65,000+ Schools Worldwide",
+      "Hear What Educators Have to Say...",
+      "Frequently Asked Questions"
+    ],
+    "navLabels": [
+      "Sales: 1-855-673-3729",
+      "Customer Support",
+      "Open I Am A...",
+      "Open Canada (English)",
+      "Open Products",
+      "Open Solutions",
+      "Open Learning & Resources",
+      "Pricing",
+      "Search",
+      "Request A Demo",
+      "Log In"
+    ],
+    "heroCtas": [
+      "Cookie Settings",
+      "Skip to content",
+      "Request A Demo",
+      "Talk To Sales"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 5017
+  },
+  "mobile": {
+    "title": "LMS pricing and packages | Seesaw",
+    "metaDescription": "Discover affordable educational tools with Seesaw. We offer learning management packages that will empower teachers to enhance student learning and engagement.",
+    "ogImage": "https://seesaw.com/wp-content/uploads/2025/09/GISD-social-media-thumbnail.png",
+    "h1": [
+      "Seesaw Can Fit Your Needs"
+    ],
+    "h2": [
+      "Premium Supplemental Curriculum",
+      "Seesaw Supports 65,000+ Schools Worldwide",
+      "Hear What Educators Have to Say...",
+      "Frequently Asked Questions"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Cookie Settings",
+      "Skip to content",
+      "Request A Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 7394
+  },
+  "ok": true
+}

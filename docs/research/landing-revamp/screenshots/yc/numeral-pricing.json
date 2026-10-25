@@ -1,0 +1,61 @@
+{
+  "url": "https://www.numeral.com/pricing",
+  "capturedAt": "2026-10-25T18:04:51.945Z",
+  "status": 200,
+  "finalUrl": "https://www.numeral.com/pricing",
+  "desktop": {
+    "title": "Numeral Pricing | Compare Prices by Plan",
+    "metaDescription": "We built Numeral to be the easiest way for e-commerce & SaaS companies to handle sales tax. Learn about our simple & honest pricing.",
+    "ogImage": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c/6a73a8ebd77e023c4e326b2b_Globe.png",
+    "h1": [
+      "Simple pricing. No contract required."
+    ],
+    "h2": [
+      "Frequently asked questions",
+      "Tax infrastructure to sell globally."
+    ],
+    "navLabels": [
+      "PRICING",
+      "Sign in",
+      "Book a demo"
+    ],
+    "heroCtas": [
+      "home",
+      "Get started",
+      "Book a demo",
+      "Book a demo",
+      "Contact Numeral"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 3936
+  },
+  "mobile": {
+    "title": "Numeral Pricing | Compare Prices by Plan",
+    "metaDescription": "We built Numeral to be the easiest way for e-commerce & SaaS companies to handle sales tax. Learn about our simple & honest pricing.",
+    "ogImage": "https://cdn.prod.website-files.com/6a219d3ca4f9ef92939b285c/6a73a8ebd77e023c4e326b2b_Globe.png",
+    "h1": [
+      "Simple pricing. No contract required."
+    ],
+    "h2": [
+      "Frequently asked questions",
+      "Tax infrastructure to sell globally."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "home",
+      "Get started",
+      "Contact Numeral"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 6755
+  },
+  "ok": true
+}

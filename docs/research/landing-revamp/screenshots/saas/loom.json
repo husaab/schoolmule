@@ -1,0 +1,166 @@
+{
+  "url": "https://www.loom.com",
+  "capturedAt": "2026-10-25T17:44:53.614Z",
+  "status": 200,
+  "finalUrl": "https://www.loom.com/",
+  "desktop": {
+    "title": "Free screen recorder for Mac and PC | Loom",
+    "metaDescription": "Best free online screen recording tool with advanced video editing and video storage trusted by over 22 million people and easy sharing from Loom.com.",
+    "ogImage": "https://cdn.sanity.io/images/pvn35iyy/production/6f62a5ee8e9e6a4a980876e632eb1f58c3125591-2400x1254.jpg",
+    "h1": [
+      "One video is worth a thousand words"
+    ],
+    "h2": [
+      "Millions of people across 400,000 companies choose Loom",
+      "Show it in Loom, ship with any agent",
+      "The easiest screen recorder you’ll ever use",
+      "Lightning fast screen recording",
+      "So much more than a screen recorder",
+      "Keep your content safe",
+      "Video messaging for all use cases",
+      "Powerful features for easy, custom recordings",
+      "How to use async video messaging to improve communication",
+      "Loom for Enterprise",
+      "Manage Preferences"
+    ],
+    "navLabels": [
+      "Loom is Live on Product Hunt! Record your screen, yourself, meetings, and now… Record for agents, built into the new Loom for Mac desktop app. Check it out!",
+      "Apps",
+      "Solutions",
+      "Resources",
+      "Enterprise",
+      "Pricing",
+      "Sign In",
+      "Get Loom for free",
+      "Contact Sales"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Get Loom for free",
+      "Install Chrome Extension Open in new window"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://cdn.loom.com/assets/marketing/bubbs/angelina.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      }
+    ],
+    "embeds": [
+      "https://www.loom.com/embed/09b1aa507cb846138847bf8e98b56a71?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true&default_speed=true&skip_embed_e"
+    ],
+    "jsonLdTypes": [
+      "Corporation"
+    ],
+    "pageHeight": 12622
+  },
+  "mobile": {
+    "title": "Free screen recorder for Mac and PC | Loom",
+    "metaDescription": "Best free online screen recording tool with advanced video editing and video storage trusted by over 22 million people and easy sharing from Loom.com.",
+    "ogImage": "https://cdn.sanity.io/images/pvn35iyy/production/6f62a5ee8e9e6a4a980876e632eb1f58c3125591-2400x1254.jpg",
+    "h1": [
+      "One video is worth a thousand words"
+    ],
+    "h2": [
+      "Millions of people across 400,000 companies choose Loom",
+      "Show it in Loom, ship with any agent",
+      "The easiest screen recorder you’ll ever use",
+      "Lightning fast screen recording",
+      "So much more than a screen recorder",
+      "Keep your content safe",
+      "Video messaging for all use cases",
+      "Powerful features for easy, custom recordings",
+      "How to use async video messaging to improve communication",
+      "Loom for Enterprise",
+      "Record, share, and watch on the go.",
+      "Manage Preferences"
+    ],
+    "navLabels": [
+      "Toggle menu close",
+      "Loom is Live on Product Hunt! Record your screen, yourself, meetings, and now… Record for agents, built into the new Loom for Mac desktop app. Check it out!"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Get Loom for free",
+      "Close",
+      "Download Loom for iOS"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://cdn.loom.com/assets/marketing/bubbs/angelina.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      }
+    ],
+    "embeds": [
+      "https://www.loom.com/embed/09b1aa507cb846138847bf8e98b56a71?hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true&default_speed=true&skip_embed_e"
+    ],
+    "jsonLdTypes": [
+      "Corporation"
+    ],
+    "pageHeight": 14847
+  },
+  "ok": true
+}

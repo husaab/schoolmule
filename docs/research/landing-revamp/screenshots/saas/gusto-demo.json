@@ -1,0 +1,50 @@
+{
+  "url": "https://gusto.com/instant-demo",
+  "capturedAt": "2026-10-25T17:47:29.442Z",
+  "status": 200,
+  "finalUrl": "https://gusto.com/instant-demo",
+  "desktop": {
+    "title": "Gusto Product Demo",
+    "metaDescription": "Explore Gusto Payroll Demo to see how you can run payroll in minutes using our modern payroll solution. Try Now.",
+    "ogImage": "https://res.cloudinary.com/dja3z8nt6/image/upload/f_auto/q_auto/v1761076021/wp-migration/og-gusto.jpg",
+    "h1": [
+      "Ready to start a step by step tour?",
+      "Ready to start a step by step tour?"
+    ],
+    "h2": [],
+    "navLabels": [
+      "(800) 936-0383"
+    ],
+    "heroCtas": [
+      "Start the demo",
+      "Privacy",
+      "Your Privacy Choices",
+      "Terms"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 999
+  },
+  "mobile": {
+    "title": "Gusto Product Demo",
+    "metaDescription": "Explore Gusto Payroll Demo to see how you can run payroll in minutes using our modern payroll solution. Try Now.",
+    "ogImage": "https://res.cloudinary.com/dja3z8nt6/image/upload/f_auto/q_auto/v1761076021/wp-migration/og-gusto.jpg",
+    "h1": [
+      "Ready to start a step by step tour?",
+      "Ready to start a step by step tour?"
+    ],
+    "h2": [],
+    "navLabels": [
+      "(800) 936-0383"
+    ],
+    "heroCtas": [
+      "Start the demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1288
+  },
+  "ok": true
+}

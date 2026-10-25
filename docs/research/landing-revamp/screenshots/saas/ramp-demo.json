@@ -1,0 +1,58 @@
+{
+  "url": "https://ramp.com/see-a-demo",
+  "capturedAt": "2026-10-25T17:47:16.083Z",
+  "status": 200,
+  "finalUrl": "https://ramp.com/see-a-demo",
+  "desktop": {
+    "title": "See a Demo | Experience How Ramp Works",
+    "metaDescription": "See how Ramp works with a live demo, interactive product tour, or product videos. Experience the finance automation platform that saves you time and money.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "See how Ramp works",
+      "See how Ramp works"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "Back to Ramp",
+      "Schedule a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 1047
+  },
+  "mobile": {
+    "title": "See a Demo | Experience How Ramp Works",
+    "metaDescription": "See how Ramp works with a live demo, interactive product tour, or product videos. Experience the finance automation platform that saves you time and money.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "See how Ramp works",
+      "See how Ramp works"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "See a demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 844
+  },
+  "ok": true
+}

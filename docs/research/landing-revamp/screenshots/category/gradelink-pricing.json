@@ -1,0 +1,55 @@
+{
+  "url": "https://www.gradelink.com/pricing",
+  "capturedAt": "2026-10-25T17:45:25.291Z",
+  "status": 200,
+  "finalUrl": "https://buy.gradelink.com/",
+  "desktop": {
+    "title": "Get Your Free Gradelink Quote in Minutes",
+    "metaDescription": "Getting your free Gradelink quote is as easy as 1, 2, 3!",
+    "ogImage": "https://buy.gradelink.com/wp-content/uploads/2020/09/School-Admin-with-Laptop-Plus-Clock.jpg",
+    "h1": [
+      "Get Your Gradelink Quote in Minutes"
+    ],
+    "h2": [
+      "Getting pricing is as easy as one, two, three",
+      "Answers to Your Questions",
+      "Get your Gradelink quote today",
+      "Need to reach our sales team?"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "GET STARTED"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 2711
+  },
+  "mobile": {
+    "title": "Get Your Free Gradelink Quote in Minutes",
+    "metaDescription": "Getting your free Gradelink quote is as easy as 1, 2, 3!",
+    "ogImage": "https://buy.gradelink.com/wp-content/uploads/2020/09/School-Admin-with-Laptop-Plus-Clock.jpg",
+    "h1": [
+      "Get Your Gradelink Quote in Minutes"
+    ],
+    "h2": [
+      "Getting pricing is as easy as one, two, three",
+      "Answers to Your Questions",
+      "Get your Gradelink quote today",
+      "Need to reach our sales team?"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "GET STARTED"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 4351
+  },
+  "ok": true
+}

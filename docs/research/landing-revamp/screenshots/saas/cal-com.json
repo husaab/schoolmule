@@ -1,0 +1,92 @@
+{
+  "url": "https://cal.com",
+  "capturedAt": "2026-10-25T17:45:42.730Z",
+  "status": 200,
+  "finalUrl": "https://cal.com/",
+  "desktop": {
+    "title": "Cal.com | Scheduling Software for Online Bookings",
+    "metaDescription": "A fully customizable scheduling software for individuals, businesses taking calls and developers building scheduling platforms where users meet users.",
+    "ogImage": "https://framerusercontent.com/images/pPSh5HDe1qaySb4R7xBgMHudhU.png",
+    "h1": [
+      "The better way to schedule your meetings"
+    ],
+    "h2": [
+      "With us, appointment scheduling is easy",
+      "Cal.com",
+      "Your all-purpose scheduling app",
+      "…and so much more!",
+      "Don’t just take our word for it",
+      "All your key tools in sync with your meetings",
+      "See why our users love Cal.com",
+      "Frequently asked questions",
+      "Smarter, simpler scheduling"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Home Cal.com",
+      "Enterprise",
+      "Cal.ai",
+      "Pricing",
+      "Sign in",
+      "Get started",
+      "Cal.com launches v6.9.5",
+      "Sign up with Google",
+      "Sign up with email"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://framer.com/edit/beta?framerSiteId=bc7227767b20f032f6b0c5eca6d5f196207f19e615b861e2b14cd0579a235b43&source=cal.com&features=%7B%22editorBarDisableFrameAn"
+    ],
+    "jsonLdTypes": [],
+    "pageHeight": 8521
+  },
+  "mobile": {
+    "title": "Cal.com | Scheduling Software for Online Bookings",
+    "metaDescription": "A fully customizable scheduling software for individuals, businesses taking calls and developers building scheduling platforms where users meet users.",
+    "ogImage": "https://framerusercontent.com/images/pPSh5HDe1qaySb4R7xBgMHudhU.png",
+    "h1": [
+      "The better way to schedule your meetings"
+    ],
+    "h2": [
+      "With us, appointment scheduling is easy",
+      "Cal.com",
+      "Your all-purpose scheduling app",
+      "…and so much more!",
+      "Don’t just take our word for it",
+      "All your key tools in sync with your meetings",
+      "See why our users love Cal.com",
+      "Frequently asked questions",
+      "Smarter, simpler scheduling"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Home Cal.com",
+      "Sign in",
+      "Get started",
+      "For Individuals Personal scheduling made simple",
+      "For Teams Collaborative scheduling for groups",
+      "For Enterprises Enterprise-level scheduling solutions",
+      "Recruiting",
+      "Sales",
+      "HR",
+      "Education",
+      "Support",
+      "Healthcare",
+      "Telehealth",
+      "Marketing",
+      "Enterprise",
+      "API Build your own integrations with our public API",
+      "Create OAuth Client Integrate Cal.com using OAuth",
+      "App Store Integrate with your favorite apps",
+      "Embed Embed Cal.com into your website",
+      "Out Of Office Schedule time off with ease"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://framer.com/edit/beta?framerSiteId=bc7227767b20f032f6b0c5eca6d5f196207f19e615b861e2b14cd0579a235b43&source=cal.com&features=%7B%22editorBarDisableFrameAn"
+    ],
+    "jsonLdTypes": [],
+    "pageHeight": 14496
+  },
+  "ok": true
+}

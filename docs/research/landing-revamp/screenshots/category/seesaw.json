@@ -1,0 +1,69 @@
+{
+  "url": "https://seesaw.com",
+  "capturedAt": "2026-10-25T17:42:32.468Z",
+  "status": 200,
+  "finalUrl": "https://seesaw.com/",
+  "desktop": {
+    "title": "Elementary Learning Experience Platform | Seesaw",
+    "metaDescription": "Seesaw is a Learning Experience Platform with 25M+ users, enhancing elementary education, engagement, and school culture while improving academic success.",
+    "ogImage": "https://seesaw.com/wp-content/uploads/2025/02/8610-Social-Cards_R2-06.webp",
+    "h1": [
+      "The World's Leading Elementary Learning Experience Company"
+    ],
+    "h2": [
+      "Seesaw's Learning Experience Platform Keeps Everyone in the Learning Loop",
+      "Why Schools and Districts Choose Seesaw",
+      "Needs Assessment Survey"
+    ],
+    "navLabels": [
+      "Sales: 1-855-673-3729",
+      "Customer Support",
+      "Open I Am A...",
+      "Open Canada (English)",
+      "Open Products",
+      "Open Solutions",
+      "Open Learning & Resources",
+      "Pricing",
+      "Search",
+      "Request A Demo",
+      "Log In"
+    ],
+    "heroCtas": [
+      "Cookie Settings",
+      "Skip to content",
+      "Request A Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 8337
+  },
+  "mobile": {
+    "title": "Elementary Learning Experience Platform | Seesaw",
+    "metaDescription": "Seesaw is a Learning Experience Platform with 25M+ users, enhancing elementary education, engagement, and school culture while improving academic success.",
+    "ogImage": "https://seesaw.com/wp-content/uploads/2025/02/8610-Social-Cards_R2-06.webp",
+    "h1": [
+      "The World's Leading Elementary Learning Experience Company"
+    ],
+    "h2": [
+      "Seesaw's Learning Experience Platform Keeps Everyone in the Learning Loop",
+      "Why Schools and Districts Choose Seesaw",
+      "Needs Assessment Survey"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Cookie Settings",
+      "Skip to content",
+      "Request A Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 11875
+  },
+  "ok": true
+}

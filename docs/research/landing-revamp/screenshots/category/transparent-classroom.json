@@ -1,0 +1,53 @@
+{
+  "url": "https://www.transparentclassroom.com",
+  "capturedAt": "2026-10-25T17:42:48.278Z",
+  "status": 200,
+  "finalUrl": "https://www.transparentclassroom.com/",
+  "desktop": {
+    "title": "Transparent Classroom",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "SIMPLE, MEANINGFUL RECORD KEEPING"
+    ],
+    "h2": [
+      "Used by over 3000 Montessori schools."
+    ],
+    "navLabels": [
+      "Transparent Classroom",
+      "Tour",
+      "Sign in",
+      "Request Trial"
+    ],
+    "heroCtas": [
+      "Request a Trial"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9246
+  },
+  "mobile": {
+    "title": "Transparent Classroom",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "SIMPLE, MEANINGFUL RECORD KEEPING"
+    ],
+    "h2": [
+      "Used by over 3000 Montessori schools."
+    ],
+    "navLabels": [
+      "Transparent Classroom",
+      "Toggle navigation"
+    ],
+    "heroCtas": [
+      "Request a Trial"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 13304
+  },
+  "ok": true
+}

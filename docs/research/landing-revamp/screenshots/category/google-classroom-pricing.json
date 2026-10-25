@@ -1,0 +1,121 @@
+{
+  "url": "https://edu.google.com/intl/ALL_ca/workspace-for-education/editions/compare-editions/",
+  "capturedAt": "2026-10-25T17:49:06.865Z",
+  "status": 200,
+  "finalUrl": "https://edu.google.com/intl/ALL_ca/workspace-for-education/editions/compare-editions/",
+  "desktop": {
+    "title": "Compare Editions - Google for Education",
+    "metaDescription": "Compare the features and tools included in Google Workspace for Education.",
+    "ogImage": "https://lh3.googleusercontent.com/YAkhuo4OVRD07TNr06uzmaTDKYTZi18-aoCvTofkIQPu4hvjMnirmQDewxnVDkqlW7gZHo1rHmOkfEOsdh3Bter-qISZz5mHoGryI88IhCg73OseUd0=s0",
+    "h1": [
+      "Get started with Google Workspace for Education"
+    ],
+    "h2": [
+      "Workspace for Education",
+      "Chromebooks",
+      "Every edition includes",
+      "Choose the right edition for your needs",
+      "No cost",
+      "C$7.80",
+      "Find the right edition for your organization",
+      "Get in touch with a Google for Education sales specialist",
+      "Enhance your edition with a powerful add-on",
+      "Teaching and learning",
+      "Find answers to commonly asked questions",
+      "Sign up for updates, insights, resources, and more"
+    ],
+    "navLabels": [
+      "Jump to content",
+      "for Education",
+      "Our values",
+      "Our Commitment",
+      "Privacy and Security",
+      "Accessibility",
+      "Sustainability",
+      "Products",
+      "Classroom",
+      "Gemini for Education",
+      "Gemini Notebook",
+      "Google Meet",
+      "Workspace LTI",
+      "About editions",
+      "Education Fundamentals",
+      "Education Plus",
+      "Compare editions",
+      "Google AI Pro for Education",
+      "Teaching and Learning",
+      "About Chromebooks",
+      "ChromeOS Flex",
+      "Explore Devices",
+      "Login to Classroom",
+      "Product guides",
+      "Product demos",
+      "App Hub",
+      "Pricing",
+      "AI",
+      "Our approach",
+      "Google AI Pro for Education",
+      "Gemini for Education",
+      "Gemini Notebook",
+      "Resources",
+      "Resources by role",
+      "Paid Workspace",
+      "Product help",
+      "Product demos",
+      "App Hub",
+      "Learning Center",
+      "Google AI Educator Series"
+    ],
+    "heroCtas": [
+      "Home",
+      "Google Workspace for Education"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "unparseable"
+    ],
+    "pageHeight": 16555
+  },
+  "mobile": {
+    "title": "Compare Editions - Google for Education",
+    "metaDescription": "Compare the features and tools included in Google Workspace for Education.",
+    "ogImage": "https://lh3.googleusercontent.com/YAkhuo4OVRD07TNr06uzmaTDKYTZi18-aoCvTofkIQPu4hvjMnirmQDewxnVDkqlW7gZHo1rHmOkfEOsdh3Bter-qISZz5mHoGryI88IhCg73OseUd0=s0",
+    "h1": [
+      "Get started with Google Workspace for Education"
+    ],
+    "h2": [
+      "Workspace for Education",
+      "Chromebooks",
+      "Every edition includes",
+      "Choose the right edition for your needs",
+      "No cost",
+      "C$7.80",
+      "Find the right edition for your organization",
+      "Get in touch with a Google for Education sales specialist",
+      "Enhance your edition with a powerful add-on",
+      "Teaching and learning",
+      "Find answers to commonly asked questions",
+      "Sign up for updates, insights, resources, and more"
+    ],
+    "navLabels": [
+      "Jump to content",
+      "Mobile navigation menu",
+      "for Education",
+      "Search",
+      "Chat now",
+      "Close"
+    ],
+    "heroCtas": [
+      "Home",
+      "Google Workspace for Education"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "unparseable"
+    ],
+    "pageHeight": 12619
+  },
+  "ok": true
+}

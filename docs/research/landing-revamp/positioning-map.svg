@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <title>School software positioning map: who it's built for versus how much it does</title>
+  <desc>25 school-software vendors from the 2026-10-25 teardowns and SchoolMule, placed by target segment (x axis, large districts on the left to small independent schools on the right) and breadth (y axis, single-purpose tools at the bottom to all-in-one school platforms at the top). Filled dots publish prices; hollow dots do not. Solid red rings mark Canada-focused vendors; dashed red rings mark vendors with a Canada page or offer. A dashed teal box marks the open space SchoolMule should claim.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#78716c"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#fbfaf8"/>
+
+  <!-- Title -->
+  <text x="40" y="42" font-size="21" font-weight="700" fill="#1c1917">School software positioning: who it's built for × how much it does</text>
+  <text x="40" y="66" font-size="12.5" fill="#57534e">25 vendors from the 2026-10-25 teardowns plus SchoolMule. Placements are judgement calls from each site's own segment and product claims; the evidence for each is in positioning-map.md.</text>
+
+  <!-- Plot area -->
+  <rect x="120" y="90" width="960" height="560" fill="#ffffff" stroke="#e7e5e4" stroke-width="1"/>
+  <line x1="600" y1="90" x2="600" y2="650" stroke="#d6d3d1" stroke-width="1" stroke-dasharray="5 5"/>
+  <line x1="120" y1="370" x2="1080" y2="370" stroke="#d6d3d1" stroke-width="1" stroke-dasharray="5 5"/>
+
+  <!-- Quadrant captions -->
+  <g font-size="11" font-weight="600" fill="#a8a29e" letter-spacing="1">
+    <text x="132" y="358">ENTERPRISE &amp; DISTRICT SUITES</text>
+    <text x="1070" y="358" text-anchor="end">SMALL-SCHOOL ALL-IN-ONES</text>
+    <text x="132" y="638">DISTRICT &amp; MASS-MARKET POINT TOOLS</text>
+    <text x="1070" y="638" text-anchor="end">SMALL-SCHOOL POINT TOOLS</text>
+  </g>
+
+  <!-- Axes -->
+  <line x1="120" y1="650" x2="1088" y2="650" stroke="#78716c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="120" y1="650" x2="120" y2="82" stroke="#78716c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="120" y="673" font-size="12.5" fill="#44403c">Large districts &amp; enterprise schools</text>
+  <text x="1080" y="673" font-size="12.5" fill="#44403c" text-anchor="end">Small independent schools (≈30–200 students)</text>
+  <text x="600" y="700" font-size="13" font-weight="700" fill="#1c1917" text-anchor="middle" letter-spacing="1">WHO IT'S BUILT FOR</text>
+  <text transform="translate(103 650) rotate(-90)" font-size="12.5" fill="#44403c">Single-purpose tool (comms, portfolio, classroom)</text>
+  <text transform="translate(103 90) rotate(-90)" font-size="12.5" fill="#44403c" text-anchor="end">All-in-one school platform</text>
+  <text transform="translate(58 370) rotate(-90)" font-size="13" font-weight="700" fill="#1c1917" text-anchor="middle" letter-spacing="1">BREADTH</text>
+
+  <!-- Open space -->
+  <rect x="990" y="138" width="122" height="114" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="1051" y="156" font-size="11" font-weight="700" fill="#0e7490" text-anchor="middle" letter-spacing="1">OPEN SPACE</text>
+  <text x="1051" y="171" font-size="11" fill="#155e75" text-anchor="middle">Ontario-specific,</text>
+  <text x="1051" y="243" font-size="10.5" fill="#155e75" text-anchor="middle">price shown · real UI</text>
+
+  <!-- Canada rings (drawn under dots) -->
+  <g fill="none" stroke="#dc2626" stroke-width="2">
+    <!-- solid: Canada-focused -->
+    <circle cx="235" cy="185" r="11"/>
+    <circle cx="379" cy="348" r="11"/>
+    <circle cx="734" cy="157" r="11"/>
+    <circle cx="811" cy="258" r="11"/>
+    <circle cx="917" cy="152" r="11"/>
+    <circle cx="1042" cy="196" r="15"/>
+  </g>
+  <g fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="3 2.5">
+    <!-- dashed: has a Canada page or offer -->
+    <circle cx="178" cy="112" r="11"/>
+    <circle cx="610" cy="146" r="11"/>
+    <circle cx="408" cy="460" r="11"/>
+    <circle cx="965" cy="269" r="11"/>
+    <circle cx="974" cy="454" r="11"/>
+  </g>
+
+  <!-- Hollow dots: price not published -->
+  <g fill="#ffffff" stroke="#334155" stroke-width="2">
+    <circle cx="178" cy="112" r="6"/>
+    <circle cx="235" cy="185" r="6"/>
+    <circle cx="293" cy="415" r="6"/>
+    <circle cx="331" cy="280" r="6"/>
+    <circle cx="379" cy="348" r="6"/>
+    <circle cx="408" cy="460" r="6"/>
+    <circle cx="494" cy="308" r="6"/>
+    <circle cx="533" cy="381" r="6"/>
+    <circle cx="533" cy="118" r="6"/>
+    <circle cx="610" cy="146" r="6"/>
+    <circle cx="629" cy="185" r="6"/>
+    <circle cx="734" cy="157" r="6"/>
+    <circle cx="811" cy="258" r="6"/>
+    <circle cx="830" cy="314" r="6"/>
+    <circle cx="878" cy="224" r="6"/>
+    <circle cx="917" cy="152" r="6"/>
+  </g>
+
+  <!-- Filled dots: publishes prices -->
+  <g fill="#334155" stroke="#334155" stroke-width="2">
+    <circle cx="446" cy="555" r="6"/>
+    <circle cx="581" cy="504" r="6"/>
+    <circle cx="667" cy="588" r="6"/>
+    <circle cx="792" cy="202" r="6"/>
+    <circle cx="965" cy="269" r="6"/>
+    <circle cx="1022" cy="303" r="6"/>
+    <circle cx="878" cy="521" r="6"/>
+    <circle cx="936" cy="398" r="6"/>
+    <circle cx="974" cy="454" r="6"/>
+  </g>
+
+  <!-- SchoolMule marker -->
+  <rect x="1034" y="188" width="16" height="16" transform="rotate(45 1042 196)" fill="#0891b2" stroke="#0e7490" stroke-width="1.5"/>
+  <text x="1051" y="228" font-size="14.5" font-weight="700" fill="#0e7490" text-anchor="middle">SchoolMule</text>
+
+  <!-- Vendor labels -->
+  <g font-size="13.5" fill="#1c1917">
+    <text x="194" y="117">PowerSchool</text>
+    <text x="251" y="190">Edsembli / Sparkrock</text>
+    <text x="305" y="420">ParentSquare</text>
+    <text x="343" y="285">Alma</text>
+    <text x="395" y="353">Edsby</text>
+    <text x="424" y="465">Seesaw</text>
+    <text x="458" y="560">Google Classroom</text>
+    <text x="506" y="313">Scout</text>
+    <text x="545" y="386">Toddle</text>
+    <text x="519" y="123" text-anchor="end">Blackbaud K–12</text>
+    <text x="593" y="509">ClassDojo</text>
+    <text x="626" y="151">Veracross</text>
+    <text x="641" y="190">FACTS</text>
+    <text x="679" y="593">Flint</text>
+    <text x="750" y="162">MySchool</text>
+    <text x="804" y="207">Sycamore</text>
+    <text x="827" y="263">Lillio (ECE)</text>
+    <text x="842" y="319">Gradelink</text>
+    <text x="864" y="229" text-anchor="end">Brightwheel (ECE)</text>
+    <text x="933" y="157">Ad-Din</text>
+    <text x="981" y="274">SchoolCues</text>
+    <text x="1006" y="308" text-anchor="end">Alif Cloud</text>
+    <text x="890" y="526">Educa (early years)</text>
+    <text x="948" y="403">Transparent Classroom</text>
+    <text x="990" y="459">Montessori Compass</text>
+  </g>
+
+  <!-- Legend -->
+  <g font-size="12.5" fill="#292524">
+    <circle cx="66" cy="738" r="6" fill="#334155" stroke="#334155" stroke-width="2"/>
+    <text x="82" y="742">Publishes prices on its own site</text>
+
+    <circle cx="416" cy="738" r="6" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+    <text x="432" y="742">Price on request or not published</text>
+
+    <circle cx="766" cy="738" r="9" fill="none" stroke="#dc2626" stroke-width="2"/>
+    <text x="784" y="742">Canada-focused: Canadian company or Canada-first site</text>
+
+    <circle cx="66" cy="770" r="9" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="3 2.5"/>
+    <text x="82" y="774">Has a Canada page or Canada-specific offer</text>
+
+    <rect x="409" y="763" width="14" height="14" transform="rotate(45 416 770)" fill="#0891b2" stroke="#0e7490" stroke-width="1.5"/>
+    <text x="432" y="774">SchoolMule: target position (price not yet public)</text>
+
+    <rect x="756" y="762" width="20" height="16" rx="4" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="784" y="774">Open space no competitor occupies</text>
+  </g>
+</svg>

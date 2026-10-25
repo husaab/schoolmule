@@ -1,0 +1,82 @@
+{
+  "url": "https://www.raycast.com",
+  "capturedAt": "2026-10-25T17:45:24.705Z",
+  "status": 200,
+  "finalUrl": "https://www.raycast.com/",
+  "desktop": {
+    "title": "Raycast - Your shortcut to everything",
+    "metaDescription": "A collection of powerful productivity tools all within an extendable launcher.",
+    "ogImage": "https://www.raycast.com/opengraph-image-pwu6ef.png?opengraph-image.1f-98etzkaz5s.png",
+    "h1": [
+      "Your shortcut to everything."
+    ],
+    "h2": [
+      "Take shortcuts, not detours.",
+      "It’s not about saving time.",
+      "There’s an extension for that.",
+      "Meet your new virtual assistant",
+      "Built for professionals like you.",
+      "Don't repeat yourself.",
+      "Stay in the loop.",
+      "Take the short way."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Store",
+      "Pro",
+      "AI",
+      "iOS",
+      "Windows",
+      "Teams",
+      "Enterprise",
+      "Blog",
+      "Pricing",
+      "Log in",
+      "Download",
+      "Download for Mac",
+      "Install via Homebrew",
+      "Download V1"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 15983
+  },
+  "mobile": {
+    "title": "Raycast - Your shortcut to everything",
+    "metaDescription": "A collection of powerful productivity tools all within an extendable launcher.",
+    "ogImage": "https://www.raycast.com/opengraph-image-pwu6ef.png?opengraph-image.1f-98etzkaz5s.png",
+    "h1": [
+      "Your shortcut to everything."
+    ],
+    "h2": [
+      "Take shortcuts, not detours.",
+      "It’s not about saving time.",
+      "There’s an extension for that.",
+      "Meet your new virtual assistant",
+      "Built for professionals like you.",
+      "Don't repeat yourself.",
+      "Stay in the loop.",
+      "Take the short way."
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Store",
+      "Pro",
+      "AI",
+      "iOS",
+      "Windows",
+      "Teams",
+      "Enterprise",
+      "Blog",
+      "Pricing",
+      "Log in",
+      "The Raycast Keyboard"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 15646
+  },
+  "ok": true
+}

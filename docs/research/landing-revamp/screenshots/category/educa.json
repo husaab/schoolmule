@@ -1,0 +1,74 @@
+{
+  "url": "https://www.geteduca.com",
+  "capturedAt": "2026-10-25T17:42:48.198Z",
+  "status": 200,
+  "finalUrl": "https://www.geteduca.com/",
+  "desktop": {
+    "title": "Educa - Create inspired explorers",
+    "metaDescription": "Children who are inspired to explore the world around them receive the greatest foundation for lifelong learning and success. Create space and time to cultivate exploration and early learning with Educa.",
+    "ogImage": "https://geteduca.com/wp-content/uploads/2023/10/hero-grid2.png",
+    "h1": [
+      "Create inspired explorers"
+    ],
+    "h2": [
+      "Teachers inspire adventure",
+      "Inspiration's a team effort",
+      "Explorers follow a path",
+      "Your tool for the adventure",
+      "Educa is built for education teams.",
+      "Our Partners & Endorsements"
+    ],
+    "navLabels": [
+      "How It Works",
+      "Pricing",
+      "Resources",
+      "About Educa",
+      "Register for a free trial",
+      "Sign In"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Explore Educa today 🚀",
+      "Accept & Close",
+      "Decline"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 5654
+  },
+  "mobile": {
+    "title": "Educa - Create inspired explorers",
+    "metaDescription": "Children who are inspired to explore the world around them receive the greatest foundation for lifelong learning and success. Create space and time to cultivate exploration and early learning with Educa.",
+    "ogImage": "https://geteduca.com/wp-content/uploads/2023/10/hero-grid2.png",
+    "h1": [
+      "Create inspired explorers"
+    ],
+    "h2": [
+      "Teachers inspire adventure",
+      "Inspiration's a team effort",
+      "Explorers follow a path",
+      "Your tool for the adventure",
+      "Educa is built for education teams.",
+      "Our Partners & Endorsements"
+    ],
+    "navLabels": [
+      "Register for a free trial",
+      "Sign In"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Accept & Close",
+      "Decline"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 10532
+  },
+  "ok": true
+}

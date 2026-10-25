@@ -1,0 +1,81 @@
+{
+  "url": "https://www.gradelink.com/",
+  "capturedAt": "2026-10-25T17:42:54.027Z",
+  "status": 200,
+  "finalUrl": "https://gradelink.com/",
+  "desktop": {
+    "title": "Gradelink Student Information System: Simplify and Succeed",
+    "metaDescription": "Discover how your school can save time, improve enrollment, and fulfill its mission with Gradelink Student Information System software. Get in touch Now!",
+    "ogImage": "https://gradelink.com/wp-content/uploads/2019/06/GradelinkPreview.jpg",
+    "h1": [
+      "Student Information System",
+      "School management is full of challenges. Your student information system shouldn’t be one of them.",
+      "School Websites Made Easy"
+    ],
+    "h2": [
+      "What Customers Are Saying",
+      "We are honored to be ranked as one of the highest-rated SISs on the market.",
+      "Get Gradelink Today",
+      "Recent Posts"
+    ],
+    "navLabels": [
+      "CONTACT",
+      "LOGIN",
+      "WHY GRADELINK?",
+      "YOUR ROLE",
+      "RESOURCES",
+      "GET A QUOTE",
+      "WATCH A DEMO"
+    ],
+    "heroCtas": [
+      "WATCH A DEMO",
+      "English",
+      "Manage consent"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/SYWOKNZYqQU?feature=oembed",
+      "https://www.youtube.com/embed/3IDyyevULQA?feature=oembed",
+      "https://www.youtube.com/embed/W_FMmxOQBgo?feature=oembed",
+      "https://www.youtube.com/embed/NxuyEsCZ2Nc?feature=oembed"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 5301
+  },
+  "mobile": {
+    "title": "Gradelink Student Information System: Simplify and Succeed",
+    "metaDescription": "Discover how your school can save time, improve enrollment, and fulfill its mission with Gradelink Student Information System software. Get in touch Now!",
+    "ogImage": "https://gradelink.com/wp-content/uploads/2019/06/GradelinkPreview.jpg",
+    "h1": [
+      "Student Information System",
+      "School management is full of challenges. Your student information system shouldn’t be one of them.",
+      "School Websites Made Easy"
+    ],
+    "h2": [
+      "What Customers Are Saying",
+      "We are honored to be ranked as one of the highest-rated SISs on the market.",
+      "Get Gradelink Today",
+      "Recent Posts"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "WATCH A DEMO",
+      "English",
+      "Manage consent"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/SYWOKNZYqQU?feature=oembed",
+      "https://www.youtube.com/embed/3IDyyevULQA?feature=oembed",
+      "https://www.youtube.com/embed/W_FMmxOQBgo?feature=oembed",
+      "https://www.youtube.com/embed/NxuyEsCZ2Nc?feature=oembed"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 8295
+  },
+  "ok": true
+}

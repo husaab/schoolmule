@@ -1,0 +1,68 @@
+{
+  "url": "https://schoolmule.ca/demo",
+  "capturedAt": "2026-10-25T17:42:52.082Z",
+  "status": 200,
+  "finalUrl": "https://schoolmule.ca/demo",
+  "desktop": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "See SchoolMule in Action"
+    ],
+    "h2": [
+      "What You'll See in Your Demo",
+      "Book Your Demo",
+      "Ready to Get Started?"
+    ],
+    "navLabels": [
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [
+      "https://calendly.com/husseinsaab14/30min?embed_domain=schoolmule.ca&embed_type=Inline"
+    ],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 2784
+  },
+  "mobile": {
+    "title": "SchoolMule: Student Management System",
+    "metaDescription": "SchoolMule is a simple, modern platform for attendance, grades, report cards, and parent communication. Streamline your school administration with SchoolMule.",
+    "ogImage": null,
+    "h1": [
+      "See SchoolMule in Action"
+    ],
+    "h2": [
+      "What You'll See in Your Demo",
+      "Book Your Demo",
+      "Ready to Get Started?"
+    ],
+    "navLabels": [
+      "Open menu",
+      "About",
+      "Product",
+      "Demo",
+      "Contact",
+      "Log In",
+      "Get Started"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [
+      "https://calendly.com/husseinsaab14/30min?embed_domain=schoolmule.ca&embed_type=Inline"
+    ],
+    "jsonLdTypes": [
+      "WebSite"
+    ],
+    "pageHeight": 4247
+  },
+  "ok": true
+}

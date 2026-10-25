@@ -1,0 +1,83 @@
+{
+  "url": "https://www.flintk12.com",
+  "capturedAt": "2026-10-25T17:44:08.997Z",
+  "status": 200,
+  "finalUrl": "https://flintk12.com/",
+  "desktop": {
+    "title": "Flint | The AI platform for schools and districts",
+    "metaDescription": "Flint is an all-in-one AI platform for teachers to personalize learning for students. Find out how hundreds of schools are enhancing education with AI.",
+    "ogImage": "https://flintk12.com/images/og-default-v2.png",
+    "h1": [
+      "Where teachers reach every student"
+    ],
+    "h2": [
+      "One-on-one attention for every student",
+      "Students learn more when teachers use Flint",
+      "Working side-by-side with teachers",
+      "Six weeks a year, handed back",
+      "Bridging the AI skills gap in the classroom",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Solutions",
+      "Outcomes",
+      "Resources",
+      "Pricing",
+      "Login",
+      "Start for free →"
+    ],
+    "heroCtas": [
+      "Start for free",
+      "Request a demo",
+      "Home",
+      "Analytics",
+      "6 students"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1236324809?title=0&byline=0&portrait=0&share=0&like=0&watch_later=0&play_button_position=center&dnt=1&texttrack=en"
+    ],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage",
+      "FAQPage"
+    ],
+    "pageHeight": 10636
+  },
+  "mobile": {
+    "title": "Flint | The AI platform for schools and districts",
+    "metaDescription": "Flint is an all-in-one AI platform for teachers to personalize learning for students. Find out how hundreds of schools are enhancing education with AI.",
+    "ogImage": "https://flintk12.com/images/og-default-v2.png",
+    "h1": [
+      "Where teachers reach every student"
+    ],
+    "h2": [
+      "One-on-one attention for every student",
+      "Students learn more when teachers use Flint",
+      "Working side-by-side with teachers",
+      "Six weeks a year, handed back",
+      "Bridging the AI skills gap in the classroom",
+      "Learning feels different when it fits you."
+    ],
+    "navLabels": [
+      "Flint home",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "Start for free",
+      "Request a demo"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://player.vimeo.com/video/1236324809?title=0&byline=0&portrait=0&share=0&like=0&watch_later=0&play_button_position=center&dnt=1&texttrack=en"
+    ],
+    "jsonLdTypes": [
+      "Organization",
+      "WebPage",
+      "FAQPage"
+    ],
+    "pageHeight": 14269
+  },
+  "ok": true
+}

@@ -1,0 +1,112 @@
+{
+  "url": "https://www.ad-din.ca/academics",
+  "capturedAt": "2026-10-25T17:50:41.689Z",
+  "status": 200,
+  "finalUrl": "https://www.ad-din.ca/academics",
+  "desktop": {
+    "title": "Ad-Din",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Simplifying Administration for Islamic Schools & Madrasahs",
+      "Ad-Din"
+    ],
+    "h2": [
+      "An Automated Approach",
+      "Report Cards",
+      "From Burnout to Breakthrough",
+      "The Cloud Solution Designed for Your Institution",
+      "Complete Report Cards in Under 3 Minutes",
+      "Built for Every Role !",
+      "Ad-Din Madrasah & School Features",
+      "Ready to Transform Your Academy?",
+      "Software for every leader"
+    ],
+    "navLabels": [
+      "Products",
+      "Resources",
+      "Home",
+      "Pricing",
+      "Log In",
+      "Request a Demo",
+      "Get Started"
+    ],
+    "heroCtas": [
+      "Book a Demo",
+      "Get Started",
+      "Previous slide",
+      "Next slide",
+      "1.",
+      "2.",
+      "3.",
+      "4.",
+      "5.",
+      "6.",
+      "7.",
+      "8.",
+      "9.",
+      "10.",
+      "11.",
+      "12.",
+      "13.",
+      "14.",
+      "15.",
+      "16."
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9987
+  },
+  "mobile": {
+    "title": "Ad-Din",
+    "metaDescription": null,
+    "ogImage": null,
+    "h1": [
+      "Simplifying Administration for Islamic Schools & Madrasahs",
+      "Ad-Din"
+    ],
+    "h2": [
+      "An Automated Approach",
+      "Report Cards",
+      "From Burnout to Breakthrough",
+      "The Cloud Solution Designed for Your Institution",
+      "Complete Report Cards in Under 3 Minutes",
+      "Built for Every Role !",
+      "Ad-Din Madrasah & School Features",
+      "Ready to Transform Your Academy?",
+      "Software for every leader"
+    ],
+    "navLabels": [
+      "Products",
+      "Resources"
+    ],
+    "heroCtas": [
+      "Book a Demo",
+      "Get Started",
+      "Previous slide",
+      "Next slide",
+      "1.",
+      "2.",
+      "3.",
+      "4.",
+      "5.",
+      "6.",
+      "7.",
+      "8.",
+      "9.",
+      "10.",
+      "11.",
+      "12.",
+      "13.",
+      "14.",
+      "15.",
+      "16."
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 12404
+  },
+  "ok": true
+}

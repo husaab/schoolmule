@@ -1,0 +1,129 @@
+{
+  "url": "https://ramp.com",
+  "capturedAt": "2026-10-25T17:42:54.069Z",
+  "status": 200,
+  "finalUrl": "https://ramp.com/en-ca/",
+  "desktop": {
+    "title": "Ramp Canada: Expense Management & Corporate Cards",
+    "metaDescription": "Ramp Canada is the all-in-one finance platform for Canadian businesses. Corporate cards in CAD & USD, automated expense management, AP, and accounting sync.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "Time is money. Save both."
+    ],
+    "h2": [
+      "All your spend, in one place.",
+      "Busywork? Done.",
+      "Trusted by finance, loved by employees.",
+      "One platform, for all of finance.",
+      "FAQs"
+    ],
+    "navLabels": [
+      "Products",
+      "Resources",
+      "Customers",
+      "Pricing",
+      "Sign in",
+      "Sign in",
+      "See a demo",
+      "Get started"
+    ],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "Get started"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://cdn.air.inc/5305a9d6-b68e-45a8-93aa-a8d46f2d3607"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "FAQPage",
+      "Organization"
+    ],
+    "pageHeight": 8315
+  },
+  "mobile": {
+    "title": "Ramp Canada: Expense Management & Corporate Cards",
+    "metaDescription": "Ramp Canada is the all-in-one finance platform for Canadian businesses. Corporate cards in CAD & USD, automated expense management, AP, and accounting sync.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "Canada, meet Ramp."
+    ],
+    "h2": [
+      "Built for Canadian businesses.",
+      "The operating layer for all your spend.",
+      "A better way to run finance.",
+      "FAQs"
+    ],
+    "navLabels": [
+      "Back",
+      "Toggle navigation menu"
+    ],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "Get started for free"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://cdn.air.inc/b8108842-3c52-4e3c-ad35-f35ee1edac59"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://cdn.air.inc/7c894a37-e874-4d57-8bad-97ea229ce292"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://cdn.air.inc/1615281d-c07a-439a-91c7-601ba30b9d20"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://cdn.air.inc/2e3b72e6-2e7b-494a-bec4-290230c0ebef"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization",
+      "FAQPage",
+      "Organization"
+    ],
+    "pageHeight": 7658
+  },
+  "ok": true
+}

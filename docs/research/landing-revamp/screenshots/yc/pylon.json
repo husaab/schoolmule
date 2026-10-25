@@ -1,0 +1,82 @@
+{
+  "url": "https://www.usepylon.com",
+  "capturedAt": "2026-10-25T17:44:25.571Z",
+  "status": 200,
+  "finalUrl": "https://www.usepylon.com/",
+  "desktop": {
+    "title": "Pylon: Agentic B2B Support",
+    "metaDescription": "Pylon lets humans and AI agents collaborate on customer work, investigating, resolving, and acting on every signal. Trusted by 1,500+ B2B companies.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "The new way to run customer support."
+    ],
+    "h2": [
+      "Stop doing the work. Start directing agents.",
+      "Turn raw customer data into usable intelligence.",
+      "The latest from Pylon"
+    ],
+    "navLabels": [
+      "Enterprise",
+      "Integrations",
+      "Customers",
+      "Pricing",
+      "Sign in",
+      "Book a demo"
+    ],
+    "heroCtas": [
+      "Register Now",
+      "home",
+      "Book a demo",
+      "View walkthrough"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac688a39a5d47433c6b35c4_pylon-hero-bg-v4-1920.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 5596
+  },
+  "mobile": {
+    "title": "Pylon: Agentic B2B Support",
+    "metaDescription": "Pylon lets humans and AI agents collaborate on customer work, investigating, resolving, and acting on every signal. Trusted by 1,500+ B2B companies.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "The new way to run customer support."
+    ],
+    "h2": [
+      "Stop doing the work. Start directing agents.",
+      "Turn raw customer data into usable intelligence.",
+      "The latest from Pylon"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Register Now",
+      "home",
+      "Book a demo",
+      "View walkthrough"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac688a39a5d47433c6b35c4_pylon-hero-bg-v4-1920.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 6950
+  },
+  "ok": true
+}

@@ -1,0 +1,82 @@
+{
+  "url": "https://www.tennr.com",
+  "capturedAt": "2026-10-25T17:44:08.465Z",
+  "status": 200,
+  "finalUrl": "https://www.tennr.com/",
+  "desktop": {
+    "title": "Tennr",
+    "metaDescription": "Tennr is a patient orchestration platform that helps providers get the right patients into the right care settings at the right time.",
+    "ogImage": "https://tennr.com/share_cards/sharecard.png",
+    "h1": [
+      "Move patients forward"
+    ],
+    "h2": [
+      "With Tennr, patients flow",
+      "No delays. Fewer denials. Optimal patient journeys.",
+      "Trusted nationwide",
+      "Proactive communication eliminates obstacles to care",
+      "Patient flow, optimized",
+      "What our customers say",
+      "Tennr sets a new standard for healthcare ops",
+      "How top teams use Tennr",
+      "Better operations make headlines",
+      "No backlog, no bottlenecks—just growth"
+    ],
+    "navLabels": [
+      "Tennr",
+      "Product",
+      "Who We Serve",
+      "DME & Manufacturers",
+      "Infusion Providers",
+      "Fertility Clinics",
+      "Physician Groups",
+      "Hospitals & Health Systems",
+      "Specialty Pharmacies",
+      "Customer Stories",
+      "Resources",
+      "Company",
+      "About Us",
+      "Careers",
+      "BOOK A DEMO"
+    ],
+    "heroCtas": [
+      "LEARN MORE"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9053
+  },
+  "mobile": {
+    "title": "Tennr",
+    "metaDescription": "Tennr is a patient orchestration platform that helps providers get the right patients into the right care settings at the right time.",
+    "ogImage": "https://tennr.com/share_cards/sharecard.png",
+    "h1": [
+      "Move patients forward"
+    ],
+    "h2": [
+      "With Tennr, patients flow",
+      "No delays. Fewer denials. Optimal patient journeys.",
+      "Trusted nationwide",
+      "Proactive communication eliminates obstacles to care",
+      "Patient flow, optimized",
+      "What our customers say",
+      "Tennr sets a new standard for healthcare ops",
+      "How top teams use Tennr",
+      "Better operations make headlines",
+      "No backlog, no bottlenecks—just growth"
+    ],
+    "navLabels": [
+      "Tennr",
+      "Open menu"
+    ],
+    "heroCtas": [
+      "LEARN MORE"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 11631
+  },
+  "ok": true
+}

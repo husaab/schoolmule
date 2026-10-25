@@ -1,0 +1,52 @@
+{
+  "url": "https://www.rippling.com/en-CA/request-demo",
+  "capturedAt": "2026-10-25T17:49:40.987Z",
+  "status": 200,
+  "finalUrl": "https://www.rippling.com/en-CA/request-demo",
+  "desktop": {
+    "title": "Request Demo - See Rippling in Action | Rippling",
+    "metaDescription": "Schedule a 30-minute demo of Rippling, the leading platform for companies that want to grow faster.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [
+      "See Rippling in action"
+    ],
+    "h2": [],
+    "navLabels": [
+      "EN"
+    ],
+    "heroCtas": [
+      "Skip to main content",
+      "See Rippling",
+      "Privacy Notice",
+      "Terms apply"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 1190
+  },
+  "mobile": {
+    "title": "Request Demo - See Rippling in Action | Rippling",
+    "metaDescription": "Schedule a 30-minute demo of Rippling, the leading platform for companies that want to grow faster.",
+    "ogImage": "https://images.ctfassets.net/k0itp0ir7ty4/3kY0HlA6r398ZS1hLhq2Pf/5da93caeafeaef92645161efe8759827/SEO_-_General_blank.png",
+    "h1": [
+      "See Rippling in action"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "Skip to main content",
+      "See Rippling",
+      "Privacy Notice"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 1184
+  },
+  "ok": true
+}

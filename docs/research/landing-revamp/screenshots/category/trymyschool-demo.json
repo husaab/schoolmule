@@ -1,0 +1,50 @@
+{
+  "url": "https://www.trymyschool.com/contact-us/",
+  "capturedAt": "2026-10-25T17:55:22.497Z",
+  "status": 200,
+  "finalUrl": "https://www.trymyschool.com/request-a-demo-new",
+  "desktop": {
+    "title": "MySchool - School Management System - book a demo with us",
+    "metaDescription": "Experience our interactive learning platform with a free demo. Contact us today and discover how TryMySchool can enhance your education. Sign up now!",
+    "ogImage": null,
+    "h1": [],
+    "h2": [
+      "Discover The MySchool K-12 School Management Ecosystem"
+    ],
+    "navLabels": [
+      "Why MySchool",
+      "Who we serve",
+      "What we do",
+      "Resources",
+      "Contact us",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to content"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 2198
+  },
+  "mobile": {
+    "title": "MySchool - School Management System - book a demo with us",
+    "metaDescription": "Experience our interactive learning platform with a free demo. Contact us today and discover how TryMySchool can enhance your education. Sign up now!",
+    "ogImage": null,
+    "h1": [],
+    "h2": [
+      "Discover The MySchool K-12 School Management Ecosystem"
+    ],
+    "navLabels": [
+      "Toggle menu"
+    ],
+    "heroCtas": [
+      "Skip to content"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 3076
+  },
+  "ok": true
+}

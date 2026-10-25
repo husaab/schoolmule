@@ -1,0 +1,88 @@
+{
+  "url": "https://www.trymyschool.com/",
+  "capturedAt": "2026-10-25T17:52:07.845Z",
+  "status": 200,
+  "finalUrl": "https://www.trymyschool.com/",
+  "desktop": {
+    "title": "The All-In-One K-12 School Management System | SIS, LMS, ERP & More | MySchool",
+    "metaDescription": "Discover MySchool – a unified school management system designed for independent K-12 institutions and school districts. Manage SIS, LMS, tuition, and admissions with a secure platform.",
+    "ogImage": null,
+    "h1": [
+      "The K-12 School Management Ecosystem Built For Canadian Schools"
+    ],
+    "h2": [
+      "Easy To Use, Easy To Love",
+      "Built Specifically For Independent Canadian Schools",
+      "Say Goodbye To Administrative Chaos One Platform, Full Compliance",
+      "Read About Effective School Management",
+      "What Is An IEP? A Guide To IEP Software For Canadian Independent Schools",
+      "Why Schools Stay With School Management Systems They’ve Outgrown",
+      "Fix The Process Or Replace The School Management System? How To Tell Which Problem You Have",
+      "School Administration Software: Tools For Independent Schools",
+      "The First 30 Days Back: Where School Operations Start To Crack",
+      "Product Update: Introducing The MySchool API",
+      "Seven Things To Handle In September: A Head Of School Checklist",
+      "Three Conversations Every Head Of School Should Have Before The New School Year",
+      "How To Choose A Student Information System For A Canadian Independent School",
+      "The Hidden Costs Of Fragmented Systems: What Your Workarounds Are Really Costing You",
+      "FAQs"
+    ],
+    "navLabels": [
+      "Why MySchool",
+      "Who we serve",
+      "What we do",
+      "Resources",
+      "Contact us",
+      "Request a Demo"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Request a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 6758
+  },
+  "mobile": {
+    "title": "The All-In-One K-12 School Management System | SIS, LMS, ERP & More | MySchool",
+    "metaDescription": "Discover MySchool – a unified school management system designed for independent K-12 institutions and school districts. Manage SIS, LMS, tuition, and admissions with a secure platform.",
+    "ogImage": null,
+    "h1": [
+      "The K-12 School Management Ecosystem Built For Canadian Schools"
+    ],
+    "h2": [
+      "Easy To Use, Easy To Love",
+      "Built Specifically For Independent Canadian Schools",
+      "Say Goodbye To Administrative Chaos One Platform, Full Compliance",
+      "Read About Effective School Management",
+      "What Is An IEP? A Guide To IEP Software For Canadian Independent Schools",
+      "Why Schools Stay With School Management Systems They’ve Outgrown",
+      "Fix The Process Or Replace The School Management System? How To Tell Which Problem You Have",
+      "School Administration Software: Tools For Independent Schools",
+      "The First 30 Days Back: Where School Operations Start To Crack",
+      "Product Update: Introducing The MySchool API",
+      "Seven Things To Handle In September: A Head Of School Checklist",
+      "Three Conversations Every Head Of School Should Have Before The New School Year",
+      "How To Choose A Student Information System For A Canadian Independent School",
+      "The Hidden Costs Of Fragmented Systems: What Your Workarounds Are Really Costing You",
+      "FAQs"
+    ],
+    "navLabels": [
+      "Toggle menu"
+    ],
+    "heroCtas": [
+      "Skip to content",
+      "Request a Demo"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 10698
+  },
+  "ok": true
+}

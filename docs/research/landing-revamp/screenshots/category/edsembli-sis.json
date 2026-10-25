@@ -1,0 +1,79 @@
+{
+  "url": "https://sparkrock.com/k12/sis/",
+  "capturedAt": "2026-10-25T17:48:16.601Z",
+  "status": 200,
+  "finalUrl": "https://sparkrock.com/k12/sis/",
+  "desktop": {
+    "title": "Student Information System - Sparkrock",
+    "metaDescription": "Built for K–12, Sparkrock SIS tracks attendance, reports, and plans—so your staff can support students faster.",
+    "ogImage": "https://sparkrock.com/wp-content/uploads/2025/07/logo.png",
+    "h1": [
+      "The SIS That Strengthens School Communities"
+    ],
+    "h2": [
+      "K–12 SIS Built to Help Your Team Spend More Time Supporting Students",
+      "Sparkrock SIS Functionality at a Glance",
+      "Sparkrock Success Stories",
+      "Spark Change in Your Schools"
+    ],
+    "navLabels": [
+      "Contact Us",
+      "Support",
+      "About Sparkrock",
+      "GET A DEMO",
+      "Skip to main content",
+      "Who We Serve",
+      "K-12 Ecosystem",
+      "Nonprofit ERP",
+      "Technology",
+      "Knowledge Base"
+    ],
+    "heroCtas": [
+      "REQUEST A DEMO",
+      "Home",
+      "K-12 Ecosystem"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://app.hubspot.com/conversations-visitor/39977136/threads/utk/f6e814ac63ab4274b46f0ca861272704?uuid=03af9260f8ee4797a95bdc08df2bb728&mobile=false&mobileSaf"
+    ],
+    "jsonLdTypes": [
+      "",
+      "LocalBusiness",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 6681
+  },
+  "mobile": {
+    "title": "Student Information System - Sparkrock",
+    "metaDescription": "Built for K–12, Sparkrock SIS tracks attendance, reports, and plans—so your staff can support students faster.",
+    "ogImage": "https://sparkrock.com/wp-content/uploads/2025/07/logo.png",
+    "h1": [
+      "The SIS That Strengthens School Communities"
+    ],
+    "h2": [
+      "K–12 SIS Built to Help Your Team Spend More Time Supporting Students",
+      "Sparkrock SIS Functionality at a Glance",
+      "Sparkrock Success Stories",
+      "Spark Change in Your Schools"
+    ],
+    "navLabels": [
+      "Skip to main content",
+      "Menu"
+    ],
+    "heroCtas": [
+      "REQUEST A DEMO"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://app.hubspot.com/conversations-visitor/39977136/threads/utk/ba02d1a566c940278f400b6b8977bcbb?uuid=db8a2a1c06bb4008b1f26f34d3b24c9d&mobile=true&mobileSafa"
+    ],
+    "jsonLdTypes": [
+      "",
+      "LocalBusiness",
+      "BreadcrumbList"
+    ],
+    "pageHeight": 12533
+  },
+  "ok": true
+}

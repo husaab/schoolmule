@@ -1,0 +1,73 @@
+{
+  "url": "https://stripe.com",
+  "capturedAt": "2026-10-25T17:42:33.808Z",
+  "status": 200,
+  "finalUrl": "https://stripe.com/en-ca",
+  "desktop": {
+    "title": "Stripe | Financial Infrastructure to Grow Your Revenue",
+    "metaDescription": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models and manage money movement.",
+    "ogImage": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/stripe.37119086.jpg",
+    "h1": [
+      "Financial infrastructure to grow your revenue. Accept payments, offer financial services and implement custom revenue models – from your first transaction to your billionth.",
+      "Financial infrastructure to grow your revenue. Accept payments, offer financial services and implement custom revenue models – from your first transaction to your billionth."
+    ],
+    "h2": [
+      "Flexible solutions for every business model.",
+      "The backbone of global commerce",
+      "Powering businesses of all sizes.",
+      "Reliable, extensible infrastructure for every stack.",
+      "What's happening"
+    ],
+    "navLabels": [
+      "Stripe homepage",
+      "Products",
+      "Solutions",
+      "Developers",
+      "Resources",
+      "Pricing",
+      "Sign in Sign in",
+      "Contact sales"
+    ],
+    "heroCtas": [
+      "Get started",
+      "Sign up with Google"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 14613
+  },
+  "mobile": {
+    "title": "Stripe | Financial Infrastructure to Grow Your Revenue",
+    "metaDescription": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models and manage money movement.",
+    "ogImage": "https://b.stripecdn.com/mkt-ssr-statics/assets/_next/static/media/stripe.37119086.jpg",
+    "h1": [
+      "Financial infrastructure to grow your revenue.",
+      "Financial infrastructure to grow your revenue."
+    ],
+    "h2": [
+      "Flexible solutions for every business model.",
+      "The backbone of global commerce",
+      "Powering businesses of all sizes.",
+      "Reliable, extensible infrastructure for every stack.",
+      "What's happening"
+    ],
+    "navLabels": [
+      "Stripe homepage",
+      "Toggle navigation menu"
+    ],
+    "heroCtas": [
+      "Get started",
+      "Sign up with Google"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 20524
+  },
+  "ok": true
+}

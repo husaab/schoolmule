@@ -1,0 +1,50 @@
+{
+  "url": "https://www.usepylon.com/schedule-demo",
+  "capturedAt": "2026-10-25T17:55:29.895Z",
+  "status": 200,
+  "finalUrl": "https://www.usepylon.com/schedule-demo",
+  "desktop": {
+    "title": "Book a Demo | Pylon",
+    "metaDescription": "Book a live walkthrough of Pylon, the agentic support platform for B2B. See humans and agents investigate, resolve, and act on every signal.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "See how agents handle the investigative work behind B2B support, while your team stays in control."
+    ],
+    "h2": [],
+    "navLabels": [
+      "Enterprise",
+      "Integrations",
+      "Customers",
+      "Pricing",
+      "Sign in",
+      "Book a demo"
+    ],
+    "heroCtas": [
+      "home",
+      "Privacy Policy"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1813
+  },
+  "mobile": {
+    "title": "Book a Demo | Pylon",
+    "metaDescription": "Book a live walkthrough of Pylon, the agentic support platform for B2B. See humans and agents investigate, resolve, and act on every signal.",
+    "ogImage": "https://cdn.prod.website-files.com/6a2c6d7ab6674379553c0824/6ac6a7c25f73a94a812c0d67_pylon%20open%20graph%20image.png",
+    "h1": [
+      "Schedule a personalized 30-minute demo"
+    ],
+    "h2": [],
+    "navLabels": [],
+    "heroCtas": [
+      "home",
+      "Privacy Policy"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 2429
+  },
+  "ok": true
+}

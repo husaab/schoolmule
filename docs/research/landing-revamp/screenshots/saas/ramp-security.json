@@ -1,0 +1,76 @@
+{
+  "url": "https://ramp.com/security",
+  "capturedAt": "2026-10-25T17:48:59.310Z",
+  "status": 200,
+  "finalUrl": "https://ramp.com/security",
+  "desktop": {
+    "title": "Corporate Card Security - 24/7 Monitoring and Spend Controls | Ramp",
+    "metaDescription": "See how Ramp keeps you and your employees secure with card locking capabilities, transaction flagging, and the most advanced encryption available.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "Peace of mind at every step"
+    ],
+    "h2": [
+      "Compliant software you can trust",
+      "SOC 2 Type II",
+      "PCI"
+    ],
+    "navLabels": [
+      "Products",
+      "Solutions",
+      "Partners",
+      "Resources",
+      "Pricing",
+      "Sign in",
+      "Sign in",
+      "See a demo",
+      "Get started"
+    ],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "Get started for free"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 5546
+  },
+  "mobile": {
+    "title": "Corporate Card Security - 24/7 Monitoring and Spend Controls | Ramp",
+    "metaDescription": "See how Ramp keeps you and your employees secure with card locking capabilities, transaction flagging, and the most advanced encryption available.",
+    "ogImage": "https://next.ramp.com/assets/images/default-og-image.jpg",
+    "h1": [
+      "Peace of mind at every step"
+    ],
+    "h2": [
+      "Compliant software you can trust",
+      "SOC 2 Type II",
+      "PCI"
+    ],
+    "navLabels": [
+      "Back",
+      "Toggle navigation menu"
+    ],
+    "heroCtas": [
+      "Close banner",
+      "Opt out of all",
+      "Opt in to all",
+      "Manage preferences",
+      "Consent powered by Ethyca",
+      "Get started for free"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "Organization"
+    ],
+    "pageHeight": 5410
+  },
+  "ok": true
+}

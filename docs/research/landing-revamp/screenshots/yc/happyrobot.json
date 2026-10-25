@@ -1,0 +1,176 @@
+{
+  "url": "https://www.happyrobot.ai",
+  "capturedAt": "2026-10-25T17:44:45.385Z",
+  "status": 200,
+  "finalUrl": "https://www.happyrobot.ai/",
+  "desktop": {
+    "title": "HappyRobot | Powering the systems that run the world",
+    "metaDescription": "Autonomous AI workers that communicate, coordinate, and operate at scale across the real economy.",
+    "ogImage": "https://happyrobot.b-cdn.net/HappyRobot_HeroLoop_v01%20(00184)%201-1200x630.png",
+    "h1": [
+      "Putting agents to work."
+    ],
+    "h2": [
+      "Deployed in the real world.",
+      "The platform to build & orchestrate agents.",
+      "Serving the industries that move the world.",
+      "We handle the work that matters most.",
+      "This is Enterprise Superintelligence.",
+      "Put agents to work in your enterprise."
+    ],
+    "navLabels": [
+      "HappyRobot",
+      "PLATFORM",
+      "SOLUTIONS",
+      "CUSTOMERS",
+      "NEWSROOM",
+      "CAREERS",
+      "BOOK A DEMO",
+      "Platform Overview",
+      "Prisma",
+      "Enterprise Superintelligence",
+      "Agents",
+      "Workflows",
+      "Conversational AI",
+      "Reasoning agents",
+      "Scalability",
+      "Performance",
+      "Northstars",
+      "Tests",
+      "Audits",
+      "Self-improving Agents",
+      "Context",
+      "Memory",
+      "Edge",
+      "External systems",
+      "Interfaces",
+      "Security & reliability",
+      "Developer tools",
+      "Logistics",
+      "Utilities",
+      "Airlines",
+      "Finance",
+      "Insurance",
+      "Manufacturing",
+      "Retail",
+      "Telecom",
+      "Customer support",
+      "Sales",
+      "Finance",
+      "Operations",
+      "HR & recruiting"
+    ],
+    "heroCtas": [
+      "BOOK A DEMO"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": ""
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 6947
+  },
+  "mobile": {
+    "title": "HappyRobot | Powering the systems that run the world",
+    "metaDescription": "Autonomous AI workers that communicate, coordinate, and operate at scale across the real economy.",
+    "ogImage": "https://happyrobot.b-cdn.net/HappyRobot_HeroLoop_v01%20(00184)%201-1200x630.png",
+    "h1": [
+      "Putting agents to work."
+    ],
+    "h2": [
+      "Deployed in the real world.",
+      "The platform to build & orchestrate agents.",
+      "Serving the industries that move the world.",
+      "We handle the work that matters most.",
+      "This is Enterprise Superintelligence.",
+      "Put agents to work in your enterprise."
+    ],
+    "navLabels": [
+      "HappyRobot",
+      "BOOK A DEMO",
+      "Open menu",
+      "PLATFORM",
+      "Platform Overview",
+      "Prisma",
+      "Enterprise Superintelligence",
+      "Agents",
+      "Workflows",
+      "Conversational AI",
+      "Reasoning agents",
+      "Scalability",
+      "Performance",
+      "Northstars",
+      "Tests",
+      "Audits",
+      "Self-improving Agents",
+      "Context",
+      "Memory",
+      "Edge",
+      "External systems",
+      "Interfaces",
+      "Security & reliability",
+      "Developer tools",
+      "SOLUTIONS",
+      "Logistics",
+      "Utilities",
+      "Airlines",
+      "Finance",
+      "Insurance",
+      "Manufacturing",
+      "Retail",
+      "Telecom",
+      "Customer support",
+      "Sales",
+      "Finance",
+      "Operations",
+      "HR & recruiting",
+      "Built for the real economy",
+      "CUSTOMERS"
+    ],
+    "heroCtas": [
+      "NEW SERIES C — AI WORKERS FOR THE REAL ECONOMY",
+      "BOOK A DEMO"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": ""
+      },
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": true,
+        "aboveFold": false,
+        "src": ""
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 8209
+  },
+  "ok": true
+}

@@ -1,0 +1,84 @@
+{
+  "url": "https://gradelink.com/demo-b/",
+  "capturedAt": "2026-10-25T17:55:03.787Z",
+  "status": 200,
+  "finalUrl": "https://gradelink.com/demo-b/",
+  "desktop": {
+    "title": "Gradelink Demo Videos B - Gradelink: Student Information System",
+    "metaDescription": "Help your school save time, improve enrollment and fulfill its mission with Gradelink SIS.",
+    "ogImage": null,
+    "h1": [
+      "School management is full of challenges.",
+      "Your student information system shouldn’t be one of them."
+    ],
+    "h2": [
+      "Get to Know Us!",
+      "The Easy-to-Use Student Information System for Private Schools",
+      "Who is Gradelink SIS for?",
+      "Here’s What Schools that Use Gradelink have to Say",
+      "All the Tools You Need To Make School Management Easier",
+      "Frequently Asked Questions",
+      "Watch a Free Demo Today",
+      "Recent Posts"
+    ],
+    "navLabels": [
+      "CONTACT",
+      "LOGIN",
+      "WHY GRADELINK?",
+      "YOUR ROLE",
+      "RESOURCES",
+      "GET A QUOTE",
+      "WATCH A DEMO"
+    ],
+    "heroCtas": [
+      "800-742-3083",
+      "Please select a country",
+      "Canada +1",
+      "Watch the Demo",
+      "English",
+      "Manage consent"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/SYWOKNZYqQU?feature=oembed"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 10494
+  },
+  "mobile": {
+    "title": "Gradelink Demo Videos B - Gradelink: Student Information System",
+    "metaDescription": "Help your school save time, improve enrollment and fulfill its mission with Gradelink SIS.",
+    "ogImage": null,
+    "h1": [
+      "School management is full of challenges.",
+      "Your student information system shouldn’t be one of them."
+    ],
+    "h2": [
+      "Get to Know Us!",
+      "The Easy-to-Use Student Information System for Private Schools",
+      "Who is Gradelink SIS for?",
+      "Here’s What Schools that Use Gradelink have to Say",
+      "All the Tools You Need To Make School Management Easier",
+      "Frequently Asked Questions",
+      "Watch a Free Demo Today",
+      "Recent Posts"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "800-742-3083",
+      "English",
+      "Manage consent"
+    ],
+    "videos": [],
+    "embeds": [
+      "https://www.youtube.com/embed/SYWOKNZYqQU?feature=oembed"
+    ],
+    "jsonLdTypes": [
+      ""
+    ],
+    "pageHeight": 13850
+  },
+  "ok": true
+}

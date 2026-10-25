@@ -1,0 +1,115 @@
+{
+  "url": "https://posthog.com",
+  "capturedAt": "2026-10-25T17:43:50.590Z",
+  "status": 200,
+  "finalUrl": "https://posthog.com/",
+  "desktop": {
+    "title": "PostHog – Your product’s context layer",
+    "metaDescription": "PostHog automatically diagnoses problems, fixes bugs, and generates pull requests – all without you having to prompt it.",
+    "ogImage": "https://posthog.com/images/og/default.png",
+    "h1": [
+      "Your product's context layer"
+    ],
+    "h2": [
+      "Ask PostHog anything",
+      "Social proof",
+      "All your data, working together",
+      "Usage-based pricing",
+      "Why PostHog?",
+      "Bedtime reading",
+      "Shameless CTA"
+    ],
+    "navLabels": [
+      "Home",
+      "Self-driving product",
+      "Context warehouse",
+      "Pricing",
+      "Docs",
+      "Demo",
+      "Talk to a human",
+      "About us",
+      "Changelog",
+      "Company handbook",
+      "Store",
+      "Careers",
+      "Trash"
+    ],
+    "heroCtas": [
+      "Products",
+      "Pricing",
+      "Docs",
+      "Community",
+      "Company",
+      "More",
+      "Get started – free",
+      "Get started",
+      "Install with AI",
+      "Copy to clipboard",
+      "Ask PostHog anything",
+      "Give agents product context",
+      "Ship with PostHog",
+      "Pause carousel",
+      "900+ sources",
+      "Get started - free",
+      "Product Analytics",
+      "Session Replay",
+      "Error Tracking",
+      "Web Analytics"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "Organization"
+    ],
+    "pageHeight": 900
+  },
+  "mobile": {
+    "title": "PostHog – Your product’s context layer",
+    "metaDescription": "PostHog automatically diagnoses problems, fixes bugs, and generates pull requests – all without you having to prompt it.",
+    "ogImage": "https://posthog.com/images/og/default.png",
+    "h1": [
+      "Your product's context layer"
+    ],
+    "h2": [
+      "Ask PostHog anything",
+      "Social proof",
+      "All your data, working together",
+      "Usage-based pricing",
+      "Why PostHog?",
+      "Bedtime reading",
+      "Shameless CTA"
+    ],
+    "navLabels": [
+      "Home",
+      "Self-driving product",
+      "Context warehouse",
+      "Pricing",
+      "Docs",
+      "Demo",
+      "Talk to a human",
+      "About us",
+      "Changelog",
+      "Company handbook",
+      "Store",
+      "Careers",
+      "Trash"
+    ],
+    "heroCtas": [
+      "Get started – free",
+      "Get started",
+      "Install with AI",
+      "Copy to clipboard",
+      "Give agents product context",
+      "Ship with PostHog"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "SoftwareApplication",
+      "Organization"
+    ],
+    "pageHeight": 844
+  },
+  "ok": true
+}

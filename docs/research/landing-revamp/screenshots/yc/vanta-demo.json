@@ -1,0 +1,49 @@
+{
+  "url": "https://www.vanta.com/demo",
+  "capturedAt": "2026-10-25T17:49:45.059Z",
+  "status": 200,
+  "finalUrl": "https://www.vanta.com/demo",
+  "desktop": {
+    "title": "Get a custom demo with Vanta",
+    "metaDescription": "Vanta's demos are tailored to fit your organization's security and compliance requirements. Learn more about Vanta's automated compliance platform with a custom demo.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Find out what Vanta can do for your business."
+    ],
+    "h2": [
+      "THE LEADING SECURITY COMPLIANCE SOLUTION TRUSTED BY OVER 16,000 ORGANIZATIONS"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Close this consent banner",
+      "Privacy Policy",
+      "Manage Preferences",
+      "Login",
+      "Vanta's Privacy Policy"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 1478
+  },
+  "mobile": {
+    "title": "Get a custom demo with Vanta",
+    "metaDescription": "Vanta's demos are tailored to fit your organization's security and compliance requirements. Learn more about Vanta's automated compliance platform with a custom demo.",
+    "ogImage": "https://cdn.prod.website-files.com/64009032676f24f376f002fc/693c66c494e0178e6fae41c8_497dda851b486eab25b5fa2d3cf2e264_OG_default.jpg",
+    "h1": [
+      "Find out what Vanta can do for your business."
+    ],
+    "h2": [
+      "THE LEADING SECURITY COMPLIANCE SOLUTION TRUSTED BY OVER 16,000 ORGANIZATIONS"
+    ],
+    "navLabels": [],
+    "heroCtas": [
+      "Login"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 2192
+  },
+  "ok": true
+}

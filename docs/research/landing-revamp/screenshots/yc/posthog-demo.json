@@ -1,0 +1,104 @@
+{
+  "url": "https://posthog.com/demo",
+  "capturedAt": "2026-10-25T17:55:41.759Z",
+  "status": 200,
+  "finalUrl": "https://posthog.com/demo",
+  "desktop": {
+    "title": "Demo - PostHog",
+    "metaDescription": "PostHog is the only developer platform built to natively work with Session Replay, Feature Flags, Experiments, and Surveys.",
+    "ogImage": "https://posthog.com/images/og/default.png",
+    "h1": [
+      "Demo"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Home",
+      "Self-driving product",
+      "Context warehouse",
+      "Pricing",
+      "Docs",
+      "Demo",
+      "Talk to a human",
+      "About us",
+      "Changelog",
+      "Company handbook",
+      "Store",
+      "Careers",
+      "Trash"
+    ],
+    "heroCtas": [
+      "Products",
+      "Pricing",
+      "Docs",
+      "Community",
+      "Company",
+      "More",
+      "Get started – free",
+      "Pause Video: What is PostHog? (Official Demo)",
+      "Click for sound",
+      "Show captions menu",
+      "1x"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "blob:https://posthog.com/f04ea862-b191-4856-9ce5-98029d06e18d"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject"
+    ],
+    "pageHeight": 900
+  },
+  "mobile": {
+    "title": "Demo - PostHog",
+    "metaDescription": "PostHog is the only developer platform built to natively work with Session Replay, Feature Flags, Experiments, and Surveys.",
+    "ogImage": "https://posthog.com/images/og/default.png",
+    "h1": [
+      "Demo"
+    ],
+    "h2": [],
+    "navLabels": [
+      "Home",
+      "Self-driving product",
+      "Context warehouse",
+      "Pricing",
+      "Docs",
+      "Demo",
+      "Talk to a human",
+      "About us",
+      "Changelog",
+      "Company handbook",
+      "Store",
+      "Careers",
+      "Trash"
+    ],
+    "heroCtas": [
+      "Get started – free",
+      "Show controls: What is PostHog? (Official Demo)"
+    ],
+    "videos": [
+      {
+        "autoplay": false,
+        "muted": false,
+        "loop": false,
+        "controls": false,
+        "poster": true,
+        "aboveFold": true,
+        "src": "https://fast.wistia.com/embed/medias/nnp7k9r717.m3u8?quality_min=360&quality_max=2160"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [
+      "VideoObject"
+    ],
+    "pageHeight": 844
+  },
+  "ok": true
+}

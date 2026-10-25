@@ -1,0 +1,147 @@
+{
+  "url": "https://www.classdojo.com/families/",
+  "capturedAt": "2026-10-25T17:49:44.586Z",
+  "status": 200,
+  "finalUrl": "https://www.classdojo.com/families/",
+  "desktop": {
+    "title": "Everything you need for a year they'll love | ClassDojo for Families | ClassDojo",
+    "metaDescription": "ClassDojo helps your child build confidence in reading and math, stay connected to their classroom, and explore safely with Dojo Islands — all in one free app for families.",
+    "ogImage": "https://static.classdojo.com/img/opengraph2026.jpg",
+    "h1": [],
+    "h2": [
+      "Everything you need for a year they'll love",
+      "New skills. Big confidence.",
+      "Reading that cheers them on",
+      "Math practice that adds up",
+      "Affordable tutoring from real teachers",
+      "Kid-powered fun. Parent-approved safety.",
+      "A window into their world at school",
+      "Stay in the loop",
+      "Bring the magic of ClassDojo home",
+      "Top of the class for privacy",
+      "3.6M Reviews and counting",
+      "Over 45 million families around the world rely on ClassDojo",
+      "ClassDojo",
+      "Preference Center"
+    ],
+    "navLabels": [
+      "Products",
+      "Schools",
+      "Districts",
+      "Families",
+      "🇺🇸",
+      "Log in",
+      "Sign up"
+    ],
+    "heroCtas": [
+      "Skip content",
+      "Download ClassDojo on the App Store",
+      "Get ClassDojo on Google Play",
+      "Learn",
+      "Play",
+      "Connect"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://static.classdojo.com/tutor/public/hero-animation/Tutor.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://static.classdojo.com/tutor/public/hero-animation/Elementary_student.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 9311
+  },
+  "mobile": {
+    "title": "Everything you need for a year they'll love | ClassDojo for Families | ClassDojo",
+    "metaDescription": "ClassDojo helps your child build confidence in reading and math, stay connected to their classroom, and explore safely with Dojo Islands — all in one free app for families.",
+    "ogImage": "https://static.classdojo.com/img/opengraph2026.jpg",
+    "h1": [],
+    "h2": [
+      "Everything you need for a year they'll love",
+      "New skills. Big confidence.",
+      "Reading that cheers them on",
+      "Math practice that adds up",
+      "Affordable tutoring from real teachers",
+      "Kid-powered fun. Parent-approved safety.",
+      "A window into their world at school",
+      "Stay in the loop",
+      "Bring the magic of ClassDojo home",
+      "Top of the class for privacy",
+      "3.6M Reviews and counting",
+      "Over 45 million families around the world rely on ClassDojo",
+      "ClassDojo",
+      "Preference Center"
+    ],
+    "navLabels": [
+      "Open menu",
+      "Products",
+      "ClassDojo",
+      "ClassDojo Plus",
+      "Dojo Islands",
+      "Dojo Tutor",
+      "Dojo Sparks",
+      "Schools",
+      "Teachers",
+      "School Leaders NEW",
+      "Resources",
+      "Districts",
+      "Overview",
+      "Roles",
+      "Solutions",
+      "Privacy & Security",
+      "Customer Stories",
+      "Blog & News",
+      "Families",
+      "Select a language…",
+      "Log in",
+      "Sign up",
+      "Get the iPhone app"
+    ],
+    "heroCtas": [
+      "Skip content",
+      "Download ClassDojo on the App Store",
+      "Get ClassDojo on Google Play",
+      "Learn",
+      "Play",
+      "Connect"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": false,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://static.classdojo.com/tutor/public/hero-animation/Tutor.mp4"
+      },
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": false,
+        "src": "https://static.classdojo.com/tutor/public/hero-animation/Elementary_student.mp4"
+      }
+    ],
+    "embeds": [],
+    "jsonLdTypes": [],
+    "pageHeight": 13429
+  },
+  "ok": true
+}

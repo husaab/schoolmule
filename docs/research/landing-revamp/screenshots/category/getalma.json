@@ -1,0 +1,72 @@
+{
+  "url": "https://www.getalma.com/",
+  "capturedAt": "2026-10-25T17:41:53.902Z",
+  "status": 200,
+  "finalUrl": "https://www.getalma.com/",
+  "desktop": {
+    "title": "Alma | K-12 Cloud-Based Student Information System | Alma",
+    "metaDescription": "Empower progress and spark potential with Alma's future-ready Student Information System (SIS) and learning management tools. Streamline operations, enhance student outcomes, and improve educator workflows with our intuitive, cloud-native platform.",
+    "ogImage": "https://www.getalma.com/wp-content/uploads/2019/08/Alma_Logolarge-e1565379787739.png",
+    "h1": [
+      "Join us for a free demo!"
+    ],
+    "h2": [
+      "Be so amazing that people think you are a myth.",
+      "From the classroom to the capitol.",
+      "Would you like to know more?",
+      "Embedded data handling drives improved student achievement",
+      "See what’s coming. Not just what happened.",
+      "Alma is built for educators, by educators, and loved by communities",
+      "If you are an educator, Alma has crafted modern tools for you ...",
+      "Would you like to know more?"
+    ],
+    "navLabels": [
+      "SOLUTIONS",
+      "WHO WE SUPPORT",
+      "RESOURCES",
+      "ABOUT ALMA",
+      "LEARN MORE"
+    ],
+    "heroCtas": [
+      "HELP CENTER",
+      "ALMA LOGIN"
+    ],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      "Corporation"
+    ],
+    "pageHeight": 7505
+  },
+  "mobile": {
+    "title": "Alma | K-12 Cloud-Based Student Information System | Alma",
+    "metaDescription": "Empower progress and spark potential with Alma's future-ready Student Information System (SIS) and learning management tools. Streamline operations, enhance student outcomes, and improve educator workflows with our intuitive, cloud-native platform.",
+    "ogImage": "https://www.getalma.com/wp-content/uploads/2019/08/Alma_Logolarge-e1565379787739.png",
+    "h1": [
+      "Join us for a free demo!"
+    ],
+    "h2": [
+      "Be so amazing that people think you are a myth.",
+      "From the classroom to the capitol.",
+      "Would you like to know more?",
+      "Embedded data handling drives improved student achievement",
+      "See what’s coming. Not just what happened.",
+      "Alma is built for educators, by educators, and loved by communities",
+      "If you are an educator, Alma has crafted modern tools for you ...",
+      "Would you like to know more?"
+    ],
+    "navLabels": [
+      "Toggle navigation"
+    ],
+    "heroCtas": [],
+    "videos": [],
+    "embeds": [],
+    "jsonLdTypes": [
+      "",
+      "Corporation"
+    ],
+    "pageHeight": 11450
+  },
+  "ok": true
+}

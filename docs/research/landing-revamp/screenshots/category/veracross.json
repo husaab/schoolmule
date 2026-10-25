@@ -1,0 +1,95 @@
+{
+  "url": "https://www.veracross.com/",
+  "capturedAt": "2026-10-25T17:41:53.833Z",
+  "status": 200,
+  "finalUrl": "https://www.veracross.com/",
+  "desktop": {
+    "title": "Student Information System - Private K-12 Schools | Veracross SIS",
+    "metaDescription": "Eliminate data chaos with the leading student information system for private & independent K-12 schools. Unify schools with Veracross SIS!",
+    "ogImage": null,
+    "h1": [
+      "School data chaos, solved."
+    ],
+    "h2": [],
+    "navLabels": [
+      "Who We Serve",
+      "Meet Veracross 360",
+      "Types of Schools",
+      "Resource Center",
+      "Company",
+      "Request Demo",
+      "Americas"
+    ],
+    "heroCtas": [
+      "Home",
+      "About",
+      "Solutions",
+      "Testimonials",
+      "Request Demo",
+      "LEARN MORE",
+      "NO THANKS",
+      "Open cookie settings widget"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://www.veracross.com/wp-content/uploads/2024/10/Veracross-Hero-Final_opt.mp4"
+      }
+    ],
+    "embeds": [
+      "https://veracross.chilipiper.com/web-data/deanonymization/iframe/?tenantId=magnus.health&parentOrigin=https%3A%2F%2Fwww.veracross.com&debug=error&consentDenied=",
+      "https://veracross.chilipiper.com/chat/loader/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt",
+      "https://veracross.chilipiper.com/chat/widget/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt"
+    ],
+    "jsonLdTypes": [
+      "",
+      "EducationalOrganization"
+    ],
+    "pageHeight": 6548
+  },
+  "mobile": {
+    "title": "Student Information System - Private K-12 Schools | Veracross SIS",
+    "metaDescription": "Eliminate data chaos with the leading student information system for private & independent K-12 schools. Unify schools with Veracross SIS!",
+    "ogImage": null,
+    "h1": [
+      "School data chaos, solved."
+    ],
+    "h2": [],
+    "navLabels": [
+      "Americas"
+    ],
+    "heroCtas": [
+      "Request Demo",
+      "LEARN MORE",
+      "NO THANKS",
+      "Open cookie settings widget"
+    ],
+    "videos": [
+      {
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "controls": false,
+        "poster": false,
+        "aboveFold": true,
+        "src": "https://www.veracross.com/wp-content/uploads/2024/10/Veracross-Hero-Final_opt.mp4"
+      }
+    ],
+    "embeds": [
+      "https://veracross.chilipiper.com/web-data/deanonymization/iframe/?tenantId=magnus.health&parentOrigin=https%3A%2F%2Fwww.veracross.com&debug=error&consentDenied=",
+      "https://veracross.chilipiper.com/chat/loader/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt",
+      "https://veracross.chilipiper.com/chat/widget/?embedOrigin=https%3A%2F%2Fwww.veracross.com&workspaceId=95e06f39-ff36-4206-b1e5-57717170dd01&tenantId=magnus.healt"
+    ],
+    "jsonLdTypes": [
+      "",
+      "EducationalOrganization"
+    ],
+    "pageHeight": 8288
+  },
+  "ok": true
+}
