@@ -110,14 +110,14 @@ const WelcomePage: FC = () => {
 
       <main className="w-full overflow-hidden">
         {/* Hero Section */}
-        <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-32 lg:pb-24">
+        <section className="relative min-h-screen flex items-center pt-32 pb-16 lg:pt-28 lg:pb-24">
           {/* Animated background */}
           <HeroBackground />
 
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-cyan-200 shadow-sm mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-cyan-200 shadow-sm mb-6">
                 <SparklesIcon className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-medium text-slate-600">
                   Trusted by 50+ Schools Nationwide
@@ -125,7 +125,7 @@ const WelcomePage: FC = () => {
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-slate-900 leading-tight tracking-tight mb-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight tracking-tight mb-5">
                 The Complete{' '}
                 <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
                   School Management
@@ -134,14 +134,14 @@ const WelcomePage: FC = () => {
               </h1>
 
               {/* Subheadline */}
-              <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10">
+              <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-8">
                 Stop juggling multiple systems. SchoolMule streamlines everything from
                 student enrollment to report cards, saving your staff{' '}
                 <span className="font-semibold text-slate-800">hours each week</span>.
               </p>
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
                 <Link
                   href="/demo"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-600 to-teal-600 rounded-xl hover:from-cyan-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
@@ -158,14 +158,12 @@ const WelcomePage: FC = () => {
               </div>
             </div>
 
-            {/* Product demo video */}
-            <div className="mt-16 lg:mt-20">
-              <div className="relative max-w-5xl mx-auto">
-                <HeroDemoVideo />
+            {/* The film: the hero's centrepiece */}
+            <div className="relative max-w-6xl mx-auto">
+              <HeroDemoVideo />
 
-                {/* Glow effect */}
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl -z-10" />
-              </div>
+              {/* Glow effect */}
+              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-cyan-500/20 blur-3xl -z-10" />
             </div>
           </div>
         </section>
