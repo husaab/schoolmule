@@ -10,10 +10,9 @@ export const DEMO_MINUTES = 15
 export const FOUNDER = {
   name: 'Hussein Saab',
   firstName: 'Hussein',
-  // Square crops of his headshot: the portrait for the founder note, the
-  // face for small round avatars. Set either to null to show initials.
+  // A square crop of the founder's headshot, for the founder note. Set to null
+  // to show initials.
   photo: '/marketing/founder.jpg' as string | null,
-  photoSmall: '/marketing/founder-face.jpg' as string | null,
 }
 
 // The only usage claim the founder has approved (2026-10-25). No counts, no

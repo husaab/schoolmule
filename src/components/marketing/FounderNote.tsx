@@ -2,19 +2,18 @@ import Image from 'next/image'
 import { FOUNDER } from '@/lib/marketing/site'
 import { cx } from './ui'
 
-/** The founder's photo, or his initials until a photo is supplied (lib/marketing/site FOUNDER.photo). */
-export function FounderPortrait({ size = 'lg', className }: { size?: 'sm' | 'lg'; className?: string }) {
-  const box = size === 'lg' ? 'size-28 rounded-[1.75rem] text-3xl' : 'size-11 rounded-full text-base'
-  const photo = size === 'lg' ? FOUNDER.photo : FOUNDER.photoSmall
-  if (photo) {
+/** The founder's photo, or initials when there is none (lib/marketing/site FOUNDER.photo). */
+function FounderPortrait() {
+  const box = 'size-28 rounded-[1.75rem] text-3xl'
+  if (FOUNDER.photo) {
     return (
       <Image
-        src={photo}
+        src={FOUNDER.photo}
         alt={FOUNDER.name}
-        width={size === 'lg' ? 112 : 44}
-        height={size === 'lg' ? 112 : 44}
-        sizes={size === 'lg' ? '112px' : '44px'}
-        className={cx(box, 'shrink-0 bg-mist object-cover ring-1 ring-ink/[0.06]', className)}
+        width={112}
+        height={112}
+        sizes="112px"
+        className={cx(box, 'shrink-0 bg-mist object-cover ring-1 ring-ink/[0.06]')}
       />
     )
   }
@@ -22,7 +21,7 @@ export function FounderPortrait({ size = 'lg', className }: { size?: 'sm' | 'lg'
     <span
       role="img"
       aria-label={FOUNDER.name}
-      className={cx(box, 'grid shrink-0 place-items-center bg-leaders font-semibold tracking-tight text-white', className)}
+      className={cx(box, 'grid shrink-0 place-items-center bg-leaders font-semibold tracking-tight text-white')}
     >
       {FOUNDER.name
         .split(' ')

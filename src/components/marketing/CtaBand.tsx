@@ -1,7 +1,7 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { DEMO_MINUTES, FOUNDER } from '@/lib/marketing/site'
 import DemoLink from './DemoLink'
-import { FounderPortrait } from './FounderNote'
 import WatchFilmButton from './film/WatchFilmButton'
 import { Accent, Container } from './ui'
 
@@ -10,7 +10,7 @@ export default function CtaBand({ from, heading, sub }: { from: string; heading?
   return (
     <section aria-labelledby={`${from}-cta`} className="bg-gradient-to-b from-white to-mist py-24 sm:py-32">
       <Container className="grid justify-items-center gap-7 text-center">
-        <FounderPortrait size="sm" />
+        <Image src="/marketing/mule-mark.png" alt="" width={74} height={56} sizes="74px" className="h-14 w-auto" />
         <h2
           id={`${from}-cta`}
           className="max-w-3xl text-balance text-[2.3rem] font-semibold leading-[1.05] tracking-[-0.035em] text-ink sm:text-[3.4rem]"
