@@ -22,7 +22,7 @@ import { DEMO_MINUTES, PRODUCT_LINKS, USAGE_CLAIM, VIEW_COLOURS } from '@/lib/ma
 // docs/research/landing-revamp/plan.md §3.1.
 
 export const metadata: Metadata = pageMetadata({
-  title: 'SchoolMule: school management for Ontario independent schools',
+  title: 'SchoolMule: School Management for Ontario Independent Schools',
   description:
     'Attendance, grades, report cards and parent messages in one system, with a view for your office, teachers, parents and students. Built for independent schools in Ontario, JK to Grade 8.',
   path: '/',

@@ -10,7 +10,7 @@ import { CONTACT_EMAIL, FOUNDER, USAGE_CLAIM } from '@/lib/marketing/site'
 // team members wait until the founder writes them (plan.md §7).
 
 export const metadata: Metadata = pageMetadata({
-  title: 'About SchoolMule',
+  title: 'About',
   description: `SchoolMule is school management for small independent schools in Ontario, built by ${FOUNDER.name}. ${USAGE_CLAIM}.`,
   path: '/about',
 })

@@ -23,7 +23,7 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: 'SchoolMule: school management for independent schools',
+    default: 'SchoolMule: School Management for Independent Schools',
     template: '%s - SchoolMule'
   },
   description: "Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students. Built for small independent schools in Ontario.",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   authors: [{ name: "SchoolMule" }],
   metadataBase: new URL('https://schoolmule.ca'),
   openGraph: {
-    title: "SchoolMule: school management for independent schools",
+    title: "SchoolMule: School Management for Independent Schools",
     description: 'Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students.',
     type: "website",
     siteName: "SchoolMule",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SchoolMule: school management for independent schools",
+    title: "SchoolMule: School Management for Independent Schools",
     description: 'Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students.',
   },
   icons: {

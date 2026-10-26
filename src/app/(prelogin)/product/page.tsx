@@ -15,7 +15,7 @@ import { CHAPTERS, formatTime, HERO_LOOP } from '@/lib/marketing/site'
 // in a modal. Ends with what SchoolMule doesn't do yet, said plainly.
 
 export const metadata: Metadata = pageMetadata({
-  title: 'Features: gradebook, report cards, attendance and parent portal',
+  title: 'Features: Gradebook, Report Cards, Attendance and Parent Portal',
   description:
     'Everything SchoolMule does for a small school: gradebook, attendance, report cards, JK and SK skills reports, parent and teacher messages, announcements, timetables, staff hours and more.',
   path: '/product',

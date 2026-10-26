@@ -67,7 +67,7 @@ export const ROLE_PAGES: RolePageData[] = [
     pill: 'For principals, owners and office staff',
     title: { plain: 'See the whole school, ', accent: 'without chasing it.' },
     lead: 'Report cards, timetables, staff hours, approvals and every family conversation, in one place your whole office shares.',
-    metaTitle: 'School administration software for independent schools',
+    metaTitle: 'School Administration Software for Independent Schools',
     metaDescription:
       'Report cards for a whole class at once, timetables built from your rules, staff hours by pay period, approvals, staff roles and every family conversation. Built for Ontario independent schools.',
     chapter: 'office',
@@ -136,7 +136,7 @@ export const ROLE_PAGES: RolePageData[] = [
     pill: 'For teachers',
     title: { plain: 'Attendance and grades in minutes. ', accent: 'Families told in one click.' },
     lead: 'Your day, your classes and your families in one place. Enter a grade once, and students and parents see it when you publish.',
-    metaTitle: 'Gradebook, attendance and report card software for teachers',
+    metaTitle: 'Gradebook, Attendance and Report Card Software for Teachers',
     metaDescription:
       'A gradebook that saves as you type, attendance in seconds, Publish & Notify emails to families, and parent questions that arrive with the assessment attached.',
     chapter: 'teachers',
@@ -205,7 +205,7 @@ export const ROLE_PAGES: RolePageData[] = [
     pill: 'For parents and guardians',
     title: { plain: 'Know how your child is doing, ', accent: 'without calling the office.' },
     lead: 'Grades with the teacher’s feedback, a short summary of the week, and a direct line to the teacher, from any phone.',
-    metaTitle: 'Parent portal for independent schools',
+    metaTitle: 'Parent Portal for Independent Schools',
     metaDescription:
       'Parents see their child’s grades with the teacher’s feedback, a short summary of the week and the school calendar, and can ask the teacher about a specific grade. No app to install.',
     chapter: 'parents',
@@ -269,7 +269,7 @@ export const ROLE_PAGES: RolePageData[] = [
     pill: 'For students',
     title: { plain: 'Your work, your feedback, ', accent: 'what’s due.' },
     lead: 'When a school turns on the student portal, students see their classes, turn in work, take quizzes and read their teachers’ feedback, on a computer or a phone.',
-    metaTitle: 'Student portal for classwork, quizzes and feedback',
+    metaTitle: 'Student Portal for Classwork, Quizzes and Feedback',
     metaDescription:
       'Students see what is due, turn in work, take quizzes and read feedback on every graded item. Parents see the same classes, read-only.',
     chapter: 'students',

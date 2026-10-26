@@ -14,7 +14,7 @@ import { breadcrumbSchema, pageMetadata } from '@/lib/marketing/seo'
 // what the product does: no Hifz tracker, no Arabic interface.
 
 export const metadata: Metadata = pageMetadata({
-  title: 'School management software for Islamic schools in Ontario',
+  title: 'School Management Software for Islamic Schools in Ontario',
   description:
     'Quran, Arabic and Islamic Studies graded beside Ontario subjects on one report card, JK and SK reported on skills, registration forms, and families kept informed in one place.',
   path: '/for/islamic-schools',
