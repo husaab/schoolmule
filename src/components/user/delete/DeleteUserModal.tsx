@@ -76,10 +76,10 @@ const DeleteUserModal: React.FC<DeleteUserModalProps> = ({ isOpen, onClose, onDe
           consequences={{
             title: 'Deleting your account:',
             items: [
-              'Signs you out right away and returns you to the login page',
-              'Removes the account outright — this username and email can no longer sign in',
-              'Deletes the saved student views you own',
-              'Leaves timetable assignments and connected sheets tied to you unassigned',
+              'Signs you out right away, on every device',
+              'Removes your name, email, photo, password and Google or Apple sign-in — this account can no longer sign in',
+              'Deletes the saved student views you own and your notification settings',
+              'Your school keeps its records (grades, attendance, classes, messages); your messages show as from a deleted user',
             ],
           }}
         >

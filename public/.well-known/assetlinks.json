@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.schoolmule.app",
+      "sha256_cert_fingerprints": [
+        "F7:EA:58:B0:5B:BB:EA:72:CF:7C:96:BC:2D:54:5C:73:CE:46:BE:AC:B5:AC:07:5C:88:47:1A:2A:EA:21:AE:BA"
+      ]
+    }
+  }
+]

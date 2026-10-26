@@ -10,7 +10,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="Last updated 25 October 2026">
+    <LegalPage title="Privacy Policy" updated="Last updated 26 October 2026">
       <p>
         SchoolMule is school administration software used by schools to manage student
         records, attendance, grades, report cards and registration forms. This policy
@@ -38,6 +38,7 @@ export default function PrivacyPolicyPage() {
         <li>Basic technical logs needed to operate and secure the service, including IP address and timestamps.</li>
         <li>The IP address attached to a public form submission, retained to prevent spam and abuse.</li>
         <li>Page views on our website and in the application, counted with Vercel Web Analytics, which does not use cookies.</li>
+        <li>If you allow notifications in the SchoolMule app, the push token your phone issues for the app, and which kinds of notification you have switched on, so we can send them. Signing out removes it.</li>
       </ul>
 
       <p>
@@ -83,6 +84,17 @@ export default function PrivacyPolicyPage() {
         account permissions page, and you can set a password instead with &ldquo;Forgot your
         password?&rdquo; on the sign-in page.
       </p>
+
+      <h3>Signing in with Apple</h3>
+      <p>
+        In the SchoolMule iPhone app you can sign in with your Apple ID. Apple tells us an
+        identifier for your Apple ID and, the first time, your name and email address. If you
+        choose Hide My Email, the address is a private relay address that Apple forwards to you.
+      </p>
+      <ul>
+        <li>We use the email address to find your SchoolMule account, or to create one when you sign up.</li>
+        <li>We keep Apple&apos;s identifier so that your Apple ID keeps opening the same SchoolMule account. We receive no Apple password.</li>
+      </ul>
 
       <h3>Google Sheets integration: what we request</h3>
       <p>
@@ -142,7 +154,8 @@ export default function PrivacyPolicyPage() {
         Two features use OpenAI&apos;s API to write text. The weekly summary parents see sends a
         child&apos;s name, the grades published that week, attendance counts, missing work and
         that week&apos;s teacher comments. Staff tools that draft report card comments or explain
-        analytics send the student names, ratings and grades involved. The summary is labelled
+        analytics send the student names, ratings and grades involved. Only what the feature
+        needs is sent, never passwords or contact details. The summary is labelled
         as written by AI. Under OpenAI&apos;s API terms, data sent through its API is not used to
         train its models by default.
       </p>
@@ -157,6 +170,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Railway</strong> — application hosting.</li>
         <li><strong>Vercel</strong> — website hosting and page-view analytics.</li>
         <li><strong>Resend</strong> — transactional email.</li>
+        <li><strong>Expo</strong> — delivers the app&apos;s push notifications, through Apple&apos;s and Google&apos;s notification services.</li>
         <li><strong>OpenAI</strong> — the AI features described above.</li>
         <li><strong>Intuit QuickBooks</strong> — where a school connects QuickBooks Online, to show tuition balances.</li>
         <li><strong>Calendly</strong> — booking a demo from our website.</li>

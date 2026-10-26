@@ -1,0 +1,52 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "FUVD39YUU6.com.schoolmule.app"
+        ],
+        "components": [
+          {
+            "/": "/verify-email-token*"
+          },
+          {
+            "/": "/reset-password*"
+          },
+          {
+            "/": "/student-invite*"
+          },
+          {
+            "/": "/signup*"
+          },
+          {
+            "/": "/login*"
+          },
+          {
+            "/": "/parent/*"
+          },
+          {
+            "/": "/student/*"
+          },
+          {
+            "/": "/email-login*"
+          },
+          {
+            "/": "/messages*"
+          },
+          {
+            "/": "/admin-panel/messages*"
+          },
+          {
+            "/": "/announcements*"
+          },
+          {
+            "/": "/parent"
+          },
+          {
+            "/": "/student"
+          }
+        ]
+      }
+    ]
+  }
+}
