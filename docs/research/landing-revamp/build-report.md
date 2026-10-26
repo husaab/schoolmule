@@ -82,7 +82,7 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 
 ## Not verified yet
 - **Lighthouse on the Vercel preview.** The branch couldn't be pushed from this session (see the reply).
-- **A real contact-form send.** The call, payload and honeypot are unchanged, but sending would email your inbox; send one test message on the preview.
+- **A real contact-form send.** The call, payload and honeypot are unchanged. It can't be tested on a preview: Vercel previews have no `NEXT_PUBLIC_BASE_URL` (it is set for Production only), and the backend accepts requests only from `https://schoolmule.ca`. A test on the preview showed the form's new error message, as it should. Send one test message on schoolmule.ca after the merge.
 - **A real Calendly booking**, and that `demo_booked` arrives in Vercel Analytics.
 
 ## For you
@@ -107,3 +107,7 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 - Hussein's headshot in the founder note and the small avatars (`public/marketing/founder.jpg`, `founder-face.jpg`).
 - The navbar has **Log in** and **Sign up** (families and staff who haven't joined yet use the site too), beside a quieter **Book a demo** without the arrow. On phones, Log in and Sign up stay in the bar and Book a demo moves to the top of the menu. "Join your school" is now "Sign up" everywhere.
 - FAQ: "Where is our data stored?" now reads "Securely, on Amazon Web Services (AWS) cloud servers…", encrypted in transit and at rest. The French question is removed. (`/product` still lists "A French or Arabic interface" under what SchoolMule doesn't do yet.)
+
+## Changes on 2026-10-26
+- **The contact form sends to info@schoolmule.ca**, the address the website shows, with a blind copy to the support inbox (`SUPPORT_EMAIL`, the founder's Gmail). This is a backend change (schoolmule-backend `786940f`, deployed); support tickets are unchanged.
+- **Main merged into the branch** (`8fa2238`): the app-link files, the `/delete-account` page (it now uses the website's navbar and footer), and the privacy policy's push-notification, Sign in with Apple and Expo additions, kept alongside this branch's privacy changes.
