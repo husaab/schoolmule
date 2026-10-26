@@ -113,4 +113,5 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 
 ## Changes on 2026-10-26
 - **The contact form sends to info@schoolmule.ca**, the address the website shows, with a blind copy to the support inbox (`SUPPORT_EMAIL`, the founder's Gmail). This is a backend change (schoolmule-backend `786940f`, deployed); support tickets are unchanged.
+- **Signed-in visitors get "Back to dashboard"** (`c464a97`) in the navbar and the footer's account column, in place of Log in, Sign up and Book a demo ("Back to home" for students, "Dashboard" or "Home" on phones). They only see the website from the app's "SchoolMule website" link or on pages that never redirect, such as `/privacy`.
 - **Main merged into the branch** (`8fa2238`): the app-link files, the `/delete-account` page (it now uses the website's navbar and footer), and the privacy policy's push-notification, Sign in with Apple and Expo additions, kept alongside this branch's privacy changes.
