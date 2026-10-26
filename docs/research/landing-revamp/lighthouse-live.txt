@@ -1,0 +1,21 @@
+Lighthouse mobile on https://schoolmule.ca, 2026-10-26 after the merge (lighthouse@12.6.0, tools/lighthouse.sh)
+
+First run:
+/                      perf 95 a11y 100 bp 100 seo 100 LCP 2.9 s CLS 0
+/product               perf 97 a11y 100 bp 100 seo 100 LCP 2.6 s CLS 0
+/for/school-leaders    perf 84 a11y 100 bp 100 seo 100 LCP 4.6 s CLS 0
+/for/teachers          perf 97 a11y 100 bp 100 seo 100 LCP 2.6 s CLS 0
+/for/parents           perf 94 a11y 100 bp 100 seo 100 LCP 3.0 s CLS 0
+/for/students          perf 86 a11y 100 bp 100 seo 100 LCP 4.2 s CLS 0
+/for/islamic-schools   perf 98 a11y 100 bp 100 seo 100 LCP 2.4 s CLS 0
+/about                 perf 100 a11y 100 bp 100 seo 100 LCP 1.8 s CLS 0
+/demo                  perf 99 a11y 100 bp 79 seo 100 LCP 1.9 s CLS 0.017
+/contact               perf 99 a11y 100 bp 100 seo 100 LCP 2.3 s CLS 0
+/privacy               perf 100 a11y 100 bp 100 seo 100 LCP 1.8 s CLS 0
+/terms                 perf 100 a11y 100 bp 100 seo 100 LCP 1.4 s CLS 0
+
+Reruns of the two pages under 90 (first visits after the deploy):
+/for/school-leaders    perf 96 a11y 100 bp 100 seo 100 LCP 2.7 s CLS 0
+/for/students          perf 96 a11y 100 bp 100 seo 100 LCP 2.7 s CLS 0
+/for/school-leaders    perf 97 a11y 100 bp 100 seo 100 LCP 2.6 s CLS 0
+/for/students          perf 96 a11y 100 bp 100 seo 100 LCP 2.7 s CLS 0

@@ -80,9 +80,12 @@ Lighthouse (mobile, `next start` on localhost; full output in [lighthouse-local.
 - The marketing site's old screenshots in `public/images/` are deleted (one showed the removed invoicing screen), along with the unused `HeroBackground` and old nav links.
 - **Mobile app:** marketing pages are exempt from the web-to-app porting rule, so `schoolmule-mobile` is unchanged.
 
+## Checked live on schoolmule.ca (2026-10-26, after the merge)
+- **Lighthouse, mobile** ([lighthouse-live.txt](lighthouse-live.txt)): performance 94 to 100 on every page, accessibility, best practices and SEO 100, CLS 0 (0.017 on `/demo`). `/demo` best practices is 79 because Calendly's embed sets third-party cookies. School leaders and Students scored 84 and 86 on the first run, the first visit after the deploy while Vercel generated their images, then 96 to 97 on two reruns.
+- **Contact form:** a test message sent from `/contact` got "Message sent." and the backend logged `POST /api/email/contact` 200 (Resend accepted it for info@schoolmule.ca with the blind copy).
+- **Every public URL** answers 200; `/features` redirects to `/product`; the sitemap, robots.txt and the app-link files are served.
+
 ## Not verified yet
-- **Lighthouse on the Vercel preview.** The branch couldn't be pushed from this session (see the reply).
-- **A real contact-form send.** The call, payload and honeypot are unchanged. It can't be tested on a preview: Vercel previews have no `NEXT_PUBLIC_BASE_URL` (it is set for Production only), and the backend accepts requests only from `https://schoolmule.ca`. A test on the preview showed the form's new error message, as it should. Send one test message on schoolmule.ca after the merge.
 - **A real Calendly booking**, and that `demo_booked` arrives in Vercel Analytics.
 
 ## For you
