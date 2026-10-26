@@ -2,6 +2,8 @@ import { FC } from 'react'
 import Link from 'next/link'
 import Logo from '@/components/marketing/Logo'
 import { CONTACT_EMAIL, PRODUCT_LINKS, SCHOOL_LINKS } from '@/lib/marketing/site'
+import AccountColumn from './AccountColumn'
+import FooterColumn from './FooterColumn'
 
 // The website's footer. Also used by the sign-in and sign-up pages.
 const COLUMNS = [
@@ -13,13 +15,6 @@ const COLUMNS = [
       { href: '/about', label: 'About' },
       { href: '/demo', label: 'Book a demo' },
       { href: '/contact', label: 'Contact' },
-    ],
-  },
-  {
-    title: 'Already a SchoolMule school',
-    links: [
-      { href: '/login', label: 'Log in' },
-      { href: '/signup', label: 'Sign up' },
     ],
   },
 ]
@@ -43,19 +38,9 @@ const Footer: FC = () => {
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">
           {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h2 className="mb-3 text-sm font-semibold text-ink">{col.title}</h2>
-              <ul className="grid gap-2">
-                {col.links.map((l) => (
-                  <li key={l.href}>
-                    <Link href={l.href} className="text-slate-600 transition-colors duration-150 hover:text-ink">
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <FooterColumn key={col.title} title={col.title} links={col.links} />
           ))}
+          <AccountColumn />
         </nav>
       </div>
       <div className="border-t border-hairline">

@@ -7,12 +7,15 @@ import Logo from '@/components/marketing/Logo'
 import { ArrowDisc, buttonStyles, cx } from '@/components/marketing/ui'
 import { PRODUCT_LINKS, SCHOOL_LINKS, VIEW_COLOURS } from '@/lib/marketing/site'
 import { trackEvent } from '@/components/marketing/film/filmEvents'
+import { useSignedInHome } from '@/components/marketing/useSignedInHome'
 
 // The website's navbar: a floating bar with the one call to action, "Book a
 // demo", always in reach (also on phones). Product opens a menu with the
 // overview first, then the four views, then the school pages.
 //
-// Also used by the sign-in and sign-up pages, so it takes no props.
+// Also used by the sign-in and sign-up pages, so it takes no props. A
+// signed-in visitor gets one way back to the app instead of Log in, Sign up
+// and Book a demo.
 
 const NAV = [
   { href: '/about', label: 'About' },
@@ -25,6 +28,7 @@ const NavBar: FC = () => {
   const [productOpen, setProductOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const productRef = useRef<HTMLDivElement>(null)
+  const home = useSignedInHome()
   const menuId = useId()
   const productId = useId()
 
@@ -167,25 +171,37 @@ const NavBar: FC = () => {
             principals come for a demo, so all three sit side by side; on
             phones the demo moves into the menu (every hero has one too). */}
         <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-          <Link href="/login" className={cx(linkClass(pathname === '/login'), 'whitespace-nowrap px-2 sm:px-3.5')}>
-            Log in
-          </Link>
-          <Link
-            href="/signup"
-            className={cx(
-              'inline-flex min-h-9 items-center whitespace-nowrap rounded-full bg-white px-3 text-[0.92rem] font-semibold text-ink ring-1 ring-hairline sm:min-h-10 sm:px-4 sm:text-[0.95rem] transition-[box-shadow,transform] duration-200 ease-film hover:ring-slate-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30',
-              pathname?.startsWith('/signup') && 'ring-slate-300',
-            )}
-          >
-            Sign up
-          </Link>
-          <Link
-            href="/demo"
-            onClick={() => trackEvent('demo_click', { from: 'navbar' })}
-            className="hidden min-h-10 items-center whitespace-nowrap rounded-full bg-brand-ink px-4 text-[0.95rem] font-semibold text-white transition-[background-color,transform] duration-200 ease-film hover:bg-brand-deep active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/35 sm:inline-flex"
-          >
-            Book a demo
-          </Link>
+          {home ? (
+            <Link
+              href={home.href}
+              className="inline-flex min-h-9 items-center whitespace-nowrap rounded-full bg-brand-ink px-3.5 text-[0.92rem] font-semibold text-white transition-[background-color,transform] duration-200 ease-film hover:bg-brand-deep active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/35 sm:min-h-10 sm:px-4 sm:text-[0.95rem]"
+            >
+              <span className="sm:hidden">{home.short}</span>
+              <span className="hidden sm:inline">{home.label}</span>
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className={cx(linkClass(pathname === '/login'), 'whitespace-nowrap px-2 sm:px-3.5')}>
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                className={cx(
+                  'inline-flex min-h-9 items-center whitespace-nowrap rounded-full bg-white px-3 text-[0.92rem] font-semibold text-ink ring-1 ring-hairline sm:min-h-10 sm:px-4 sm:text-[0.95rem] transition-[box-shadow,transform] duration-200 ease-film hover:ring-slate-300 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30',
+                  pathname?.startsWith('/signup') && 'ring-slate-300',
+                )}
+              >
+                Sign up
+              </Link>
+              <Link
+                href="/demo"
+                onClick={() => trackEvent('demo_click', { from: 'navbar' })}
+                className="hidden min-h-10 items-center whitespace-nowrap rounded-full bg-brand-ink px-4 text-[0.95rem] font-semibold text-white transition-[background-color,transform] duration-200 ease-film hover:bg-brand-deep active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/35 sm:inline-flex"
+              >
+                Book a demo
+              </Link>
+            </>
+          )}
           <button
             type="button"
             className="grid size-10 place-items-center rounded-full text-ink hover:bg-mist sm:size-11 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 lg:hidden"
@@ -209,14 +225,16 @@ const NavBar: FC = () => {
         className="fixed inset-x-0 bottom-0 top-[5.25rem] overflow-y-auto bg-white px-4 pb-10 pt-4 lg:hidden"
       >
         <div className="mx-auto grid max-w-lg gap-1">
-          <Link
-            href="/demo"
-            onClick={() => trackEvent('demo_click', { from: 'navbar-menu' })}
-            className={cx(buttonStyles.primary, 'mb-4 w-full sm:hidden')}
-          >
-            Book a demo
-            <ArrowDisc />
-          </Link>
+          {!home && (
+            <Link
+              href="/demo"
+              onClick={() => trackEvent('demo_click', { from: 'navbar-menu' })}
+              className={cx(buttonStyles.primary, 'mb-4 w-full sm:hidden')}
+            >
+              Book a demo
+              <ArrowDisc />
+            </Link>
+          )}
           <p className="px-3 pb-1 text-sm font-medium text-slate-600">Product</p>
           {PRODUCT_LINKS.map((l, i) => (
             <Link
@@ -241,12 +259,20 @@ const NavBar: FC = () => {
               {l.label}
             </Link>
           ))}
-          <Link href="/login" className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
-            Log in
-          </Link>
-          <Link href="/signup" className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
-            Sign up
-          </Link>
+          {home ? (
+            <Link href={home.href} className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
+              {home.label}
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
+                Log in
+              </Link>
+              <Link href="/signup" className="rounded-2xl px-3 py-3 text-lg font-semibold text-ink hover:bg-mist">
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
