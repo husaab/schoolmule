@@ -3,7 +3,7 @@
 // Saved schedule drafts + the published one, with entry points into the
 // generate/browse workspace.
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PlusIcon,
@@ -12,11 +12,16 @@ import {
   TrashIcon,
   LinkIcon,
   SparklesIcon,
+  ClockIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { deleteSchedule, updateSchedule } from '@/services/schedulePlannerService'
 import type { ClassGroup, PlannerTeacher, ScheduleSummary } from '@/services/types/schedulePlanner'
 import PrintMenu from './PrintMenu'
+import CopyWithTimesModal from './CopyWithTimesModal'
+import GoLiveDateModal from './GoLiveDateModal'
+import { formatDay } from '@/lib/bellTimes'
 
 interface SchedulesTabProps {
   schedules: ScheduleSummary[]
@@ -36,9 +41,17 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({
 }) => {
   const router = useRouter()
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const [copyFrom, setCopyFrom] = useState<string | null>(null)
+  const [goLiveFor, setGoLiveFor] = useState<ScheduleSummary | null>(null)
 
   const handleDelete = async (schedule: ScheduleSummary) => {
-    if (!confirm(`Delete "${schedule.name}"?${schedule.status === 'published' ? ' It is currently published — the live link will stop working.' : ''}`)) return
+    const warning =
+      schedule.status === 'published'
+        ? ' It is currently published — the live link will stop working.'
+        : schedule.goLiveOn && schedule.goLiveStatus === 'pending'
+          ? ` It is set to go live ${formatDay(schedule.goLiveOn)}; that won't happen.`
+          : ''
+    if (!confirm(`Delete "${schedule.name}"?${warning}`)) return
     try {
       await deleteSchedule(schedule.scheduleId)
       showNotification('Schedule deleted', 'success')
@@ -140,9 +153,38 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({
                       Draft
                     </span>
                   )}
+                  {s.status === 'draft' && s.goLiveOn && (s.goLiveStatus === 'pending' || s.goLiveStatus === 'running') && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setGoLiveFor(s)
+                      }}
+                      title="Change or remove the go-live date"
+                      className="px-2 py-0.5 bg-cyan-50 text-cyan-700 text-[11px] font-medium rounded-full hover:bg-cyan-100 cursor-pointer"
+                    >
+                      Goes live {formatDay(s.goLiveOn)}
+                    </button>
+                  )}
+                  {s.status === 'draft' && s.goLiveStatus === 'failed' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setGoLiveFor(s)
+                      }}
+                      title={s.goLiveError ?? 'Go-live failed'}
+                      className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-medium rounded-full hover:bg-amber-200 cursor-pointer"
+                    >
+                      Go-live failed · Retry
+                    </button>
+                  )}
                 </div>
                 <div className="text-xs text-gray-400">
-                  Updated {new Date(s.updatedAt).toLocaleDateString()}
+                  {s.status === 'published' && s.effectiveFrom
+                    ? `Live since ${formatDay(s.effectiveFrom)}`
+                    : s.status === 'draft' && s.effectiveTo
+                      ? `Was live until ${formatDay(s.effectiveTo)}`
+                      : `Updated ${new Date(s.updatedAt).toLocaleDateString()}`}
+                  {s.status === 'draft' && s.hasOwnBellTimes && ' · has its own bell times'}
                 </div>
               </div>
               {/* Row click opens the workspace; action buttons must not bubble */}
@@ -157,6 +199,28 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({
                     className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
                   >
                     <LinkIcon className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCopyFrom(s.scheduleId)
+                  }}
+                  title="Copy with new times (keep the timetable, change the bell times)"
+                  className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
+                >
+                  <ClockIcon className="h-4 w-4" />
+                </button>
+                {s.status === 'draft' && !['pending', 'running', 'failed'].includes(s.goLiveStatus ?? '') && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setGoLiveFor(s)
+                    }}
+                    title="Set a go-live date"
+                    className="p-1.5 text-gray-400 hover:text-cyan-600 cursor-pointer"
+                  >
+                    <CalendarDaysIcon className="h-4 w-4" />
                   </button>
                 )}
                 <button
@@ -195,6 +259,9 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({
           ))}
         </div>
       )}
+
+      <CopyWithTimesModal scheduleId={copyFrom} onClose={() => setCopyFrom(null)} onCreated={() => onChanged()} />
+      <GoLiveDateModal schedule={goLiveFor} onClose={() => setGoLiveFor(null)} onChanged={onChanged} />
     </div>
   )
 }

@@ -18,6 +18,9 @@ import type {
   PlannerSettings,
   PlannerTeacher,
   MySchedule,
+  RetimeModel,
+  RetimePreview,
+  RetimeRequest,
   ScheduleDraft,
   ScheduleSession,
   ScheduleSummary,
@@ -275,6 +278,42 @@ export const publishSchedule = async (scheduleId: string): Promise<ApiResponse<S
   apiClient<ApiResponse<ScheduleDraft>>(
     `${BASE}/schedules/${encodeURIComponent(scheduleId)}/publish`,
     { method: 'POST' }
+  );
+
+// ─── Copy with new times + go-live dates ──────────────────────────────────
+
+/** GET /schedules/:id/retime — the schedule's bells, ready to edit. */
+export const getRetimeModel = async (scheduleId: string): Promise<ApiResponse<RetimeModel>> =>
+  apiClient<ApiResponse<RetimeModel>>(`${BASE}/schedules/${encodeURIComponent(scheduleId)}/retime`);
+
+/** POST /schedules/:id/retime with dryRun — what would move, and new problems. Writes nothing. */
+export const previewRetime = async (
+  scheduleId: string,
+  payload: Omit<RetimeRequest, 'dryRun' | 'name' | 'goLiveOn'>
+): Promise<ApiResponse<RetimePreview>> =>
+  apiClient<ApiResponse<RetimePreview>, RetimeRequest>(
+    `${BASE}/schedules/${encodeURIComponent(scheduleId)}/retime`,
+    { method: 'POST', body: { ...payload, dryRun: true } }
+  );
+
+/** POST /schedules/:id/retime — save the copy as a new draft (optionally going live on a date). */
+export const createRetimedSchedule = async (
+  scheduleId: string,
+  payload: Omit<RetimeRequest, 'dryRun'>
+): Promise<ApiResponse<{ schedule: ScheduleDraft; preview: RetimePreview }>> =>
+  apiClient<ApiResponse<{ schedule: ScheduleDraft; preview: RetimePreview }>, RetimeRequest>(
+    `${BASE}/schedules/${encodeURIComponent(scheduleId)}/retime`,
+    { method: 'POST', body: { ...payload, dryRun: false } }
+  );
+
+/** PUT /schedules/:id/go-live — set, move or retry (yyyy-mm-dd), or remove (null). */
+export const setScheduleGoLive = async (
+  scheduleId: string,
+  goLiveOn: string | null
+): Promise<ApiResponse<ScheduleSummary>> =>
+  apiClient<ApiResponse<ScheduleSummary>, { goLiveOn: string | null }>(
+    `${BASE}/schedules/${encodeURIComponent(scheduleId)}/go-live`,
+    { method: 'PUT', body: { goLiveOn } }
   );
 
 export type SchedulePdfView = 'class' | 'teacher' | 'day';

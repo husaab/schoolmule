@@ -184,6 +184,8 @@ export interface GenerateRequest {
   baseScheduleId?: string;
 }
 
+export type GoLiveStatus = 'pending' | 'running' | 'done' | 'failed';
+
 export interface ScheduleSummary {
   scheduleId: string;
   school: string;
@@ -193,12 +195,101 @@ export interface ScheduleSummary {
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** The schedule this one was copied from with new times */
+  sourceScheduleId?: string | null;
+  /** Carries its own breaks + school hours (a copy with new times, or a schedule that was live and got replaced) */
+  hasOwnBellTimes?: boolean;
+  /** yyyy-mm-dd it publishes itself (America/Toronto) */
+  goLiveOn?: string | null;
+  goLiveStatus?: GoLiveStatus | null;
+  goLiveError?: string | null;
+  /** yyyy-mm-dd it went live / last day it was live */
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+}
+
+/** The breaks and school hours a schedule was made for. */
+export interface BellTimes {
+  fixedBlocks: Omit<FixedBlock, 'fixedBlockId'>[];
+  dayTemplates: DayTemplate[];
 }
 
 export interface ScheduleDraft extends ScheduleSummary {
   sessions: ScheduleSession[];
   diagnostics?: SolverDiagnostic[] | null;
   configSnapshot?: Record<string, unknown> | null;
+  /** Own bell times; null = the year's live config */
+  bellTimes?: BellTimes | null;
+}
+
+// ─── Copy with new times ─────────────────────────────────────────────────
+
+/** One editable line of a bell schedule: a period (classes move with it) or a break. */
+export interface RetimeRow {
+  rowId: string;
+  kind: 'period' | 'break';
+  label: string;
+  startMin: number;
+  endMin: number;
+  days: number[];
+  /** Breaks: the class groups it applies to (empty = whole school) */
+  classGroupIds?: string[];
+  /** Periods: how many classes meet in it */
+  sessionCount?: number;
+}
+
+/** Grades that share period times, e.g. "Grades 1–4 · JK · SK". */
+export interface RetimeBell {
+  bellId: string;
+  label: string;
+  classGroupIds: string[];
+  rows: RetimeRow[];
+}
+
+export interface RetimeHours {
+  rowId: string;
+  startMin: number;
+  endMin: number;
+  days: number[];
+}
+
+export interface RetimeModel {
+  schedule: ScheduleSummary;
+  bells: RetimeBell[];
+  hours: RetimeHours[];
+  /** Blocks such as "JK not in session" that follow the bell times automatically */
+  adjustableBlocks: number;
+}
+
+export interface RetimeEdits {
+  rows?: { rowId: string; startMin?: number; endMin?: number; removed?: boolean }[];
+  added?: { label: string; startMin: number; endMin: number; classGroupIds: string[]; days?: number[] }[];
+  hours?: { rowId: string; startMin: number; endMin: number }[];
+}
+
+export type RetimeWarningCode =
+  | 'TEACHER_CLASH'
+  | 'CLASS_CLASH'
+  | 'ROOM_CLASH'
+  | 'IN_BREAK'
+  | 'OUTSIDE_HOURS'
+  | 'TEACHER_UNAVAILABLE';
+
+export interface RetimePreview {
+  totals: { sessions: number; moved: number };
+  movedByRow: Record<string, number>;
+  adjustedBlocks: { label: string; days: number[]; from: TimeRange; to: TimeRange }[];
+  unmatchedBlocks: { label: string; days: number[]; startMin: number; endMin: number }[];
+  unmapped: { classGroupName: string | null; courseName: string; dayOfWeek: number; startMin: number; endMin: number }[];
+  /** Only problems the new times create, not ones the schedule already had */
+  warnings: { code: RetimeWarningCode; dayOfWeek: number; message: string }[];
+}
+
+export interface RetimeRequest {
+  edits: RetimeEdits;
+  name?: string;
+  goLiveOn?: string | null;
+  dryRun?: boolean;
 }
 
 /** Materialized session (published schedule; used by widget + public page) */
@@ -233,7 +324,7 @@ export interface MySchedule {
   /** Breaks snapshotted at publish time (Snack, Lunch, Salat) */
   fixedBlocks: FixedBlock[];
   dayTemplates: DayTemplate[];
-  schedule: { scheduleId: string; name: string; publishedAt: string } | null;
+  schedule: { scheduleId: string; name: string; publishedAt: string; effectiveFrom?: string | null } | null;
   /** Monday of the current week, yyyy-mm-dd */
   weekStart: string;
   /** School closures overlapping the current week */

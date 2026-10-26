@@ -33,6 +33,7 @@ import SessionEditorModal, {
 } from '@/components/schedulePlanner/SessionEditorModal'
 import { findConflicts } from '@/components/schedulePlanner/conflicts'
 import { dayLabel } from '@/components/schedulePlanner/timeUtils'
+import { withBellTimes } from '@/lib/bellTimes'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
@@ -86,6 +87,8 @@ const ScheduleWorkspacePage = () => {
   const [currentScheduleId, setCurrentScheduleId] = useState<string | null>(isNew ? null : scheduleId)
   const [scheduleStatus, setScheduleStatus] = useState<'draft' | 'published' | null>(null)
   const [showPublishConfirm, setShowPublishConfirm] = useState(false)
+  // A copy made with new times carries its own breaks and school hours.
+  const [hasOwnBellTimes, setHasOwnBellTimes] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Manual builder: hand-place sessions instead of (or on top of) generating.
@@ -110,18 +113,23 @@ const ScheduleWorkspacePage = () => {
     const load = async () => {
       try {
         const configRes = await getPlannerConfig()
-        if (configRes.status === 'success') setConfig(configRes.data)
+        let nextConfig = configRes.status === 'success' ? configRes.data : null
         if (!isNew) {
           const scheduleRes = await getSchedule(scheduleId)
           if (scheduleRes.status === 'success') {
             loadSessions(scheduleRes.data.sessions)
             setScheduleName(scheduleRes.data.name)
             setScheduleStatus(scheduleRes.data.status)
+            // Show the breaks and hours this schedule was made for, not the year's live ones.
+            const own = scheduleRes.data.bellTimes
+            setHasOwnBellTimes(!!own)
+            if (nextConfig) nextConfig = withBellTimes(nextConfig, own)
           }
         } else {
           reset()
           setScheduleName('')
         }
+        if (nextConfig) setConfig(nextConfig)
       } catch (err) {
         console.error('Error loading workspace:', err)
         showNotification('Error loading schedule workspace', 'error')
@@ -338,6 +346,14 @@ const ScheduleWorkspacePage = () => {
   }
 
   const handleGenerate = async (opts?: { baseScheduleId?: string }) => {
+    // The solver works from the school's live breaks and hours, not this copy's own.
+    if (hasOwnBellTimes) {
+      showNotification(
+        'This copy has its own bell times, but generating uses the school’s current ones. Publish it first, or edit it by hand.',
+        'error'
+      )
+      return
+    }
     const baseScheduleId = opts?.baseScheduleId
     setGenerating(true)
     setDiagnostics(null)
@@ -427,6 +443,7 @@ const ScheduleWorkspacePage = () => {
       const res = await publishSchedule(currentScheduleId)
       if (res.status === 'success') {
         setScheduleStatus('published')
+        setHasOwnBellTimes(false)
         showNotification('Schedule published — teachers and the public link now see it', 'success')
       }
     } catch (err) {
@@ -830,6 +847,8 @@ const ScheduleWorkspacePage = () => {
               It becomes the school&apos;s live timetable: teachers see it on their dashboard and the
               public share link starts working. Any previously published schedule is demoted to a
               draft.
+              {hasOwnBellTimes &&
+                ' This schedule has its own bell times, so its breaks and school hours also become the school’s. The schedule it replaces keeps its times for later.'}
             </p>
             <div className="flex justify-end gap-2">
               <button
