@@ -328,25 +328,23 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Danger Zone */}
-          {user.school !== 'PLAYGROUND' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <TrashIcon className="w-5 h-5 text-red-400" />
-                <h3 className="text-lg font-semibold text-slate-900">Danger Zone</h3>
-              </div>
-              <p className="text-sm text-slate-500 mb-4">
-                Once you delete your account, there is no going back. Please be certain.
-              </p>
-              <button
-                onClick={() => setDeleteModalOpen(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-medium cursor-pointer"
-              >
-                <TrashIcon className="w-4 h-4" />
-                Delete Account
-              </button>
+          {/* Danger Zone: every account, the demo school's too (App Review signs in there). */}
+          <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <TrashIcon className="w-5 h-5 text-red-400" />
+              <h3 className="text-lg font-semibold text-slate-900">Danger Zone</h3>
             </div>
-          )}
+            <p className="text-sm text-slate-500 mb-4">
+              Once you delete your account, there is no going back. Please be certain.
+            </p>
+            <button
+              onClick={() => setDeleteModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-medium cursor-pointer"
+            >
+              <TrashIcon className="w-4 h-4" />
+              Delete Account
+            </button>
+          </div>
         </div>
       </main>
 

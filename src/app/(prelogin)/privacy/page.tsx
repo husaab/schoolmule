@@ -4,7 +4,7 @@ import LegalPage from '@/components/legal/LegalPage'
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="Last updated 25 October 2026">
+    <LegalPage title="Privacy Policy" updated="Last updated 26 October 2026">
       <p>
         SchoolMule is school administration software used by schools to manage student
         records, attendance, grades, report cards and registration forms. This policy
@@ -151,6 +151,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Railway</strong> — application hosting.</li>
         <li><strong>Resend</strong> — transactional email.</li>
         <li><strong>Expo</strong> — delivers the app&apos;s push notifications, through Apple&apos;s and Google&apos;s notification services.</li>
+        <li><strong>OpenAI</strong> — writes the AI drafts and summaries some features offer: a parent&apos;s weekly summary of their child&apos;s week, the report card and progress report comments a teacher asks it to draft, and insights on a school&apos;s analytics page. We send only what the feature needs, such as a student&apos;s name, marks, attendance and a teacher&apos;s notes, never passwords or contact details. OpenAI does not use data sent through its API to train its models.</li>
         <li><strong>Google</strong> — when you choose to sign in with Google, and where a school has connected the optional Sheets integration described above.</li>
       </ul>
 
