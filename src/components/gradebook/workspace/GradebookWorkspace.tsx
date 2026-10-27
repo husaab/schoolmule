@@ -102,7 +102,7 @@ import Spinner from '@/components/Spinner'
 import Avatar from '@/components/avatar/Avatar'
 import ClassStatsModal from '@/components/gradebook/classStats/ClassStatsModal'
 import { useStatsExclusions } from '@/hooks/useStatsExclusions'
-import { classAverage as poolAverage, leftOutIndex, toggledColumn } from '@/lib/classStats'
+import { classAverage as poolAverage, leftOutIndex, leftOutOfClassCount, leftOutSummary, statusLine, toggledColumn } from '@/lib/classStats'
 import type { StatsLeftOutControl } from '@/components/assessments/scores/StatusControl'
 import { readGridDensity, scoreTone, writeGridDensity, type GridDensity } from '@/lib/gradesLayout'
 
@@ -458,7 +458,8 @@ export default function GradebookWorkspace({
   const assessedCount = termGrades.filter((g) => g.pct != null).length
   const classAverage = poolAverage(termGrades, leftOut, 'counted').average
   const everyoneAverage = poolAverage(termGrades, leftOut, 'everyone').average
-  const leftOutOfClass = statsExclusions.exclusions.filter((e) => e.scope === 'class').length
+  const leftOutOfClass = leftOutOfClassCount(statsExclusions.exclusions)
+  const assessmentNames = useMemo(() => new Map(assessments.map((a) => [a.assessmentId, a.name])), [assessments])
   useEffect(() => {
     if (!loading && !error) onClassAverage?.(classAverage)
   }, [classAverage, loading, error, onClassAverage])
@@ -715,12 +716,10 @@ export default function GradebookWorkspace({
   // for the student (a student left out of the whole class is changed in the
   // window instead).
   const toggleColumnStats = async (stu: StudentPayload, a: AssessmentPayload) => {
-    const next = toggledColumn(statsExclusions.byStudent.get(stu.studentId), a.assessmentId)
-    if (next === undefined) return
     try {
-      if (next === null) await statsExclusions.remove(stu.studentId)
-      else await statsExclusions.save(stu.studentId, next)
-      const nowOut = next !== null && next.assessmentIds.includes(a.assessmentId)
+      const after = await statsExclusions.update(stu.studentId, (current) => toggledColumn(current, a.assessmentId))
+      if (after?.scope === 'class') return
+      const nowOut = Boolean(after?.assessmentIds.includes(a.assessmentId))
       showNotification(
         nowOut
           ? `${stu.name} is left out of the class average for ${a.name}`
@@ -732,9 +731,9 @@ export default function GradebookWorkspace({
     }
   }
   const statsControl = (stu: StudentPayload, a: AssessmentPayload): StatsLeftOutControl => {
-    const e = statsExclusions.byStudent.get(stu.studentId)
+    const out = leftOut.get(stu.studentId)
     return {
-      state: e?.scope === 'class' ? 'class' : e?.assessmentIds.includes(a.assessmentId) ? 'assessment' : null,
+      state: out?.wholeClass ? 'class' : out?.assessmentIds.has(a.assessmentId) ? 'assessment' : null,
       onToggle: () => void toggleColumnStats(stu, a),
     }
   }
@@ -810,9 +809,7 @@ export default function GradebookWorkspace({
                 className="inline-flex cursor-pointer items-center self-center rounded-full border border-dashed border-slate-400 bg-white px-2 py-px text-xs font-medium text-slate-600 hover:border-cyan-500 hover:text-cyan-700"
                 title="Choose who counts in the class average"
               >
-                {leftOutOfClass > 0
-                  ? `${leftOutOfClass} left out`
-                  : `${statsExclusions.exclusions.length} left out of some averages`}
+                {leftOutSummary(statsExclusions.exclusions)}
               </button>
             )}
             {leftOutOfClass > 0 && (
@@ -1015,11 +1012,7 @@ export default function GradebookWorkspace({
                               type="button"
                               onClick={() => setStatsWindow({ focusStudentId: stu.studentId })}
                               className="inline-flex shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border border-dashed border-slate-400 bg-white px-1.5 py-px text-[10px] font-medium text-slate-500 hover:border-cyan-500 hover:text-cyan-700"
-                              title={`Left out of the class average${
-                                statsExclusions.byStudent.get(stu.studentId)?.note
-                                  ? ` · ${statsExclusions.byStudent.get(stu.studentId)?.note}`
-                                  : ''
-                              }`}
+                              title={statusLine(statsExclusions.byStudent.get(stu.studentId), false, assessmentNames)}
                             >
                               Not in avg
                             </button>

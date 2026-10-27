@@ -1,12 +1,20 @@
 'use client'
 
 // Who counts in a class's statistics, for the gradebook and the class page:
-// the class's exclusions (staff only), plus saving and removing one. Each
-// write replaces that student's entry with what the server now holds.
+// the class's exclusions (staff only), and changing one student's. Changes to
+// one student run one at a time, each deciding from what the server last
+// returned, so two quick taps can't build on a stale list (a save replaces
+// everything that student is left out of).
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getStatsExclusions, removeStatsExclusion, saveStatsExclusion } from '@/services/classStatsExclusionService'
 import type { StatsExclusion, StatsExclusionInput } from '@/services/types/classStatsExclusion'
+
+/**
+ * Given the student's current exclusion, what to save: the new exclusion,
+ * null to count them everywhere again, or undefined to leave it as it is.
+ */
+export type StatsExclusionDecision = (current: StatsExclusion | undefined) => StatsExclusionInput | null | undefined
 
 export interface StatsExclusionsState {
   exclusions: StatsExclusion[]
@@ -15,23 +23,29 @@ export interface StatsExclusionsState {
   loading: boolean
   error: string | null
   reload: () => Promise<void>
-  /** Throws when the save fails, so the caller can say so. */
-  save: (studentId: string, input: StatsExclusionInput) => Promise<StatsExclusion>
-  /** Counts the student in every class statistic again. Throws on failure. */
-  remove: (studentId: string) => Promise<void>
+  /** Changes one student's exclusion; resolves to what the server now holds (null: counted). Throws on failure. */
+  update: (studentId: string, decide: StatsExclusionDecision) => Promise<StatsExclusion | null>
 }
 
 export function useStatsExclusions(classId: string | null | undefined): StatsExclusionsState {
   const [exclusions, setExclusions] = useState<StatsExclusion[]>([])
   const [loading, setLoading] = useState(Boolean(classId))
   const [error, setError] = useState<string | null>(null)
+  // The newest list, read by queued changes before React re-renders.
+  const latestRef = useRef<StatsExclusion[]>([])
+  const queuesRef = useRef(new Map<string, Promise<unknown>>())
+
+  const replaceAll = (next: StatsExclusion[]) => {
+    latestRef.current = next
+    setExclusions(next)
+  }
 
   const reload = useCallback(async () => {
     if (!classId) return
     setLoading(true)
     try {
       const res = await getStatsExclusions(classId)
-      setExclusions(res.data ?? [])
+      replaceAll(res.data ?? [])
       setError(null)
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Couldn't load who counts in the class average")
@@ -44,26 +58,32 @@ export function useStatsExclusions(classId: string | null | undefined): StatsExc
     void reload()
   }, [reload])
 
-  const save = useCallback(
-    async (studentId: string, input: StatsExclusionInput) => {
-      if (!classId) throw new Error('No class')
-      const res = await saveStatsExclusion(classId, studentId, input)
-      setExclusions((prev) => [...prev.filter((e) => e.studentId !== studentId), res.data])
-      return res.data
-    },
-    [classId],
-  )
-
-  const remove = useCallback(
-    async (studentId: string) => {
-      if (!classId) throw new Error('No class')
-      await removeStatsExclusion(classId, studentId)
-      setExclusions((prev) => prev.filter((e) => e.studentId !== studentId))
+  const update = useCallback(
+    (studentId: string, decide: StatsExclusionDecision) => {
+      const run = async (): Promise<StatsExclusion | null> => {
+        if (!classId) throw new Error('No class')
+        const current = latestRef.current.find((e) => e.studentId === studentId)
+        const next = decide(current)
+        if (next === undefined) return current ?? null
+        const others = latestRef.current.filter((e) => e.studentId !== studentId)
+        if (next === null) {
+          if (current) await removeStatsExclusion(classId, studentId)
+          replaceAll(others)
+          return null
+        }
+        const res = await saveStatsExclusion(classId, studentId, next)
+        replaceAll([...others, res.data])
+        return res.data
+      }
+      // After this student's previous change, whether it worked or not.
+      const queued = (queuesRef.current.get(studentId) ?? Promise.resolve()).catch(() => undefined).then(run)
+      queuesRef.current.set(studentId, queued)
+      return queued
     },
     [classId],
   )
 
   const byStudent = useMemo(() => new Map(exclusions.map((e) => [e.studentId, e])), [exclusions])
 
-  return { exclusions, byStudent, loading, error, reload, save, remove }
+  return { exclusions, byStudent, loading, error, reload, update }
 }

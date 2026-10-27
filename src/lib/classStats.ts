@@ -55,13 +55,32 @@ export function inPool(leftOut: LeftOut | undefined, pool: StatsPool, assessment
   return assessmentId == null || !leftOut.assessmentIds.has(assessmentId)
 }
 
-/** How many students are out of the counted pool for the class, or for one assessment. */
-export function leftOutCount(
-  studentIds: string[],
-  index: Map<string, LeftOut>,
-  assessmentId: string | null = null,
-): number {
-  return studentIds.filter((id) => !inPool(index.get(id), 'counted', assessmentId)).length
+/** Classes shows students a class average only when at least this many count (the server's MIN_STUDENTS_FOR_AVERAGE). */
+export const CLASSROOM_AVERAGE_FLOOR = 5
+
+/** How many students are left out of the whole class. */
+export const leftOutOfClassCount = (exclusions: StatsExclusion[]) => exclusions.filter((e) => e.scope === 'class').length
+
+/** "2 left out · 1 left out of some assessments", or "Everyone counts". */
+export function leftOutSummary(exclusions: StatsExclusion[]): string {
+  const wholeClass = leftOutOfClassCount(exclusions)
+  const someOnly = exclusions.length - wholeClass
+  const parts = [wholeClass > 0 && `${wholeClass} left out`, someOnly > 0 && `${someOnly} left out of some assessments`].filter(Boolean)
+  return parts.length ? parts.join(' · ') : 'Everyone counts'
+}
+
+/**
+ * A student's line in "Who counts in the class average": what they're left
+ * out of and the note. `picking`: chose "Only some assessments", none ticked yet.
+ */
+export function statusLine(e: StatsExclusion | undefined, picking: boolean, names: Map<string, string>): string {
+  if (picking) return 'Pick the assessments to leave them out of'
+  if (!e) return 'Counted'
+  const note = e.note ? ` · ${e.note}` : ''
+  if (e.scope === 'class') return `Left out of the class average${note}`
+  const listed = e.assessmentIds.map((id) => names.get(id)).filter(Boolean)
+  const what = listed.length === 1 ? `the average for ${listed[0]}` : `${e.assessmentIds.length} assessment averages`
+  return `Left out of ${what}${note}`
 }
 
 const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null)

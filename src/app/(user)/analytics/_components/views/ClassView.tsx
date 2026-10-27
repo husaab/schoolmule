@@ -117,7 +117,7 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
               className="rounded-full border border-dashed border-slate-400 px-1.5 py-px text-[10px] font-medium text-slate-500"
               title="Left out of the class's statistics by the teacher. Their own grade is unchanged."
             >
-              Not in class stats
+              Not in class average
             </span>
           )}
         </span>

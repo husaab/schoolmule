@@ -12,15 +12,12 @@ import { ChartBarIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, ModalBody, ModalFooter, ModalHeader, textareaClass } from '@/components/shared/modalKit'
 import Avatar from '@/components/avatar/Avatar'
-import { classAverage, leftOutIndex } from '@/lib/classStats'
+import { CLASSROOM_AVERAGE_FLOOR, classAverage, leftOutIndex, leftOutOfClassCount, statusLine, toggledColumn } from '@/lib/classStats'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import type { StudentPayload } from '@/services/types/student'
 import type { AssessmentPayload } from '@/services/types/assessment'
-import type { StatsExclusion, StatsExclusionInput } from '@/services/types/classStatsExclusion'
-import type { StatsExclusionsState } from '@/hooks/useStatsExclusions'
-
-/** Classes shows students a class average only when at least this many count (the server's floor). */
-const CLASSROOM_FLOOR = 5
+import type { StatsExclusion } from '@/services/types/classStatsExclusion'
+import type { StatsExclusionDecision, StatsExclusionsState } from '@/hooks/useStatsExclusions'
 
 interface ClassStatsModalProps {
   isOpen: boolean
@@ -38,17 +35,6 @@ interface ClassStatsModalProps {
 }
 
 const pct = (v: number | null) => (v == null ? '—' : `${v.toFixed(1)}%`)
-
-/** "Left out of the class average · note" and the like, for a row's second line. */
-function statusLine(e: StatsExclusion | undefined, picking: boolean, names: Map<string, string>): string {
-  if (picking) return 'Pick the assessments to leave them out of'
-  if (!e) return 'Counted'
-  const note = e.note ? ` · ${e.note}` : ''
-  if (e.scope === 'class') return `Left out of the class average${note}`
-  const listed = e.assessmentIds.map((id) => names.get(id)).filter(Boolean)
-  const what = listed.length === 1 ? `the average for ${listed[0]}` : `${e.assessmentIds.length} assessment averages`
-  return `Left out of ${what}${note}`
-}
 
 const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
   isOpen,
@@ -82,13 +68,37 @@ const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
     const grades = students.map((s) => ({ studentId: s.studentId, pct: gradeOf(s.studentId) }))
     return { counted: classAverage(grades, index, 'counted'), everyone: classAverage(grades, index, 'everyone') }
   }, [gradeOf, exclusions.exclusions, assessments, students])
-  const leftOutOfClass = exclusions.exclusions.filter((e) => e.scope === 'class').length
+  const leftOutOfClass = leftOutOfClassCount(exclusions.exclusions)
 
-  const run = async (studentId: string, name: string, work: () => Promise<unknown>, done: string) => {
+  /** The note to save: what's typed, else the note the student already has. */
+  const noteFor = (studentId: string, current: StatsExclusion | undefined) =>
+    (noteDrafts[studentId] ?? current?.note ?? '').trim() || null
+  const noteOf = (studentId: string) => noteDrafts[studentId] ?? byStudent.get(studentId)?.note ?? ''
+
+  // One change for a student: saved, then the typed note and the half-made
+  // "only some assessments" choice are forgotten (the server now holds them).
+  const change = async (
+    studentId: string,
+    name: string,
+    decide: StatsExclusionDecision,
+    done: (after: StatsExclusion | null) => string | null,
+  ) => {
     setBusyId(studentId)
     try {
-      await work()
-      showNotification(done, 'success')
+      const after = await exclusions.update(studentId, decide)
+      setNoteDrafts((prev) => {
+        const next = { ...prev }
+        delete next[studentId]
+        return next
+      })
+      setPicking((prev) => {
+        const next = new Set(prev)
+        next.delete(studentId)
+        return next
+      })
+      if (!after) setOpenId((id) => (id === studentId ? null : id))
+      const message = done(after)
+      if (message) showNotification(message, 'success')
     } catch (err) {
       showNotification(err instanceof Error && err.message ? err.message : `Couldn't change ${name}. Try again.`, 'error')
     } finally {
@@ -96,48 +106,46 @@ const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
     }
   }
 
-  const stopPicking = (studentId: string) =>
-    setPicking((prev) => {
-      const next = new Set(prev)
-      next.delete(studentId)
-      return next
-    })
-
-  const save = (studentId: string, name: string, input: StatsExclusionInput, done: string) =>
-    run(studentId, name, () => exclusions.save(studentId, input), done).then(() => stopPicking(studentId))
-
   const countAgain = (studentId: string, name: string) =>
-    run(studentId, name, () => exclusions.remove(studentId), `${name} counts in the class average again`).then(() => {
-      stopPicking(studentId)
-      setOpenId(null)
-    })
+    change(studentId, name, () => null, () => `${name} counts in the class average again`)
 
-  const noteOf = (studentId: string) => noteDrafts[studentId] ?? byStudent.get(studentId)?.note ?? ''
-  const cleanNote = (studentId: string) => noteOf(studentId).trim() || null
-
-  const toggleSwitch = (studentId: string, name: string) => {
-    const current = byStudent.get(studentId)
-    if (current?.scope === 'class') return void countAgain(studentId, name)
-    setOpenId(studentId)
-    void save(studentId, name, { scope: 'class', note: cleanNote(studentId) }, `${name} is left out of the class average`)
-  }
-
-  const toggleColumn = (studentId: string, name: string, assessmentId: string) => {
-    const current = byStudent.get(studentId)
-    const ids = current?.scope === 'assessments' ? current.assessmentIds : []
-    const next = ids.includes(assessmentId) ? ids.filter((id) => id !== assessmentId) : [...ids, assessmentId]
-    if (next.length === 0) return void countAgain(studentId, name)
-    void save(studentId, name, { scope: 'assessments', assessmentIds: next, note: cleanNote(studentId) }, `Saved for ${name}`)
-  }
-
-  const saveNote = (studentId: string, name: string) => {
-    const current = byStudent.get(studentId)
-    if (!current || (current.note ?? '') === (cleanNote(studentId) ?? '')) return
-    void save(
+  const leaveOutOfClass = (studentId: string, name: string) =>
+    change(
       studentId,
       name,
-      { scope: current.scope, assessmentIds: current.assessmentIds, note: cleanNote(studentId) },
-      `Note saved for ${name}`,
+      (current) => (current?.scope === 'class' ? undefined : { scope: 'class', note: noteFor(studentId, current) }),
+      () => `${name} is left out of the class average`,
+    )
+
+  const toggleSwitch = (studentId: string, name: string) => {
+    if (byStudent.get(studentId)?.scope === 'class') return void countAgain(studentId, name)
+    setOpenId(studentId)
+    void leaveOutOfClass(studentId, name)
+  }
+
+  // A column chip: replaces a whole-class exclusion with just this column.
+  const toggleColumn = (studentId: string, name: string, assessmentId: string) =>
+    void change(
+      studentId,
+      name,
+      (current) => {
+        const next = toggledColumn(current?.scope === 'assessments' ? current : undefined, assessmentId)
+        return next && { ...next, note: noteFor(studentId, current) }
+      },
+      (after) => (after ? `Saved for ${name}` : `${name} counts in the class average again`),
+    )
+
+  const saveNote = (studentId: string, name: string) => {
+    if (noteDrafts[studentId] === undefined) return
+    void change(
+      studentId,
+      name,
+      (current) => {
+        const note = noteFor(studentId, current)
+        if (!current || (current.note ?? null) === note) return undefined
+        return { scope: current.scope, assessmentIds: current.assessmentIds, note }
+      },
+      (after) => (after ? `Note saved for ${name}` : null),
     )
   }
 
@@ -162,9 +170,9 @@ const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
             </span>
           </div>
         )}
-        {summary && summary.counted.n > 0 && summary.counted.n < CLASSROOM_FLOOR && (
+        {summary && summary.counted.n > 0 && summary.counted.n < CLASSROOM_AVERAGE_FLOOR && (
           <p className="text-[13px] text-amber-700">
-            With fewer than {CLASSROOM_FLOOR} students counted, Classes won&apos;t show students a class average.
+            With fewer than {CLASSROOM_AVERAGE_FLOOR} students counted, Classes won&apos;t show students a class average.
           </p>
         )}
         {exclusions.error && <p className="text-sm text-rose-700">{exclusions.error}</p>}
@@ -224,10 +232,7 @@ const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
                         <ScopePill
                           pressed={mode === 'class'}
                           disabled={readOnly || busy}
-                          onClick={() => {
-                            if (mode === 'class') return
-                            void save(stu.studentId, stu.name, { scope: 'class', note: cleanNote(stu.studentId) }, `${stu.name} is left out of the class average`)
-                          }}
+                          onClick={() => void leaveOutOfClass(stu.studentId, stu.name)}
                         >
                           The whole class
                         </ScopePill>

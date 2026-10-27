@@ -7,6 +7,7 @@
 import React, { useState } from 'react'
 import ClassStatsModal from '@/components/gradebook/classStats/ClassStatsModal'
 import { useStatsExclusions } from '@/hooks/useStatsExclusions'
+import { leftOutSummary } from '@/lib/classStats'
 import { getAssessmentsByClass, getStudentsInClass } from '@/services/classService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import type { StudentPayload } from '@/services/types/student'
@@ -36,14 +37,7 @@ export default function ClassStatsRow({ classId, canEdit }: ClassStatsRowProps) 
     }
   }
 
-  const wholeClass = exclusions.exclusions.filter((e) => e.scope === 'class').length
-  const someOnly = exclusions.exclusions.length - wholeClass
-  const summary =
-    exclusions.exclusions.length === 0
-      ? 'Everyone counts'
-      : [wholeClass > 0 && `${wholeClass} left out`, someOnly > 0 && `${someOnly} left out of some assessments`]
-          .filter(Boolean)
-          .join(' · ')
+  const summary = leftOutSummary(exclusions.exclusions)
 
   return (
     <div className="flex items-center justify-between gap-4 text-sm text-slate-800">

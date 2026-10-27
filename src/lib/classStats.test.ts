@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assessmentAverage, classAverage, inPool, leftOutCount, leftOutIndex, toggledColumn } from './classStats'
+import { assessmentAverage, classAverage, inPool, leftOutIndex, leftOutSummary, statusLine, toggledColumn } from './classStats'
 import { buildScoreLookup, type EngineAssessment } from './gradeEngine'
 import type { StatsExclusion } from '@/services/types/classStatsExclusion'
 
@@ -55,11 +55,6 @@ describe('inPool', () => {
     expect(inPool(index.get('s2'), 'counted')).toBe(true)
     expect(inPool(index.get('s2'), 'counted', 'q1')).toBe(false)
     expect(inPool(index.get('s2'), 'counted', 'q2')).toBe(true)
-  })
-
-  it('counts who is left out', () => {
-    expect(leftOutCount(['s1', 's2', 's3'], index)).toBe(1)
-    expect(leftOutCount(['s1', 's2', 's3'], index, 'q1')).toBe(2)
   })
 })
 
@@ -117,5 +112,24 @@ describe('toggledColumn', () => {
 
   it('has nothing to toggle for a student left out of the whole class', () => {
     expect(toggledColumn(exclusion('s1'), 'q1')).toBeUndefined()
+  })
+})
+
+describe('leftOutSummary and statusLine', () => {
+  const names = new Map([['q1', 'Quiz 1'], ['q2', 'Quiz 2']])
+
+  it('counts the whole class and some assessments separately', () => {
+    expect(leftOutSummary([])).toBe('Everyone counts')
+    expect(leftOutSummary([exclusion('s1'), exclusion('s2', { scope: 'assessments', assessmentIds: ['q1'] })])).toBe(
+      '1 left out · 1 left out of some assessments',
+    )
+  })
+
+  it("says what a student is left out of, with the note", () => {
+    expect(statusLine(undefined, false, names)).toBe('Counted')
+    expect(statusLine(exclusion('s1', { note: 'ESL newcomer' }), false, names)).toBe('Left out of the class average · ESL newcomer')
+    expect(statusLine(exclusion('s1', { scope: 'assessments', assessmentIds: ['q1'] }), false, names)).toBe('Left out of the average for Quiz 1')
+    expect(statusLine(exclusion('s1', { scope: 'assessments', assessmentIds: ['q1', 'q2'] }), false, names)).toBe('Left out of 2 assessment averages')
+    expect(statusLine(undefined, true, names)).toBe('Pick the assessments to leave them out of')
   })
 })
