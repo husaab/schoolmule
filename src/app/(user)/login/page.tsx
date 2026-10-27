@@ -156,10 +156,6 @@ const LoginPage: FC = () => {
                   Sign up
                 </Link>
               </p>
-              {/* Students sign in with the same form; this is for one who has no account yet. */}
-              <p className="text-center mt-2 text-xs text-slate-500">
-                Student? Choose your school on the sign-up page, then &ldquo;I am a student&rdquo; to ask for an account.
-              </p>
             </div>
           </div>
         </div>
