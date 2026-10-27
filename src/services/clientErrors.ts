@@ -2,7 +2,8 @@
 // Collects browser-side failures and sends them to the backend in small
 // batches. Fire-and-forget: nothing here may throw or loop on its own
 // failures, so the reporter never reports itself.
-export type ClientEventKind = 'js_error' | 'unhandled_rejection' | 'api_failure' | 'render_error' | 'redirect_loop'
+// push_tap: the mobile app's trace of a tapped notification (what arrived, what it opened).
+export type ClientEventKind = 'js_error' | 'unhandled_rejection' | 'api_failure' | 'render_error' | 'redirect_loop' | 'push_tap'
 
 export interface ClientEvent {
   kind: ClientEventKind
