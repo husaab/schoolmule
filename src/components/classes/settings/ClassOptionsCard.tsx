@@ -1,12 +1,14 @@
 // src/components/classes/settings/ClassOptionsCard.tsx
 // Settings → Class options: three switches that save the moment they change,
-// and the school's private-comments rule shown read-only.
+// who counts in the class average, and the school's private-comments rule
+// shown read-only.
 'use client'
 
 import { useState } from 'react'
 import { updateClassOptions } from '@/services/classroomService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import type { ClassOptions } from '@/services/types/classroom'
+import ClassStatsRow from './ClassStatsRow'
 
 interface ClassOptionsCardProps {
   classId: string
@@ -14,6 +16,8 @@ interface ClassOptionsCardProps {
   /** The school's setting (Student accounts → Classroom settings). */
   parentsReadPrivateComments: boolean
   canEdit: boolean
+  /** Who counts in the class average (classes with percentage grades, not JK/SK). */
+  showClassStats?: boolean
   /** The options the server now holds. */
   onChanged: (options: ClassOptions) => void
 }
@@ -29,6 +33,7 @@ export default function ClassOptionsCard({
   options,
   parentsReadPrivateComments,
   canEdit,
+  showClassStats = false,
   onChanged,
 }: ClassOptionsCardProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -70,6 +75,7 @@ export default function ClassOptionsCard({
           </label>
         )
       })}
+      {showClassStats && <ClassStatsRow classId={classId} canEdit={canEdit} />}
       <div className="flex items-center justify-between gap-4 text-sm text-slate-500">
         Parents can read private comments
         <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs">

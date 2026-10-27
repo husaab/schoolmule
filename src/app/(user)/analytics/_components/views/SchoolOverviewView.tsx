@@ -14,6 +14,8 @@ import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
 import QuartileChart from '../charts/QuartileChart'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
+import StatsExclusionsPanel from '@/components/analytics/StatsExclusionsPanel'
+import ClassAvgCell from '../ClassAvgCell'
 
 interface SchoolOverviewViewProps {
   overview: OverviewData
@@ -88,7 +90,7 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
       : []),
     { key: 'teacherName', label: 'Teacher', lowPriority: true },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
-    { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
+    { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => <ClassAvgCell row={c} /> },
     { key: 'classMedian', label: 'Median', numeric: true, render: (c) => fmtPct(c.classMedian) },
   ]
 
@@ -167,6 +169,8 @@ const SchoolOverviewView: React.FC<SchoolOverviewViewProps> = ({
               })
             }
           />
+
+          {params.termId && <StatsExclusionsPanel termId={params.termId} />}
         </div>
 
         {/* AI column. On xl the inner wrapper is absolutely positioned so the

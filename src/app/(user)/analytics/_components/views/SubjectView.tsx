@@ -13,6 +13,7 @@ import { useAnalyticsTermComparison } from '@/components/analytics/useAnalyticsD
 import StatCard from '../StatCard'
 import HistogramChart from '@/components/analytics/charts/HistogramChart'
 import TermComparisonChart from '@/components/analytics/charts/TermComparisonChart'
+import ClassAvgCell from '../ClassAvgCell'
 import AnalyticsTable, { Column } from '../tables/AnalyticsTable'
 import TermComparisonSection from './TermComparisonSection'
 
@@ -61,13 +62,15 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
   // mean of medians, so we only surface an aggregate median when it's a single
   // class.
   // A class with no graded students has classAvg null and carries no weight —
-  // it must not enter the mean as a 0.
-  const gradedClasses = classes.filter((c) => c.classAvg != null)
+  // it must not enter the mean as a 0. A roll-up above the class counts every
+  // student, so it reads each class's average with everyone in it.
+  const everyoneAvg = (c: (typeof classes)[number]) => c.classAvgAll ?? c.classAvg
+  const gradedClasses = classes.filter((c) => everyoneAvg(c) != null)
   const totalStudents = gradedClasses.reduce((sum, c) => sum + c.studentCount, 0)
   const weightedAvg =
     totalStudents > 0
       ? Math.round(
-          (gradedClasses.reduce((sum, c) => sum + (c.classAvg as number) * c.studentCount, 0) / totalStudents) * 10
+          (gradedClasses.reduce((sum, c) => sum + (everyoneAvg(c) as number) * c.studentCount, 0) / totalStudents) * 10
         ) / 10
       : null
   const singleClassMedian = classes.length === 1 ? classes[0].classMedian : null
@@ -83,7 +86,7 @@ const SubjectView: React.FC<SubjectViewProps> = ({ overview, params, aiPanel }) 
     { key: 'grade', label: 'Grade', accessor: (c) => Number(c.grade), numeric: true, render: (c) => <span className="font-semibold text-slate-900">Grade {c.grade}</span> },
     { key: 'teacherName', label: 'Teacher' },
     { key: 'studentCount', label: 'Students', numeric: true, lowPriority: true },
-    { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
+    { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => <ClassAvgCell row={c} /> },
     { key: 'classMedian', label: 'Median', numeric: true, render: (c) => fmtPct(c.classMedian) },
   ]
 

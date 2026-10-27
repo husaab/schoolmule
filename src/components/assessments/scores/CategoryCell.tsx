@@ -14,7 +14,7 @@ import React from 'react'
 import type { AssessmentResult, CellState, ScoreStatus } from '@/lib/gradeEngine'
 import type { CategoryDot } from '@/lib/gridOverlay'
 import { categoryFlag, scoreTone } from '@/lib/gradesLayout'
-import StatusControl from './StatusControl'
+import StatusControl, { StatsLeftOutMark, type StatsLeftOutControl } from './StatusControl'
 import { pillClass } from './ScoreCell'
 
 interface CategoryCellProps {
@@ -37,6 +37,8 @@ interface CategoryCellProps {
   title?: string
   /** Compact rows: the words sit beside the score instead of under it. */
   dense?: boolean
+  /** "Leave out of the class average" in the menu (the gradebook's grid only). */
+  statsLeftOut?: StatsLeftOutControl
 }
 
 /**
@@ -64,6 +66,7 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   className = '',
   title,
   dense = false,
+  statsLeftOut,
 }) => {
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
@@ -108,7 +111,9 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
             ? `Mark all ${childStates.length} items missing? ${gradedChildren} entered score${gradedChildren === 1 ? '' : 's'} will be cleared and count as 0.`
             : undefined
         }
+        statsLeftOut={statsLeftOut}
       />
+      {statsLeftOut?.state === 'assessment' && <StatsLeftOutMark />}
       {onClick ? (
         <button
           type="button"

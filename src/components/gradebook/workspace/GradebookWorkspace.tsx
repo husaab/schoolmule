@@ -100,6 +100,10 @@ import {
 } from '@heroicons/react/24/outline'
 import Spinner from '@/components/Spinner'
 import Avatar from '@/components/avatar/Avatar'
+import ClassStatsModal from '@/components/gradebook/classStats/ClassStatsModal'
+import { useStatsExclusions } from '@/hooks/useStatsExclusions'
+import { classAverage as poolAverage, leftOutIndex, toggledColumn } from '@/lib/classStats'
+import type { StatsLeftOutControl } from '@/components/assessments/scores/StatusControl'
 import { readGridDensity, scoreTone, writeGridDensity, type GridDensity } from '@/lib/gradesLayout'
 
 interface GradebookWorkspaceProps {
@@ -209,6 +213,10 @@ export default function GradebookWorkspace({
   const [selectedStudent, setSelectedStudent] = useState<{ studentId: string; name: string } | null>(null)
   // Excused assessments window
   const [selectedExclusionStudent, setSelectedExclusionStudent] = useState<{ studentId: string; name: string } | null>(null)
+  // Who counts in the class average: the class's exclusions and their window
+  // (opened on one student from a row's chip, or on the whole class).
+  const statsExclusions = useStatsExclusions(classId)
+  const [statsWindow, setStatsWindow] = useState<{ focusStudentId: string | null } | null>(null)
 
   // Assessment jumper: refs for horizontal scroll-to-column + transient highlight
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -439,9 +447,18 @@ export default function GradebookWorkspace({
     )
   }, [students, rowsByStudent, pendingMap, engineAssessments, keepsDrafts])
 
-  // Class average = mean of the students who have any graded work.
-  const assessedPcts = [...liveByStudent.values()].map((v) => v.grade.pct).filter((pct): pct is number => pct != null)
-  const classAverage = assessedPcts.length > 0 ? assessedPcts.reduce((sum, pct) => sum + pct, 0) / assessedPcts.length : null
+  // Class average = mean of the counted students who have any graded work
+  // (students left out of the class's statistics don't count); the figure
+  // with everyone in it shows beside it while anyone is left out.
+  const leftOut = useMemo(
+    () => leftOutIndex(statsExclusions.exclusions, engineAssessments),
+    [statsExclusions.exclusions, engineAssessments],
+  )
+  const termGrades = [...liveByStudent.entries()].map(([studentId, v]) => ({ studentId, pct: v.grade.pct }))
+  const assessedCount = termGrades.filter((g) => g.pct != null).length
+  const classAverage = poolAverage(termGrades, leftOut, 'counted').average
+  const everyoneAverage = poolAverage(termGrades, leftOut, 'everyone').average
+  const leftOutOfClass = statsExclusions.exclusions.filter((e) => e.scope === 'class').length
   useEffect(() => {
     if (!loading && !error) onClassAverage?.(classAverage)
   }, [classAverage, loading, error, onClassAverage])
@@ -694,6 +711,34 @@ export default function GradebookWorkspace({
     }
   }
 
+  // "Leave out of the class average" in a cell's menu: toggles that column
+  // for the student (a student left out of the whole class is changed in the
+  // window instead).
+  const toggleColumnStats = async (stu: StudentPayload, a: AssessmentPayload) => {
+    const next = toggledColumn(statsExclusions.byStudent.get(stu.studentId), a.assessmentId)
+    if (next === undefined) return
+    try {
+      if (next === null) await statsExclusions.remove(stu.studentId)
+      else await statsExclusions.save(stu.studentId, next)
+      const nowOut = next !== null && next.assessmentIds.includes(a.assessmentId)
+      showNotification(
+        nowOut
+          ? `${stu.name} is left out of the class average for ${a.name}`
+          : `${stu.name} counts in the class average for ${a.name} again`,
+        'success',
+      )
+    } catch (err) {
+      showNotification(err instanceof Error && err.message ? err.message : "That didn't save. Try again.", 'error')
+    }
+  }
+  const statsControl = (stu: StudentPayload, a: AssessmentPayload): StatsLeftOutControl => {
+    const e = statsExclusions.byStudent.get(stu.studentId)
+    return {
+      state: e?.scope === 'class' ? 'class' : e?.assessmentIds.includes(a.assessmentId) ? 'assessment' : null,
+      onToggle: () => void toggleColumnStats(stu, a),
+    }
+  }
+
   const openColumn = (a: AssessmentPayload) => {
     if (a.isParent) setSelectedParentAssessment(a)
     else setStandaloneAssessmentId(a.assessmentId)
@@ -744,13 +789,37 @@ export default function GradebookWorkspace({
             {displayedAssessments.length > 0 && `, ${liveLabel}`}
           </span>
           <span>
-            {assessedPcts.length} of {students.length} students assessed
+            {assessedCount} of {students.length} students assessed
           </span>
-          <span className="flex items-baseline gap-1.5">
-            Class average
+          <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+            <button
+              type="button"
+              onClick={() => setStatsWindow({ focusStudentId: null })}
+              className="cursor-pointer underline decoration-slate-300 decoration-dotted underline-offset-4 hover:text-cyan-700 hover:decoration-cyan-400"
+              title="Choose who counts in the class average"
+            >
+              Class average
+            </button>
             <strong className={`font-display text-lg font-semibold tabular-nums ${classAverage == null ? 'text-slate-400' : 'text-slate-900'}`}>
               {classAverage == null ? '—' : `${classAverage.toFixed(1)}%`}
             </strong>
+            {statsExclusions.exclusions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatsWindow({ focusStudentId: null })}
+                className="inline-flex cursor-pointer items-center self-center rounded-full border border-dashed border-slate-400 bg-white px-2 py-px text-xs font-medium text-slate-600 hover:border-cyan-500 hover:text-cyan-700"
+                title="Choose who counts in the class average"
+              >
+                {leftOutOfClass > 0
+                  ? `${leftOutOfClass} left out`
+                  : `${statsExclusions.exclusions.length} left out of some averages`}
+              </button>
+            )}
+            {leftOutOfClass > 0 && (
+              <span className="text-xs tabular-nums text-slate-400">
+                {everyoneAverage == null ? '—' : `${everyoneAverage.toFixed(1)}%`} with everyone
+              </span>
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -941,6 +1010,20 @@ export default function GradebookWorkspace({
                           >
                             {stu.name}
                           </button>
+                          {statsExclusions.byStudent.get(stu.studentId)?.scope === 'class' && (
+                            <button
+                              type="button"
+                              onClick={() => setStatsWindow({ focusStudentId: stu.studentId })}
+                              className="inline-flex shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border border-dashed border-slate-400 bg-white px-1.5 py-px text-[10px] font-medium text-slate-500 hover:border-cyan-500 hover:text-cyan-700"
+                              title={`Left out of the class average${
+                                statsExclusions.byStudent.get(stu.studentId)?.note
+                                  ? ` · ${statsExclusions.byStudent.get(stu.studentId)?.note}`
+                                  : ''
+                              }`}
+                            >
+                              Not in avg
+                            </button>
+                          )}
                           {openThreadsFor(stu.studentId) > 0 && (
                             <button
                               type="button"
@@ -1003,6 +1086,7 @@ export default function GradebookWorkspace({
                               className={`border-l border-t border-slate-100 transition-colors hover:bg-cyan-50/60 ${rowPad} ${highlight}`}
                               title="Open this category's assessments"
                               dense={density === 'compact'}
+                              statsLeftOut={statsControl(stu, a)}
                             />
                           )
                         }
@@ -1025,6 +1109,7 @@ export default function GradebookWorkspace({
                             onCommit={() => void autosave.flush()}
                             onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
+                            statsLeftOut={statsControl(stu, a)}
                             className={`border-l border-t border-slate-100 ${rowPad} ${highlight}`}
                             corner={
                               threadStubs[key] && (
@@ -1151,6 +1236,7 @@ export default function GradebookWorkspace({
           onPublishDrafts={openDraftPublish}
           assessment={standaloneAssessment}
           allAssessments={assessments}
+          leftOut={leftOut}
           students={sortedStudents}
           scoresMatrix={scoresMatrix}
           autosave={autosave}
@@ -1286,6 +1372,19 @@ export default function GradebookWorkspace({
           assessments={assessments}
           scoresMatrix={scoresMatrix}
           onUpdate={refreshScoresMatrix}
+        />
+      )}
+
+      {statsWindow && (
+        <ClassStatsModal
+          key={statsWindow.focusStudentId ?? 'class'}
+          isOpen
+          onClose={() => setStatsWindow(null)}
+          students={students}
+          assessments={assessments}
+          gradeOf={(id) => liveByStudent.get(id)?.grade.pct ?? null}
+          exclusions={statsExclusions}
+          focusStudentId={statsWindow.focusStudentId}
         />
       )}
     </div>

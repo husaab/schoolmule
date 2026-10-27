@@ -43,6 +43,11 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
 
   const anomalousCount = classData.assessments.filter((a) => a.isAnomalous).length
 
+  // Students left out of the class's statistics: the cards say so, with the figure with everyone.
+  const leftOut = classData.summary.leftOutCount ?? 0
+  const leftOutSub = (withEveryone: number | null | undefined) =>
+    leftOut > 0 ? `${leftOut} left out · ${fmtPct(withEveryone)} with everyone` : undefined
+
   const assessmentColumns: Column<AssessmentStatsRow>[] = [
     {
       key: 'name',
@@ -60,7 +65,22 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
     },
     { key: 'date', label: 'Date', lowPriority: true, accessor: (a) => a.date, render: (a) => (a.date ? format(new Date(a.date), 'MMM d') : '—') },
     { key: 'weightPoints', label: 'Weight', numeric: true, lowPriority: true, render: (a) => (a.weightPoints == null ? '—' : `${a.weightPoints} pts`) },
-    { key: 'avg', label: 'Average', numeric: true, accessor: (a) => a.stats?.avg ?? null, render: (a) => fmtPct(a.stats?.avg) },
+    {
+      key: 'avg',
+      label: 'Average',
+      numeric: true,
+      accessor: (a) => a.stats?.avg ?? null,
+      // A student left out of this average: the figure with everyone underneath.
+      render: (a) =>
+        a.leftOutCount ? (
+          <span className="inline-flex flex-col items-end leading-tight" title={`${a.leftOutCount} left out by the teacher`}>
+            {fmtPct(a.stats?.avg)}
+            <span className="text-[10px] font-normal text-slate-400">{fmtPct(a.avgAll)} with everyone</span>
+          </span>
+        ) : (
+          fmtPct(a.stats?.avg)
+        ),
+    },
     { key: 'median', label: 'Median', numeric: true, accessor: (a) => a.stats?.median ?? null, render: (a) => fmtPct(a.stats?.median) },
     { key: 'stdDev', label: 'σ', numeric: true, lowPriority: true, accessor: (a) => a.stats?.stdDev ?? null, render: (a) => a.stats?.stdDev ?? '—' },
     {
@@ -86,7 +106,23 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
 
   const studentColumns: Column<ClassStudentRow>[] = [
     { key: 'rank', label: '#', numeric: true, render: (r) => (r.rank == null ? '—' : r.rank) },
-    { key: 'studentName', label: 'Student', render: (r) => <span className="font-medium text-slate-900">{r.studentName}</span> },
+    {
+      key: 'studentName',
+      label: 'Student',
+      render: (r) => (
+        <span className="inline-flex items-center gap-2 font-medium text-slate-900">
+          {r.studentName}
+          {r.leftOut && (
+            <span
+              className="rounded-full border border-dashed border-slate-400 px-1.5 py-px text-[10px] font-medium text-slate-500"
+              title="Left out of the class's statistics by the teacher. Their own grade is unchanged."
+            >
+              Not in class stats
+            </span>
+          )}
+        </span>
+      ),
+    },
     {
       key: 'finalPct',
       label: 'Grade',
@@ -105,7 +141,14 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
           </span>
         ),
     },
-    { key: 'percentileInClass', label: 'Percentile', numeric: true, lowPriority: true, render: (r) => (r.percentileInClass == null ? '—' : `${Math.round(r.percentileInClass)}`) },
+    {
+      key: 'percentileInClass',
+      label: 'Percentile',
+      numeric: true,
+      lowPriority: true,
+      render: (r) =>
+        r.leftOut ? <span className="text-slate-400">Not ranked</span> : r.percentileInClass == null ? '—' : `${Math.round(r.percentileInClass)}`,
+    },
     {
       key: 'missingCount',
       label: 'Missing (flagged)',
@@ -139,8 +182,8 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up">
-        <StatCard label="Class Average" value={fmtPct(s?.avg)} icon={ChartBarIcon} color="from-cyan-500 to-cyan-600" />
-        <StatCard label="Class Median" value={fmtPct(s?.median)} icon={PresentationChartLineIcon} color="from-teal-500 to-teal-600" />
+        <StatCard label="Class Average" value={fmtPct(s?.avg)} icon={ChartBarIcon} color="from-cyan-500 to-cyan-600" sub={leftOutSub(classData.summary.avgAll)} />
+        <StatCard label="Class Median" value={fmtPct(s?.median)} icon={PresentationChartLineIcon} color="from-teal-500 to-teal-600" sub={leftOutSub(classData.summary.medianAll)} />
         <StatCard label="Students" value={classData.students.length} icon={UserGroupIcon} color="from-blue-500 to-blue-600" />
         <StatCard
           label="Avg Completion"

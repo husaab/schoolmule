@@ -37,6 +37,7 @@ import GridLegend from '@/components/gradebook/GridLegend'
 import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
 import { classItemHref } from '@/lib/classroomRoutes'
 import { draftCount, EMPTY_OVERLAY, overlayCell, type OverlayIndex } from '@/lib/gridOverlay'
+import { inPool, type LeftOut } from '@/lib/classStats'
 
 interface StandaloneAssessmentModalProps {
   isOpen: boolean
@@ -63,9 +64,12 @@ interface StandaloneAssessmentModalProps {
   keepsDrafts?: (assessmentId: string) => boolean
   /** "Publish N" on a turn-in column holding drafts. */
   onPublishDrafts?: (assessment: AssessmentPayload) => void
+  /** Students left out of the class's statistics (lib/classStats): not in this column's class average. */
+  leftOut?: Map<string, LeftOut>
 }
 
 const noDrafts = () => false
+const NOBODY_LEFT_OUT = new Map<string, LeftOut>()
 
 // Dates arrive as ISO strings; split off the day so a UTC midnight doesn't
 // roll back to the previous evening in Toronto.
@@ -92,6 +96,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   overlay = EMPTY_OVERLAY,
   keepsDrafts = noDrafts,
   onPublishDrafts,
+  leftOut = NOBODY_LEFT_OUT,
 }) => {
   // The page keys this modal by assessment id, so switching columns remounts
   // it and the editor starts closed.
@@ -133,9 +138,14 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   })
   const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
   const counted = rows.filter((r) => r.result.isCounted)
-  const average = counted.length
-    ? counted.reduce((sum, r) => sum + (r.result.pct as number), 0) / counted.length
-    : null
+  const meanOf = (list: typeof rows) =>
+    list.length ? list.reduce((sum, r) => sum + (r.result.pct as number), 0) / list.length : null
+  // The class average leaves out students left out of the class's statistics
+  // (or of this column); staff see the figure with everyone beside it.
+  const pooled = counted.filter((r) => inPool(leftOut.get(r.student.studentId), 'counted', assessment.assessmentId))
+  const average = meanOf(pooled)
+  const everyoneAverage = pooled.length < counted.length ? meanOf(counted) : null
+  const asScore = (pct: number) => `${((pct / 100) * maxScore).toFixed(1)} / ${maxScore} · ${pct.toFixed(1)}%`
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-2xl">
@@ -193,7 +203,16 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
               facts={[
                 {
                   label: 'Class average',
-                  value: average == null ? '—' : `${((average / 100) * maxScore).toFixed(1)} / ${maxScore} · ${average.toFixed(1)}%`,
+                  value: (
+                    <>
+                      {average == null ? '—' : asScore(average)}
+                      {everyoneAverage != null && (
+                        <span className="block text-xs font-normal text-slate-500">
+                          {counted.length - pooled.length} left out · {everyoneAverage.toFixed(1)}% with everyone
+                        </span>
+                      )}
+                    </>
+                  ),
                 },
                 { label: 'Assessed', value: `${counted.length} of ${students.length}` },
                 { label: 'Missing', value: String(countBy('missing')) },

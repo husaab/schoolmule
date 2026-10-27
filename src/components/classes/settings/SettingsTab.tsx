@@ -284,6 +284,7 @@ export default function SettingsTab({ classId, data, reload, patchClass, onChang
               options={cls.options}
               parentsReadPrivateComments={data.settings.parentsReadPrivateComments}
               canEdit={canEdit}
+              showClassStats={!jk && !sk}
               onChanged={(options) => patchClass?.({ options })}
             />
           </section>

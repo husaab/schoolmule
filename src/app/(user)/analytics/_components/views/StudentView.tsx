@@ -92,7 +92,20 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
         ),
     },
     { key: 'classAvg', label: 'Class Avg', numeric: true, render: (c) => fmtPct(c.classAvg) },
-    { key: 'percentileInClass', label: 'Percentile', numeric: true, lowPriority: true, render: (c) => (c.percentileInClass == null ? '—' : Math.round(c.percentileInClass)) },
+    {
+      key: 'percentileInClass',
+      label: 'Percentile',
+      numeric: true,
+      lowPriority: true,
+      render: (c) =>
+        c.leftOut ? (
+          <span className="text-slate-400" title="Left out of this class's statistics by the teacher">Not ranked</span>
+        ) : c.percentileInClass == null ? (
+          '—'
+        ) : (
+          Math.round(c.percentileInClass)
+        ),
+    },
     {
       key: 'missingCount',
       label: 'Missing (flagged)',

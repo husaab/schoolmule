@@ -96,7 +96,8 @@ const HeadlineTiles: React.FC<HeadlineTilesProps> = ({
 
   const classes = classesHealth.data?.classes ?? []
   const studentCount = new Set(classes.flatMap((c) => c.studentIds)).size
-  const avgs = classes.map((c) => c.classAvg).filter((v): v is number => v != null)
+  // Across classes, so it counts every student (each class's average with everyone in it).
+  const avgs = classes.map((c) => c.classAvgAll ?? c.classAvg).filter((v): v is number => v != null)
   const myAvg = avgs.length ? avgs.reduce((s, v) => s + v, 0) / avgs.length : null
   const missing = classes.reduce((s, c) => s + c.missingCount, 0)
   const loading = pending || classesHealth.loading

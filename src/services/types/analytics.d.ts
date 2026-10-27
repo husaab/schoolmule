@@ -96,6 +96,9 @@ export interface SubjectClassRow {
   studentCount: number
   classAvg: number | null
   classMedian: number | null
+  /** Staff only: the class average with everyone in it, and how many are left out of its statistics. */
+  classAvgAll?: number | null
+  leftOutCount?: number
   termId: string
 }
 
@@ -198,8 +201,13 @@ export interface ClassStudentRow {
   studentId: string
   studentName: string
   finalPct: number | null
+  /** Null when not ranked: no grade yet, or left out of the class's statistics. */
   rank: number | null
   percentileInClass: number | null
+  /** Left out of the class's statistics (their own grade is unchanged). */
+  leftOut?: boolean
+  /** Columns whose class average leaves this student out. */
+  leftOutAssessmentIds?: string[]
   /** Cells the teacher flagged missing (counted as 0). */
   missingCount: number
   /** Blank cells — not yet graded, carry no weight. */
@@ -219,6 +227,9 @@ export interface AssessmentStatsRow {
   completionRate: number // 0-1
   stats: SummaryStats | null
   histogram: HistogramBucket[]
+  /** The average with everyone in it, and how many are left out of this one. */
+  avgAll?: number | null
+  leftOutCount?: number
   isAnomalous: boolean
 }
 
@@ -239,6 +250,10 @@ export interface ClassData {
   summary: {
     stats: SummaryStats | null
     histogram: HistogramBucket[]
+    /** With everyone in it, beside the counted figures above. */
+    avgAll?: number | null
+    medianAll?: number | null
+    leftOutCount?: number
   }
   students: ClassStudentRow[]
   assessments: AssessmentStatsRow[]
@@ -258,7 +273,12 @@ export interface StudentClassBreakdown {
   teacherName: string
   finalPct: number | null
   classAvg: number | null
+  /** The class average with everyone in it (staff surfaces). */
+  classAvgAll?: number | null
+  /** Null when not ranked (left out of the class's statistics, or no grade yet). */
   percentileInClass: number | null
+  /** Left out of this class's statistics. */
+  leftOut?: boolean
   /** Cells the teacher flagged missing (counted as 0). */
   missingCount: number
   /** Blank cells — not yet graded, carry no weight. */
@@ -352,6 +372,9 @@ export interface ClassHealthRow {
   studentCount: number
   classAvg: number | null
   classMedian: number | null
+  /** The class average with everyone in it, and how many are left out of its statistics. */
+  classAvgAll?: number | null
+  leftOutCount?: number
   /** Sum of every student's flagged-missing assessments in this class. */
   missingCount: number
   /** Coverage summed over the class's students, when the API provides it. */

@@ -224,7 +224,14 @@ const ClassGradeCard = ({
           <p className={`text-lg font-bold tabular-nums ${gradeText(cls.finalPct)}`}>{cls.finalPct == null ? '—' : `${cls.finalPct}%`}</p>
           <p className="text-[11px] text-slate-400">
             class avg {fmtPct(cls.classAvg)}
-            {cls.percentileInClass != null && <> · {ordinal(Math.round(cls.percentileInClass))} percentile</>}
+            {cls.leftOut ? (
+              <span title={`Left out of this class's average by the teacher · ${fmtPct(cls.classAvgAll ?? null)} with everyone`}>
+                {' '}
+                · not ranked
+              </span>
+            ) : (
+              cls.percentileInClass != null && <> · {ordinal(Math.round(cls.percentileInClass))} percentile</>
+            )}
           </p>
         </div>
       </button>

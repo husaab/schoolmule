@@ -25,7 +25,7 @@ import React, { KeyboardEvent, useRef, useState } from 'react'
 import { inputClass } from '@/components/shared/modalKit'
 import type { ScoreStatus } from '@/lib/gradeEngine'
 import { clampScoreInput, type CellValue } from '@/lib/scoreAutosaveQueue'
-import StatusControl from './StatusControl'
+import StatusControl, { StatsLeftOutMark, type StatsLeftOutControl } from './StatusControl'
 
 interface ScoreCellProps {
   /** DOM id used by useScoreGridNav to move focus (input or pill). */
@@ -54,6 +54,8 @@ interface ScoreCellProps {
   corner?: React.ReactNode
   /** The classwork layer's marks for a turn-in column. */
   mark?: ScoreCellMark
+  /** "Leave out of the class average" in the menu (the gradebook's grid only). */
+  statsLeftOut?: StatsLeftOutControl
 }
 
 export interface ScoreCellMark {
@@ -116,6 +118,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
   className = '',
   corner,
   mark,
+  statsLeftOut,
 }) => {
   const isDraft = Boolean(mark?.draft)
   const isIn = Boolean(mark?.turnedIn) && value == null
@@ -140,8 +143,10 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         open={menuOpen}
         onOpenChange={setMenuOpen}
         triggerRef={pillRef}
+        statsLeftOut={statsLeftOut}
       />
       {corner}
+      {statsLeftOut?.state === 'assessment' && <StatsLeftOutMark />}
 
       {status !== 'graded' ? (
         <div className="flex items-center justify-center">

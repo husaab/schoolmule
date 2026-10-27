@@ -8,10 +8,30 @@
 // reveal to work. A flagged cell's pill can open the same menu (`open`,
 // `onOpenChange`, `triggerRef`). The menu opens upward when the grid's scroll
 // box has no room for it below, so the bottom row's menu is never cut off.
+// The gradebook's grid adds a fourth item (`statsLeftOut`): leave this student
+// out of the column's class average, which never changes their own mark.
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowPathIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, CheckIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline'
 import type { ScoreStatus } from '@/lib/gradeEngine'
+
+/** The cell's student and the class average of its column. */
+export interface StatsLeftOutControl {
+  /** 'assessment': left out of this column's average; 'class': of the whole class (changed in the manager); null: counted. */
+  state: 'class' | 'assessment' | null
+  onToggle: () => void
+}
+
+/** A cell's sign that its student is left out of this column's class average. */
+export const StatsLeftOutMark: React.FC = () => (
+  <span className="absolute bottom-0.5 right-0.5 text-slate-400" title="Left out of this column's class average">
+    <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
+      <circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2 1.5" />
+      <path d="M3.2 8.8l5.6-5.6" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+    <span className="sr-only">Left out of this column&apos;s class average</span>
+  </span>
+)
 
 interface StatusControlProps {
   /** Accessible name of the cell, e.g. "Student A score for Quiz 1". */
@@ -29,10 +49,14 @@ interface StatusControlProps {
   onOpenChange?: (open: boolean) => void
   /** That pill: pressing it toggles the menu instead of counting as a press outside. */
   triggerRef?: React.RefObject<HTMLElement | null>
+  /** Offers "Leave out of the class average" (the gradebook's grid only). */
+  statsLeftOut?: StatsLeftOutControl
 }
 
 const itemClass =
   'flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 pointer-coarse:py-2.5 pointer-coarse:text-sm'
+const checkItemClass =
+  'flex w-full cursor-pointer items-start gap-2.5 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:hover:bg-white pointer-coarse:py-2.5 pointer-coarse:text-sm'
 
 /** The box the menu must fit inside: the nearest ancestor that clips (the grid's scroll box), within the viewport. */
 function clipBox(el: HTMLElement): { top: number; bottom: number } {
@@ -56,6 +80,7 @@ const StatusControl: React.FC<StatusControlProps> = ({
   open: openProp,
   onOpenChange,
   triggerRef,
+  statsLeftOut,
 }) => {
   const [ownOpen, setOwnOpen] = useState(false)
   const open = openProp ?? ownOpen
@@ -122,7 +147,7 @@ const StatusControl: React.FC<StatusControlProps> = ({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Change status for ${label}`}
-        title="Mark missing, excuse, or clear"
+        title={statsLeftOut ? 'Mark missing, excuse, or leave out of the class average' : 'Mark missing, excuse, or clear'}
         disabled={disabled || busy}
         onClick={() => setOpen(!open)}
         className={`flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-opacity hover:bg-slate-200 disabled:cursor-not-allowed pointer-coarse:h-6 pointer-coarse:w-6 pointer-coarse:bg-slate-200 pointer-coarse:text-slate-600 ${
@@ -168,7 +193,9 @@ const StatusControl: React.FC<StatusControlProps> = ({
         <div
           ref={menuRef}
           role="menu"
-          className={`absolute right-0 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg pointer-coarse:w-44 ${placement}`}
+          className={`absolute right-0 z-20 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg ${
+            statsLeftOut ? 'w-56 pointer-coarse:w-60' : 'w-40 pointer-coarse:w-44'
+          } ${placement}`}
         >
           {status !== 'missing' && (
             <button type="button" role="menuitem" className={itemClass} onClick={() => choose('missing')}>
@@ -187,6 +214,38 @@ const StatusControl: React.FC<StatusControlProps> = ({
               <span>Clear status</span>
               <kbd className="font-sans text-[10px] text-slate-400 pointer-coarse:hidden">⌫</kbd>
             </button>
+          )}
+          {statsLeftOut && (
+            <>
+              <div className="my-1 border-t border-slate-100" role="separator" />
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={statsLeftOut.state !== null}
+                disabled={statsLeftOut.state === 'class'}
+                className={checkItemClass}
+                onClick={() => {
+                  setOpen(false)
+                  statsLeftOut.onToggle()
+                }}
+              >
+                <span
+                  className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border ${
+                    statsLeftOut.state ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-slate-300'
+                  }`}
+                >
+                  {statsLeftOut.state && <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />}
+                </span>
+                <span>
+                  Leave out of the class average
+                  <span className="block text-[11px] text-slate-500">
+                    {statsLeftOut.state === 'class'
+                      ? 'Left out of the whole class. Change it in Who counts.'
+                      : 'Their own mark still counts'}
+                  </span>
+                </span>
+              </button>
+            </>
           )}
         </div>
       )}
