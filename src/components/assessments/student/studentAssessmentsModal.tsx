@@ -424,7 +424,7 @@ export default function StudentAssessmentsModal({
         </div>
 
         {/* Assessments List */}
-        <div className="max-h-96 overflow-y-auto space-y-4">
+        <div className="isolate max-h-96 overflow-y-auto space-y-4">
           {groupedAssessments.map((group, groupIndex) => (
             <div key={groupIndex} className="border rounded-lg p-4 bg-gray-50">
               {group.parent ? (
@@ -466,7 +466,7 @@ export default function StudentAssessmentsModal({
         <div className="border-t pt-4">
           <div className="text-sm text-gray-600">
             <p>&bull; Enter scores for each assessment. Blank cells are not yet graded and carry no weight; a typed 0 is a real 0.</p>
-            <p>&bull; Hover a row for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear.</p>
+            <p>&bull; Hover a row (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear.</p>
             <p>&bull; Click &quot;Save Changes&quot; to update the gradebook</p>
           </div>
         </div>

@@ -207,7 +207,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                 No students are enrolled in this class yet — add them from the class roster.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <div className="isolate overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full table-auto whitespace-nowrap">
                   <thead className="bg-slate-50">
                     <tr>
@@ -257,7 +257,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
             <ul className="space-y-1 text-xs text-slate-400">
               <li>Arrow keys move between students; Enter moves down.</li>
               <li>Blank cells are not yet graded and carry no weight anywhere in SchoolMule. A typed 0 is a real 0.</li>
-              <li>Hover a score for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
+              <li>Hover a score (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses.</li>
               <li>Scores save by themselves as you type; there is no Save button.</li>
               <li>To delete this assessment, use Assessments &amp; categories.</li>
             </ul>

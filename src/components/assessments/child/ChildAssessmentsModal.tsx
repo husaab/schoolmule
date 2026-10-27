@@ -65,6 +65,11 @@ interface ChildAssessmentsModalProps {
 
 const noDrafts = () => false
 
+// The category total, pinned at the far right with a shadow over the columns
+// that scroll beneath it, from tablet width up (as in the main grid).
+const TOTAL_PIN = 'sm:sticky sm:right-0'
+const TOTAL_SHADOW = 'sm:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
+
 const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   isOpen,
   onClose,
@@ -206,11 +211,12 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          // isolate: the pinned cells and "…" controls stay under the modal's sticky header when the window scrolls.
+          <div className="isolate overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full table-auto whitespace-nowrap">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="sticky left-0 z-10 bg-slate-50 px-4 py-2 text-left text-sm font-semibold text-slate-600">
+                  <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-600 sm:px-4">
                     Student
                   </th>
                   {childAssessments.map((child) => {
@@ -305,8 +311,10 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                       </th>
                     )
                   })}
-                  {/* Pinned at the far right, like the main grid's Term total. */}
-                  <th className="sticky right-0 z-10 bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-slate-600 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]">
+                  {/* Pinned at the far right, like the main grid's Term total. On a
+                      phone it scrolls with the row: pinned beside the names, it
+                      covered every item column and left nothing to tap. */}
+                  <th className={`${TOTAL_PIN} z-10 bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-slate-600 ${TOTAL_SHADOW}`}>
                     {parentAssessment.name} total
                   </th>
                 </tr>
@@ -334,9 +342,12 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         key={student.studentId}
                         className="border-t border-slate-100 hover:bg-slate-50/70"
                       >
-                        <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm font-medium text-slate-800">
+                        <td className="sticky left-0 z-10 whitespace-normal bg-white px-3 py-2 text-sm font-medium text-slate-800 sm:whitespace-nowrap sm:px-4">
                           <span className="flex items-center gap-2.5">
-                            <Avatar student name={student.name} avatar={student.avatar ?? null} photoUrl={student.photoUrl} size={28} />
+                            {/* No avatar on a phone, as in the main grid: the name column stays narrow enough to leave room for scores. */}
+                            <span className="hidden shrink-0 sm:inline-flex">
+                              <Avatar student name={student.name} avatar={student.avatar ?? null} photoUrl={student.photoUrl} size={28} />
+                            </span>
                             {student.name}
                           </span>
                         </td>
@@ -396,7 +407,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           isToggling={togglingKey === categoryKey}
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
-                          className="sticky right-0 z-[5] bg-cyan-50 px-4 shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]"
+                          className={`${TOTAL_PIN} z-[5] bg-cyan-50 px-4 ${TOTAL_SHADOW}`}
                         />
                       </tr>
                     )
@@ -411,7 +422,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
         <ul className="space-y-1 text-xs text-slate-400">
           <li>Arrow keys move between score cells; Enter moves down.</li>
           <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight; drafts count once published.</li>
-          <li>Hover a cell for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. On a focused cell, M marks missing and X excuses.</li>
+          <li>Hover a cell (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses.</li>
         </ul>
       </ModalBody>
 

@@ -5,9 +5,11 @@
 //   graded  — a number (0 is a real 0)
 //   missing — red "M" pill: counts as 0
 //   excused — grey "Excused" pill: never counts
-// A hover/focus "…" control switches between them; on a focused cell `m`
-// marks missing, `x` excuses, and Backspace/Delete on a pill clears it.
-// Renders the <td> itself so the grids stay thin.
+// A hover/focus "…" control switches between them (always shown on a touch
+// screen), and clicking or tapping a pill opens the same menu, so a flag can
+// always be cleared. On a focused cell `m` marks missing, `x` excuses, and
+// Backspace/Delete on a pill clears it. Renders the <td> itself so the grids
+// stay thin.
 //
 // Scores autosave (D17): every keystroke reports the clamped value through
 // onValue, and leaving the cell (blur, Enter, Tab, an arrow key) calls
@@ -19,7 +21,7 @@
 // teacher sees is grey and italic, work turned in with no grade yet reads
 // "In" in cyan, and work past due with nothing turned in gets a rose dot.
 
-import React, { KeyboardEvent } from 'react'
+import React, { KeyboardEvent, useRef, useState } from 'react'
 import { inputClass } from '@/components/shared/modalKit'
 import type { ScoreStatus } from '@/lib/gradeEngine'
 import { clampScoreInput, type CellValue } from '@/lib/scoreAutosaveQueue'
@@ -122,6 +124,10 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
     if (toggleDisabled) return
     onSetStatus(next)
   }
+  // The pill opens the "…" menu too: the corner control is hidden until hover
+  // or focus, which a phone or tablet never gives a tapped pill.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const pillRef = useRef<HTMLButtonElement>(null)
 
   return (
     <td className={`group relative px-2 py-1.5 text-center ${className}`}>
@@ -131,20 +137,29 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         busy={isToggling}
         disabled={toggleDisabled}
         onSetStatus={onSetStatus}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        triggerRef={pillRef}
       />
       {corner}
 
       {status !== 'graded' ? (
         <div className="flex items-center justify-center">
           <button
+            ref={pillRef}
             type="button"
             id={inputId}
-            aria-label={`${label}: ${status === 'missing' ? 'missing, counts as 0' : 'excused, not counted'}`}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label={`${label}: ${status === 'missing' ? 'missing, counts as 0' : 'excused, not counted'}. Change or clear`}
             title={
               (status === 'missing'
-                ? 'Missing — counts as 0. Backspace clears.'
-                : 'Excused — not counted. Backspace clears.') + (isDraft ? ' A draft: only you see it until you publish.' : '')
+                ? 'Missing — counts as 0. Click to change or clear.'
+                : 'Excused — not counted. Click to change or clear.') + (isDraft ? ' A draft: only you see it until you publish.' : '')
             }
+            onClick={() => {
+              if (!toggleDisabled && !isToggling) setMenuOpen(!menuOpen)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Backspace' || e.key === 'Delete') {
                 e.preventDefault()
@@ -154,7 +169,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
               if (statusShortcut(e, guarded)) return
               onKeyDown(e)
             }}
-            className={`cursor-default rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${pillClass[status]} ${isDraft ? 'italic' : ''}`}
+            className={`cursor-pointer rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 pointer-coarse:px-3 pointer-coarse:py-1.5 ${pillClass[status]} ${isDraft ? 'italic' : ''}`}
           >
             {status === 'missing' ? 'M' : 'Excused'}
           </button>

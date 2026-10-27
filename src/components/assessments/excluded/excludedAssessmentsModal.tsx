@@ -124,7 +124,7 @@ const ExcludedAssessmentsModal: React.FC<ExcludedAssessmentsModalProps> = ({
             <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
               <p className="text-sm text-slate-500">Nothing is excused yet.</p>
               <p className="mt-1 text-xs text-slate-400">
-                Pick an assessment above, or hover a cell in the grid and choose Excuse.
+                Pick an assessment above, or open a cell&apos;s … menu in the grid and choose Excuse.
               </p>
             </div>
           ) : (
