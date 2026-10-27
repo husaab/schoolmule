@@ -7,43 +7,247 @@
         ],
         "components": [
           {
-            "/": "/verify-email-token*"
+            "/": "/"
           },
           {
-            "/": "/reset-password*"
+            "/": "/about"
           },
           {
-            "/": "/student-invite*"
+            "/": "/about/*"
           },
           {
-            "/": "/signup*"
+            "/": "/admin-panel"
           },
           {
-            "/": "/login*"
+            "/": "/admin-panel/*"
           },
           {
-            "/": "/parent/*"
+            "/": "/analytics"
           },
           {
-            "/": "/student/*"
+            "/": "/analytics/*"
           },
           {
-            "/": "/email-login*"
+            "/": "/attendance"
           },
           {
-            "/": "/messages*"
+            "/": "/attendance/*"
           },
           {
-            "/": "/admin-panel/messages*"
+            "/": "/classes"
           },
           {
-            "/": "/announcements*"
+            "/": "/classes/*"
+          },
+          {
+            "/": "/contact"
+          },
+          {
+            "/": "/contact/*"
+          },
+          {
+            "/": "/contact-us"
+          },
+          {
+            "/": "/contact-us/*"
+          },
+          {
+            "/": "/dashboard"
+          },
+          {
+            "/": "/dashboard/*"
+          },
+          {
+            "/": "/delete-account"
+          },
+          {
+            "/": "/delete-account/*"
+          },
+          {
+            "/": "/demo"
+          },
+          {
+            "/": "/demo/*"
+          },
+          {
+            "/": "/email-login"
+          },
+          {
+            "/": "/email-login/*"
+          },
+          {
+            "/": "/finance"
+          },
+          {
+            "/": "/finance/*"
+          },
+          {
+            "/": "/forgot-password"
+          },
+          {
+            "/": "/forgot-password/*"
+          },
+          {
+            "/": "/gradebook"
+          },
+          {
+            "/": "/gradebook/*"
+          },
+          {
+            "/": "/login"
+          },
+          {
+            "/": "/login/*"
+          },
+          {
+            "/": "/messages"
+          },
+          {
+            "/": "/messages/*"
+          },
+          {
+            "/": "/my-attendance"
+          },
+          {
+            "/": "/my-attendance/*"
+          },
+          {
+            "/": "/my-schedule"
+          },
+          {
+            "/": "/my-schedule/*"
+          },
+          {
+            "/": "/observe"
+          },
+          {
+            "/": "/observe/*"
           },
           {
             "/": "/parent"
           },
           {
+            "/": "/parent/*"
+          },
+          {
+            "/": "/privacy"
+          },
+          {
+            "/": "/privacy/*"
+          },
+          {
+            "/": "/product"
+          },
+          {
+            "/": "/product/*"
+          },
+          {
+            "/": "/qr"
+          },
+          {
+            "/": "/qr/*"
+          },
+          {
+            "/": "/report-cards"
+          },
+          {
+            "/": "/report-cards/*"
+          },
+          {
+            "/": "/reports"
+          },
+          {
+            "/": "/reports/*"
+          },
+          {
+            "/": "/reset-password"
+          },
+          {
+            "/": "/reset-password/*"
+          },
+          {
+            "/": "/school-approval"
+          },
+          {
+            "/": "/school-approval/*"
+          },
+          {
+            "/": "/school-schedule"
+          },
+          {
+            "/": "/school-schedule/*"
+          },
+          {
+            "/": "/settings"
+          },
+          {
+            "/": "/settings/*"
+          },
+          {
+            "/": "/signup"
+          },
+          {
+            "/": "/signup/*"
+          },
+          {
+            "/": "/staff-attendance"
+          },
+          {
+            "/": "/staff-attendance/*"
+          },
+          {
             "/": "/student"
+          },
+          {
+            "/": "/student/*"
+          },
+          {
+            "/": "/student-invite"
+          },
+          {
+            "/": "/student-invite/*"
+          },
+          {
+            "/": "/student-views"
+          },
+          {
+            "/": "/student-views/*"
+          },
+          {
+            "/": "/students"
+          },
+          {
+            "/": "/students/*"
+          },
+          {
+            "/": "/support"
+          },
+          {
+            "/": "/support/*"
+          },
+          {
+            "/": "/terms"
+          },
+          {
+            "/": "/terms/*"
+          },
+          {
+            "/": "/verify-email"
+          },
+          {
+            "/": "/verify-email/*"
+          },
+          {
+            "/": "/verify-email-token"
+          },
+          {
+            "/": "/verify-email-token/*"
+          },
+          {
+            "/": "/whats-new"
+          },
+          {
+            "/": "/whats-new/*"
           }
         ]
       }
