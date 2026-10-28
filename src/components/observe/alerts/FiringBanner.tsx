@@ -5,7 +5,7 @@
 import Link from 'next/link'
 import { BellAlertIcon } from '@heroicons/react/24/outline'
 import type { AlertIncident } from '@/services/types/observe'
-import { fmtDuration } from '@/lib/observeAlerts'
+import { fmtDuration, latestRule } from '@/lib/observeAlerts'
 import { IncidentStatusPill, TierPill } from '../pills'
 import { fmtDateTime } from '../format'
 
@@ -24,7 +24,7 @@ interface FiringBannerProps {
 
 export default function FiringBanner({ incident, onOpen, showAlertsLink = false }: FiringBannerProps) {
   if (!incident) return null
-  const latest = [...incident.rules].sort((a, b) => b.lastAt.localeCompare(a.lastAt))[0]
+  const latest = latestRule(incident)
   return (
     <div className={`observe-in flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border px-4 py-3 ${TONE[incident.tier] ?? TONE.info}`} role="status">
       <BellAlertIcon className="hidden sm:block h-6 w-6 shrink-0 text-slate-200" />

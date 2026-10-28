@@ -2,15 +2,13 @@
 'use client'
 // One incident: what tripped, the totals, a timeline of every email and
 // push, and the errors behind it. Refreshes while it is still firing.
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import type { AlertIncident } from '@/services/types/observe'
-import { deleteAlertIncident, getAlertIncident } from '@/services/observeService'
-import { isApiError } from '@/services/apiClient'
+import { deleteAlertIncident } from '@/services/observeService'
 import { buildTimeline, fmtDuration, TIER_LABEL } from '@/lib/observeAlerts'
 import { useObserveStore } from '@/store/useObserveStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { LIVE_INTERVAL_MS } from '@/hooks/useObserveQuery'
+import { useAlertIncident } from '@/hooks/useAlertIncident'
 import StateBlock from '../StateBlock'
 import { IncidentStatusPill, TierPill } from '../pills'
 import { fmtDateTime, fmtNum } from '../format'
@@ -32,42 +30,12 @@ function Figure({ label, value }: { label: string; value: string }) {
 }
 
 export default function IncidentDetail({ id, onClose }: { id: string; onClose: () => void }) {
-  const live = useObserveStore((s) => s.live)
   const bumpAlerts = useObserveStore((s) => s.bumpAlerts)
   const showNotification = useNotificationStore((s) => s.showNotification)
-  const [incident, setIncident] = useState<AlertIncident | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const { incident, error, notFound, retry } = useAlertIncident(id)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  // Bumped to fetch again: Retry, and every 30 s while it is still firing.
-  const [tick, setTick] = useState(0)
-
-  useEffect(() => {
-    let current = true
-    getAlertIncident(id)
-      .then((inc) => {
-        if (!current) return
-        setIncident(inc)
-        setError(null)
-      })
-      .catch((e) => {
-        if (!current) return
-        if (isApiError(e) && e.status === 404) setNotFound(true)
-        else setError(e instanceof Error ? e.message : 'Could not load the incident')
-      })
-    return () => {
-      current = false
-    }
-  }, [id, tick])
-
   const firing = incident?.status === 'open'
-  useEffect(() => {
-    if (!live || !firing) return
-    const t = setInterval(() => setTick((n) => n + 1), LIVE_INTERVAL_MS)
-    return () => clearInterval(t)
-  }, [live, firing])
 
   const remove = async () => {
     setDeleting(true)
@@ -84,7 +52,7 @@ export default function IncidentDetail({ id, onClose }: { id: string; onClose: (
   }
 
   if (notFound) return <StateBlock kind="empty" message="This incident no longer exists. It may have been deleted." />
-  if (error && !incident) return <StateBlock kind="error" message={error} onRetry={() => setTick((n) => n + 1)} />
+  if (error && !incident) return <StateBlock kind="error" message={error} onRetry={retry} />
   if (!incident) return <StateBlock kind="loading" />
 
   const timeline = buildTimeline(incident)

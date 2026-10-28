@@ -2,9 +2,8 @@
 'use client'
 // Observe → Alerts: what's firing, whether the alert engine is healthy, every
 // incident in the window, and the built-in rules with the owner's settings.
-import { useState } from 'react'
-import type { AlertRule } from '@/services/types/observe'
 import { getAlertIncidents, getAlertRules } from '@/services/observeService'
+import { TIER_GROUPS } from '@/lib/observeAlerts'
 import { useObserveQuery } from '@/hooks/useObserveQuery'
 import { useAlertStatus } from '@/hooks/useAlertStatus'
 import { useIncidentModal } from '@/hooks/useIncidentModal'
@@ -18,12 +17,6 @@ import RuleRow from '@/components/observe/alerts/RuleRow'
 import TestAlertButton from '@/components/observe/alerts/TestAlertButton'
 import { fmtDateTime, timeAgo } from '@/components/observe/format'
 
-const TIER_GROUPS = [
-  { tier: 'critical', title: 'Critical', subtitle: 'Emailed and pushed right away, at any hour' },
-  { tier: 'warning', title: 'Warning', subtitle: 'Emailed 7 am–10 pm Toronto time; overnight ones wait for the morning' },
-  { tier: 'info', title: 'Notice', subtitle: 'One email, no reminders' },
-] as const
-
 export default function AlertsPage() {
   const status = useAlertStatus()
   const statusError = useObserveStore((s) => s.alertStatusError)
@@ -32,20 +25,21 @@ export default function AlertsPage() {
   const incidentsQ = useObserveQuery(getAlertIncidents, [alertsVersion])
   const rulesQ = useObserveQuery(() => getAlertRules(), [alertsVersion])
 
-  // Saved changes show at once; the next fetch replaces them.
-  const [edits, setEdits] = useState<{ basis: AlertRule[] | null; rules: Record<string, AlertRule> }>({ basis: null, rules: {} })
-  const overlay = edits.basis === rulesQ.data ? edits.rules : {}
-  const rules = (rulesQ.data ?? []).map((r) => overlay[r.id] ?? r)
-  const onRuleChange = (rule: AlertRule) => setEdits({ basis: rulesQ.data, rules: { ...overlay, [rule.id]: rule } })
-
+  const rules = rulesQ.data ?? []
   const db = status?.db
   const lastTick = status?.lastTickAt
+  const loading = !status && !statusError
 
   return (
     <div className="space-y-4">
       <FiringBanner incident={status?.firing ?? null} onOpen={open} />
 
       {statusError && !status && <StateBlock kind="error" message={statusError} />}
+      {statusError && status && (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Couldn’t refresh the alert status ({statusError}). Showing what was last loaded{lastTick ? `, checked ${timeAgo(lastTick)}` : ''}.
+        </div>
+      )}
 
       {status && !status.running && (
         <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
@@ -61,35 +55,35 @@ export default function AlertsPage() {
           value={!status ? '—' : status.running ? 'Running' : 'Off'}
           tone={!status ? 'neutral' : status.running ? 'good' : 'warn'}
           sub={lastTick ? `checked ${timeAgo(lastTick)}` : status?.running ? 'starting' : undefined}
-          loading={!status && !statusError}
+          loading={loading}
         />
         <Tile
           label="Database check"
           value={!db ? '—' : db.ok ? 'Passing' : 'Failing'}
           tone={!db ? 'neutral' : db.ok ? 'good' : 'bad'}
           sub={db && !db.ok ? db.error ?? `${db.consecutiveFails} failures in a row` : 'every 30 s'}
-          loading={!status && !statusError}
+          loading={loading}
         />
         <Tile
           label="Emails this hour"
           value={status ? `${status.emailsLastHour} / ${status.emailCap}` : '—'}
           tone={status && status.emailsLastHour >= status.emailCap ? 'warn' : 'neutral'}
           sub="hourly cap"
-          loading={!status && !statusError}
+          loading={loading}
         />
         <Tile
           label="Delivered to"
           value={status ? `${status.recipients} inbox${status.recipients === 1 ? '' : 'es'}` : '—'}
           tone={status && status.recipients === 0 ? 'bad' : 'neutral'}
           sub={status ? `${status.pushDevices} phone${status.pushDevices === 1 ? '' : 's'} for push` : undefined}
-          loading={!status && !statusError}
+          loading={loading}
         />
         <Tile
           label="Quiet hours"
           value={status ? (status.quietHours ? 'Now' : 'Not now') : '—'}
           tone={status?.quietHours ? 'warn' : 'neutral'}
           sub="10 pm–7 am: warnings wait"
-          loading={!status && !statusError}
+          loading={loading}
         />
       </div>
 
@@ -140,7 +134,7 @@ export default function AlertsPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{g.title}</h3>
                   <p className="text-[11px] text-slate-500">{g.subtitle}</p>
                   <ul className="divide-y divide-white/[0.04]">
-                    {list.map((r) => <RuleRow key={r.id} rule={r} onChange={onRuleChange} />)}
+                    {list.map((r) => <RuleRow key={r.id} rule={r} />)}
                   </ul>
                 </section>
               )

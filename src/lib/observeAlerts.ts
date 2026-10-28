@@ -22,6 +22,17 @@ export const readIncident = (params: Pick<URLSearchParams, 'get'>): string | nul
 
 export const TIER_LABEL: Record<AlertTier, string> = { critical: 'Critical', warning: 'Warning', info: 'Notice' }
 
+/** The rules list on Observe → Alerts, by tier. */
+export const TIER_GROUPS: { tier: AlertTier; title: string; subtitle: string }[] = [
+  { tier: 'critical', title: 'Critical', subtitle: 'Emailed and pushed right away, at any hour' },
+  { tier: 'warning', title: 'Warning', subtitle: 'Emailed 7 am–10 pm Toronto time; overnight ones wait for the morning' },
+  { tier: 'info', title: 'Notice', subtitle: 'One email, no reminders' },
+]
+
+/** The rule that tripped most recently: what the incident is doing now. */
+export const latestRule = (incident: Pick<AlertIncident, 'rules'>) =>
+  [...incident.rules].sort((a, b) => b.lastAt.localeCompare(a.lastAt))[0] ?? null
+
 /** "under a minute", "47 min", "11 h 40 min". */
 export function fmtDuration(ms: number): string {
   const mins = Math.floor(Math.max(0, ms) / 60000)

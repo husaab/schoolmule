@@ -4,30 +4,37 @@
 // owner's settings for it (thresholds, mute, watch-only, off, back to the
 // defaults). Critical rules can be tuned and muted for a day, never switched
 // off; the server enforces the same.
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { AlertRule, AlertRulePatch } from '@/services/types/observe'
 import { resetAlertRule, updateAlertRule } from '@/services/observeService'
 import { checkParam, mutePresetsFor, muteUntil, ruleStateOf, thresholdText } from '@/lib/observeAlerts'
 import { useNotificationStore } from '@/store/useNotificationStore'
+import { useObserveStore } from '@/store/useObserveStore'
 import { refreshAlertStatus } from '@/hooks/useAlertStatus'
+import { useDismiss } from './useDismiss'
 import { RuleStatePill, TierPill } from '../pills'
 import { fmtDateTime, timeAgo } from '../format'
 
 const button = 'rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-xs text-slate-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-50'
 
-export default function RuleRow({ rule, onChange }: { rule: AlertRule; onChange: (rule: AlertRule) => void }) {
+export default function RuleRow({ rule }: { rule: AlertRule }) {
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const bumpAlerts = useObserveStore((s) => s.bumpAlerts)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [muteOpen, setMuteOpen] = useState(false)
+  const muteRef = useRef<HTMLDivElement>(null)
+  const closeMute = useCallback(() => setMuteOpen(false), [])
+  useDismiss(muteRef, muteOpen, closeMute)
   const state = ruleStateOf(rule)
 
   const save = async (patch: AlertRulePatch | 'reset', done?: string) => {
     setSaving(true)
     try {
-      const next = patch === 'reset' ? await resetAlertRule(rule.id) : await updateAlertRule(rule.id, patch)
-      onChange(next)
+      await (patch === 'reset' ? resetAlertRule(rule.id) : updateAlertRule(rule.id, patch))
+      // The rules list and the status refetch with the saved settings.
+      bumpAlerts()
       refreshAlertStatus()
       if (done) showNotification(done, 'success')
       return true
@@ -90,7 +97,7 @@ export default function RuleRow({ rule, onChange }: { rule: AlertRule; onChange:
             {muted ? (
               <button type="button" className={button} disabled={saving} onClick={() => save({ mutedUntil: null }, `${rule.name} unmuted`)}>Unmute</button>
             ) : (
-              <div className="relative">
+              <div className="relative" ref={muteRef}>
                 <button type="button" className={button} disabled={saving} onClick={() => setMuteOpen((v) => !v)} aria-expanded={muteOpen}>Mute…</button>
                 {muteOpen && (
                   <div className="absolute right-0 z-10 mt-1 w-36 rounded-xl border border-white/[0.08] bg-slate-900 p-1 shadow-xl">

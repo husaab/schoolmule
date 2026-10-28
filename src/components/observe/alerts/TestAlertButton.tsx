@@ -1,10 +1,11 @@
 // src/components/observe/alerts/TestAlertButton.tsx
 'use client'
 // "Send test": proves an alert reaches the owners' inbox and phones.
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { sendTestAlert } from '@/services/observeService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useObserveStore } from '@/store/useObserveStore'
+import { useDismiss } from './useDismiss'
 
 const CHANNELS = [
   { key: 'both', label: 'Email and push' },
@@ -17,6 +18,9 @@ export default function TestAlertButton() {
   const bumpAlerts = useObserveStore((s) => s.bumpAlerts)
   const [open, setOpen] = useState(false)
   const [sending, setSending] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, open, close)
 
   const send = async (channel: (typeof CHANNELS)[number]['key']) => {
     setOpen(false)
@@ -37,7 +41,7 @@ export default function TestAlertButton() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

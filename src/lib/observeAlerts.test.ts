@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AlertIncident, AlertRule } from '@/services/types/observe'
 import {
-  buildTimeline, checkParam, fmtDuration, fmtParam, muteUntil, mutePresetsFor, readIncident, ruleStateOf, sortIncidents,
+  buildTimeline, checkParam, fmtDuration, fmtParam, latestRule, muteUntil, mutePresetsFor, readIncident, ruleStateOf, sortIncidents,
   thresholdText, withIncident, withoutIncident,
 } from './observeAlerts'
 
@@ -110,5 +110,12 @@ describe('sortIncidents', () => {
     const b = incident({ id: 'b', openedAt: '2026-10-25T00:00:00Z' })
     const c = incident({ id: 'c', status: 'open', openedAt: '2026-10-10T00:00:00Z' })
     expect(sortIncidents([a, b, c]).map((i) => i.id)).toEqual(['c', 'b', 'a'])
+  })
+})
+
+describe('latestRule', () => {
+  it('is the rule that tripped last', () => {
+    expect(latestRule(incident())?.id).toBe('db_unreachable')
+    expect(latestRule(incident({ rules: [] }))).toBeNull()
   })
 })

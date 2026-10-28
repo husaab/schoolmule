@@ -1,5 +1,8 @@
 // src/components/observe/pills.tsx
 // Small coloured labels. Colour is semantic (see chartTheme).
+import type { AlertTier } from '@/services/types/observe'
+import { TIER_LABEL } from '@/lib/observeAlerts'
+
 const base = 'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase'
 
 export const StatusPill = ({ status }: { status: number }) => {
@@ -34,8 +37,7 @@ export const PatternPill = ({ pattern }: { pattern: string | null }) =>
 export const ImpersonationMark = () => <span className={`${base} bg-violet-400/15 text-violet-300`} title="Admin preview session">preview</span>
 
 const TIER: Record<string, string> = { critical: 'bg-rose-400/15 text-rose-300', warning: 'bg-amber-400/15 text-amber-300', info: 'bg-sky-400/15 text-sky-300' }
-const TIER_WORD: Record<string, string> = { critical: 'critical', warning: 'warning', info: 'notice' }
-export const TierPill = ({ tier }: { tier: string }) => <span className={`${base} ${TIER[tier] ?? 'bg-white/[0.06] text-slate-400'}`}>{TIER_WORD[tier] ?? tier}</span>
+export const TierPill = ({ tier }: { tier: AlertTier }) => <span className={`${base} ${TIER[tier] ?? 'bg-white/[0.06] text-slate-400'}`}>{TIER_LABEL[tier] ?? tier}</span>
 
 export const IncidentStatusPill = ({ status, held = false }: { status: 'open' | 'resolved'; held?: boolean }) =>
   status === 'open' ? (
