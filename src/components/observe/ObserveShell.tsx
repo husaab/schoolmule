@@ -8,14 +8,17 @@ import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Squares2X2Icon, PresentationChartLineIcon, UsersIcon, RectangleStackIcon, ExclamationTriangleIcon,
-  KeyIcon, ServerStackIcon, ArrowUturnLeftIcon, SignalIcon,
+  KeyIcon, ServerStackIcon, ArrowUturnLeftIcon, SignalIcon, BellAlertIcon,
 } from '@heroicons/react/24/outline'
 import { useObserveStore, WINDOW_KEYS, isWindowKey } from '@/store/useObserveStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useAlertStatus, useAlertStatusPoll } from '@/hooks/useAlertStatus'
 import { timeAgo } from './format'
+import IncidentModalHost from './alerts/IncidentModalHost'
 
 const NAV = [
   { href: '/observe', label: 'Overview', icon: Squares2X2Icon, exact: true },
+  { href: '/observe/alerts', label: 'Alerts', icon: BellAlertIcon },
   { href: '/observe/activity', label: 'Activity', icon: PresentationChartLineIcon },
   { href: '/observe/users', label: 'Users', icon: UsersIcon },
   { href: '/observe/features', label: 'Features', icon: RectangleStackIcon },
@@ -86,10 +89,19 @@ function LiveToggle() {
   )
 }
 
+// A pulsing dot on Alerts while an incident is open.
+function FiringDot({ href }: { href: string }) {
+  const firing = useAlertStatus()?.firing
+  if (href !== '/observe/alerts' || !firing) return null
+  const colour = firing.tier === 'critical' ? 'bg-rose-400' : firing.tier === 'warning' ? 'bg-amber-400' : 'bg-sky-400'
+  return <span className={`ml-auto h-2 w-2 rounded-full observe-live-dot ${colour}`} aria-label="An incident is open" />
+}
+
 export default function ObserveShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const user = useUserStore((s) => s.user)
   const current = NAV.find((n) => (n.exact ? pathname === n.href : pathname.startsWith(n.href)))
+  useAlertStatusPoll()
 
   return (
     <div className="observe-root min-h-dvh flex font-sans">
@@ -118,6 +130,7 @@ export default function ObserveShell({ children }: { children: ReactNode }) {
               >
                 <Icon className={`h-[18px] w-[18px] ${active ? 'text-cyan-300' : ''}`} />
                 {label}
+                <FiringDot href={href} />
               </Link>
             )
           })}
@@ -148,14 +161,18 @@ export default function ObserveShell({ children }: { children: ReactNode }) {
             {NAV.map(({ href, label, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href)
               return (
-                <Link key={href} href={href} className={`px-3 py-1 rounded-lg text-xs whitespace-nowrap ${active ? 'bg-white/[0.08] text-white' : 'text-slate-400'}`}>
+                <Link key={href} href={href} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs whitespace-nowrap ${active ? 'bg-white/[0.08] text-white' : 'text-slate-400'}`}>
                   {label}
+                  <FiringDot href={href} />
                 </Link>
               )
             })}
           </nav>
         </header>
         <main className="flex-1 px-4 sm:px-6 py-5 max-w-[1600px] w-full mx-auto">{children}</main>
+        <Suspense fallback={null}>
+          <IncidentModalHost />
+        </Suspense>
       </div>
     </div>
   )

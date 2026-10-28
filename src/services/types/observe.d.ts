@@ -121,3 +121,53 @@ export interface ScannerSeriesData { window: ObserveWindow; bucket: string; seri
 export interface HealthData { ok: boolean; uptime_s: number; db: 'ok' | 'down'; buffer: { pending: number; dropped: number; flushes: number; failures: number } }
 
 export interface ObserveResponse<T> { status: 'success'; data: T }
+
+// ─── Alerts (/observe/alerts) ───────────────────────────────────────────
+export type AlertTier = 'critical' | 'warning' | 'info'
+export interface AlertIncidentRule {
+  id: string; name: string; tier: AlertTier; firstAt: string; lastAt: string; peak: number; summary: string
+}
+export interface AlertNotification {
+  ts: string; channel: 'email' | 'push'
+  kind: 'opened' | 'escalated' | 'reminder' | 'reopened' | 'recovered' | 'summary' | 'test'
+  ok: boolean; recipients: number; subject: string | null; error: string | null
+}
+export interface AlertIncident {
+  id: string; status: 'open' | 'resolved'; tier: AlertTier; title: string
+  openedAt: string; lastTripAt: string; resolvedAt: string | null; durationMs: number
+  reopenCount: number; notifiedAt: string | null
+  /** A warning or notice waiting for 7 am (quiet hours). */
+  held: boolean
+  rules: AlertIncidentRule[]
+  stats: { failedRequests: number; loggedErrors: number; peopleAffected: number; peakErrors5m: number; topErrors: { fingerprint: string; message: string; count: number }[] }
+  emails?: number; pushes?: number
+  notifications?: AlertNotification[]
+}
+export interface AlertCheck { ok: boolean; error: string | null; consecutiveFails?: number }
+export interface AlertStatusData {
+  /** ALERTS_ENABLED on this server, and whether the worker is running. */
+  enabled: boolean; running: boolean; lastTickAt: string | null; tickMs: number
+  quietHours: boolean; db: AlertCheck | null; selfCheck: AlertCheck | null
+  emailsLastHour: number; emailCap: number; recipients: number; pushDevices: number
+  firing: AlertIncident | null; rulesMuted: number; rulesWatching: number
+}
+export interface AlertIncidentsData { window: { key: WindowKey; from: string; to: string }; incidents: AlertIncident[]; otherSends: AlertNotification[] }
+export interface AlertRuleParam { key: string; label: string; unit: string; default: number; min: number; max: number; value: number }
+export interface AlertRule {
+  id: string; name: string; tier: AlertTier; description: string; source: string; window: string
+  /** Critical rules: tune or mute (24 h at most), never off or watch-only. */
+  locked: boolean
+  /** Watched by Railway, not by SchoolMule. */
+  external: boolean
+  defaultMode: 'live' | 'watch'
+  params: AlertRuleParam[]
+  enabled: boolean; mode: 'live' | 'watch'; mutedUntil: string | null; customized: boolean
+  current: { tripped: boolean | null; value: number | null; summary: string } | null
+  lastTrip: { at: string; mode: 'live' | 'watch' | 'muted'; value: number | null; summary: string | null } | null
+  trips7d: { live: number; watch: number; muted: number }
+}
+export interface AlertRulePatch { params?: Record<string, number>; enabled?: boolean; mode?: 'live' | 'watch'; mutedUntil?: string | null }
+export interface AlertTestResult {
+  email: { ok: boolean; recipients?: number; error?: string } | null
+  push: { ok: boolean; sent: number; devices: number; error?: string } | null
+}

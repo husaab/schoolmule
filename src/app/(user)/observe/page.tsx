@@ -12,9 +12,14 @@ import StateBlock from '@/components/observe/StateBlock'
 import { SourcePill } from '@/components/observe/pills'
 import { C } from '@/components/observe/chartTheme'
 import { deltaRatio, fmtMs, fmtNum, fmtPct, timeAgo } from '@/components/observe/format'
+import FiringBanner from '@/components/observe/alerts/FiringBanner'
+import { useAlertStatus } from '@/hooks/useAlertStatus'
+import { useIncidentModal } from '@/hooks/useIncidentModal'
 
 export default function OverviewPage() {
   const { data, error, loading, refetch, window } = useObserveQuery(getOverview)
+  const firing = useAlertStatus()?.firing ?? null
+  const { open } = useIncidentModal()
 
   if (error && !data) return <StateBlock kind="error" message={error} onRetry={refetch} />
 
@@ -26,6 +31,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-4">
+      <FiringBanner incident={firing} onOpen={open} showAlertsLink />
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
         <Tile label="Online now" value={fmtNum(t?.onlineNow)} tone={t && t.onlineNow > 0 ? 'good' : 'neutral'} sub="seen in last 10 min" loading={loading && !data} />
         <Tile label="Active users" value={fmtNum(t?.activeUsers)} delta={t && p ? deltaRatio(t.activeUsers, p.activeUsers) : null} spark={spark('activeUsers')} loading={loading && !data} />

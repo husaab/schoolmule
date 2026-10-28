@@ -32,3 +32,31 @@ export const PatternPill = ({ pattern }: { pattern: string | null }) =>
   pattern ? <span className={`${base} ${PATTERN[pattern] ?? 'bg-white/[0.06] text-slate-400'}`}>{pattern}</span> : <span className="text-slate-600">—</span>
 
 export const ImpersonationMark = () => <span className={`${base} bg-violet-400/15 text-violet-300`} title="Admin preview session">preview</span>
+
+const TIER: Record<string, string> = { critical: 'bg-rose-400/15 text-rose-300', warning: 'bg-amber-400/15 text-amber-300', info: 'bg-sky-400/15 text-sky-300' }
+const TIER_WORD: Record<string, string> = { critical: 'critical', warning: 'warning', info: 'notice' }
+export const TierPill = ({ tier }: { tier: string }) => <span className={`${base} ${TIER[tier] ?? 'bg-white/[0.06] text-slate-400'}`}>{TIER_WORD[tier] ?? tier}</span>
+
+export const IncidentStatusPill = ({ status, held = false }: { status: 'open' | 'resolved'; held?: boolean }) =>
+  status === 'open' ? (
+    <span className={`${base} gap-1.5 ${held ? 'bg-amber-400/15 text-amber-300' : 'bg-rose-400/15 text-rose-300'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${held ? 'bg-amber-300' : 'bg-rose-300 observe-live-dot'}`} />
+      {held ? 'held till 7 am' : 'firing'}
+    </span>
+  ) : (
+    <span className={`${base} bg-emerald-400/15 text-emerald-300`}>recovered</span>
+  )
+
+const RULE_STATE: Record<string, [string, string]> = {
+  firing: ['bg-rose-400/15 text-rose-300', 'tripping'],
+  ok: ['bg-emerald-400/15 text-emerald-300', 'ok'],
+  muted: ['bg-amber-400/15 text-amber-300', 'muted'],
+  watch: ['bg-violet-400/15 text-violet-300', 'watch only'],
+  off: ['bg-white/[0.06] text-slate-500', 'off'],
+  external: ['bg-white/[0.06] text-slate-400', 'railway'],
+  'no-data': ['bg-white/[0.06] text-slate-400', 'no data'],
+}
+export const RuleStatePill = ({ state }: { state: string }) => {
+  const [cls, label] = RULE_STATE[state] ?? RULE_STATE['no-data']
+  return <span className={`${base} ${cls}`}>{label}</span>
+}
