@@ -5,6 +5,7 @@ import Navbar from '../../../components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import StudentAddModal from '@/components/student/add/studentAddModal';
 import StudentDeleteModal from '@/components/student/delete/studentDeleteModal';
+import RecentlyDeletedStudents from '@/components/student/delete/RecentlyDeletedStudents';
 import StudentEditModal from '@/components/student/edit/studentEditModal';
 import StudentArchiveModal from '@/components/student/archive/studentArchiveModal';
 import StudentUnarchiveModal from '@/components/student/archive/studentUnarchiveModal';
@@ -39,7 +40,8 @@ const StudentsContent = () => {
     const selectedYearId = useSchoolYearStore((s) => s.selectedYearId);
     // Filters live in the URL so Back/refresh/share restore them.
     const gradeFilter = get('grade');
-    const showArchived = get('archived') === '1';
+    const showDeleted = get('deleted') === '1';
+    const showArchived = !showDeleted && get('archived') === '1';
     const [showAddModal, setShowAddModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<StudentPayload | null>(null);
     const [editStudent, setEditStudent] = useState<StudentPayload | null>(null);
@@ -114,7 +116,7 @@ const StudentsContent = () => {
                                 <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Students</h1>
                                 <p className="text-slate-500 mt-1">Manage student records and information</p>
                             </div>
-                            {!showArchived && (
+                            {!showArchived && !showDeleted && (
                                 <button
                                     onClick={() => setShowAddModal(true)}
                                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl font-medium cursor-pointer"
@@ -134,9 +136,9 @@ const StudentsContent = () => {
                                 {/* Tabs for Active/Archived */}
                                 <div className="flex gap-2 mb-6">
                                     <button
-                                        onClick={() => setParams({ archived: null })}
+                                        onClick={() => setParams({ archived: null, deleted: null })}
                                         className={`px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
-                                            !showArchived
+                                            !showArchived && !showDeleted
                                                 ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 border border-cyan-100'
                                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                                         }`}
@@ -144,7 +146,7 @@ const StudentsContent = () => {
                                         Active Students
                                     </button>
                                     <button
-                                        onClick={() => setParams({ archived: '1' })}
+                                        onClick={() => setParams({ archived: '1', deleted: null })}
                                         className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
                                             showArchived
                                                 ? 'bg-amber-50 text-amber-700 border border-amber-100'
@@ -153,6 +155,17 @@ const StudentsContent = () => {
                                     >
                                         <ArchiveBoxIcon className="h-4 w-4" />
                                         Archived
+                                    </button>
+                                    <button
+                                        onClick={() => setParams({ deleted: '1', archived: null })}
+                                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all cursor-pointer ${
+                                            showDeleted
+                                                ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <TrashIcon className="h-4 w-4" />
+                                        Recently deleted
                                     </button>
                                 </div>
 
@@ -205,7 +218,9 @@ const StudentsContent = () => {
 
                         {/* Students Content */}
                         <div className="p-6">
-                            {loading ? (
+                            {showDeleted ? (
+                                <RecentlyDeletedStudents searchTerm={searchTerm} gradeFilter={gradeFilter} yearKey={selectedYearId} />
+                            ) : loading ? (
                                 <div className="flex justify-center py-12">
                                     <Spinner size="lg" />
                                 </div>

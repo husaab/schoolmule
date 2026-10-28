@@ -44,7 +44,7 @@ const StudentDeleteModal: React.FC<StudentDeleteModalProps> = ({ isOpen, onClose
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
       <ModalHeader
         title="Delete student"
-        subtitle="This cannot be undone."
+        subtitle="You can restore them from Recently deleted."
         icon={TrashIcon}
         tone="danger"
       />
@@ -53,16 +53,17 @@ const StudentDeleteModal: React.FC<StudentDeleteModalProps> = ({ isOpen, onClose
         <ConfirmBody
           tone="danger"
           consequences={{
-            title: 'Deleting removes everything tied to this student:',
+            title: 'Deleting hides this student everywhere:',
             items: [
-              'Grades, assessment scores, and report cards',
-              'Attendance history in every class',
-              'Class enrolments and parent links',
+              'Every student list, class roster and report',
+              'The Archived tab',
+              'The parent and student portals',
             ],
           }}
         >
-          <strong className="font-semibold text-slate-900">{student.name}</strong> will be permanently
-          removed. To keep the records and just take the student off active lists, archive them instead.
+          <strong className="font-semibold text-slate-900">{student.name}</strong>&rsquo;s grades,
+          attendance and report cards are kept, and Students &rarr; Recently deleted brings them back.
+          If they&rsquo;ve left the school, archive them instead so they stay in Archived.
         </ConfirmBody>
 
         <RecordFacts

@@ -102,3 +102,29 @@ export const unarchiveStudent = async (
     method: 'POST',
   });
 };
+
+/** A student in Recently deleted: hidden everywhere, every record kept. */
+export interface DeletedStudent {
+  studentId: string
+  name: string
+  grade: string | null
+  oen: string | null
+  homeroomTeacherId: string | null
+  /** Restore puts them back in Archived rather than the active list. */
+  wasArchived: boolean
+  deletedAt: string
+  deletedBy: string | null
+  deletedByName: string | null
+  avatar?: string | null
+  photoUrl?: string | null
+}
+
+/** Recently deleted: this school year's deleted students, newest first. */
+export const getDeletedStudents = async (): Promise<{ status: string; data: DeletedStudent[] }> =>
+  apiClient<{ status: string; data: DeletedStudent[] }>('/students/deleted')
+
+/** Undo a delete: back to the list, or to Archived if they had been archived. */
+export const restoreStudent = async (
+  id: string
+): Promise<{ status: string; message: string; data: { studentId: string; isArchived: boolean } }> =>
+  apiClient(`/students/${id}/restore`, { method: 'POST' })

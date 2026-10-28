@@ -106,7 +106,7 @@ export default function UndoImportModal({ submissionId, isOpen, onClose, onUndon
                   <span>
                     <span className="font-medium">Unlink and delete the student</span>
                     <span className="block text-xs text-slate-500">
-                      Nothing depends on this student yet, so it can be removed cleanly.
+                      Nothing depends on this student yet. They move to Students &rarr; Recently deleted, where you can restore them.
                     </span>
                   </span>
                 </label>

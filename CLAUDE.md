@@ -17,6 +17,7 @@ School Mule is a comprehensive school management system with separate frontend a
 - **Purpose**: Authentication and user management for teachers/administrators
 
 #### students
+- **Soft delete (2026-10-28):** the table is `students_all`; `students` is a view of the rows with `deleted_at IS NULL`, so every query hides deleted students on its own. Schema changes go to `students_all` (new foreign keys reference `students_all(student_id)`), and after adding a column re-run the `CREATE OR REPLACE VIEW` in `schoolmule-backend/database/migrations/student_soft_delete_migration.sql`. Deleting a student only sets `deleted_at`; Students → Recently deleted restores. Nothing erases a student.
 - **Primary Key**: `student_id` (UUID)
 - **Fields**: name, homeroom_teacher_id, grade, oen, mother_name, mother_email, mother_number, father_name, father_email, father_number, emergency_contact, school
 - **Foreign Keys**: homeroom_teacher_id → users(user_id)
