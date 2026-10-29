@@ -20,6 +20,7 @@ import ChildJumpNav from '@/components/parent/ChildJumpNav'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import ParentAssessmentTable from '@/components/parent/ParentAssessmentTable'
+import { formatAssessmentDate } from '@/lib/assessmentDate'
 import Link from 'next/link'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 import ClassGradesBarChart from '@/components/parent/ClassGradesBarChart'
@@ -339,11 +340,15 @@ const ChildGradesSection: React.FC<ChildGradesSectionProps> = ({
             listed here and doesn&apos;t affect the average.
           </p>
           <ul className="space-y-1">
-            {missingWork.map((m) => (
-              <li key={`${m.classId}-${m.assessmentId}`} className="text-sm text-slate-700">
-                <span className="font-medium">{m.subject}:</span> {m.assessmentName}
-              </li>
-            ))}
+            {missingWork.map((m) => {
+              const date = formatAssessmentDate(m.assessmentDate)
+              return (
+                <li key={`${m.classId}-${m.assessmentId}`} className="text-sm text-slate-700">
+                  <span className="font-medium">{m.subject}:</span> {m.assessmentName}
+                  {date && <span className="text-slate-500"> · {date}</span>}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}

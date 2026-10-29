@@ -14,15 +14,8 @@ import {
 } from '@/lib/assessmentGrouping'
 import { gradeTextColor } from './childColors'
 import AssessmentStatusBadge from './AssessmentStatusBadge'
+import { formatAssessmentDate } from '@/lib/assessmentDate'
 import InlineAskComposer from '@/components/messaging/InlineAskComposer'
-
-const formatDate = (date: string | null) => {
-  if (!date) return null
-  const d = new Date(date)
-  return Number.isNaN(d.getTime())
-    ? null
-    : d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
-}
 
 /** Small dot-separated meta line; skips anything absent. */
 const MetaLine: React.FC<{ parts: (string | null)[] }> = ({ parts }) => {
@@ -106,7 +99,7 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
           </div>
           <MetaLine
             parts={[
-              formatDate(score.date),
+              formatAssessmentDate(score.date),
               score.weightPoints != null ? `Weight ${score.weightPoints}` : null,
             ]}
           />
