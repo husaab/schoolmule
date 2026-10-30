@@ -25,6 +25,7 @@ import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
+import { useFrozenEdges } from '@/components/assessments/scores/useFrozenEdges'
 import { buildScoreLookup, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/components/assessments/scores/liveGrade'
 import SavedPill from '@/components/gradebook/SavedPill'
@@ -69,6 +70,10 @@ const noDrafts = () => false
 // that scroll beneath it, from tablet width up (as in the main grid).
 const TOTAL_PIN = 'sm:sticky sm:right-0'
 const TOTAL_SHADOW = 'sm:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
+// The header row stays frozen at the top of the grid's scroll box, with a
+// hairline under it. Layers inside the box: a cell's "…" z-10, pinned body
+// cells z-20, header cells z-30, header corners z-40, a cell with its menu open z-50.
+const HEAD_PIN = 'sticky top-0 inset-shadow-[0_-1px_0_var(--color-slate-200)]'
 
 const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   isOpen,
@@ -93,6 +98,8 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
   const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
+  const [scrollBox, setScrollBox] = useState<HTMLDivElement | null>(null)
+  useFrozenEdges(scrollBox)
 
   // ?focus= on a column inside this category: scroll it into view and flash it.
   const thRefs = useRef<Record<string, HTMLTableCellElement | null>>({})
@@ -211,12 +218,18 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
             </p>
           </div>
         ) : (
-          // isolate: the pinned cells and "…" controls stay under the modal's sticky header when the window scrolls.
-          <div className="isolate overflow-x-auto rounded-xl border border-slate-200">
+          // Sized to fit the window between its header and footer (the header
+          // wraps taller on a phone), so a long class scrolls inside the box
+          // under its frozen header row. isolate: the pinned cells and "…"
+          // controls stay under the modal's sticky header.
+          <div
+            ref={setScrollBox}
+            className="isolate max-h-[max(14rem,calc(85vh-21rem))] overflow-auto rounded-xl border border-slate-200 sm:max-h-[max(16rem,calc(85vh-15rem))]"
+          >
             <table className="w-full table-auto whitespace-nowrap">
-              <thead className="bg-slate-50">
+              <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-600 sm:px-4">
+                  <th className={`${HEAD_PIN} left-0 z-40 bg-slate-50 px-3 py-2 text-left text-sm font-semibold text-slate-600 sm:px-4`}>
                     Student
                   </th>
                   {childAssessments.map((child) => {
@@ -237,7 +250,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         ref={(el) => {
                           thRefs.current[child.assessmentId] = el
                         }}
-                        className={`whitespace-nowrap px-4 py-2 text-center align-top transition-shadow duration-300 ${
+                        className={`${HEAD_PIN} z-30 whitespace-nowrap bg-slate-50 px-4 py-2 text-center align-top transition-shadow duration-300 ${
                           flashId === child.assessmentId ? 'ring-2 ring-inset ring-cyan-400' : ''
                         }`}
                       >
@@ -314,7 +327,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                   {/* Pinned at the far right, like the main grid's Term total. On a
                       phone it scrolls with the row: pinned beside the names, it
                       covered every item column and left nothing to tap. */}
-                  <th className={`${TOTAL_PIN} z-10 bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-slate-600 ${TOTAL_SHADOW}`}>
+                  <th className={`${HEAD_PIN} z-40 bg-cyan-50 px-4 py-2 sm:right-0 text-center text-sm font-semibold text-slate-600 ${TOTAL_SHADOW}`}>
                     {parentAssessment.name} total
                   </th>
                 </tr>
@@ -342,7 +355,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                         key={student.studentId}
                         className="border-t border-slate-100 hover:bg-slate-50/70"
                       >
-                        <td className="sticky left-0 z-10 whitespace-normal bg-white px-3 py-2 text-sm font-medium text-slate-800 sm:whitespace-nowrap sm:px-4">
+                        <td className="sticky left-0 z-20 whitespace-normal bg-white px-3 py-2 text-sm font-medium text-slate-800 sm:whitespace-nowrap sm:px-4">
                           <span className="flex items-center gap-2.5">
                             {/* No avatar on a phone, as in the main grid: the name column stays narrow enough to leave room for scores. */}
                             <span className="hidden shrink-0 sm:inline-flex">
@@ -407,7 +420,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           isToggling={togglingKey === categoryKey}
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
-                          className={`${TOTAL_PIN} z-[5] bg-cyan-50 px-4 ${TOTAL_SHADOW}`}
+                          className={`${TOTAL_PIN} z-20 bg-cyan-50 px-4 ${TOTAL_SHADOW}`}
                         />
                       </tr>
                     )

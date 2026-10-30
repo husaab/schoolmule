@@ -94,9 +94,10 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
       {flag && <span className={`text-xs font-medium ${flag.className}`}>{flag.text}</span>}
     </span>
   )
+  // An open menu lifts its cell over the grid's frozen header row and pinned columns.
   return (
     <td
-      className={`group relative px-2 py-2 text-center ${onClick ? 'cursor-pointer' : ''} ${failed ? 'ring-2 ring-inset ring-rose-400' : ''} ${className}`}
+      className={`group relative px-2 py-2 text-center has-[[aria-expanded=true]]:z-50 ${onClick ? 'cursor-pointer' : ''} ${failed ? 'ring-2 ring-inset ring-rose-400' : ''} ${className}`}
       onClick={onClick}
       title={failed ? "A score in this category didn't save. Use Retry above the grid." : title}
     >

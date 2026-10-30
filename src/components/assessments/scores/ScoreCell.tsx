@@ -132,8 +132,9 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
   const [menuOpen, setMenuOpen] = useState(false)
   const pillRef = useRef<HTMLButtonElement>(null)
 
+  // An open menu lifts its cell over the grid's frozen header row and pinned columns.
   return (
-    <td className={`group relative px-2 py-1.5 text-center ${className}`}>
+    <td className={`group relative px-2 py-1.5 text-center has-[[aria-expanded=true]]:z-50 ${className}`}>
       <StatusControl
         label={label}
         status={status}

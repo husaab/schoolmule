@@ -942,3 +942,30 @@ body {
 /* FAQ disclosure marker */
 .mk-faq summary::-webkit-details-marker { display: none; }
 .mk-faq summary { list-style: none; }
+
+/* ==========================================================================
+   Gradebook: frozen header row
+   ========================================================================== */
+
+/* The grid scrolls sideways in its own box, so its header row can't stick to
+   the page with position: sticky. Instead each header cell rides the page's
+   scroll: once the grid's top passes under the class page's stuck bars
+   (--frozen-top) a header cell moves down exactly as far as the page scrolls,
+   so it holds still, until it meets the last row (--frozen-travel, set by
+   useFrozenEdges). Scroll-driven, so it runs with the scroll and never lags
+   it. Browsers without scroll timelines keep a header that scrolls away. */
+@supports (animation-timeline: view()) {
+  .frozen-grid {
+    view-timeline: --frozen-grid block;
+    view-timeline-inset: var(--frozen-top, 0px) 0px;
+  }
+  .frozen-grid .frozen-head {
+    animation: frozen-head linear both;
+    animation-timeline: --frozen-grid;
+    animation-range: exit-crossing 0% exit-crossing var(--frozen-travel, 0px);
+  }
+}
+@keyframes frozen-head {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--frozen-travel, 0px)); }
+}

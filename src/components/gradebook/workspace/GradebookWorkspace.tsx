@@ -57,6 +57,8 @@ import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
+import { useFrozenEdges } from '@/components/assessments/scores/useFrozenEdges'
+import { CLASS_STICKY_BOTTOM_PX } from '@/lib/classStickyHeader'
 import { writeStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades'
 import { getThreadStubs } from '@/services/messagingService'
 import type { ThreadStub } from '@/services/types/messaging'
@@ -138,6 +140,10 @@ const pointsOf = (a: AssessmentPayload) => a.weightPoints || a.weightPercent || 
 const TOTAL_SHADOW = 'sm:shadow-[-6px_0_8px_-6px_rgba(15,23,42,0.18)]'
 // On a phone the term total scrolls with the row; pinned, it would leave no room for the scores.
 const TOTAL_PIN = 'sm:sticky sm:right-0'
+// The header row stays in view under the class page's stuck bars while the
+// page scrolls (`frozen-grid` / `frozen-head` in globals.css). Layers inside
+// the grid: a cell's "…" z-10, pinned body cells z-20, header cells z-30,
+// header corners z-40, a cell with its menu open z-50.
 
 export default function GradebookWorkspace({
   classId,
@@ -338,6 +344,12 @@ export default function GradebookWorkspace({
   // the matrix is re-read.
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh: refreshScoresMatrix, autosave })
   const nav = useScoreGridNav('grade', students.length, assessments.filter((a) => !a.parentAssessmentId).length)
+  const [gridBox, setGridBox] = useState<HTMLDivElement | null>(null)
+  const gridRef = useCallback((el: HTMLDivElement | null) => {
+    scrollContainerRef.current = el
+    setGridBox(el)
+  }, [])
+  useFrozenEdges(gridBox)
 
   const load = useCallback(() => {
     Promise.all([getStudentsInClass(classId), getAssessmentsByClass(classId), getScoresByClass(classId)])
@@ -858,17 +870,24 @@ export default function GradebookWorkspace({
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{exportError}</div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+      {/* overflow-clip, not -hidden: a hidden box counts as a scroller, and the
+          frozen header row follows the page's own scroll. */}
+      <div className="overflow-clip rounded-2xl border border-slate-200/70 bg-white shadow-sm">
         <AssessmentJumper
           assessments={displayedAssessments}
           onJump={handleJumpToAssessment}
           activeAssessmentId={highlightedAssessmentId}
         />
-        <div className="overflow-x-auto" ref={scrollContainerRef}>
+        {/* isolate keeps the grid's layers to itself. */}
+        <div
+          className="frozen-grid isolate overflow-x-auto"
+          style={{ '--frozen-top': `${CLASS_STICKY_BOTTOM_PX}px` } as React.CSSProperties}
+          ref={gridRef}
+        >
           <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr className="bg-slate-50">
-                <th className="sticky left-0 z-20 min-w-[130px] border-b border-slate-100 bg-slate-50 px-4 py-3 text-left text-[13px] font-semibold text-slate-700 sm:min-w-[240px]">
+                <th className="frozen-head sticky left-0 z-40 min-w-[130px] border-b border-slate-100 bg-slate-50 px-4 py-3 text-left text-[13px] font-semibold text-slate-700 sm:min-w-[240px]">
                   Student
                 </th>
                 {displayedAssessments.map((a) => {
@@ -882,7 +901,7 @@ export default function GradebookWorkspace({
                       ref={(el) => {
                         thRefs.current[a.assessmentId] = el
                       }}
-                      className={`min-w-[150px] cursor-pointer border-b border-l border-slate-100 px-3 py-3 text-center align-top transition-colors duration-300 hover:bg-slate-100 ${
+                      className={`frozen-head relative z-30 min-w-[150px] cursor-pointer border-b border-l border-slate-100 bg-slate-50 px-3 py-3 text-center align-top transition-colors duration-300 hover:bg-slate-100 ${
                         highlightedAssessmentId === a.assessmentId ? 'ring-2 ring-inset ring-cyan-400' : ''
                       }`}
                       onClick={() => openColumn(a)}
@@ -963,7 +982,7 @@ export default function GradebookWorkspace({
                   )
                 })}
                 <th
-                  className={`${TOTAL_PIN} z-20 min-w-[110px] border-b border-l-2 border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 py-3 text-center font-display text-sm font-semibold text-emerald-800 ${TOTAL_SHADOW}`}
+                  className={`frozen-head relative z-40 ${TOTAL_PIN} min-w-[110px] border-b border-l-2 border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 py-3 text-center font-display text-sm font-semibold text-emerald-800 ${TOTAL_SHADOW}`}
                 >
                   Term total
                 </th>
@@ -990,7 +1009,7 @@ export default function GradebookWorkspace({
                   const grade = live.grade
                   return (
                     <tr key={stu.studentId} className="transition-colors hover:bg-slate-50/50">
-                      <td className={`sticky left-0 z-10 border-r border-t border-slate-100 bg-white px-4 ${rowPad}`}>
+                      <td className={`sticky left-0 z-20 border-r border-t border-slate-100 bg-white px-4 ${rowPad}`}>
                         <div className="flex items-center gap-2.5">
                           {/* No avatar on a phone: the name column stays narrow enough to leave room for scores. */}
                           <span className="hidden shrink-0 sm:inline-flex">
@@ -1131,7 +1150,7 @@ export default function GradebookWorkspace({
                       })}
 
                       <td
-                        className={`${TOTAL_PIN} z-10 border-l-2 border-t border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 text-center ${rowPad} ${TOTAL_SHADOW}`}
+                        className={`${TOTAL_PIN} z-20 border-l-2 border-t border-slate-100 border-l-emerald-100 bg-emerald-50 px-4 text-center ${rowPad} ${TOTAL_SHADOW}`}
                         title={density === 'compact' ? formatCoverage(grade.coverage) : undefined}
                       >
                         <div className={`font-display text-xl font-bold leading-tight tabular-nums ${scoreTone(grade.pct)}`}>
