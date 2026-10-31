@@ -624,10 +624,10 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                       <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[260px]">
                         Core Standards
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[160px]">
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
                         Work Habits
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[160px]">
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
                         Behavior
                       </th>
                       <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[380px]">
