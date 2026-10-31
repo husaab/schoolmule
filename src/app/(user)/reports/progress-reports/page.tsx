@@ -1,49 +1,94 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+// Progress reports for one term: every student once, with their report (or
+// that there isn't one yet) and whether the family was emailed. The overview
+// shows how far the term has got and doubles as the grade filter; the chips
+// filter by status; a selection generates, emails, downloads or deletes in
+// bulk. Filters live in the URL (term, grades, status, q).
+
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowDownTrayIcon,
+  ArrowLeftIcon,
+  CalendarDaysIcon,
+  DocumentPlusIcon,
+  EnvelopeIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  UserGroupIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
+import BackLink from '@/components/shared/BackLink'
+import EmptyState from '@/components/ui/EmptyState'
+import SearchableSelect from '@/components/ui/SearchableSelect'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getAllStudents } from '@/services/studentService'
-import { getProgressReportsByTermAndSchool, generateBulkProgressReports, getSignedProgressReportUrl } from '@/services/progressReportService'
+import { generateBulkProgressReports, getProgressReportsByTermAndSchool, getSignedProgressReportUrl } from '@/services/progressReportService'
 import type { TermPayload } from '@/services/types/term'
 import type { StudentPayload } from '@/services/types/student'
-import { getGradeOptions, getGradeNumericValue } from '@/lib/schoolUtils'
-import { ArrowLeftIcon, DocumentArrowDownIcon, CalendarIcon, UserIcon, MagnifyingGlassIcon, FunnelIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, EnvelopeIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
+import { saveBlob } from '@/lib/pdfDownload'
+import {
+  STATUS_FILTERS,
+  buildRoster,
+  filterRoster,
+  gradeBreakdown,
+  inGrades,
+  isStatusFilter,
+  localDateISO,
+  matchesStatus,
+  normalizeProgressReport,
+  parseGenerateResult,
+  parseGradeList,
+  rosterCounts,
+  selectionTargets,
+  shortDate,
+  type GenerateOutcome,
+  type RawProgressReport,
+  type StatusFilter,
+} from '@/lib/progressReportRoster'
+import ProgressOverview from '@/components/progress-report/roster/ProgressOverview'
+import RosterTable, { type Row, type RowActions } from '@/components/progress-report/roster/RosterTable'
+import PdfViewerModal from '@/components/reports/PdfViewerModal'
 import GenerateProgressReportModal from '@/components/progress-report/generate/generateProgressReportModal'
-import ViewProgressReportModal from '@/components/progress-report/view/viewProgressReportModal'
 import DeleteProgressReportModal from '@/components/progress-report/delete/deleteProgressReportModal'
 import BulkDeleteProgressReportModal from '@/components/progress-report/delete/bulkDeleteProgressReportModal'
 import BulkDownloadProgressReportModal from '@/components/progress-report/download/bulkDownloadProgressReportModal'
 import SentEmailProgressReportModal from '@/components/progress-report/email/sent/sentEmailProgressReportModal'
 import SingleEmailProgressReportModal from '@/components/progress-report/email/singleEmailProgressReportModal'
 import BulkEmailProgressReportModal from '@/components/progress-report/email/bulkEmailProgressReportModal'
-import { useFilterParams, useDebouncedParam } from '@/hooks/useFilterParams'
-import SearchableSelect from '@/components/ui/SearchableSelect'
 
-interface ProgressReportRecord {
-  student_id?: string
-  studentId?: string
-  term: string
-  student_name?: string
-  studentName?: string
-  grade?: string
-  file_path?: string
-  filePath?: string
-  generated_at?: string
-  generatedAt?: string
-  school?: string
-  email_sent?: boolean
-  email_sent_at?: string
-  email_sent_by?: string
+type Dialog =
+  | { kind: 'view'; row: Row; url: string }
+  | { kind: 'email'; row: Row }
+  | { kind: 'sent'; row: Row }
+  | { kind: 'delete'; row: Row }
+  | { kind: 'bulkDelete'; paths: string[] }
+  | { kind: 'bulkDownload'; paths: string[] }
+  | { kind: 'bulkEmail'; preselect: string[] }
+
+interface GenerateRun {
+  students: { studentId: string; name: string }[]
+  running: boolean
+  outcome: GenerateOutcome | null
+  error: string | null
 }
 
+const secondaryButton =
+  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50'
+const primaryButton =
+  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:from-cyan-600 hover:to-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+const bulkButtonBase =
+  'inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 font-medium shadow-sm ring-1 ring-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50'
+const bulkButton = `${bulkButtonBase} text-slate-700 hover:bg-slate-50`
+const dangerBulkButton = `${bulkButtonBase} text-rose-700 hover:bg-rose-50`
+
 const ProgressReportsContent = () => {
-  const router = useRouter()
   const user = useUserStore((state) => state.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((state) => state.showNotification)
@@ -52,84 +97,61 @@ const ProgressReportsContent = () => {
 
   const [terms, setTerms] = useState<TermPayload[]>([])
   const [students, setStudents] = useState<StudentPayload[]>([])
+  // The report rows, tagged with the term they were read for, so a term switch never shows the old term's.
+  const [reportsFor, setReportsFor] = useState<{ term: string; rows: RawProgressReport[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const latestReportsRequest = useRef(0)
+
   // Filters live in the URL so Back/refresh/share restore them.
   const selectedTerm = get('term')
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([])
-  const [generatedReports, setGeneratedReports] = useState<ProgressReportRecord[]>([])
+  const selectedGrades = parseGradeList(get('grades'))
+  const rawStatus = get('status')
+  const status: StatusFilter = isStatusFilter(rawStatus) ? rawStatus : ''
+  const [search, setSearch] = useDebouncedParam(filters, 'q')
 
-  // Filter states — search inputs seeded from URL; grade selects are URL source of truth.
-  const [studentSearchTerm, setStudentSearchTerm] = useDebouncedParam(filters, 'sq')
-  // Grades the user has deselected (excluded) from the generate list; empty = all grades shown.
-  const excludedGrades = get('xgrades') ? get('xgrades').split(',') : []
-  const [reportSearchTerm, setReportSearchTerm] = useDebouncedParam(filters, 'rq')
-  const reportGradeFilter = get('rgrade')
-  
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  
-  // Modal states
-  const [showGenerateModal, setShowGenerateModal] = useState(false)
-  const [generateResult, setGenerateResult] = useState('')
-  const [viewingUrl, setViewingUrl] = useState<string | null>(null)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [selectedForDelete, setSelectedForDelete] = useState<ProgressReportRecord | null>(null)
-  const [selectedForEmail, setSelectedForEmail] = useState<ProgressReportRecord | null>(null)
-  const [emailDetailsModalOpen, setEmailDetailsModalOpen] = useState(false)
-  const [sendEmailModalOpen, setSendEmailModalOpen] = useState(false)
-  const [bulkEmailModalOpen, setBulkEmailModalOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [dialog, setDialog] = useState<Dialog | null>(null)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const [run, setRun] = useState<GenerateRun | null>(null)
+  // The date JK/SK progress reports print (other grades don't print one).
+  const [reportDate, setReportDate] = useState(() => localDateISO())
 
-  // Bulk selection for download/delete (keyed by file_path, same key the APIs use)
-  const [selectedReportPaths, setSelectedReportPaths] = useState<string[]>([])
-  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false)
-  const [bulkDownloadModalOpen, setBulkDownloadModalOpen] = useState(false)
-
-  // Fetch initial data
   const fetchData = useCallback(async () => {
     if (!user?.school) return
-
     try {
       setLoading(true)
-
-      const [termsRes, studentsRes] = await Promise.all([
-        getTermsBySchool(user.school),
-        getAllStudents(user.school)
-      ])
-
-      if (termsRes.status === 'success') {
-        setTerms(termsRes.data)
-      }
-
-      if (studentsRes.status === 'success') {
-        setStudents(studentsRes.data)
-      }
+      const [termsRes, studentsRes] = await Promise.all([getTermsBySchool(user.school), getAllStudents(user.school)])
+      if (termsRes.status === 'success') setTerms(termsRes.data)
+      if (studentsRes.status === 'success') setStudents(studentsRes.data)
     } catch (err) {
       console.error('Error fetching data:', err)
+      showNotification("Couldn't load students and terms", 'error')
     } finally {
       setLoading(false)
     }
-  }, [user?.school, selectedYearId]) // refetch when the selected school year changes
+  }, [user?.school, selectedYearId, showNotification]) // refetch when the selected school year changes
 
-  // Default to the active term once terms load, only if the URL hasn't pinned
-  // one. Kept out of fetchData so changing filters never refetches data.
+  // Default to the active term once terms load, only if the URL hasn't pinned one.
   useEffect(() => {
     if (selectedTerm || terms.length === 0) return
-    const activeTerm = terms.find(t => t.isActive)
+    const activeTerm = terms.find((t) => t.isActive)
     if (activeTerm) setParams({ term: activeTerm.name })
   }, [terms, selectedTerm, setParams])
 
-  // Fetch generated reports when term changes
   const fetchGeneratedReports = useCallback(async () => {
     if (!user?.school || !selectedTerm) return
-
+    // Only the newest request lands: switching Term 1 → 2 → 1 quickly never shows Term 2's rows under Term 1.
+    const request = ++latestReportsRequest.current
     try {
       const reportsRes = await getProgressReportsByTermAndSchool(selectedTerm, user.school)
-      if (reportsRes.status === 'success') {
-        setGeneratedReports(reportsRes.data)
-      }
+      if (request !== latestReportsRequest.current) return
+      if (reportsRes.status === 'success') setReportsFor({ term: selectedTerm, rows: reportsRes.data as unknown as RawProgressReport[] })
     } catch (err) {
+      if (request !== latestReportsRequest.current) return
       console.error('Error fetching generated reports:', err)
+      showNotification("Couldn't load this term's progress reports", 'error')
     }
-  }, [user?.school, selectedTerm, selectedYearId]) // refetch when the selected school year changes
+  }, [user?.school, selectedTerm, selectedYearId, showNotification]) // refetch when the selected school year changes
 
   useEffect(() => {
     fetchData()
@@ -139,723 +161,439 @@ const ProgressReportsContent = () => {
     fetchGeneratedReports()
   }, [fetchGeneratedReports])
 
-  // Get grade options
-  const grades = getGradeOptions()
+  // A new term or school year starts with nothing selected.
+  useEffect(() => {
+    setSelectedIds([])
+  }, [selectedTerm, selectedYearId])
 
-  // Filter and sort students
-  const filteredStudents = students
-    .filter(s => {
-      const matchesName = s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())
-      const matchesGrade = !excludedGrades.includes(String(s.grade))
-      return matchesName && matchesGrade
-    })
-    .sort((a, b) => {
-      // Sort by grade first (JK, SK, 1, 2, 3...8)
-      const gradeA = getGradeNumericValue(a.grade || '')
-      const gradeB = getGradeNumericValue(b.grade || '')
-      
-      if (gradeA !== gradeB) {
-        return gradeA - gradeB
-      }
-      // Then sort by name alphabetically within the same grade
-      return a.name.localeCompare(b.name)
-    })
+  // Until this term's rows arrive the list shows a skeleton and the header actions wait.
+  const reportsReady = !!selectedTerm && reportsFor?.term === selectedTerm
+  const rawReports = useMemo(() => (reportsReady ? reportsFor!.rows : []), [reportsReady, reportsFor])
+  const reports = useMemo(() => rawReports.map(normalizeProgressReport), [rawReports])
+  const roster = useMemo(() => buildRoster(students, reports), [students, reports])
+  const rosterById = useMemo(() => new Map(roster.map((r) => [r.studentId, r])), [roster])
+  const counts = useMemo(() => rosterCounts(roster), [roster])
+  const grades = useMemo(() => gradeBreakdown(roster), [roster])
+  const gradeRows = roster.filter((r) => inGrades(r, selectedGrades))
+  const visible = filterRoster(roster, { grades: selectedGrades, status, q: search })
+  // Only rows on screen count as selected, so a bulk action never reaches a student a filter
+  // (or a row's own change, e.g. it was just emailed) has hidden.
+  const visibleIdSet = new Set(visible.map((r) => r.studentId))
+  const shownSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id))
+  const targets = selectionTargets(visible, shownSelectedIds)
+  const missingIds = gradeRows.filter((r) => r.status === 'none' && r.student).map((r) => r.studentId)
+  const unemailedReports = rawReports.filter((r) => !(r.email_sent ?? r.emailSent))
+  const hasFilters = selectedGrades.length > 0 || status !== '' || search.trim() !== ''
 
-  // Filter and sort generated reports
-  const filteredReports = generatedReports
-    .filter(r => {
-      const matchesName = (r.student_name || r.studentName || '').toLowerCase().includes(reportSearchTerm.toLowerCase())
-      const matchesGrade = reportGradeFilter === '' || String(r.grade) === reportGradeFilter
-      return matchesName && matchesGrade
-    })
-    .sort((a, b) => {
-      // Sort by grade first (JK, SK, 1, 2, 3...8)
-      const gradeA = getGradeNumericValue(a.grade || '')
-      const gradeB = getGradeNumericValue(b.grade || '')
-      
-      if (gradeA !== gradeB) {
-        return gradeA - gradeB
-      }
-      // Then sort by name alphabetically within the same grade
-      const nameA = a.student_name || a.studentName || ''
-      const nameB = b.student_name || b.studentName || ''
-      return nameA.localeCompare(nameB)
-    })
-
-  const handleStudentSelection = (studentId: string) => {
-    setSelectedStudents(prev => 
-      prev.includes(studentId) 
-        ? prev.filter(id => id !== studentId)
-        : [...prev, studentId]
-    )
+  // Changing what's shown drops the selection, so a bulk action never reaches hidden rows.
+  const changeFilters = (patch: Record<string, string | null>) => {
+    setSelectedIds([])
+    setParams(patch)
+  }
+  const toggleGrade = (grade: string) => {
+    const next = selectedGrades.includes(grade) ? selectedGrades.filter((g) => g !== grade) : [...selectedGrades, grade]
+    changeFilters({ grades: next.length ? next.join(',') : null })
+  }
+  const clearFilters = () => {
+    setSelectedIds([])
+    setSearch('')
+    setParams({ grades: null, status: null, q: null })
   }
 
-  const handleSelectAll = () => {
-    if (selectedStudents.length === filteredStudents.length) {
-      setSelectedStudents([])
-    } else {
-      setSelectedStudents(filteredStudents.map(s => s.studentId))
-    }
-  }
-
-  // Toggle a grade in/out of the generate list. Deselecting a grade also drops any
-  // already-selected students of that grade so they aren't generated while hidden.
-  const toggleGradeExcluded = (gradeValue: string | number) => {
-    const g = String(gradeValue)
-    const isExcluding = !excludedGrades.includes(g)
-    const next = isExcluding ? [...excludedGrades, g] : excludedGrades.filter(x => x !== g)
-    setParams({ xgrades: next.length ? next.join(',') : null })
-    if (isExcluding) {
-      setSelectedStudents(prev => prev.filter(id => {
-        const stu = students.find(s => s.studentId === id)
-        return stu ? String(stu.grade) !== g : true
-      }))
-    }
-  }
-
-  const handleGenerateReports = async () => {
-    if (!selectedTerm || selectedStudents.length === 0) {
-      showNotification('Please select a term and at least one student', 'error')
-      return
-    }
-
-    setGenerating(true)
-    setShowGenerateModal(true)
-    
+  const runGenerate = async (studentIds: string[]) => {
+    if (!selectedTerm || studentIds.length === 0) return
+    const runStudents = studentIds.map((id) => ({ studentId: id, name: rosterById.get(id)?.name ?? 'Student' }))
+    setRun({ students: runStudents, running: true, outcome: null, error: null })
+    setSelectedIds([])
     try {
-      const result = await generateBulkProgressReports({
-        studentIds: selectedStudents,
-        term: selectedTerm
-      })
-
-      const successCount = result.generated?.length || 0
-      const failureCount = result.failed?.length || 0
-      
-      let message = `Generated ${successCount} progress report${successCount !== 1 ? 's' : ''}`
-      if (failureCount > 0) {
-        message += `, ${failureCount} failed`
-      }
-      
-      setGenerateResult(message)
-      showNotification(message, successCount > 0 ? 'success' : 'error')
-      
-      // Refresh generated reports list
+      const outcome = parseGenerateResult(
+        await generateBulkProgressReports({ studentIds, term: selectedTerm, reportDate: reportDate || undefined }),
+      )
+      setRun({ students: runStudents, running: false, outcome, error: null })
+      const ok = outcome.generated.length
+      const failed = outcome.failed.length
+      showNotification(
+        `Generated ${ok} progress report${ok !== 1 ? 's' : ''}${failed > 0 ? `, ${failed} skipped` : ''}`,
+        ok > 0 ? 'success' : 'error',
+      )
       await fetchGeneratedReports()
-      
-      // Clear selections
-      setSelectedStudents([])
-      
     } catch (err) {
       console.error('Error generating reports:', err)
-      setGenerateResult('Failed to generate progress reports')
+      setRun({ students: runStudents, running: false, outcome: null, error: 'The server could not generate the reports. Try again.' })
       showNotification('Failed to generate progress reports', 'error')
-    } finally {
-      setGenerating(false)
     }
   }
 
-  const handleDownloadReport = async (report: ProgressReportRecord) => {
+  const handleDownloadReport = async (row: Row) => {
+    const filePath = row.report?.filePath || ''
     try {
-      const signedUrl = await getSignedProgressReportUrl(report.file_path || report.filePath || '')
+      const signedUrl = await getSignedProgressReportUrl(filePath)
       if (!signedUrl) {
         showNotification('Failed to get download link', 'error')
         return
       }
-
       const response = await fetch(signedUrl)
-      const blob = await response.blob()
-      const blobUrl = window.URL.createObjectURL(blob)
-
-      const anchor = document.createElement('a')
-      anchor.href = blobUrl
-      anchor.download = (report.file_path || report.filePath || '').split('/').pop() || 'progress-report.pdf'
-      document.body.appendChild(anchor)
-      anchor.click()
-      document.body.removeChild(anchor)
-      window.URL.revokeObjectURL(blobUrl) // Clean up
+      saveBlob(await response.blob(), filePath.split('/').pop() || 'progress-report.pdf')
     } catch (err) {
       console.error('Error downloading report:', err)
       showNotification('Failed to download report', 'error')
     }
   }
 
-  const handlePreviewReport = async (report: ProgressReportRecord) => {
+  const handlePreviewReport = async (row: Row) => {
+    setOpeningId(row.studentId)
     try {
-      const signedUrl = await getSignedProgressReportUrl(report.file_path || report.filePath || '')
-      if (signedUrl) {
-        setViewingUrl(signedUrl)
-      } else {
-        showNotification('Failed to get preview link', 'error')
-      }
+      const signedUrl = await getSignedProgressReportUrl(row.report?.filePath || '')
+      if (signedUrl) setDialog({ kind: 'view', row, url: signedUrl })
+      else showNotification('Failed to get preview link', 'error')
     } catch (err) {
       console.error('Error previewing report:', err)
       showNotification('Failed to preview report', 'error')
+    } finally {
+      setOpeningId(null)
     }
   }
 
-  const handleDeleteReport = (report: ProgressReportRecord) => {
-    setSelectedForDelete(report)
-    setDeleteModalOpen(true)
+  const actions: RowActions = {
+    view: (row) => void handlePreviewReport(row),
+    download: (row) => void handleDownloadReport(row),
+    emailFamily: (row) => setDialog({ kind: 'email', row }),
+    emailDetails: (row) => setDialog({ kind: 'sent', row }),
+    generate: (ids) => void runGenerate(ids),
+    remove: (row) => setDialog({ kind: 'delete', row }),
   }
 
-  const handleEmailClick = (report: ProgressReportRecord) => {
-    setSelectedForEmail(report)
-    if (report.email_sent) {
-      // Show email details modal if already sent
-      setEmailDetailsModalOpen(true)
-    } else {
-      // Open send email modal
-      setSendEmailModalOpen(true)
-    }
+  const removePaths = (paths: string[]) => {
+    setReportsFor((prev) => prev && { ...prev, rows: prev.rows.filter((r) => !paths.includes(r.file_path || r.filePath || '')) })
+    setSelectedIds([])
   }
 
-  const getEmailIcon = (report: ProgressReportRecord) => {
-    if (report.email_sent) {
-      return (
-        <CheckCircleIcon 
-          className="h-5 w-5" 
-          title={`Email sent on ${report.email_sent_at ? new Date(report.email_sent_at).toLocaleDateString() : 'Unknown date'}`}
-        />
-      )
-    }
-    return <EnvelopeIcon className="h-5 w-5" title="Send email" />
-  }
+  const toggleRow = (id: string) => setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  const visibleIds = visible.map((r) => r.studentId)
+  const toggleAllShown = () => setSelectedIds((prev) => (visibleIds.length > 0 && visibleIds.every((id) => prev.includes(id)) ? [] : visibleIds))
 
-  const getEmailButtonClasses = (report: ProgressReportRecord) => {
-    if (report.email_sent) {
-      return "p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-    }
-    return "p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-  }
+  const termOptions = terms.map((term) => ({
+    value: term.name,
+    // The navbar already names the school year.
+    label: `${term.name}${term.isActive ? ' · active' : ''}`,
+  }))
+  const summary = selectedTerm
+    ? `${selectedTerm} · ${counts.total} student${counts.total !== 1 ? 's' : ''}`
+    : 'Core standards, work habits and behaviour for every student, emailed to each family.'
 
-  const handleBulkEmail = () => {
-    // Filter out reports that have already been emailed
-    const unemailedReports = generatedReports.filter(report => !report.email_sent)
-    
-    if (unemailedReports.length === 0) {
-      showNotification('No progress reports available for bulk email (all reports have been sent)', 'error')
-      return
-    }
-    setBulkEmailModalOpen(true)
-  }
-
-  // Records use dual field naming; file_path is the delete/download key.
-  const pathOf = (r: ProgressReportRecord) => r.file_path || r.filePath || ''
-
-  const visiblePaths = filteredReports.map(pathOf).filter(Boolean)
-  const allVisibleSelected = visiblePaths.length > 0 && visiblePaths.every(p => selectedReportPaths.includes(p))
-
-  const toggleReportSelection = (filePath: string) => {
-    setSelectedReportPaths(prev =>
-      prev.includes(filePath)
-        ? prev.filter(p => p !== filePath)
-        : [...prev, filePath]
-    )
-  }
-
-  const toggleSelectAll = () => {
-    setSelectedReportPaths(allVisibleSelected ? [] : visiblePaths)
-  }
-
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <Sidebar />
-        <main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10">
-          <div className="text-center">
-            <p className="text-gray-600">Loading progress reports...</p>
-          </div>
-        </main>
-      </>
-    )
-  }
+  const sentRow = dialog?.kind === 'sent' ? dialog.row : null
+  const generatedEmailable = (run?.outcome?.generated ?? []).filter((id) => rosterById.get(id)?.status === 'ready')
 
   return (
     <>
       <Navbar />
       <Sidebar />
-      
-      <main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black">
-        <div className="max-w-screen-2xl mx-auto">
+
+      <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={() => router.push('/reports')}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+          <div className="flex flex-col gap-4 min-[1400px]:flex-row min-[1400px]:items-end min-[1400px]:justify-between">
+            <div className="min-w-0">
+              <BackLink to="/reports" className="mb-2 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
+                <ArrowLeftIcon className="h-4 w-4" />
+                Reports
+              </BackLink>
+              <h1 className="font-display text-[26px] font-semibold leading-tight text-slate-900 sm:text-[30px]">Progress reports</h1>
+              <p className="mt-1 text-[15px] text-slate-600">{summary}</p>
+            </div>
+            {/* A phone stacks them full width; wider screens keep them on one line. */}
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
+              <SearchableSelect
+                options={termOptions}
+                value={selectedTerm}
+                onChange={(v) => setParams({ term: v })}
+                placeholder="Select a term"
+                ariaLabel="Term"
+                searchPlaceholder="Find a term"
+                size="sm"
+                className="sm:min-w-[11rem]"
+              />
+              <label
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 shadow-sm focus-within:ring-2 focus-within:ring-cyan-500"
+                title="The date printed on JK and SK progress reports"
               >
-                <ArrowLeftIcon className="h-5 w-5" />
-                Back to Reports
+                <CalendarDaysIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <span>Report date</span>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  className="border-0 bg-transparent p-0 text-sm font-medium text-slate-900 focus:outline-none focus:ring-0"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: 'bulkEmail', preselect: unemailedReports.map((r) => r.student_id || r.studentId || '') })}
+                disabled={!reportsReady || unemailedReports.length === 0}
+                title={unemailedReports.length === 0 ? 'Every report this term has been emailed' : undefined}
+                className={secondaryButton}
+              >
+                <EnvelopeIcon className="h-4 w-4 text-slate-500" />
+                Email families ({unemailedReports.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => void runGenerate(missingIds)}
+                disabled={!reportsReady || missingIds.length === 0 || !!run?.running}
+                title={missingIds.length === 0 ? 'Everyone shown has a report' : undefined}
+                className={primaryButton}
+              >
+                <DocumentPlusIcon className="h-4 w-4" />
+                Generate missing ({missingIds.length})
               </button>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Progress Reports</h1>
-            <p className="text-gray-600">
-              Generate and manage student progress reports with core standards, work habits, and behavior assessments.
-            </p>
           </div>
 
-          {/* Term Selection — shared across both panels (generate + view) */}
-          <div className="mb-8 bg-white border border-gray-200 rounded-lg shadow-sm px-6 py-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <CalendarIcon className="h-4 w-4 inline mr-1" />
-              Select Term
-            </label>
-            <SearchableSelect
-              options={terms.map((term) => ({
-                value: term.name,
-                label: `${term.name} (${term.academicYear})${term.isActive ? ' - Active' : ''}`,
-              }))}
-              value={selectedTerm}
-              onChange={(v) => { setParams({ term: v }); setSelectedReportPaths([]); }}
-              placeholder="Select a term"
-              ariaLabel="Select term"
-              className="lg:max-w-md"
-              triggerClassName="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-indigo-500"
-            />
-            <p className="text-gray-500 text-xs mt-2">
-              Generating for and viewing reports for this term.
-            </p>
-          </div>
+          {!selectedTerm && !loading && (
+            <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Pick a term to see its progress reports.
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Generate Reports Section */}
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <DocumentArrowDownIcon className="h-6 w-6" />
-                  Generate Progress Reports
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Select students and generate progress reports for parent conferences
-                </p>
-              </div>
+          <ProgressOverview
+            term={selectedTerm || 'this term'}
+            counts={counts}
+            grades={grades}
+            selectedGrades={selectedGrades}
+            onToggleGrade={toggleGrade}
+            onClearGrades={() => changeFilters({ grades: null })}
+            loading={loading || (!!selectedTerm && !reportsReady)}
+          />
 
-              <div className="p-6 space-y-6">
-                {!selectedTerm && (
-                  <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                    Select a term above to generate progress reports.
-                  </div>
-                )}
-
-                {/* Student Filters */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <MagnifyingGlassIcon className="h-4 w-4 inline mr-1" />
-                      Search Students
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Search by name..."
-                      value={studentSearchTerm}
-                      onChange={(e) => setStudentSearchTerm(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* Grade toggles — all included by default; click to deselect a grade (e.g. JK/SK). */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        <FunnelIcon className="h-4 w-4 inline mr-1" />
-                        Grades to include
-                      </label>
-                      {excludedGrades.length > 0 && (
-                        <button
-                          onClick={() => setParams({ xgrades: null })}
-                          className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
-                        >
-                          Reset
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {grades.map(gradeOption => {
-                        const g = String(gradeOption.value)
-                        const included = !excludedGrades.includes(g)
-                        return (
-                          <button
-                            key={gradeOption.value}
-                            type="button"
-                            onClick={() => toggleGradeExcluded(gradeOption.value)}
-                            aria-pressed={included}
-                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
-                              included
-                                ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
-                                : 'bg-white text-gray-400 border-gray-300 hover:bg-gray-50 line-through'
-                            }`}
-                          >
-                            {gradeOption.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {(studentSearchTerm || excludedGrades.length > 0) && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Showing {filteredStudents.length} of {students.length} students
-                      </span>
-                      <button
-                        onClick={() => {
-                          setParams({ sq: null, xgrades: null })
-                        }}
-                        className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
-                      >
-                        Clear filters
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Student Selection */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      <UserIcon className="h-4 w-4 inline mr-1" />
-                      Students ({selectedStudents.length} selected)
-                    </label>
+          <section aria-label="Students" className="rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            {/* Toolbar */}
+            <div className="flex flex-col gap-3 border-b border-slate-100 p-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by report status">
+                {STATUS_FILTERS.map((chip) => {
+                  const count = gradeRows.filter((r) => matchesStatus(r, chip.value)).length
+                  // "Updated since emailed" only earns a chip when something needs it.
+                  if (chip.value === 'updated' && count === 0 && status !== 'updated') return null
+                  const active = status === chip.value
+                  const attention = chip.value === 'updated' && count > 0 && !active
+                  return (
                     <button
-                      onClick={handleSelectAll}
-                      className="cursor-pointer text-sm text-indigo-600 hover:text-indigo-800"
+                      key={chip.value || 'all'}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => changeFilters({ status: chip.value || null })}
+                      className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                        active
+                          ? 'border-cyan-200 bg-cyan-50 font-medium text-cyan-800'
+                          : attention
+                            ? 'border-amber-200 bg-amber-50 font-medium text-amber-800 hover:bg-amber-100'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      {selectedStudents.length === filteredStudents.length ? 'Deselect All' : 'Select All'}
+                      {chip.label}
+                      <span className="ml-1.5 text-xs tabular-nums text-slate-400">{count}</span>
                     </button>
-                  </div>
-                  
-                  <div className="max-h-96 overflow-y-auto border border-gray-300 rounded-md">
-                    {filteredStudents.length === 0 ? (
-                      <div className="p-4 text-center text-gray-600">
-                        {students.length === 0 ? 'No students found' : 'No students match your filters'}
-                      </div>
-                    ) : (
-                      filteredStudents.map((student) => (
-                        <label
-                          key={student.studentId}
-                          className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedStudents.includes(student.studentId)}
-                            onChange={() => handleStudentSelection(student.studentId)}
-                            className="mr-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <div>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-sm text-gray-600">Grade {student.grade}</div>
-                          </div>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
+                  )
+                })}
+              </div>
+              <div className="relative xl:w-64">
+                <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => {
+                    setSelectedIds([])
+                    setSearch(e.target.value)
+                  }}
+                  placeholder="Search students"
+                  aria-label="Search students"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+            </div>
 
-                {/* Generate Button */}
-                <button
-                  onClick={handleGenerateReports}
-                  disabled={!selectedTerm || selectedStudents.length === 0 || generating}
-                  className={`w-full cursor-pointer py-3 px-4 rounded-lg font-medium transition-colors ${
-                    !selectedTerm || selectedStudents.length === 0 || generating
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  {generating ? 'Generating Reports...' : `Generate ${selectedStudents.length} Progress Report${selectedStudents.length !== 1 ? 's' : ''}`}
+            {/* Bulk bar */}
+            {shownSelectedIds.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-cyan-100 bg-cyan-50/60 px-4 py-2.5 text-sm">
+                <span className="mr-1 font-medium text-cyan-900">{shownSelectedIds.length} selected</span>
+                <button type="button" onClick={() => void runGenerate(targets.generateIds)} disabled={targets.generateIds.length === 0} className={bulkButton}>
+                  <DocumentPlusIcon className="h-4 w-4 text-slate-500" />
+                  Generate {targets.generateIds.length}
+                </button>
+                <button type="button" onClick={() => setDialog({ kind: 'bulkEmail', preselect: targets.emailIds })} disabled={targets.emailIds.length === 0} className={bulkButton}>
+                  <EnvelopeIcon className="h-4 w-4 text-slate-500" />
+                  Email families ({targets.emailIds.length})
+                </button>
+                <button type="button" onClick={() => setDialog({ kind: 'bulkDownload', paths: targets.filePaths })} disabled={targets.filePaths.length === 0} className={bulkButton}>
+                  <ArrowDownTrayIcon className="h-4 w-4 text-slate-500" />
+                  Download ZIP ({targets.filePaths.length})
+                </button>
+                <button type="button" onClick={() => setDialog({ kind: 'bulkDelete', paths: targets.filePaths })} disabled={targets.filePaths.length === 0} className={dangerBulkButton}>
+                  <TrashIcon className="h-4 w-4" />
+                  Delete ({targets.filePaths.length})
+                </button>
+                {targets.replacing > 0 && (
+                  <span className="text-xs text-cyan-800">
+                    {targets.replacing} already {targets.replacing === 1 ? 'has a report that' : 'have reports that'} Generate will replace
+                  </span>
+                )}
+                <button type="button" onClick={() => setSelectedIds([])} className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-slate-600 hover:bg-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+                  <XMarkIcon className="h-4 w-4" />
+                  Clear
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Generated Reports Section */}
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold">Generated Reports</h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Download previously generated progress reports
-                </p>
+            {/* Rows */}
+            {loading || (!!selectedTerm && !reportsReady) ? (
+              <div className="space-y-2 p-4" aria-label="Loading students">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />
+                ))}
               </div>
+            ) : roster.length === 0 ? (
+              <EmptyState icon={UserGroupIcon} title="No students yet" description="Students added to this school year show up here, ready for their progress reports." />
+            ) : visible.length === 0 ? (
+              <EmptyState
+                icon={MagnifyingGlassIcon}
+                title="No students match these filters"
+                description="Clear the search, or pick a different status or grade."
+                action={
+                  <button type="button" onClick={clearFilters} className={secondaryButton}>
+                    Clear filters
+                  </button>
+                }
+              />
+            ) : (
+              <RosterTable rows={visible} selectedIds={selectedIds} onToggle={toggleRow} onToggleAll={toggleAllShown} actions={actions} openingId={openingId} />
+            )}
 
-              <div className="p-6 space-y-6">
-                {/* Report Filters */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <MagnifyingGlassIcon className="h-4 w-4 inline mr-1" />
-                        Search Reports
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Search by student name..."
-                        value={reportSearchTerm}
-                        onChange={(e) => { setReportSearchTerm(e.target.value); setSelectedReportPaths([]); }}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <FunnelIcon className="h-4 w-4 inline mr-1" />
-                        Filter by Grade
-                      </label>
-                      <SearchableSelect
-                        options={grades.map((gradeOption) => ({
-                          value: String(gradeOption.value),
-                          label: `Grade ${gradeOption.label}`,
-                        }))}
-                        value={reportGradeFilter}
-                        onChange={(v) => { setParams({ rgrade: v }); setSelectedReportPaths([]); }}
-                        allLabel="All Grades"
-                        ariaLabel="Filter by grade"
-                        triggerClassName="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <button
-                        onClick={handleBulkEmail}
-                        disabled={generatedReports.filter(report => !report.email_sent).length === 0}
-                        className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                          generatedReports.filter(report => !report.email_sent).length === 0
-                            ? 'bg-gray-300 text-gray-500'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
-                      >
-                        <EnvelopeIcon className="h-4 w-4" />
-                        Bulk Email
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {(reportSearchTerm || reportGradeFilter) && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Showing {filteredReports.length} of {generatedReports.length} reports
-                      </span>
-                      <button
-                        onClick={() => {
-                          setParams({ rq: null, rgrade: null })
-                          setSelectedReportPaths([])
-                        }}
-                        className="text-sm cursor-pointer text-indigo-600 hover:text-indigo-800"
-                      >
-                        Clear filters
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bulk selection action bar */}
-                {filteredReports.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={toggleSelectAll}
-                      className="text-sm text-indigo-600 hover:text-indigo-800 cursor-pointer"
-                    >
-                      {allVisibleSelected ? 'Deselect all' : 'Select all'}
-                    </button>
-                    {selectedReportPaths.length > 0 && (
-                      <>
-                        <button
-                          onClick={() => setSelectedReportPaths([])}
-                          className="text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
-                        >
-                          Clear selection
-                        </button>
-                        <div className="ml-auto flex items-center gap-3">
-                          <button
-                            onClick={() => setBulkDownloadModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium"
-                          >
-                            <ArrowDownTrayIcon className="h-4 w-4" />
-                            Download Selected ({selectedReportPaths.length})
-                          </button>
-                          <button
-                            onClick={() => setBulkDeleteModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors cursor-pointer text-sm font-medium"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                            Delete Selected ({selectedReportPaths.length})
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-                {filteredReports.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">
-                      {generatedReports.length === 0 ? 'No progress reports generated yet.' : 'No reports match your filters.'}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {generatedReports.length === 0 ? 'Generate your first progress report to see it here.' : 'Try adjusting your search or filter criteria.'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[40rem] overflow-y-auto">
-                    {filteredReports.map((report) => (
-                      <div
-                        key={`${report.student_id || report.studentId}-${report.term}`}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="checkbox"
-                            title="Select progress report"
-                            checked={selectedReportPaths.includes(pathOf(report))}
-                            onChange={() => toggleReportSelection(pathOf(report))}
-                            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
-                          />
-                          <div>
-                            <div className="font-medium">{report.student_name || report.studentName}</div>
-                          <div className="text-sm text-gray-600">
-                            {report.term} • Grade {report.grade}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Generated: {new Date(report.generated_at || report.generatedAt || '').toLocaleDateString()}
-                          </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <button
-                            onClick={() => handleEmailClick(report)}
-                            title={report.email_sent ? 'View email details' : 'Send email'}
-                            className={getEmailButtonClasses(report)}
-                          >
-                            {getEmailIcon(report)}
-                          </button>
-                          <button
-                            onClick={() => handlePreviewReport(report)}
-                            title="View PDF"
-                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <EyeIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDownloadReport(report)}
-                            title="Download PDF"
-                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <ArrowDownTrayIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReport(report)}
-                            title="Delete Progress Report"
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            {!loading && roster.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
+                <span>
+                  Showing {visible.length} of {roster.length} students, by grade then name
+                </span>
+                {hasFilters && (
+                  <button type="button" onClick={clearFilters} className="cursor-pointer rounded font-medium text-cyan-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+                    Clear filters
+                  </button>
                 )}
               </div>
-            </div>
-          </div>
+            )}
+          </section>
         </div>
       </main>
 
       <GenerateProgressReportModal
-        isOpen={showGenerateModal}
-        onClose={() => setShowGenerateModal(false)}
-        isLoading={generating}
-        resultMessage={generateResult}
+        isOpen={!!run}
+        onClose={() => setRun(null)}
+        running={!!run?.running}
+        term={selectedTerm}
+        students={run?.students ?? []}
+        outcome={run?.outcome ?? null}
+        error={run?.error ?? null}
+        emailableIds={generatedEmailable}
+        onEmailFamilies={(ids) => {
+          setRun(null)
+          setDialog({ kind: 'bulkEmail', preselect: ids })
+        }}
       />
 
-      {viewingUrl && (
-        <ViewProgressReportModal
-          url={viewingUrl}
-          onClose={() => setViewingUrl(null)}
-        />
-      )}
+      <PdfViewerModal
+        isOpen={dialog?.kind === 'view'}
+        onClose={() => setDialog(null)}
+        src={dialog?.kind === 'view' ? dialog.url : null}
+        title={dialog?.kind === 'view' ? dialog.row.name : ''}
+        subtitle={
+          dialog?.kind === 'view'
+            ? `${selectedTerm} progress report${dialog.row.report?.generatedAt ? `, generated ${shortDate(dialog.row.report.generatedAt)}` : ''}`
+            : undefined
+        }
+        actions={
+          dialog?.kind === 'view' ? (
+            <>
+              <button type="button" onClick={() => void handleDownloadReport(dialog.row)} aria-label="Download PDF" className={secondaryButton}>
+                <ArrowDownTrayIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <span className="hidden sm:inline">Download</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDialog({ kind: 'email', row: dialog.row })}
+                aria-label={dialog.row.status === 'ready' ? 'Email family' : 'Email family again'}
+                className={primaryButton}
+              >
+                <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{dialog.row.status === 'ready' ? 'Email family' : 'Email again'}</span>
+              </button>
+            </>
+          ) : null
+        }
+      />
 
-      {deleteModalOpen && selectedForDelete && (
+      {dialog?.kind === 'delete' && (
         <DeleteProgressReportModal
-          isOpen={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
-          studentName={selectedForDelete.student_name || selectedForDelete.studentName || ''}
-          filePath={selectedForDelete.file_path || selectedForDelete.filePath || ''}
+          isOpen
+          onClose={() => setDialog(null)}
+          studentName={dialog.row.name}
+          filePath={dialog.row.report?.filePath || ''}
           onDeleted={(filePath: string) => {
-            setGeneratedReports((prev) => prev.filter((r) => (r.file_path || r.filePath) !== filePath));
-            setSelectedReportPaths((prev) => prev.filter((p) => p !== filePath));
-            setDeleteModalOpen(false);
-            setSelectedForDelete(null);
+            removePaths([filePath])
+            setDialog(null)
           }}
         />
       )}
 
-      {bulkDeleteModalOpen && selectedReportPaths.length > 0 && (
-        <BulkDeleteProgressReportModal
-          isOpen={bulkDeleteModalOpen}
-          onClose={() => setBulkDeleteModalOpen(false)}
-          filePaths={selectedReportPaths}
-          onDeleted={(filePaths: string[]) => {
-            setGeneratedReports((prev) => prev.filter((r) => !filePaths.includes(r.file_path || r.filePath || '')));
-            setSelectedReportPaths([]);
-          }}
-        />
+      {dialog?.kind === 'bulkDelete' && (
+        <BulkDeleteProgressReportModal isOpen onClose={() => setDialog(null)} filePaths={dialog.paths} onDeleted={(filePaths: string[]) => removePaths(filePaths)} />
       )}
 
-      {bulkDownloadModalOpen && selectedReportPaths.length > 0 && (
-        <BulkDownloadProgressReportModal
-          isOpen={bulkDownloadModalOpen}
-          onClose={() => setBulkDownloadModalOpen(false)}
-          filePaths={selectedReportPaths}
-          term={selectedTerm}
-        />
+      {dialog?.kind === 'bulkDownload' && (
+        <BulkDownloadProgressReportModal isOpen onClose={() => setDialog(null)} filePaths={dialog.paths} term={selectedTerm} onDownloaded={() => setSelectedIds([])} />
       )}
 
-      {emailDetailsModalOpen && selectedForEmail && (
+      {sentRow && (
         <SentEmailProgressReportModal
-          isOpen={emailDetailsModalOpen}
-          onClose={() => {
-            setEmailDetailsModalOpen(false);
-            setSelectedForEmail(null);
-          }}
-          studentId={selectedForEmail.student_id || selectedForEmail.studentId || ''}
-          studentName={selectedForEmail.student_name || selectedForEmail.studentName || ''}
-          term={selectedForEmail.term}
+          isOpen
+          onClose={() => setDialog(null)}
+          studentId={sentRow.studentId}
+          studentName={sentRow.name}
+          term={selectedTerm}
+          onEmailAgain={() => setDialog({ kind: 'email', row: sentRow })}
         />
       )}
 
-      {sendEmailModalOpen && selectedForEmail && (
+      {dialog?.kind === 'email' && (
         <SingleEmailProgressReportModal
-          isOpen={sendEmailModalOpen}
-          onClose={() => {
-            setSendEmailModalOpen(false);
-            setSelectedForEmail(null);
-          }}
-          studentId={selectedForEmail.student_id || selectedForEmail.studentId || ''}
-          studentName={selectedForEmail.student_name || selectedForEmail.studentName || ''}
-          term={selectedForEmail.term}
+          isOpen
+          onClose={() => setDialog(null)}
+          studentId={dialog.row.studentId}
+          studentName={dialog.row.name}
+          term={selectedTerm}
           onEmailSent={() => {
-            // Refresh the reports list to update email status
-            fetchGeneratedReports();
+            // Refresh the list so the row shows it was emailed.
+            fetchGeneratedReports()
           }}
         />
       )}
 
-      {bulkEmailModalOpen && (() => {
-        const unemailedReports = generatedReports.filter(report => !report.email_sent);
-        return (
-          <BulkEmailProgressReportModal
-            isOpen={bulkEmailModalOpen}
-            onClose={() => setBulkEmailModalOpen(false)}
-            availableReports={unemailedReports}
-            term={selectedTerm}
-            onEmailsSent={() => {
-              // Refresh the reports list to update email status
-              fetchGeneratedReports();
-            }}
-          />
-        );
-      })()}
+      {dialog?.kind === 'bulkEmail' && (
+        <BulkEmailProgressReportModal
+          isOpen
+          onClose={() => setDialog(null)}
+          availableReports={unemailedReports}
+          initialSelectedIds={dialog.preselect}
+          term={selectedTerm}
+          onEmailsSent={() => {
+            setSelectedIds([])
+            fetchGeneratedReports()
+          }}
+        />
+      )}
     </>
   )
 }
 
 const ProgressReportsPage = () => (
-  <Suspense fallback={<main className="lg:ml-64 pt-32 lg:pt-40 bg-white min-h-screen p-4 lg:p-10 text-black" />}>
+  <Suspense fallback={<main className="lg:ml-72 pt-20 min-h-screen bg-slate-50" />}>
     <ProgressReportsContent />
   </Suspense>
 )

@@ -1,67 +1,126 @@
 'use client'
 
-import React from 'react'
+// Reports: the PDFs staff can make. Each card shows what the document looks
+// like and what it's for; Progress reports also shows where the active term
+// stands (generated, emailed), read from that term's report list. Reports
+// still being built are named in one quiet line, not as dead cards.
+
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ChevronRightIcon } from '@heroicons/react/24/outline'
 import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
-import { useNotificationStore } from '@/store/useNotificationStore'
-import { 
-  DocumentTextIcon, 
-  ChartBarIcon, 
-  UserGroupIcon, 
-  ClipboardDocumentListIcon,
-  DocumentChartBarIcon
-} from '@heroicons/react/24/outline'
+import { useUserStore } from '@/store/useUserStore'
+import { useSchoolYearStore } from '@/store/useSchoolYearStore'
+import { getTermsBySchool } from '@/services/termService'
+import { getProgressReportsByTermAndSchool } from '@/services/progressReportService'
+import { normalizeProgressReport, type RawProgressReport } from '@/lib/progressReportRoster'
+
+const PLANNED = ['Attendance summaries for a class or date range', 'Class overview with the grade spread', 'Grade trends across the year']
+
+interface TermStatus {
+  term: string
+  generated: number
+  emailed: number
+}
+
+/** Where the active term's progress reports stand; null until known (or when there's no active term). */
+function useActiveTermStatus(): TermStatus | null {
+  const school = useUserStore((s) => s.user?.school)
+  const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
+  // Tagged with the school and year it was read for, so a year switch never shows the old line.
+  const key = `${school}|${selectedYearId}`
+  const [loaded, setLoaded] = useState<{ key: string; status: TermStatus } | null>(null)
+
+  useEffect(() => {
+    if (!school) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const terms = await getTermsBySchool(school)
+        const active = terms.status === 'success' ? terms.data.find((t) => t.isActive) : undefined
+        if (!active) return
+        const res = await getProgressReportsByTermAndSchool(active.name, school)
+        if (cancelled || res.status !== 'success') return
+        const rows = (res.data as unknown as RawProgressReport[]).map(normalizeProgressReport)
+        setLoaded({ key, status: { term: active.name, generated: rows.length, emailed: rows.filter((r) => r.emailSent).length } })
+      } catch {
+        // The card reads fine without the line.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [school, selectedYearId, key])
+
+  return loaded?.key === key ? loaded.status : null
+}
+
+// Two small pages, the way a progress report looks: a title bar, a table, lines of comments.
+function ProgressThumb() {
+  return (
+    <div className="flex h-40 items-end justify-center gap-3.5 overflow-hidden bg-slate-100 pt-6" aria-hidden="true">
+      {[
+        'h-[150px] -rotate-[4deg] translate-y-2.5',
+        'h-[160px]',
+      ].map((shape, i) => (
+        <div key={i} className={`flex w-[118px] flex-col gap-1.5 rounded-t bg-white p-3 shadow-[0_2px_8px_rgba(15,23,42,0.09)] ${shape}`}>
+          <span className="h-1.5 w-3/4 rounded-sm bg-slate-800" />
+          <span className="h-1 w-1/2 rounded-sm bg-slate-300" />
+          <span className="mt-1.5 h-9 rounded-sm border border-slate-200" />
+          <span className="h-1 w-11/12 rounded-sm bg-slate-200" />
+          <span className="h-1 w-3/4 rounded-sm bg-slate-200" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// One landscape page: name and grade, three attendance boxes, assessment rows.
+function SummaryThumb() {
+  return (
+    <div className="flex h-40 items-end justify-center overflow-hidden bg-slate-100 pt-6" aria-hidden="true">
+      <div className="flex h-[136px] w-[200px] flex-col gap-1.5 rounded-t bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.1)]">
+        <span className="flex items-center justify-between">
+          <span className="h-1.5 w-[46%] rounded-sm bg-slate-800" />
+          <span className="text-xs font-bold text-slate-800">84%</span>
+        </span>
+        <span className="grid grid-cols-3 gap-1">
+          <span className="h-3.5 bg-slate-100" />
+          <span className="h-3.5 bg-slate-100" />
+          <span className="h-3.5 bg-slate-100" />
+        </span>
+        <span className="h-1 rounded-sm bg-slate-200" />
+        <span className="h-1 rounded-sm bg-slate-200" />
+        <span className="h-1 rounded-sm bg-slate-200" />
+        <span className="h-1 w-4/5 rounded-sm bg-slate-200" />
+      </div>
+    </div>
+  )
+}
+
+function ReportCard({ href, title, children, thumb, cta }: { href: string; title: string; children: React.ReactNode; thumb: React.ReactNode; cta: string }) {
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-cyan-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+    >
+      {thumb}
+      <div className="flex flex-1 flex-col gap-2.5 p-5 lg:p-6">
+        <h2 className="font-display text-xl font-semibold text-slate-900">{title}</h2>
+        {children}
+        <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-medium text-cyan-700">
+          {cta}
+          <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+        </span>
+      </div>
+    </Link>
+  )
+}
 
 const ReportsPage = () => {
-  const showNotification = useNotificationStore((state) => state.showNotification)
-
-  const handleWorkInProgress = (reportTitle: string) => {
-    showNotification(`${reportTitle} is work in progress!`, 'error')
-  }
-
-  const reportTypes = [
-    {
-      title: 'Student Summary',
-      description: 'Generate comprehensive student reports including grades, attendance by class.',
-      href: '/reports/student-summary',
-      icon: DocumentTextIcon,
-      color: 'bg-blue-500',
-      isAvailable: true
-    },
-    {
-      title: 'Progress Reports',
-      description: 'Generate progress reports with core standards, work habits, and behavior assessments for parent conferences.',
-      href: '/reports/progress-reports',
-      icon: DocumentChartBarIcon,
-      color: 'bg-indigo-500',
-      isAvailable: true
-    },
-    {
-      title: 'Attendance Reports',
-      description: 'View and generate attendance summaries for students, classes, or specific date ranges.',
-      href: '/reports/attendance-summary',
-      icon: ClipboardDocumentListIcon,
-      color: 'bg-green-500',
-      isAvailable: false
-    },
-    {
-      title: 'Class Overview',
-      description: 'Get detailed insights into class performance, grade distributions, and assessment results.',
-      href: '/reports/class-overview',
-      icon: UserGroupIcon,
-      color: 'bg-purple-500',
-      isAvailable: false
-    },
-    {
-      title: 'Grade Analysis',
-      description: 'Analyze grade trends, assessment performance, and student progress over time.',
-      href: '/reports/grade-analysis',
-      icon: ChartBarIcon,
-      color: 'bg-orange-500',
-      isAvailable: false
-    }
-  ]
+  const termStatus = useActiveTermStatus()
+  const emailedPct = termStatus && termStatus.generated > 0 ? (termStatus.emailed / termStatus.generated) * 100 : 0
 
   return (
     <>
@@ -69,108 +128,51 @@ const ReportsPage = () => {
       <Sidebar />
 
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Reports</h1>
-            <p className="text-slate-500 mt-1">
-              Generate comprehensive reports for students, classes, and school performance analytics
-            </p>
+        <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+          <div>
+            <h1 className="font-display text-[26px] font-semibold leading-tight text-slate-900 sm:text-[30px]">Reports</h1>
+            <p className="mt-1 text-[15px] text-slate-600">PDFs for parent conferences and for families at home.</p>
           </div>
 
-          {/* Report Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {reportTypes.map((report) => {
-              const IconComponent = report.icon
-
-              if (report.isAvailable) {
-                return (
-                  <Link
-                    key={report.title}
-                    href={report.href}
-                    className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-slate-200 transition-all duration-200 overflow-hidden"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className={`${report.color} p-3 rounded-xl text-white group-hover:scale-110 transition-transform duration-200 shadow-lg`}>
-                          <IconComponent className="h-6 w-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors duration-200">
-                            {report.title}
-                          </h3>
-                          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                            {report.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Arrow indicator */}
-                      <div className="absolute top-6 right-6 text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all duration-200">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Hover effect overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-l from-cyan-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
-                  </Link>
-                )
-              } else {
-                return (
+          <div className="grid gap-5 md:grid-cols-2">
+            <ReportCard href="/reports/progress-reports" title="Progress reports" thumb={<ProgressThumb />} cta="Open progress reports">
+              <p className="text-sm leading-relaxed text-slate-600">
+                Core standards, work habits and behaviour for every student this term. Generate them in one go, then email each family.
+              </p>
+              {termStatus && (
+                <div className="space-y-2 pt-2">
+                  <p className="flex justify-between gap-3 text-[13px] text-slate-600">
+                    <span>
+                      {termStatus.term}: {termStatus.generated} generated
+                    </span>
+                    <span>{termStatus.emailed} emailed</span>
+                  </p>
                   <div
-                    key={report.title}
-                    onClick={() => handleWorkInProgress(report.title)}
-                    className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer opacity-75"
+                    role="img"
+                    aria-label={`${termStatus.emailed} of ${termStatus.generated} generated reports emailed`}
+                    className="flex h-1.5 overflow-hidden rounded-full bg-cyan-100"
                   >
-                    <div className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className={`${report.color} p-3 rounded-xl text-white transition-transform duration-200 opacity-60`}>
-                          <IconComponent className="h-6 w-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
-                            {report.title}
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                              Coming Soon
-                            </span>
-                          </h3>
-                          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                            {report.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="bg-teal-700" style={{ width: `${emailedPct}%` }} />
                   </div>
-                )
-              }
-            })}
+                </div>
+              )}
+            </ReportCard>
+
+            <ReportCard href="/reports/student-summary" title="Student summary" thumb={<SummaryThumb />} cta="Open student summary">
+              <p className="text-sm leading-relaxed text-slate-600">
+                One student in one class: every assessment, their term grade and attendance. Made for a parent–teacher conference.
+              </p>
+              <p className="pt-2 text-[13px] text-slate-500">Pick a class and a student, then preview the PDF right on the page.</p>
+            </ReportCard>
           </div>
 
-          {/* Footer Info */}
-          <div className="mt-8 bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Report Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                </div>
-                <span className="text-slate-600">Generate PDF reports instantly</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                </div>
-                <span className="text-slate-600">Filter by term and date ranges</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-purple-500 rounded-full" />
-                </div>
-                <span className="text-slate-600">Perfect for parent-teacher conferences</span>
-              </div>
-            </div>
+          <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 rounded-2xl border border-dashed border-slate-300 px-5 py-4 text-[13px]">
+            <span className="font-medium text-slate-700">Planned</span>
+            {PLANNED.map((p) => (
+              <span key={p} className="text-slate-500">
+                {p}
+              </span>
+            ))}
           </div>
         </div>
       </main>

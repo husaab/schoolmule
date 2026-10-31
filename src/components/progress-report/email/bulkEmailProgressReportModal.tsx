@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/modal';
 import ReportEmailProgress from '@/components/report-emails/ReportEmailProgress';
-import { PaperAirplaneIcon, UsersIcon, ChatBubbleLeftRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon } from '@heroicons/react/24/outline';
+import { Button, Field, FormSection, ModalBody, ModalFooter, ModalHeader, RecordFacts, inputClass, textareaClass } from '@/components/shared/modalKit';
 import { sendBulkReportEmails, listReportEmailRuns, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendBulkReportEmailPayload, BulkReportEmailResponse, BulkReportEmailResult } from '@/services/types/reportEmails';
@@ -12,17 +13,17 @@ import { getGradeNumericValue } from '@/lib/schoolUtils';
 interface ProgressReportRecord {
   student_id?: string;
   studentId?: string;
-  term: string;
+  term?: string;
   student_name?: string;
   studentName?: string;
-  grade?: string;
+  grade?: string | number | null;
   file_path?: string;
   filePath?: string;
-  generated_at?: string;
-  generatedAt?: string;
+  generated_at?: string | null;
+  generatedAt?: string | null;
   school?: string;
-  email_sent?: boolean;
-  email_sent_at?: string;
+  email_sent?: boolean | null;
+  email_sent_at?: string | null;
   email_sent_by?: string;
 }
 
@@ -32,6 +33,8 @@ interface BulkEmailProgressReportModalProps {
   availableReports: ProgressReportRecord[];
   term: string;
   onEmailsSent?: () => void;
+  /** Students ticked when the window opens (the page's selection); none when omitted. */
+  initialSelectedIds?: string[];
 }
 
 export default function BulkEmailProgressReportModal({
@@ -39,7 +42,8 @@ export default function BulkEmailProgressReportModal({
   onClose,
   availableReports,
   term,
-  onEmailsSent
+  onEmailsSent,
+  initialSelectedIds
 }: BulkEmailProgressReportModalProps) {
   const showNotification = useNotificationStore((state) => state.showNotification);
 
@@ -71,7 +75,7 @@ export default function BulkEmailProgressReportModal({
   const sampleStudentName = previewReport?.student_name || previewReport?.studentName || 'the student';
 
   const reportsByGrade = availableReports.reduce((acc, report) => {
-    const grade = report.grade || 'Unknown';
+    const grade = report.grade ? String(report.grade) : 'Unknown';
     if (!acc[grade]) acc[grade] = [];
     acc[grade].push(report);
     return acc;
@@ -95,10 +99,11 @@ export default function BulkEmailProgressReportModal({
       setSummary(null);
       setRunId(null);
       setResumed(false);
-      // Reset selections
-      setSelectedStudentIds([]);
+      // Start from the page's selection, limited to reports this window can send.
+      const sendable = new Set(availableReports.map((r) => r.student_id || r.studentId || ''));
+      setSelectedStudentIds((initialSelectedIds ?? []).filter((id) => sendable.has(id)));
     }
-  }, [isOpen, term]);
+  }, [isOpen, term]); // eslint-disable-line react-hooks/exhaustive-deps -- seed once per open
 
   // A send of this term still going (the window was closed mid-send): follow it.
   useEffect(() => {
@@ -145,25 +150,9 @@ export default function BulkEmailProgressReportModal({
   };
 
   const handleStudentToggle = (studentId: string) => {
-    setSelectedStudentIds(prev => {
-      const newSelected = prev.includes(studentId)
-        ? prev.filter(id => id !== studentId)
-        : [...prev, studentId];
-      
-      // Update selected grades based on student selection
-      const newSelectedGrades = [];
-      for (const grade of availableGrades) {
-        const gradeReports = reportsByGrade[grade] || [];
-        const gradeStudentIds = gradeReports.map(r => r.student_id || r.studentId || '');
-        const allSelected = gradeStudentIds.every(id => newSelected.includes(id));
-        
-        if (allSelected && gradeStudentIds.length > 0) {
-          newSelectedGrades.push(grade);
-        }
-      }
-      
-      return newSelected;
-    });
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    );
   };
 
   const handleSelectAll = () => {
@@ -257,356 +246,186 @@ export default function BulkEmailProgressReportModal({
     }
   };
 
-  const getStatusIcon = (status: 'success' | 'failed') => {
-    if (status === 'success') {
-      return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-    }
-    return <XCircleIcon className="h-4 w-4 text-red-500" />;
-  };
+  const selectedCount = selectedStudentIds.length;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} style="max-w-4xl w-11/12">
-      <div className="p-9">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6 p-4 bg-blue-50 rounded-lg">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <PaperAirplaneIcon className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Send Bulk Progress Report Emails
-            </h3>
-            <p className="text-sm text-gray-600">
-              Select students to email progress reports for {term}
-            </p>
-          </div>
-        </div>
+    <Modal isOpen={isOpen} onClose={handleClose} closeOnEscape={!loading} style="w-full max-w-3xl">
+      <ModalHeader
+        title="Email families"
+        subtitle={`${term} progress reports. Each family gets their own child's report.`}
+        icon={EnvelopeIcon}
+      />
 
-        {/* Content */}
-        <div className="text-black">
-          {runId ? (
-            <div className="space-y-6">
-              {resumed && (
-                <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
-                  A send for {term} is still going. It keeps going if you close this window.
+      {runId ? (
+        <>
+          <ModalBody>
+            {resumed && (
+              <p className="rounded-xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-900">
+                A send for {term} is still going. It keeps going if you close this window.
+              </p>
+            )}
+            <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailsSent} />
+          </ModalBody>
+          <ModalFooter>
+            {resumed && (
+              <Button variant="secondary" onClick={() => { setRunId(null); setResumed(false); }}>
+                New send
+              </Button>
+            )}
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+          </ModalFooter>
+        </>
+      ) : results ? (
+        <>
+          <ModalBody>
+            <RecordFacts
+              facts={[
+                { label: 'Sent', value: <span className="text-emerald-700">{summary?.sent}</span> },
+                { label: 'Failed', value: <span className={summary?.failed ? 'text-rose-700' : ''}>{summary?.failed}</span> },
+                { label: 'Total', value: summary?.total },
+                { label: 'Took', value: summary?.duration },
+              ]}
+            />
+            <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100">
+              {results.map((result) => (
+                <li key={result.studentId} className="flex items-start justify-between gap-3 px-4 py-2.5 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900">{result.studentName}</p>
+                    {result.status === 'success' && result.sentTo && (
+                      <p className="mt-0.5 truncate text-xs text-slate-500">To {result.sentTo.join(', ')}</p>
+                    )}
+                    {result.status === 'failed' && <p className="mt-0.5 text-xs text-rose-700">{result.error}</p>}
+                  </div>
+                  <span className={result.status === 'success' ? 'text-emerald-700' : 'text-rose-700'}>
+                    {result.status === 'success' ? 'Sent' : 'Failed'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="secondary" onClick={handleClose}>Close</Button>
+          </ModalFooter>
+        </>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <FormSection label="Families">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-900">{selectedCount}</span> of {availableReports.length} selected
                 </p>
-              )}
-              <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailsSent} />
-              <div className="flex justify-end gap-3 border-t border-gray-200 pt-6">
-                {resumed && (
-                  <button
-                    type="button"
-                    onClick={() => { setRunId(null); setResumed(false); }}
-                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    New send
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={handleSelectAll} className="cursor-pointer rounded-lg px-2.5 py-1 text-sm font-medium text-cyan-700 hover:bg-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+                    Select all
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          ) : results ? (
-            /* Results View */
-            <div className="space-y-6">
-              {/* Summary */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3">Email Summary</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Total</p>
-                    <p className="font-semibold">{summary?.total}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Sent</p>
-                    <p className="font-semibold text-green-600">{summary?.sent}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Failed</p>
-                    <p className="font-semibold text-red-600">{summary?.failed}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Duration</p>
-                    <p className="font-semibold">{summary?.duration}</p>
-                  </div>
+                  <button type="button" onClick={handleDeselectAll} disabled={selectedCount === 0} className="cursor-pointer rounded-lg px-2.5 py-1 text-sm text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50">
+                    Clear
+                  </button>
                 </div>
               </div>
 
-              {/* Detailed Results */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Detailed Results</h4>
-                <div className="max-h-80 overflow-y-auto border border-gray-300 rounded-md">
-                  {results.map((result) => (
-                    <div
-                      key={result.studentId}
-                      className={`flex items-center justify-between p-3 border-b border-gray-100 last:border-b-0 ${
-                        result.status === 'success' ? 'bg-green-50' : 'bg-red-50'
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Select a whole grade">
+                {availableGrades.map(grade => {
+                  const gradeStudentIds = (reportsByGrade[grade] || []).map(r => r.student_id || r.studentId || '');
+                  const selectedInGrade = gradeStudentIds.filter(id => selectedStudentIds.includes(id)).length;
+                  const allSelected = selectedInGrade === gradeStudentIds.length && gradeStudentIds.length > 0;
+                  return (
+                    <button
+                      key={grade}
+                      type="button"
+                      aria-pressed={allSelected}
+                      onClick={() => handleGradeToggle(grade)}
+                      className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                        allSelected
+                          ? 'border-cyan-200 bg-cyan-50 font-medium text-cyan-800'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(result.status)}
-                        <div>
-                          <p className="font-medium">{result.studentName}</p>
-                          {result.status === 'success' && result.sentTo && (
-                            <p className="text-xs text-gray-600">
-                              Sent to: {result.sentTo.join(', ')}
-                            </p>
-                          )}
-                          {result.status === 'failed' && (
-                            <p className="text-xs text-red-600">{result.error}</p>
-                          )}
-                        </div>
-                      </div>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          result.status === 'success'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {result.status === 'success' ? 'Sent' : 'Failed'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Close Button */}
-              <div className="flex justify-end pt-6 border-t border-gray-200">
-                <button
-                  onClick={handleClose}
-                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Form View */
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Grade-Based Selection */}
-              <div className="space-y-4">
-                {/* Grade Selection Header */}
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700">
-                    <FunnelIcon className="h-4 w-4 inline mr-1" />
-                    Select by Grade
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSelectAll}
-                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer"
-                    >
-                      Select All
+                      {grade === 'Unknown' ? 'No grade' : `Grade ${grade}`}
+                      <span className="ml-1.5 text-xs tabular-nums text-slate-400">{selectedInGrade}/{gradeStudentIds.length}</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleDeselectAll}
-                      className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors cursor-pointer"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                </div>
-
-                {/* Grade Checkboxes */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {availableGrades.map(grade => {
-                    const gradeReports = reportsByGrade[grade] || [];
-                    const gradeStudentIds = gradeReports.map(r => r.student_id || r.studentId || '');
-                    const selectedInGrade = gradeStudentIds.filter(id => selectedStudentIds.includes(id)).length;
-                    const allSelected = selectedInGrade === gradeStudentIds.length && gradeStudentIds.length > 0;
-                    
-                    return (
-                      <label
-                        key={grade}
-                        className="flex items-center p-2 rounded border border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={allSelected}
-                          onChange={() => handleGradeToggle(grade)}
-                          className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm">
-                          Grade {grade} ({selectedInGrade}/{gradeStudentIds.length})
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
 
-              {/* Student Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <UsersIcon className="h-4 w-4 inline mr-1" />
-                  Students ({selectedStudentIds.length} selected)
-                </label>
-                <div className="max-h-64 overflow-y-auto border border-gray-300 rounded-md">
-                  {availableGrades.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      No progress reports available for bulk email
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-100">
+                {availableGrades.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-slate-500">Every report this term has already been emailed.</p>
+                ) : (
+                  availableGrades.map(grade => (
+                    <div key={grade}>
+                      <p className="sticky top-0 bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-500">
+                        {grade === 'Unknown' ? 'No grade' : `Grade ${grade}`}
+                      </p>
+                      {(reportsByGrade[grade] || []).map(report => {
+                        const studentId = report.student_id || report.studentId || '';
+                        const studentName = report.student_name || report.studentName || '';
+                        return (
+                          <label key={studentId} className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-800 hover:bg-slate-50">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudentIds.includes(studentId)}
+                              onChange={() => handleStudentToggle(studentId)}
+                              className="h-4 w-4 cursor-pointer rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                            />
+                            {studentName}
+                          </label>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    availableGrades.map(grade => {
-                      const gradeReports = reportsByGrade[grade] || [];
-                      const selectedInGrade = gradeReports.filter(r => 
-                        selectedStudentIds.includes(r.student_id || r.studentId || '')
-                      ).length;
-
-                      return (
-                        <div key={grade} className="border-b border-gray-100 last:border-b-0">
-                          <div className="p-3 bg-gray-50 font-medium text-sm text-gray-700">
-                            Grade {grade} ({selectedInGrade}/{gradeReports.length} selected)
-                          </div>
-                          <div className="p-3 space-y-2">
-                            {gradeReports.map(report => {
-                              const studentId = report.student_id || report.studentId || '';
-                              const studentName = report.student_name || report.studentName || '';
-                              const isSelected = selectedStudentIds.includes(studentId);
-
-                              return (
-                                <label
-                                  key={studentId}
-                                  className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => handleStudentToggle(studentId)}
-                                    className="mr-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                  <span className="text-sm">{studentName}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                  ))
+                )}
               </div>
+              <p className="text-xs text-slate-500">Each email goes to that student&apos;s parent addresses. Students with no parent email are skipped.</p>
+            </FormSection>
 
-              {/* Individual Parent Emails Notice */}
-              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Each student will be emailed individually to their parent email addresses. 
-                  Students without parent emails will be skipped.
-                </p>
-              </div>
-
-              {/* CC Recipients */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CC Recipients (Optional)
-                </label>
+            <FormSection label="Email">
+              <Field label="CC" htmlFor="pr-bulk-cc" hint="Optional, e.g. the office. Separate addresses with commas.">
                 <input
+                  id="pr-bulk-cc"
                   type="text"
                   value={ccInput}
                   onChange={(e) => handleCcInputChange(e.target.value)}
-                  placeholder="Enter CC email addresses separated by commas (e.g., admin@school.com)"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Optional"
+                  className={inputClass}
                 />
-                {ccAddresses.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {ccAddresses.map((email, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
-                      >
-                        {email}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Custom Header */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <ChatBubbleLeftRightIcon className="h-4 w-4 inline mr-1" />
-                  Email Subject (Shared)
-                </label>
+              </Field>
+              <Field label="Subject" htmlFor="pr-bulk-subject" hint="Each family's subject carries their child's name.">
                 <input
+                  id="pr-bulk-subject"
                   type="text"
                   value={customHeader}
                   onChange={(e) => setCustomHeader(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={inputClass}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  This subject will be used for all emails (individual student names will be added automatically)
-                </p>
-              </div>
-
-              {/* Custom Message */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Message (shared)
-                </label>
+              </Field>
+              <Field label="Message" htmlFor="pr-bulk-message" hint="[Student Name] and [Term] are filled in for each family.">
                 <textarea
+                  id="pr-bulk-message"
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
-                  rows={6}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={5}
+                  className={textareaClass}
                   placeholder="Write the email body parents will see..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Merge tags <code>[Student Name]</code> and <code>[Term]</code> are replaced per student when each email is sent.
+              </Field>
+              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium text-slate-500">What {sampleStudentName}&apos;s family reads</p>
+                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                  {resolveMessagePreview(customMessage, { studentName: sampleStudentName, term })}
                 </p>
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Preview:</strong>
-                  </p>
-                  <p className="text-sm text-blue-700 italic whitespace-pre-line">
-                    {resolveMessagePreview(customMessage, { studentName: sampleStudentName, term })}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-2">
-                    Name varies per student.
-                  </p>
-                </div>
               </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || selectedStudentIds.length === 0}
-                  className={`px-6 py-2 text-sm font-medium text-white rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    loading || selectedStudentIds.length === 0
-                      ? 'bg-gray-400'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <ClockIcon className="h-4 w-4 animate-spin" />
-                      Sending Emails...
-                    </div>
-                  ) : (
-                    `Send ${selectedStudentIds.length} Email${selectedStudentIds.length !== 1 ? 's' : ''}`
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
+            </FormSection>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" loading={loading} disabled={selectedCount === 0}>
+              {loading ? 'Sending' : `Send ${selectedCount} email${selectedCount !== 1 ? 's' : ''}`}
+            </Button>
+          </ModalFooter>
+        </form>
+      )}
     </Modal>
   );
 }

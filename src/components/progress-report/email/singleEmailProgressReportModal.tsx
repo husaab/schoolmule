@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/components/shared/modal';
 import ReportEmailProgress from '@/components/report-emails/ReportEmailProgress';
-import { EnvelopeIcon, PaperAirplaneIcon, UserIcon, ChatBubbleLeftRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon } from '@heroicons/react/24/outline';
+import { Button, Field, ModalBody, ModalFooter, ModalHeader, inputClass, textareaClass } from '@/components/shared/modalKit';
 import { sendReportEmail, generateDefaultSubject, generateDefaultMessage, resolveMessagePreview, validateEmailAddresses } from '@/services/reportEmailService';
 import { getStudentById } from '@/services/studentService';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -186,196 +187,103 @@ export default function SingleEmailProgressReportModal({
     }
   };
 
+  const sendLabel = `Send email${emailAddresses.length > 1 ? ` to ${emailAddresses.length}` : ''}`;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="max-w-2xl w-11/12">
-      <div className="p-9">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6 p-4 bg-blue-50 rounded-lg">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <PaperAirplaneIcon className="h-6 w-6 text-blue-600" />
+    <Modal isOpen={isOpen} onClose={onClose} closeOnEscape={!loading} style="w-full max-w-xl">
+      <ModalHeader
+        title={`Email ${studentName}'s family`}
+        subtitle={`${term} progress report, attached as a PDF${student?.grade ? ` · Grade ${student.grade}` : ''}`}
+        icon={EnvelopeIcon}
+      />
+
+      {runId ? (
+        <>
+          <ModalBody>
+            <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailSent} />
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="secondary" onClick={onClose}>Close</Button>
+          </ModalFooter>
+        </>
+      ) : fetchingStudent ? (
+        <ModalBody>
+          <div className="flex items-center justify-center gap-3 py-8 text-sm text-slate-500">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-100 border-t-cyan-600" aria-hidden="true" />
+            Loading the family&apos;s contacts…
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Send Progress Report
-            </h3>
-            <p className="text-sm text-gray-600">
-              Email progress report for {studentName} - {term}
-            </p>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="text-black">
-          {runId ? (
-            <div className="space-y-6">
-              <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailSent} />
-              <div className="flex justify-end border-t border-gray-200 pt-6">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  Close
-                </button>
+        </ModalBody>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <Field label="To" htmlFor="pr-email-to" required hint="Filled in from the student's parent contacts. Separate addresses with commas.">
+              <input
+                id="pr-email-to"
+                type="text"
+                value={emailInput}
+                onChange={(e) => handleEmailInputChange(e.target.value)}
+                placeholder="parent@example.com"
+                className={inputClass}
+                required
+              />
+            </Field>
+            {emailAddresses.length > 0 && (
+              <div className="-mt-3 flex flex-wrap gap-1.5">
+                {emailAddresses.map((email, index) => (
+                  <span key={index} className="rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700">
+                    {email}
+                  </span>
+                ))}
               </div>
+            )}
+
+            <Field label="CC" htmlFor="pr-email-cc" hint="Optional. Separate addresses with commas.">
+              <input
+                id="pr-email-cc"
+                type="text"
+                value={ccInput}
+                onChange={(e) => handleCcInputChange(e.target.value)}
+                placeholder="Optional"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Subject" htmlFor="pr-email-subject">
+              <input
+                id="pr-email-subject"
+                type="text"
+                value={customHeader}
+                onChange={(e) => setCustomHeader(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Message" htmlFor="pr-email-message" hint="[Student Name] and [Term] are filled in when the email is sent.">
+              <textarea
+                id="pr-email-message"
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                rows={6}
+                className={textareaClass}
+                placeholder="Write the email body parents will see..."
+              />
+            </Field>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-medium text-slate-500">What the family reads</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                {resolveMessagePreview(customMessage, { studentName, term })}
+              </p>
             </div>
-          ) : fetchingStudent ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading student information...</span>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Student Info */}
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                <UserIcon className="h-5 w-5 text-gray-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Student</p>
-                  <p className="text-sm text-gray-900">{studentName}</p>
-                  <p className="text-xs text-gray-500">Grade {student?.grade} - {term}</p>
-                </div>
-              </div>
-
-              {/* Email Recipients */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <EnvelopeIcon className="h-4 w-4 inline mr-1" />
-                  Email Recipients *
-                </label>
-                <input
-                  type="text"
-                  value={emailInput}
-                  onChange={(e) => handleEmailInputChange(e.target.value)}
-                  placeholder="Enter email addresses separated by commas"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Separate multiple email addresses with commas
-                </p>
-                {emailAddresses.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {emailAddresses.map((email, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                      >
-                        {email}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* CC Recipients */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CC Recipients (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={ccInput}
-                  onChange={(e) => handleCcInputChange(e.target.value)}
-                  placeholder="Enter CC email addresses separated by commas"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                {ccAddresses.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {ccAddresses.map((email, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
-                      >
-                        {email}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Custom Header */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <ChatBubbleLeftRightIcon className="h-4 w-4 inline mr-1" />
-                  Email Subject
-                </label>
-                <input
-                  type="text"
-                  value={customHeader}
-                  onChange={(e) => setCustomHeader(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* Email Message */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Message
-                </label>
-                <textarea
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  rows={6}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Write the email body parents will see..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Merge tags <code>[Student Name]</code> and <code>[Term]</code> are replaced when the email is sent.
-                </p>
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Preview:</strong>
-                  </p>
-                  <p className="text-sm text-blue-700 italic whitespace-pre-line">
-                    {resolveMessagePreview(customMessage, { studentName, term })}
-                  </p>
-                </div>
-              </div>
-
-              {/* Warning */}
-              <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-yellow-800">Before sending:</p>
-                  <p className="text-yellow-700">
-                    Please ensure the progress report has been generated and the email addresses are correct.
-                  </p>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || emailAddresses.length === 0}
-                  className={`px-6 py-2 text-sm font-medium text-white rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    loading || emailAddresses.length === 0
-                      ? 'bg-gray-400'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Sending...
-                    </div>
-                  ) : (
-                    `Send Email${emailAddresses.length > 1 ? ` (${emailAddresses.length})` : ''}`
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button type="submit" loading={loading} disabled={emailAddresses.length === 0}>
+              {loading ? 'Sending' : sendLabel}
+            </Button>
+          </ModalFooter>
+        </form>
+      )}
     </Modal>
   );
 }

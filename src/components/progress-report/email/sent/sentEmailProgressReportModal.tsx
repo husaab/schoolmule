@@ -1,8 +1,13 @@
+// src/components/progress-report/email/sent/sentEmailProgressReportModal.tsx
+// What went to a family for one progress report: who sent it and when, every
+// address, the subject and the message. "Email again" re-sends from here (a
+// regenerated report, a new parent address, a family that lost the email).
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { CheckIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
-import { EnvelopeIcon, CalendarIcon, UserIcon, ChatBubbleLeftRightIcon, ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Button, ModalBody, ModalFooter, ModalHeader, RecordFacts } from '@/components/shared/modalKit';
 import { getStudentEmailHistory } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { ReportEmailRecord } from '@/services/types/reportEmails';
@@ -13,216 +18,116 @@ interface SentEmailProgressReportModalProps {
   studentId: string;
   studentName: string;
   term: string;
+  /** Opens the send form for this student again. */
+  onEmailAgain?: () => void;
 }
+
+const sentDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const sentDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export default function SentEmailProgressReportModal({
   isOpen,
   onClose,
   studentId,
   studentName,
-  term
+  term,
+  onEmailAgain,
 }: SentEmailProgressReportModalProps) {
   const [emailRecord, setEmailRecord] = useState<ReportEmailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   useEffect(() => {
-    if (isOpen && studentId) {
-      fetchEmailRecord();
-    }
-  }, [isOpen, studentId, term]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchEmailRecord = async () => {
-    try {
-      setLoading(true);
-      const response = await getStudentEmailHistory(studentId);
-      console.log(response)
-      if (response.status === 'success') {
-        // Find the progress report email for this specific term
-        const progressReportEmail = response.data.find(
-          email => email.reportType.toLowerCase() === 'progress_report' && email.term === term
+    if (!isOpen || !studentId) return;
+    // The page mounts this window fresh for each row, so it starts loading with nothing shown.
+    let cancelled = false;
+    getStudentEmailHistory(studentId)
+      .then((response) => {
+        if (cancelled || response.status !== 'success') return;
+        // The newest send of this term's progress report.
+        const record = response.data.find(
+          (email) => email.reportType.toLowerCase() === 'progress_report' && email.term === term
         );
-        
-        if (progressReportEmail) {
-          setEmailRecord(progressReportEmail);
-        } else {
-          showNotification('No email record found for this progress report', 'error');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching email record:', error);
-      showNotification('Failed to load email details', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+        setEmailRecord(record ?? null);
+      })
+      .catch((error) => {
+        console.error('Error fetching email record:', error);
+        if (!cancelled) showNotification('Failed to load email details', 'error');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, studentId, term, showNotification]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatEmailList = (emails: string[]) => {
-    if (emails.length <= 2) {
-      return emails.join(', ');
-    }
-    return `${emails.slice(0, 2).join(', ')} and ${emails.length - 2} more`;
-  };
+  const title = emailRecord ? `Emailed ${sentDate(emailRecord.sentAt)}` : 'Email details';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} style="max-w-2xl w-11/12">
-      <div className="p-9">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6 p-3 bg-green-50 rounded-lg">
-        <div className="p-2 bg-green-100 rounded-lg">
-          <CheckCircleIcon className="h-6 w-6 text-green-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Email Sent Successfully
-          </h3>
-          <p className="text-sm text-gray-600">
-            Progress Report - {studentName}
-          </p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="text-black">
-          {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-3 text-gray-600">Loading email details...</span>
+    <Modal isOpen={isOpen} onClose={onClose} closeOnEscape style="w-full max-w-lg">
+      <ModalHeader
+        title={title}
+        subtitle={`${studentName}'s ${term} progress report`}
+        icon={emailRecord ? CheckIcon : EnvelopeIcon}
+        tone={emailRecord ? 'success' : 'brand'}
+      />
+      <ModalBody>
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 py-8 text-sm text-slate-500">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-100 border-t-emerald-600" aria-hidden="true" />
+            Loading what was sent…
           </div>
         ) : emailRecord ? (
-          <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <UserIcon className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Student</p>
-                    <p className="text-sm text-gray-900">{studentName}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                  <CalendarIcon className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Term</p>
-                    <p className="text-sm text-gray-900">{emailRecord.term}</p>
-                  </div>
-                </div>
+          <>
+            <RecordFacts
+              facts={[
+                { label: 'Sent by', value: emailRecord.sentByUsername || 'Someone at the school' },
+                { label: 'Sent', value: sentDateTime(emailRecord.sentAt) },
+              ]}
+            />
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-xs font-medium text-slate-500">To</dt>
+                <dd className="mt-0.5 break-words text-slate-800">{emailRecord.emailAddresses.join(', ')}</dd>
               </div>
-
-              {/* Email Details */}
-              <div className="space-y-4">
+              {emailRecord.ccAddresses && emailRecord.ccAddresses.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <EnvelopeIcon className="h-5 w-5 text-gray-500" />
-                    <h4 className="text-sm font-medium text-gray-700">Email Recipients</h4>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">To: </span>
-                        <span className="text-sm text-gray-900">
-                          {formatEmailList(emailRecord.emailAddresses)}
-                        </span>
-                      </div>
-                      {emailRecord.ccAddresses && emailRecord.ccAddresses.length > 0 && (
-                        <div>
-                          <span className="text-sm font-medium text-gray-600">CC: </span>
-                          <span className="text-sm text-gray-900">
-                            {formatEmailList(emailRecord.ccAddresses)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <dt className="text-xs font-medium text-slate-500">CC</dt>
+                  <dd className="mt-0.5 break-words text-slate-800">{emailRecord.ccAddresses.join(', ')}</dd>
                 </div>
-
-                {/* Email Subject */}
-                {emailRecord.customHeader && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <ChatBubbleLeftRightIcon className="h-5 w-5 text-gray-500" />
-                      <h4 className="text-sm font-medium text-gray-700">Email Subject</h4>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-900">{emailRecord.customHeader}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Custom Message */}
-                {emailRecord.customMessage && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <ChatBubbleLeftRightIcon className="h-5 w-5 text-gray-500" />
-                      <h4 className="text-sm font-medium text-gray-700">Custom Message</h4>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{emailRecord.customMessage}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Sent Details */}
+              )}
+              {emailRecord.customHeader && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <ClockIcon className="h-5 w-5 text-gray-500" />
-                    <h4 className="text-sm font-medium text-gray-700">Email Details</h4>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Sent on: </span>
-                        <span className="text-sm text-gray-900">
-                          {formatDate(emailRecord.sentAt)}
-                        </span>
-                      </div>
-                      {emailRecord.sentByUsername && (
-                        <div>
-                          <span className="text-sm font-medium text-gray-600">Sent by: </span>
-                          <span className="text-sm text-gray-900">{emailRecord.sentByUsername}</span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Report Type: </span>
-                        <span className="text-sm text-gray-900">Progress Report</span>
-                      </div>
-                    </div>
-                  </div>
+                  <dt className="text-xs font-medium text-slate-500">Subject</dt>
+                  <dd className="mt-0.5 text-slate-800">{emailRecord.customHeader}</dd>
                 </div>
-              </div>
-          </div>
+              )}
+              {emailRecord.customMessage && (
+                <div>
+                  <dt className="text-xs font-medium text-slate-500">Message</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap leading-relaxed text-slate-700">{emailRecord.customMessage}</dd>
+                </div>
+              )}
+            </dl>
+          </>
         ) : (
-          <div className="text-center py-8">
-            <EnvelopeIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Email Record Found</h3>
-            <p className="text-gray-600">
-              We couldn&apos;t find an email record for this progress report.
-            </p>
-          </div>
+          <p className="py-6 text-center text-sm text-slate-500">
+            This report is marked as emailed, but there&apos;s no record of what was sent. You can email the family again.
+          </p>
         )}
-      </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-        </div>
-      </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>Close</Button>
+        {onEmailAgain && !loading && (
+          <Button variant="primary" onClick={onEmailAgain}>
+            Email again
+          </Button>
+        )}
+      </ModalFooter>
     </Modal>
   );
 }
