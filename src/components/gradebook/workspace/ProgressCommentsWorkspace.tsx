@@ -33,6 +33,7 @@ import { firstNameOf } from '@/lib/classroomText'
 import { getClassCommentBank } from '@/services/commentBankService'
 import type { CommentBank } from '@/services/types/commentBank'
 import { RatingButtons, type RatingOption } from './RatingButtons'
+import StandardCommentsModal from './StandardCommentsModal'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -52,7 +53,8 @@ import {
   SparklesIcon,
   InformationCircleIcon,
   CalendarDaysIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  ChatBubbleBottomCenterTextIcon,
 } from '@heroicons/react/24/outline'
 import { aiFetch } from '@/services/aiClient'
 
@@ -107,6 +109,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
   const [bankSaved, setBankSaved] = useState(false)
   // The student whose "Rebuild from standard comments" is waiting for Replace.
   const [confirmRebuild, setConfirmRebuild] = useState<string | null>(null)
+  const [bankOpen, setBankOpen] = useState(false)
 
   // Student grades from localStorage (computed in the gradebook by the grade
   // engine). pct is null when nothing has been graded yet — never 0.
@@ -409,6 +412,17 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                   <CalendarDaysIcon className="h-4 w-4" />
                   <span>{classData.termName}</span>
                 </div>
+
+                {/* The class's standard comments */}
+                <button
+                  type="button"
+                  onClick={() => setBankOpen(true)}
+                  disabled={bankState !== 'ready'}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-white/10 border border-white/30 text-white hover:bg-white/20 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
+                  Standard comments
+                </button>
 
                 {/* Save Button */}
                 <button
@@ -848,8 +862,23 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
           studentGrade={studentGrades[modalStudent.id] ? studentGrades[modalStudent.id].pct : undefined}
           coverage={studentGrades[modalStudent.id]?.coverage ?? undefined}
           initialTerm={selectedTerm}
+          commentBank={bankState === 'ready' ? bank : null}
         />
       )}
+
+      <StandardCommentsModal
+        isOpen={bankOpen}
+        onClose={() => setBankOpen(false)}
+        classId={classId}
+        bank={bank}
+        bankSaved={bankSaved}
+        subject={classData.subject}
+        previewStudent={students[0] ? { name: students[0].name, gender: students[0].gender ?? null } : null}
+        onSaved={(next, saved) => {
+          setBank(next)
+          setBankSaved(saved)
+        }}
+      />
     </>
   )
 }

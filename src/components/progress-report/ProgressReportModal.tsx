@@ -14,7 +14,6 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
-  selectClass,
   textareaClass,
 } from '@/components/shared/modalKit';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -26,6 +25,25 @@ import {
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { aiFetch } from '@/services/aiClient';
+import { RatingButtons, type RatingOption } from '@/components/gradebook/workspace/RatingButtons';
+import {
+  CORE_STANDARDS_LEVELS,
+  buildStandardComment,
+  isStandardComment,
+  suggestCoreStandards,
+  withStandardComment,
+  type StandardCommentContext,
+} from '@/lib/commentBank';
+import { firstNameOf } from '@/lib/classroomText';
+import type { CommentBank } from '@/services/types/commentBank';
+
+const CORE_STANDARDS_OPTIONS: RatingOption[] = CORE_STANDARDS_LEVELS.map((l) => ({ value: l.value, label: l.label, title: l.value }));
+const RATING_OPTIONS: RatingOption[] = [
+  { value: 'E', label: 'E', title: 'E - Excellent' },
+  { value: 'G', label: 'G', title: 'G - Good' },
+  { value: 'S', label: 'S', title: 'S - Satisfactory' },
+  { value: 'N', label: 'N', title: 'N - Needs Improvement' },
+];
 
 interface ProgressReportModalProps {
   isOpen: boolean;
@@ -40,6 +58,8 @@ interface ProgressReportModalProps {
   studentGrade?: number | null;
   coverage?: { assessed: number; total: number; missing: number; excused: number };
   initialTerm?: string;
+  /** The class's standard comments; null while they haven't loaded (nothing builds itself). */
+  commentBank?: CommentBank | null;
 }
 
 const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
@@ -53,6 +73,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   studentGrade,
   coverage,
   initialTerm,
+  commentBank,
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -227,6 +248,27 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
   const ratingsIncomplete = !coreStandards || !workHabit || !behavior;
 
+  // Standard comments: Core Standards and Work Habits rebuild a comment that is
+  // empty or still SchoolMule's text; one the teacher wrote is kept.
+  const commentContext: StandardCommentContext | null = commentBank
+    ? { bank: commentBank, student: { name: studentName, gender: studentGender ?? null }, subject: subjectName || '' }
+    : null;
+  const suggestion = commentBank ? suggestCoreStandards(studentGrade, commentBank.cutoffs) : null;
+  const picks = { coreStandards, workHabit };
+  const standardText = commentContext ? buildStandardComment(picks, commentContext) : '';
+  const isStandard = commentContext ? isStandardComment(comment, picks, commentContext) : false;
+  const canRebuild = standardText !== '' && comment.trim() !== '' && !isStandard;
+  const [confirmRebuild, setConfirmRebuild] = useState(false);
+
+  const pickRating = (field: 'coreStandards' | 'workHabit', value: string) => {
+    if (field === 'coreStandards') setCoreStandards(value);
+    else setWorkHabit(value);
+    if (!commentContext) return;
+    const before = { coreStandards, workHabit, comment };
+    const next = withStandardComment(before, { ...before, [field]: value }, commentContext);
+    setComment(next.comment ?? '');
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg">
       <ModalHeader
@@ -283,49 +325,25 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
               )}
             </div>
 
-            <Field label="Core standards" htmlFor="pr-core-standards">
-              <select
-                id="pr-core-standards"
+            <Field label="Core standards">
+              <RatingButtons
+                label="Core standards"
+                options={CORE_STANDARDS_OPTIONS}
                 value={coreStandards}
-                onChange={(e) => setCoreStandards(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">Select core standards rating</option>
-                <option value="Exceeding Common Core Standards">Exceeding Common Core Standards</option>
-                <option value="Meeting Common Core Standards">Meeting Common Core Standards</option>
-                <option value="Working towards Common Core Standards">Working towards Common Core Standards</option>
-                <option value="Not Meeting Common Core Standards">Not Meeting Common Core Standards</option>
-              </select>
+                suggested={suggestion}
+                onChange={(v) => pickRating('coreStandards', v)}
+              />
+              {!coreStandards && suggestion && typeof studentGrade === 'number' && (
+                <p className="mt-1 text-xs text-violet-600">Suggested from {studentGrade.toFixed(1)}%. Pick it to confirm.</p>
+              )}
             </Field>
 
-            <Field label="Work habits" htmlFor="pr-work-habits">
-              <select
-                id="pr-work-habits"
-                value={workHabit}
-                onChange={(e) => setWorkHabit(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">Select work habits rating</option>
-                <option value="E">E - Excellent</option>
-                <option value="G">G - Good</option>
-                <option value="S">S - Satisfactory</option>
-                <option value="N">N - Needs Improvement</option>
-              </select>
+            <Field label="Work habits">
+              <RatingButtons label="Work habits" options={RATING_OPTIONS} value={workHabit} onChange={(v) => pickRating('workHabit', v)} />
             </Field>
 
-            <Field label="Behavior" htmlFor="pr-behavior">
-              <select
-                id="pr-behavior"
-                value={behavior}
-                onChange={(e) => setBehavior(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">Select behavior rating</option>
-                <option value="E">E - Excellent</option>
-                <option value="G">G - Good</option>
-                <option value="S">S - Satisfactory</option>
-                <option value="N">N - Needs Improvement</option>
-              </select>
+            <Field label="Behavior">
+              <RatingButtons label="Behavior" options={RATING_OPTIONS} value={behavior} onChange={setBehavior} />
             </Field>
 
             {/* AI feature info card */}
@@ -385,6 +403,40 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 rows={4}
                 placeholder="Generate with AI, or write your own comment…"
               />
+              {isStandard && !studentGender && (
+                <p className="mt-1 text-xs text-amber-700">No gender on file for {firstNameOf(studentName)}: check the pronouns.</p>
+              )}
+              {canRebuild &&
+                (confirmRebuild ? (
+                  <div className="mt-1 flex items-center gap-2 text-xs">
+                    <span className="text-slate-600">Replace your comment?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setComment(standardText);
+                        setConfirmRebuild(false);
+                      }}
+                      className="cursor-pointer rounded-md bg-emerald-600 px-2 py-1 font-medium text-white hover:bg-emerald-700"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRebuild(false)}
+                      className="cursor-pointer rounded-md px-2 py-1 font-medium text-slate-600 hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRebuild(true)}
+                    className="mt-1 cursor-pointer text-xs font-medium text-emerald-700 hover:text-emerald-900"
+                  >
+                    Rebuild from standard comments
+                  </button>
+                ))}
             </div>
           </ModalBody>
 
