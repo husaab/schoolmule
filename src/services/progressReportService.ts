@@ -213,10 +213,12 @@ export const getProgressReportsByTermAndSchool = async (
   )
 }
 
-// Generate single progress report
+// Generate single progress report. `reportDate` (YYYY-MM-DD) is the date
+// JK/SK progress reports print; omitted, they print today's.
 export const generateProgressReport = async (payload: {
   studentId: string
   term: string
+  reportDate?: string
 }): Promise<{ status: string; message: string; data: unknown }> => {
   return apiClient<{ status: string; message: string; data: unknown }>('/progress-reports/generate', {
     method: 'POST',
@@ -229,6 +231,7 @@ export const generateProgressReport = async (payload: {
 export const generateBulkProgressReports = async (payload: {
   studentIds: string[]
   term: string
+  reportDate?: string
 }): Promise<{ status: string; term: string; generated: unknown[]; failed: unknown[] }> => {
   return apiClient<{ status: string; term: string; generated: unknown[]; failed: unknown[] }>('/progress-reports/generate/bulk', {
     method: 'POST',
