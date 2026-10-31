@@ -255,7 +255,7 @@ describe('Office Staff test user (spec section 7)', () => {
     '/reports', '/report-cards', '/staff-attendance', '/my-attendance', '/my-schedule', '/school-schedule',
     '/messages', '/admin-panel/messages', '/admin-panel/users', '/admin-panel/student-accounts',
     '/admin-panel/approvals', '/admin-panel/relations', '/admin-panel/forms', '/admin-panel/school-settings',
-    '/admin-panel/school-calendar', '/admin-panel/school-assets', '/admin-panel/schedule-planner',
+    '/admin-panel/school-calendar', '/admin-panel/school-assets', '/admin-panel/report-templates', '/admin-panel/schedule-planner',
     '/admin-panel/agendas', '/whats-new', '/settings', '/support', '/contact-us', '/qr',
     // The old bookmark redirects to /school-schedule.
     '/admin-panel/school-schedule',

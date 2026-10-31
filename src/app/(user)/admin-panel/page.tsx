@@ -3,7 +3,7 @@
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon, LockClosedIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon, LockClosedIcon, ChatBubbleOvalLeftEllipsisIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useAccess } from '@/hooks/useAccess';
 
 // Every card is filtered by the route rules (lib/permissions), the same
@@ -80,6 +80,15 @@ const adminLinks = [
     color: 'bg-amber-500',
     bgColor: 'from-amber-50 to-orange-50',
     borderColor: 'border-amber-100',
+  },
+  {
+    href: '/admin-panel/report-templates',
+    label: 'Report Templates',
+    description: 'Design report cards and progress reports, and choose which prints for each grade.',
+    icon: DocumentTextIcon,
+    color: 'bg-indigo-500',
+    bgColor: 'from-indigo-50 to-violet-50',
+    borderColor: 'border-indigo-100',
   },
   {
     href: '/admin-panel/forms',
