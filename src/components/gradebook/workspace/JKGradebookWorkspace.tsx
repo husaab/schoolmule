@@ -201,8 +201,8 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     applyDoc(EMPTY_FIELDS)
 
     try {
-      // Earlier edits save first: SK subject comments belong to both
-      // documents, so this one must not read them before that save lands.
+      // Earlier edits save first: the teacher assistant belongs to both
+      // documents, so this one must not read it before that save lands.
       const fields = await loadAfterPendingSaves(flushDocs, async () => {
         const fields: KindergartenFields = { ...EMPTY_FIELDS }
 
@@ -216,12 +216,17 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
           fields.ratings = map
         }
 
-        // For report card tab, also load comments, learning skills, TA
+        // Both documents print (and always save) the teacher assistant, so
+        // neither opens without it: a blank one would be saved over it.
+        const taRes = await getJKTeacherAssistant(selectedStudentId, term)
+        if (taRes.status !== 'success') throw new Error('Could not load the teacher assistant')
+        fields.teacherAssistant = taRes.data?.teacherAssistantName || ''
+
+        // For report card tab, also load comments and learning skills
         if (activeTab === 'report_card') {
-          const [commentsRes, lsRes, taRes] = await Promise.all([
+          const [commentsRes, lsRes] = await Promise.all([
             getJKDomainComments(selectedStudentId, term),
             getJKLearningSkills(selectedStudentId, term),
-            getJKTeacherAssistant(selectedStudentId, term),
           ])
 
           if (commentsRes.status === 'success') {
@@ -239,8 +244,6 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
             })
             fields.learningSkills = lmap
           }
-
-          fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
         }
 
         // For progress report tab, load progress report comments
@@ -641,21 +644,21 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                     </div>
                   </div>
 
-                  {/* Teacher Assistant (report card only) */}
-                  {activeTab === 'report_card' && (
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Teacher Assistant (optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={teacherAssistant}
-                        onChange={(e) => change({ teacherAssistant: e.target.value })}
-                        placeholder="Enter teacher assistant name"
-                        className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
+                  {/* Teacher Assistant (one per student and term, printed on both documents) */}
+                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
+                    <label htmlFor="jk-teacher-assistant" className="block text-sm font-medium text-slate-700 mb-1">
+                      Teacher Assistant (optional)
+                    </label>
+                    <input
+                      id="jk-teacher-assistant"
+                      type="text"
+                      value={teacherAssistant}
+                      onChange={(e) => change({ teacherAssistant: e.target.value })}
+                      placeholder="Enter teacher assistant name"
+                      className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">Printed on both the progress report and the report card.</p>
+                  </div>
 
                   {/* Domain Cards */}
                   {domains.map((domain) => (

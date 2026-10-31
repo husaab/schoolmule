@@ -96,13 +96,14 @@ export interface SKTeacherAssistantPayload {
   school: string
 }
 
-// -- Progress Report Comments (Academic Achievement / Socio-Emotional) --
+// -- Progress Report Comments ("Strengths/Next Steps" rows, lib/skProgressComments.ts) --
 
 export interface SKProgressReportComment {
   id: string
   studentId: string
   term: string
-  sectionType: 'academic_achievement' | 'socio_emotional'
+  /** A row key of SK_PROGRESS_COMMENT_ROWS (older rows may hold other keys). */
+  sectionType: string
   comment: string | null
   updatedAt: string
 }
@@ -115,7 +116,7 @@ export interface SKProgressReportCommentsResponse {
 export interface SKProgressReportCommentEntry {
   studentId: string
   term: string
-  sectionType: 'academic_achievement' | 'socio_emotional'
+  sectionType: string
   comment: string | null
   school: string
 }

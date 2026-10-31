@@ -47,6 +47,7 @@ import {
   type KindergartenFields,
 } from '@/lib/kindergartenSave'
 import { aiFetch } from '@/services/aiClient'
+import { SK_PROGRESS_COMMENT_ROWS, ratedStandardsForRow, type SKProgressCommentRow } from '@/lib/skProgressComments'
 
 // Rating options for each document type
 const SK_PROGRESS_REPORT_RATINGS = [
@@ -99,12 +100,12 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
 
   // Rating state: standardId -> rating
   const [ratings, setRatings] = useState<Record<string, string>>({})
-  // Subject comments: subjectId -> comment
+  // Report card subject comments: subjectId -> comment
   const [subjectComments, setSubjectComments] = useState<Record<string, string>>({})
+  // Progress report "Strengths / Next Steps" rows: row key -> comment
+  const [progressComments, setProgressComments] = useState<Record<string, string>>({})
   // Teacher assistant
   const [teacherAssistant, setTeacherAssistant] = useState('')
-  // Progress report comments (sectionType -> comment) have no fields here: they
-  // ride in the open document (docRef) and are saved back as loaded.
 
   // AI generation state
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
@@ -131,6 +132,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     docRef.current = next
     setRatings(next.ratings)
     setSubjectComments(next.comments)
+    setProgressComments(next.progressComments)
     setTeacherAssistant(next.teacherAssistant)
   }, [])
 
@@ -208,20 +210,9 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
         }
 
-        // For progress report tab, load subject comments and progress report comments
+        // For progress report tab, load the "Strengths / Next Steps" rows
         if (activeTab === 'progress_report') {
-          const [commentsRes, prCommentsRes] = await Promise.all([
-            getSKSubjectComments(selectedStudentId, term),
-            getSKProgressReportComments(selectedStudentId, term).catch(() => ({ status: 'error', data: [] })),
-          ])
-
-          if (commentsRes.status === 'success') {
-            const cmap: Record<string, string> = {}
-            commentsRes.data.forEach((c) => {
-              if (c.comment) cmap[c.subjectId] = c.comment
-            })
-            fields.comments = cmap
-          }
+          const prCommentsRes = await getSKProgressReportComments(selectedStudentId, term)
 
           if (prCommentsRes.status === 'success') {
             const pmap: Record<string, string> = {}
@@ -275,14 +266,18 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   const handleSubjectCommentChange = (subjectId: string, value: string, forKey: string | null = docKey) =>
     change({ comments: { ...docRef.current.comments, [subjectId]: value } }, forKey)
 
-  const handleProgressCommentChange = (sectionType: string, value: string) =>
-    change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } })
+  const handleProgressCommentChange = (rowKey: string, value: string, forKey: string | null = docKey) =>
+    change({ progressComments: { ...docRef.current.progressComments, [rowKey]: value } }, forKey)
 
-  // Generate AI comment for a single subject or section
+  // Generate an AI comment from rated standards. `key` names the request (a
+  // subjectId, or `row:<row key>` for a progress report row); `apply` puts the
+  // comment in place (subject comments unless given).
   const handleGenerateAIComment = async (
     key: string,
     subjectName: string,
-    standardsForPrompt: Array<{ name: string; rating: string; description?: string }>
+    standardsForPrompt: Array<{ name: string; rating: string; description?: string }>,
+    apply: (comment: string, forKey: string | null) => boolean = (comment, forKey) =>
+      handleSubjectCommentChange(key, comment, forKey)
   ) => {
     if (!selectedStudent) return
     // The document this comment is for, whatever is open when it arrives.
@@ -310,8 +305,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
 
       const data = await response.json()
       if (data.comment) {
-        // Both documents keep subject comments by subjectId.
-        const applied = handleSubjectCommentChange(key, data.comment, requestedKey)
+        const applied = apply(data.comment, requestedKey)
         if (applied) showNotification('Comment generated successfully', 'success')
         else showNotification(`The AI comment for ${selectedStudent.name} arrived after you switched, so it wasn't added.`, 'error')
       } else {
@@ -329,27 +323,39 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     }
   }
 
-  // Generate AI comments for all subjects at once
+  // A progress report row's AI comment, from the rated standards it covers.
+  const rowKeyOf = (row: SKProgressCommentRow) => `row:${row.key}`
+  const handleGenerateRowComment = (row: SKProgressCommentRow) =>
+    handleGenerateAIComment(rowKeyOf(row), row.label, ratedStandardsForRow(row, subjects, ratings), (comment, forKey) =>
+      handleProgressCommentChange(row.key, comment, forKey)
+    )
+
+  // Generate AI comments for every subject (report card) or row (progress
+  // report) that has ratings, at once
   const handleGenerateAllComments = async () => {
     if (!selectedStudent) return
 
     setGeneratingAllAI(true)
 
-    // Generate for each subject that has ratings
-    const subjectPromises = subjects
-      .filter((subject) => subject.standards.some((s) => ratings[s.standardId]))
-      .map((subject) => {
-        const standardsForPrompt = subject.standards
-          .filter((s) => ratings[s.standardId])
-          .map((s) => ({
-            name: s.name,
-            rating: ratings[s.standardId],
-            description: s.description || undefined,
-          }))
-        return handleGenerateAIComment(subject.subjectId, subject.name, standardsForPrompt)
-      })
+    const requests =
+      activeTab === 'progress_report'
+        ? SK_PROGRESS_COMMENT_ROWS.filter((row) => ratedStandardsForRow(row, subjects, ratings).length > 0).map(
+            handleGenerateRowComment
+          )
+        : subjects
+            .filter((subject) => subject.standards.some((s) => ratings[s.standardId]))
+            .map((subject) => {
+              const standardsForPrompt = subject.standards
+                .filter((s) => ratings[s.standardId])
+                .map((s) => ({
+                  name: s.name,
+                  rating: ratings[s.standardId],
+                  description: s.description || undefined,
+                }))
+              return handleGenerateAIComment(subject.subjectId, subject.name, standardsForPrompt)
+            })
 
-    await Promise.allSettled(subjectPromises)
+    await Promise.allSettled(requests)
 
     setGeneratingAllAI(false)
   }
@@ -707,13 +713,12 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                         )}
                       </div>
 
-                      {/* Subject Comment */}
+                      {/* Subject Comment (report card; the progress report's are the rows below) */}
+                      {activeTab === 'report_card' && (
                       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100">
                         <div className="flex items-center justify-between mb-1">
                           <label className="block text-xs font-medium text-slate-500">
-                            {activeTab === 'report_card'
-                              ? 'Strengths / Next Steps'
-                              : 'Teacher Comment'}
+                            Strengths / Next Steps
                           </label>
                           <button
                             type="button"
@@ -751,16 +756,58 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                             handleSubjectCommentChange(subject.subjectId, e.target.value)
                           }
                           rows={3}
-                          placeholder={
-                            activeTab === 'report_card'
-                              ? "Click 'Generate with AI' or type strengths and next steps..."
-                              : "Click 'Generate with AI' or type your own comment..."
-                          }
+                          placeholder="Click 'Generate with AI' or type strengths and next steps..."
                           className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
                         />
                       </div>
+                      )}
                     </div>
                   ))}
+
+                  {/* Progress report: Strengths / Next Steps, one row per subject of the printed report */}
+                  {activeTab === 'progress_report' && (
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3">
+                        <h3 className="text-white font-semibold text-sm">Strengths / Next Steps for Improvement</h3>
+                        <p className="text-emerald-50 text-xs mt-0.5">Printed on the last page of the progress report.</p>
+                      </div>
+                      <div className="divide-y divide-slate-100">
+                        {SK_PROGRESS_COMMENT_ROWS.map((row) => {
+                          const busy = generatingAI.has(rowKeyOf(row))
+                          const canGenerate = ratedStandardsForRow(row, subjects, ratings).length > 0
+                          const fieldId = `sk-progress-comment-${row.key}`
+                          return (
+                            <div key={row.key} className="px-4 py-3">
+                              <div className="flex items-start justify-between gap-3 mb-1">
+                                <label htmlFor={fieldId} className="block">
+                                  <span className="text-sm font-medium text-slate-700">{row.label}</span>
+                                  {row.caption && <span className="block text-xs text-slate-500">{row.caption}</span>}
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleGenerateRowComment(row)}
+                                  disabled={busy || !canGenerate}
+                                  title={canGenerate ? undefined : 'Rate the standards this row covers first'}
+                                  className="flex shrink-0 items-center gap-1.5 px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                  <SparklesIcon className={`w-3.5 h-3.5 ${busy ? 'animate-pulse' : ''}`} />
+                                  {busy ? 'Generating...' : 'Generate with AI'}
+                                </button>
+                              </div>
+                              <textarea
+                                id={fieldId}
+                                value={progressComments[row.key] || ''}
+                                onChange={(e) => handleProgressCommentChange(row.key, e.target.value)}
+                                rows={3}
+                                placeholder="Click 'Generate with AI' or type strengths and next steps..."
+                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               )}

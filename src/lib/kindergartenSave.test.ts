@@ -47,9 +47,9 @@ describe('saveJKDocument: the same calls and payloads the JK Save button sent', 
     teacherAssistant: fn('teacherAssistant'),
   })
 
-  it('progress report: rated skills, then the non-empty section comments', async () => {
+  it('progress report: rated skills, the section comments (an emptied one sent blank), then the teacher assistant (always)', async () => {
     const { calls, fn } = recorder()
-    await saveJKDocument(snap(), api(fn))
+    await saveJKDocument(snap({ teacherAssistant: 'Rana Kareem' }), api(fn))
     expect(calls).toEqual([
       ['assessments', [
         { studentId: 'k1', skillId: 'sk1', term: 'Term 1', rating: 'D', school: 'DEMO', assessedBy: 'u1' },
@@ -57,7 +57,9 @@ describe('saveJKDocument: the same calls and payloads the JK Save button sent', 
       ], {}],
       ['progressComments', [
         { studentId: 'k1', term: 'Term 1', sectionType: 'academic_achievement', comment: 'Growing reader.', school: 'DEMO' },
+        { studentId: 'k1', term: 'Term 1', sectionType: 'socio_emotional', comment: '', school: 'DEMO' },
       ], {}],
+      ['teacherAssistant', { studentId: 'k1', teacherAssistantName: 'Rana Kareem', term: 'Term 1', school: 'DEMO' }, {}],
     ])
   })
 
@@ -70,10 +72,12 @@ describe('saveJKDocument: the same calls and payloads the JK Save button sent', 
     expect(calls[3][1]).toEqual({ studentId: 'k1', teacherAssistantName: null, term: 'Term 1', school: 'DEMO' })
   })
 
-  it('skips an empty list, as Save did', async () => {
+  it('skips an empty list, as Save did (the teacher assistant still goes)', async () => {
     const { calls, fn } = recorder()
     await saveJKDocument(snap({ ratings: { sk1: '' }, progressComments: {} }), api(fn))
-    expect(calls).toEqual([])
+    expect(calls).toEqual([
+      ['teacherAssistant', { studentId: 'k1', teacherAssistantName: null, term: 'Term 1', school: 'DEMO' }, {}],
+    ])
   })
 })
 
@@ -85,13 +89,19 @@ describe('saveSKDocument: the same calls and payloads the SK Save button sent', 
     teacherAssistant: fn('teacherAssistant'),
   })
 
-  it('progress report: rated standards, subject comments, then section comments', async () => {
+  it('progress report: rated standards, subject comments, then the Strengths/Next Steps rows', async () => {
     const { calls, fn } = recorder()
-    await saveSKDocument(snap({ ratings: { st1: 'E' }, comments: { sub1: 'Loves art.' } }), api(fn))
+    await saveSKDocument(
+      snap({ ratings: { st1: 'E' }, comments: { sub1: 'Loves art.' }, progressComments: { mathematics: 'Counts to 100.', french: ' ' } }),
+      api(fn),
+    )
     expect(calls).toEqual([
       ['assessments', [{ studentId: 'k1', standardId: 'st1', term: 'Term 1', rating: 'E', school: 'DEMO', assessedBy: 'u1' }], {}],
       ['subjectComments', [{ studentId: 'k1', subjectId: 'sub1', term: 'Term 1', comment: 'Loves art.', school: 'DEMO' }], {}],
-      ['progressComments', [{ studentId: 'k1', term: 'Term 1', sectionType: 'academic_achievement', comment: 'Growing reader.', school: 'DEMO' }], {}],
+      ['progressComments', [
+        { studentId: 'k1', term: 'Term 1', sectionType: 'mathematics', comment: 'Counts to 100.', school: 'DEMO' },
+        { studentId: 'k1', term: 'Term 1', sectionType: 'french', comment: '', school: 'DEMO' },
+      ], {}],
     ])
   })
 

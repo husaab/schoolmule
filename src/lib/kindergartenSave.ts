@@ -3,8 +3,9 @@
 // student's progress report or report card is saved as a whole document,
 // exactly as the JK/SK Save button did: the same service calls, in the same
 // order, with the same payloads (empty ratings and blank comments skipped,
-// the teacher assistant always sent on the report card). Only the timing
-// changed. When the page is going away (keepalive) every call is sent at
+// the teacher assistant always sent: by both JK documents, by the SK report
+// card). Only the timing changed. One exception: a progress report section
+// the teacher emptied is sent blank, so it is cleared (it used to come back). When the page is going away (keepalive) every call is sent at
 // once, so none is left waiting behind another.
 
 import type {
@@ -38,7 +39,8 @@ export interface KindergartenSnapshot {
   /** JK report card only: skill name → rating. */
   learningSkills: Record<string, string>
   teacherAssistant: string
-  /** academic_achievement / socio_emotional → comment. */
+  /** Progress report comments by section: JK academic_achievement /
+   *  socio_emotional, SK the rows of lib/skProgressComments.ts. */
   progressComments: Record<string, string>
 }
 
@@ -142,7 +144,19 @@ export async function openSKDocument(
 }
 
 const filled = (value: string | undefined) => !!value && value.trim() !== ''
-type Section = JKProgressReportCommentEntry['sectionType']
+type JKSection = JKProgressReportCommentEntry['sectionType']
+
+/**
+ * Progress report section comments to save: every section in the document,
+ * an emptied one sent blank (the server stores it as none). Sections hold
+ * only what was loaded (non-empty) or edited, so a blank never overwrites a
+ * comment the teacher didn't touch.
+ */
+const sectionComments = (s: KindergartenSnapshot) =>
+  Object.entries(s.progressComments).map(([sectionType, comment]) => ({
+    sectionType,
+    comment: filled(comment) ? comment : '',
+  }))
 
 // Sequential, as the Save button awaited them; all at once when leaving.
 async function run(calls: Call[], opts: SaveOpts) {
@@ -169,9 +183,9 @@ export function saveJKDocument(s: KindergartenSnapshot, api: JKSaveApi, opts: Sa
   if (assessments.length > 0) calls.push(() => api.assessments(assessments, opts))
 
   if (s.doc === 'progress_report') {
-    const prComments = Object.entries(s.progressComments)
-      .filter(([, val]) => filled(val))
-      .map(([sectionType, comment]) => ({ studentId: s.studentId, term: s.term, sectionType: sectionType as Section, comment, school: s.school }))
+    const prComments = sectionComments(s).map(({ sectionType, comment }) => ({
+      studentId: s.studentId, term: s.term, sectionType: sectionType as JKSection, comment, school: s.school,
+    }))
     if (prComments.length > 0) calls.push(() => api.progressComments(prComments, opts))
   }
 
@@ -185,10 +199,12 @@ export function saveJKDocument(s: KindergartenSnapshot, api: JKSaveApi, opts: Sa
       .filter(([, val]) => val !== '')
       .map(([skillName, rating]) => ({ studentId: s.studentId, term: s.term, skillName, rating, school: s.school }))
     if (learningSkills.length > 0) calls.push(() => api.learningSkills(learningSkills, opts))
-
-    const ta = { studentId: s.studentId, teacherAssistantName: s.teacherAssistant || null, term: s.term, school: s.school }
-    calls.push(() => api.teacherAssistant(ta, opts))
   }
+
+  // Both JK documents print the teacher assistant (one per student and term),
+  // and both always send it, so each must load it before it can save.
+  const ta = { studentId: s.studentId, teacherAssistantName: s.teacherAssistant || null, term: s.term, school: s.school }
+  calls.push(() => api.teacherAssistant(ta, opts))
   return run(calls, opts)
 }
 
@@ -206,16 +222,17 @@ export function saveSKDocument(s: KindergartenSnapshot, api: SKSaveApi, opts: Sa
     .map(([standardId, rating]) => ({ studentId: s.studentId, standardId, term: s.term, rating, school: s.school, assessedBy: s.assessedBy }))
   if (assessments.length > 0) calls.push(() => api.assessments(assessments, opts))
 
-  // Both documents carry per-subject comments.
+  // Per-subject comments (the report card's; the progress report's own
+  // comments are its section rows, progressComments).
   const subjectComments = Object.entries(s.comments)
     .filter(([, val]) => filled(val))
     .map(([subjectId, comment]) => ({ studentId: s.studentId, subjectId, term: s.term, comment, school: s.school }))
   if (subjectComments.length > 0) calls.push(() => api.subjectComments(subjectComments, opts))
 
   if (s.doc === 'progress_report') {
-    const prComments = Object.entries(s.progressComments)
-      .filter(([, val]) => filled(val))
-      .map(([sectionType, comment]) => ({ studentId: s.studentId, term: s.term, sectionType: sectionType as Section, comment, school: s.school }))
+    const prComments = sectionComments(s).map(({ sectionType, comment }) => ({
+      studentId: s.studentId, term: s.term, sectionType, comment, school: s.school,
+    }))
     if (prComments.length > 0) calls.push(() => api.progressComments(prComments, opts))
   }
 
