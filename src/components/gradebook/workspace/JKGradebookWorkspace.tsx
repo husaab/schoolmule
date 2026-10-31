@@ -329,6 +329,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     try {
       const response = await aiFetch('/api/ai/generate-jksk-comment', {
         studentName: selectedStudent.name,
+        gender: selectedStudent.gender ?? null,
         domainName,
         skills: ratedSkills,
         ratingScale: activeTab === 'progress_report' ? 'DBIN' : 'BGDVNI',

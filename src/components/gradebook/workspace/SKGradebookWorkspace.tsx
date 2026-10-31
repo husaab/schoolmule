@@ -293,6 +293,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     try {
       const response = await aiFetch('/api/ai/generate-jksk-comment', {
         studentName: selectedStudent.name,
+        gender: selectedStudent.gender ?? null,
         domainName: subjectName,
         skills: ratedStandards,
         ratingScale: activeTab === 'progress_report' ? 'EGSNINA' : 'EPDVEMNI',

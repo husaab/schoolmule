@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { pronounGuidance } from '@/lib/aiCommentPronouns'
 
 // Rating scale labels
 const DBIN_LABELS: Record<string, string> = {
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+    // Only a recorded gender counts; anything else is treated as not recorded.
+    const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : null
     const {
       studentName,
       domainName,
@@ -144,7 +147,8 @@ Tone Guidance:
 ${toneGuidance}
 
 Guidelines:
-- Write in third person, referring to the student by their first name only (e.g., "Ahmed" not "Ahmed Smith")
+- Write in third person
+${pronounGuidance(studentName, gender)}
 - Keep the comment between 2-4 sentences
 - Use warm, developmentally appropriate language suitable for early childhood education
 - Reference specific skills and the child's progress naturally — do NOT list skills mechanically
