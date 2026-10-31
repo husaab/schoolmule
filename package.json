@@ -10,7 +10,8 @@
     "test": "vitest run",
     "avatars:render": "node scripts/render-avatar-pngs.mjs",
     "test:e2e": "playwright test",
-    "sync:reportkit": "node scripts/build-reportkit.mjs"
+    "sync:reportkit": "node scripts/build-reportkit.mjs",
+    "check:reportkit": "node scripts/build-reportkit.mjs --check"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

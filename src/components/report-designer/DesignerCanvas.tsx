@@ -102,6 +102,8 @@ type Drag =
       py: number;
       guides: { x: number[]; y: number[] };
       moved: boolean;
+      /** Latest box (pointer-up may come before React re-renders). */
+      box?: Box;
     }
   | { kind: 'zone'; zone: ZoneKey; startH: number; py: number; edge: 'bottom' | 'top'; current: number }
   | { kind: 'width'; id: string; startW: number; px: number; contentW: number; current: number }
@@ -335,6 +337,7 @@ export default function DesignerCanvas({ data }: Props) {
           : resizeBox(drag.start, drag.handle!, dx, dy, e.shiftKey);
       const snapped = e.metaKey || e.altKey ? { box: raw, lines: { x: [], y: [] } } : snapBox(raw, drag.guides, 5 / zoom, drag.kind === 'move' ? 'move' : drag.handle);
       const box = roundBox(snapped.box);
+      drag.box = box;
       liveApply(drag.id, box);
       setLiveBox({ id: drag.id, box });
       const container = elementBox(drag.id)?.container;
@@ -371,8 +374,8 @@ export default function DesignerCanvas({ data }: Props) {
     setSnapLines(null);
     setLiveEdge(null);
     if (!drag || !doc) return;
-    if ((drag.kind === 'move' || drag.kind === 'resize') && drag.moved && liveBox) {
-      commit(updateElement(doc, drag.id, liveBox.box));
+    if ((drag.kind === 'move' || drag.kind === 'resize') && drag.moved && drag.box) {
+      commit(updateElement(doc, drag.id, drag.box));
       setLiveBox(null);
       return;
     }
@@ -472,6 +475,7 @@ export default function DesignerCanvas({ data }: Props) {
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           onPointerLeave={() => !dragRef.current && setHover(null)}
           onDoubleClick={onDoubleClick}
           data-testid="designer-overlay"

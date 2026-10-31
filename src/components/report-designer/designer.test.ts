@@ -50,7 +50,7 @@ describe('docOps', () => {
   });
 
   it('updates a block in place, by patch or function', () => {
-    const id = doc.blocks[3].id;
+    const id = doc.blocks.find((b) => b.type === 'skillsTable')!.id;
     const d = updateBlock(doc, id, { name: 'Renamed', marginTop: 4 });
     expect(findBlock(d, id)!.block).toMatchObject({ name: 'Renamed', marginTop: 4, type: 'skillsTable' });
     const d2 = updateBlock(d, id, (b) => ({ ...b, keepTogether: true }));

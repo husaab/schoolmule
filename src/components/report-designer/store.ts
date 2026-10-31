@@ -76,7 +76,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       past: coalesce ? past : [...past, current].slice(-HISTORY_LIMIT),
       future: [],
       lastCommit: coalesceKey ? { key: coalesceKey, at: now } : null,
-      saveState: 'dirty',
+      // A conflict stays visible until the admin reloads.
+      saveState: get().saveState === 'conflict' ? 'conflict' : 'dirty',
       editSeq: editSeq + 1,
     });
   },

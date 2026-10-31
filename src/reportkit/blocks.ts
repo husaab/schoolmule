@@ -1,9 +1,11 @@
 import { evaluateCondition } from './conditions';
 import { formatMark, overallRating } from './format';
+import { builtinImageLabel } from './images';
 import { mergeHtml, type MergeScope } from './merge';
 import { alignClass, barCss, boxCss, colgroup, num, panelCss, px, safeColor, tableCss, textCss } from './style';
 import type {
   Block,
+  Box4,
   CanvasElement,
   ColumnDef,
   CommentsTableBlock,
@@ -16,6 +18,7 @@ import type {
   ReportData,
   SignaturesBlock,
   SkillGroup,
+  SkillGroupStyle,
   SkillItem,
   SkillsTableBlock,
   SubjectCardsBlock,
@@ -43,6 +46,8 @@ export interface RenderCtx {
 export interface TableRow {
   html: string;
   keepWithNext: boolean;
+  /** A spacer left out when it would start a page (splitPlan). */
+  dropAtTop?: boolean;
 }
 
 export type Flowable =
@@ -92,6 +97,7 @@ function imageHtml(ctx: RenderCtx, src: ImageSource | null | undefined, height: 
 function imageLabel(src: ImageSource | null | undefined): string {
   if (!src) return 'Image';
   if (src.kind === 'url') return 'Image';
+  if (src.kind === 'builtin') return builtinImageLabel(src.name);
   return (
     { logo: 'School logo', principalSignature: "Principal's signature", stamp: 'School stamp', teacherSignature: "Teacher's signature" }[
       src.asset
@@ -121,6 +127,12 @@ function ratingStyle(ctx: RenderCtx, scaleId: string | undefined, colored: boole
   return out.join(';');
 }
 
+/** A text style's vertical alignment as a table-cell declaration. */
+function valign(style: TextStyle | undefined): string {
+  const v = style?.verticalAlign;
+  return v === 'top' || v === 'middle' || v === 'bottom' ? `vertical-align:${v}` : '';
+}
+
 function cellHtml(ctx: RenderCtx, cell: TableCellDef, tag: 'td' | 'th' = 'td'): string {
   const attrs: string[] = [];
   if (cell.colSpan && cell.colSpan > 1) attrs.push(`colspan="${Math.floor(num(cell.colSpan, 1, 1, 50))}"`);
@@ -130,7 +142,12 @@ function cellHtml(ctx: RenderCtx, cell: TableCellDef, tag: 'td' | 'th' = 'td'): 
   if (bg) css.push(`background:${bg}`);
   const t = textCss(cell.style);
   if (t) css.push(t);
-  if (cell.style?.verticalAlign) css.push(`vertical-align:${cell.style.verticalAlign}`);
+  const va = valign(cell.style);
+  if (va) css.push(va);
+  if (cell.padding) {
+    const p = (k: keyof Box4) => px(cell.padding?.[k], 0, 0, 400);
+    css.push(`padding:${p('top')} ${p('right')} ${p('bottom')} ${p('left')}`);
+  }
   let inner = '';
   if (cell.image) inner += imageHtml(ctx, cell.image, cell.imageHeight ?? 36, imageLabel(cell.image));
   if (cell.text) inner += (inner ? ' ' : '') + mergeHtml(cell.text, ctx.scope);
@@ -141,8 +158,9 @@ function cellHtml(ctx: RenderCtx, cell: TableCellDef, tag: 'td' | 'th' = 'td'): 
   return `<${tag} ${attrs.join(' ')} style="${css.join(';')}">${inner}</${tag}>`;
 }
 
-function staticRowHtml(ctx: RenderCtx, row: TableRowDef): string {
-  const h = row.height ? ` style="height:${px(row.height, 20, 4, 1000)}"` : '';
+function staticRowHtml(ctx: RenderCtx, row: TableRowDef, fill = false): string {
+  // A filling row takes a table's extra height (see TableBlock.minHeight).
+  const h = fill ? ' style="height:100%"' : row.height ? ` style="height:${px(row.height, 20, 4, 1000)}"` : '';
   return `<tr${h}>${row.cells.map((c) => cellHtml(ctx, c)).join('')}</tr>`;
 }
 
@@ -157,12 +175,38 @@ function barRow(text: string, bar: SkillsTableBlock['groupBar'], colspan: number
   };
 }
 
+/** "Fine Motor Skills:" → "fine motor skills" (how groupStyles match). */
+function groupKey(name: unknown): string {
+  return normName(name).replace(/\s*:$/, '');
+}
+
+/** The group bar's style for one group: its groupStyles entry, else a fallback colour by position. */
+function groupLook(block: SkillsTableBlock, name: string, index: number): { bar: SkillsTableBlock['groupBar']; style: SkillGroupStyle | null } {
+  const key = groupKey(name);
+  const style = (block.groupStyles ?? []).find((s) => s && groupKey(s.match) === key && key !== '') ?? null;
+  const fallbacks = (block.fallbackGroupColors ?? []).filter((c) => !!safeColor(c));
+  const background = safeColor(style?.background) || (style || fallbacks.length === 0 ? '' : fallbacks[index % fallbacks.length]);
+  const color = safeColor(style?.color);
+  if (!background && !color) return { bar: block.groupBar, style };
+  return { bar: { ...block.groupBar, ...(background ? { background } : {}), ...(color ? { color } : {}) }, style };
+}
+
+function groupIconHtml(ctx: RenderCtx, style: SkillGroupStyle | null): string {
+  if (!style?.icon) return '';
+  const url = ctx.image(style.icon);
+  if (!url) return '';
+  const h = num(style.iconHeight, 29, 4, 200);
+  return `<img class="rk-icon" src="${escapeHtml(url)}" alt="" style="height:${h}px;width:auto;margin-left:21px;vertical-align:middle">`;
+}
+
 // ─────────────────────────────────────────────────────────── blocks ──
 
 function tableBlock(block: TableBlock, ctx: RenderCtx): string {
   const rows = block.rows.filter((r) => evaluateCondition(r.showWhen, ctx.scope));
-  return `${tableOpen('', tableCss(block, ctx.doc.theme), block.columns)}<tbody>${rows
-    .map((r) => staticRowHtml(ctx, r))
+  const min = block.minHeight ? num(block.minHeight, 0, 0, 3000) : 0;
+  const css = [tableCss(block, ctx.doc.theme), min ? `height:${min}px` : ''].filter(Boolean).join(';');
+  return `${tableOpen('', css, block.columns)}<tbody>${rows
+    .map((r, i) => staticRowHtml(ctx, r, min > 0 && i === rows.length - 1))
     .join('')}</tbody></table>`;
 }
 
@@ -217,10 +261,11 @@ function ratingKey(block: RatingKeyBlock, ctx: RenderCtx): string {
     .map((l, i) => {
       const side =
         hasSide && i === 0
-          ? `<td class="rk-vertical rk-bar" rowspan="${levels.length}" style="${titleCss}"><span>${escapeHtml(block.sideLabel)}</span></td>`
+          ? `<td class="rk-vertical rk-bar" rowspan="${levels.length}" style="${[titleCss, textCss(block.sideStyle), 'text-align:center'].filter(Boolean).join(';')}"><span>${escapeHtml(block.sideLabel).replace(/\r?\n/g, '<br>')}</span></td>`
           : '';
       const desc = hasDesc ? `<td>${escapeHtml(l.description ?? '')}</td>` : '';
-      return `<tr>${side}<td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, true, l.code, block.id)}">${escapeHtml(l.code)}</td><td style="font-weight:700">${escapeHtml(l.label)}</td>${desc}</tr>`;
+      const codeCss = [ratingStyle(ctx, block.scaleId, true, l.code, block.id), textCss(block.codeStyle)].filter(Boolean).join(';');
+      return `<tr>${side}<td class="rk-rating" style="${codeCss}">${escapeHtml(l.code)}</td><td style="font-weight:700">${escapeHtml(l.label)}</td>${desc}</tr>`;
     })
     .join('');
   const title = block.title
@@ -257,20 +302,41 @@ function skillsTable(block: SkillsTableBlock, ctx: RenderCtx): Flowable | null {
   // column lines up with the pairs' right-hand rating column.
   const ratingCol = [...cols].reverse().find((c) => ratingKeys.has(c.key)) ?? cols[cols.length - 1];
   const nameCol = cols.find((c) => !ratingKeys.has(c.key)) ?? cols[0];
+  const pairColumns = (block.pairColumns ?? []).map((w) => num(w, 0, 0, 100));
   const widths = pairMode
-    ? (() => {
-        const rw = num(ratingCol.width, 20, 1, 90);
-        const rest = 100 - rw;
-        const a = rest * 0.4;
-        const b = rest * 0.1;
-        return [a, b, rest - a - b, rw];
-      })()
+    ? pairColumns.length === 4 && pairColumns.every((w) => w > 0)
+      ? pairColumns
+      : (() => {
+          const rw = num(ratingCol.width, 20, 1, 90);
+          const rest = 100 - rw;
+          const a = rest * 0.4;
+          const b = rest * 0.1;
+          return [a, b, rest - a - b, rw];
+        })()
     : cols.map((c) => c.width);
+  const rowHeight = block.rowHeight ? ` style="height:${px(block.rowHeight, 0, 0, 600)}"` : '';
+  const pairRowHeight = block.pairRowHeight ? ` style="height:${px(block.pairRowHeight, 0, 0, 600)}"` : rowHeight;
   const span = widths.length;
 
   const rows: TableRow[] = [];
   const groupBg = '#d9d9d9';
   if (block.title) rows.push(barRow(block.title, block.titleBar, span, '#9bc2e6', ctx));
+
+  // A group's bar: its own colour/icon (groupStyles), one merged cell or, with
+  // groupBarColumns, the name over the text columns and a blank rating cell.
+  const groupBarRow = (name: string, index: number): TableRow => {
+    const look = groupLook(block, name, index);
+    const css = barCss(look.bar, groupBg, ctx.doc.theme);
+    const label = `${escapeHtml(name)}${groupIconHtml(ctx, look.style)}`;
+    if (block.groupBarColumns && span > 1) {
+      // The text columns come before the first rating column (pair mode: 3 of 4).
+      const firstRating = pairMode ? span - 1 : cols.findIndex((c) => ratingKeys.has(c.key));
+      const textSpan = firstRating > 0 ? firstRating : span - 1;
+      const blanks = Array.from({ length: span - textSpan }, () => `<td class="rk-bar" style="${css}"></td>`).join('');
+      return { html: `<tr><td class="rk-bar" colspan="${textSpan}" style="${css}">${label}</td>${blanks}</tr>`, keepWithNext: true };
+    }
+    return { html: `<tr><td class="rk-bar" colspan="${span}" style="${css}">${label}</td></tr>`, keepWithNext: true };
+  };
 
   const headCells = (labelFor: (c: ColumnDef) => string) =>
     pairMode
@@ -288,7 +354,7 @@ function skillsTable(block: SkillsTableBlock, ctx: RenderCtx): Flowable | null {
     if (pairMode) {
       const v = skillValue(item, ratingCol.key);
       return {
-        html: `<tr${cls}><td colspan="3">${escapeHtml(item.name)}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, v, block.id)}">${escapeHtml(v)}</td></tr>`,
+        html: `<tr${cls}${rowHeight}><td colspan="3">${escapeHtml(item.name)}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, v, block.id)}">${escapeHtml(v)}</td></tr>`,
         keepWithNext: false,
       };
     }
@@ -303,7 +369,7 @@ function skillsTable(block: SkillsTableBlock, ctx: RenderCtx): Flowable | null {
         return `<td class="${alignClass(c.align).trim()}"${own ? ` style="${own}"` : ''}>${escapeHtml(v)}</td>`;
       })
       .join('');
-    return { html: `<tr${cls}>${tds}</tr>`, keepWithNext: false };
+    return { html: `<tr${cls}${rowHeight}>${tds}</tr>`, keepWithNext: false };
   };
 
   const commentRow = (g: SkillGroup): TableRow | null => {
@@ -316,59 +382,66 @@ function skillsTable(block: SkillsTableBlock, ctx: RenderCtx): Flowable | null {
     const css = block.groupCommentBar ? ` style="${barCss({ fontWeight: 400, ...block.groupCommentBar }, '', ctx.doc.theme)}"` : '';
     return { html: `<tr><td colspan="${span}"${css}>${label}${dataHtml(g.comment)}</td></tr>`, keepWithNext: false };
   };
-  // A blank row between groups; its side and bottom borders are hidden so the
-  // gap reads as white space, and a page may end on it.
+  // A blank row before every group but the first; its side borders are hidden
+  // so the gap reads as white space. It goes to the next page with its group
+  // and is left out there, so no page starts or ends on a gap.
   const gap = num(block.groupGap, 0, 0, 200);
-  const gapRow = (): TableRow => ({
-    html: `<tr class="rk-gap"><td colspan="${span}" style="height:${gap}px;padding:0;background:transparent;border-left-style:hidden;border-right-style:hidden;border-bottom-style:hidden"></td></tr>`,
-    keepWithNext: false,
-  });
-  // Group rows from `start`: chained so the group stays together (when asked)
-  // and a gap row, not the group's last row, is where a page may end.
-  const closeGroup = (start: number, more: boolean) => {
-    if (block.keepGroupsTogether) for (let k = start; k < rows.length - 1; k++) rows[k].keepWithNext = true;
-    if (gap > 0 && more) {
-      if (rows.length > start) rows[rows.length - 1].keepWithNext = true;
-      rows.push(gapRow());
+  let groupsPlaced = 0;
+  const openGroup = () => {
+    if (gap > 0 && groupsPlaced > 0) {
+      rows.push({
+        html: `<tr class="rk-gap"><td colspan="${span}" style="height:${gap}px;padding:0;background:transparent;border-left-style:hidden;border-right-style:hidden"></td></tr>`,
+        keepWithNext: true,
+        dropAtTop: true,
+      });
     }
+    groupsPlaced += 1;
+    return rows.length;
+  };
+  // Group rows from `start`, chained so the group stays together (when asked).
+  const closeGroup = (start: number) => {
+    if (block.keepGroupsTogether) for (let k = start; k < rows.length - 1; k++) rows[k].keepWithNext = true;
   };
 
   let lastGroup: string | null = null;
   const done = new Set<string>();
-  const leftAfter = (gi: number) => groups.slice(gi + 1).some((x) => !done.has(normName(x.name)));
   for (const [gi, g] of groups.entries()) {
     const key = normName(g.name);
     if (done.has(key)) continue;
     done.add(key);
-    const start = rows.length;
+    const start = openGroup();
 
     const pair = pairOf(g);
     if (pair) {
       const right = groupByName.get(pair[1])!;
       done.add(pair[1]);
       lastGroup = null;
-      const bar = barCss(block.groupBar, groupBg, ctx.doc.theme);
+      const pairCell = (x: SkillGroup) => {
+        const look = groupLook(block, x.name, groups.indexOf(x));
+        return `<td class="rk-bar" colspan="2" style="${barCss(look.bar, groupBg, ctx.doc.theme)}">${escapeHtml(x.name)}${groupIconHtml(ctx, look.style)}</td>`;
+      };
       rows.push({
-        html: `<tr><td class="rk-bar" colspan="2" style="${bar}">${escapeHtml(g.name)}</td><td class="rk-bar" colspan="2" style="${bar}">${escapeHtml(right.name)}</td></tr>`,
+        html: `<tr>${pairCell(g)}${pairCell(right)}</tr>`,
         keepWithNext: true,
       });
       const n = Math.max(g.items.length, right.items.length);
       for (let r = 0; r < n; r++) {
         const a = g.items[r];
         const b = right.items[r];
+        const pairText = block.pairStyle ? ` style="${textCss(block.pairStyle)}"` : '';
         const av = a ? skillValue(a, ratingCol.key) : '';
         const bv = b ? skillValue(b, ratingCol.key) : '';
         rows.push({
           // A side-by-side pair is short; keep it in one piece.
           keepWithNext: r < n - 1,
-          html: `<tr><td>${a ? escapeHtml(a.name) : ''}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, av, block.id)}">${escapeHtml(av)}</td><td>${b ? escapeHtml(b.name) : ''}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, bv, block.id)}">${escapeHtml(bv)}</td></tr>`,
+          html: `<tr${pairRowHeight}><td${pairText}>${a ? escapeHtml(a.name) : ''}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, av, block.id)}">${escapeHtml(av)}</td><td${pairText}>${b ? escapeHtml(b.name) : ''}</td><td class="rk-rating" style="${ratingStyle(ctx, block.scaleId, block.colorRatings, bv, block.id)}">${escapeHtml(bv)}</td></tr>`,
         });
       }
       for (const cg of [g, right]) {
         const c = commentRow(cg);
         if (c) rows.push(c);
       }
-      closeGroup(start, leftAfter(gi));
+      closeGroup(start);
       continue;
     }
 
@@ -381,18 +454,18 @@ function skillsTable(block: SkillsTableBlock, ctx: RenderCtx): Flowable | null {
       const m = block.splitGroupNames ? /^(.+?)\s+-\s+(.+)$/.exec(g.name) : null;
       if (m) {
         const parent = m[1].trim();
-        if (normName(parent) !== lastGroup) rows.push(barRow(parent, block.groupBar, span, groupBg, ctx));
+        if (normName(parent) !== lastGroup) rows.push(groupBarRow(parent, gi));
         rows.push(barRow(m[2].trim(), block.subgroupBar, span, '#bdd7ee', ctx));
         lastGroup = normName(parent);
       } else {
-        rows.push(barRow(g.name, block.groupBar, span, groupBg, ctx));
+        rows.push(groupBarRow(g.name, gi));
         lastGroup = null;
       }
     }
     g.items.forEach((item, i) => rows.push(itemRow(item, i % 2 === 1)));
     const c = commentRow(g);
     if (c) rows.push(c);
-    closeGroup(start, leftAfter(gi));
+    closeGroup(start);
   }
 
   return {
@@ -424,9 +497,13 @@ function commentsTable(block: CommentsTableBlock, ctx: RenderCtx): Flowable | nu
   const span = (n: number) => (n > 1 ? ` colspan="${n}"` : '');
   const headBar = barCss(block.headerBar, '#d0cece', ctx.doc.theme);
   const head = `<thead><tr><th class="rk-c"${span(subjectSpan)} style="${headBar}">${escapeHtml(block.subjectLabel)}</th><th class="rk-c"${span(commentSpan)} style="${headBar}">${escapeHtml(block.commentLabel)}</th></tr></thead>`;
-  const subjectCss = textCss(block.subjectStyle);
+  const subjectBg = safeColor(block.subjectBackground);
+  const subjectCss = [textCss(block.subjectStyle), subjectBg ? `background:${subjectBg}` : '', valign(block.subjectStyle)].filter(Boolean).join(';');
+  const captionCss = block.captionStyle ? ` style="${textCss(block.captionStyle)}"` : '';
+  const commentCss = block.commentStyle ? ` style="${[textCss(block.commentStyle), valign(block.commentStyle)].filter(Boolean).join(';')}"` : '';
+  const rowHeight = block.rowHeight ? ` style="height:${px(block.rowHeight, 0, 0, 600)}"` : '';
   const rows: TableRow[] = items.map((r) => ({
-    html: `<tr><td${span(subjectSpan)} style="${subjectCss}"><strong>${escapeHtml(r.label)}</strong>${r.caption ? `<span class="rk-caption">${escapeHtml(r.caption)}</span>` : ''}</td><td${span(commentSpan)}>${dataHtml(r.text)}</td></tr>`,
+    html: `<tr${rowHeight}><td${span(subjectSpan)} style="${subjectCss}"><strong>${escapeHtml(r.label)}</strong>${r.caption ? `<span class="rk-caption"${captionCss}>${escapeHtml(r.caption)}</span>` : ''}</td><td${span(commentSpan)}${commentCss}>${dataHtml(r.text)}</td></tr>`,
     keepWithNext: false,
   }));
   if (block.footerRow && evaluateCondition(block.footerRow.showWhen, ctx.scope)) {
@@ -646,8 +723,9 @@ export function elementHtml(el: CanvasElement, ctx: RenderCtx): string {
   if (el.type === 'image') {
     const url = ctx.image(el.src);
     const fit = el.fit === 'cover' ? 'cover' : el.fit === 'fill' ? 'fill' : 'contain';
+    const position = el.align === 'left' || el.align === 'right' ? `;object-position:${el.align} center` : '';
     const inner = url
-      ? `<img class="rk-img" src="${escapeHtml(url)}" alt="" style="object-fit:${fit}">`
+      ? `<img class="rk-img" src="${escapeHtml(url)}" alt="" style="object-fit:${fit}${position}">`
       : ctx.mode === 'editor'
         ? `<div class="rk-placeholder">${escapeHtml(imageLabel(el.src))}</div>`
         : '';

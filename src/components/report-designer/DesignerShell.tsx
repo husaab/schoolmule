@@ -26,6 +26,7 @@ import {
   getPreviewData,
   getReportTemplate,
   getSampleData,
+  getTemplateCoverage,
   listReportTemplateVersions,
   publishReportTemplate,
   renameReportTemplate,
@@ -43,6 +44,7 @@ import { duplicateBlock, duplicateElement, findElement, removeBlock, removeEleme
 import DesignerCanvas from './DesignerCanvas';
 import Inspector from './Inspector';
 import LeftRail from './LeftRail';
+import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog';
 import { inputCls } from './fields';
 
 const AUTOSAVE_MS = 1200;
@@ -68,6 +70,9 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
   const revRef = useRef(0);
   const savedSeqRef = useRef(0);
   const [pdf, setPdf] = useState<{ url: string; pages: number | null } | null>(null);
+  const pdfUrlRef = useRef<string | null>(null);
+  pdfUrlRef.current = pdf?.url ?? null;
+  useEffect(() => () => void (pdfUrlRef.current && URL.revokeObjectURL(pdfUrlRef.current)), []);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
@@ -114,30 +119,56 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
   );
 
   // ── autosave ──
-  const save = useCallback(async () => {
-    const st = store.getState();
-    if (!st.doc || st.saveState === 'conflict') return;
-    const seq = st.editSeq;
-    if (seq === savedSeqRef.current) return;
-    const check = validateTemplate(st.doc);
-    if (!check.ok) {
-      st.setSaveState('error');
-      return;
-    }
-    st.setSaveState('saving');
-    try {
-      const res = await saveReportTemplateDraft(templateId, st.doc, revRef.current);
-      revRef.current = res.draftRev;
-      savedSeqRef.current = seq;
-      store.getState().setSaveState(store.getState().editSeq === seq ? 'saved' : 'dirty');
-    } catch (e) {
-      if (isApiError(e) && e.status === 409) {
-        store.getState().setSaveState('conflict');
-      } else {
-        store.getState().setSaveState('error');
+  // Saves run one at a time, each with the latest rev; a response that arrives
+  // after a reload (loadGen changed) is ignored. Resolves true when the draft
+  // on the server now matches the editor.
+  const inflightRef = useRef<Promise<boolean> | null>(null);
+  const loadGenRef = useRef(0);
+  const save = useCallback(async (): Promise<boolean> => {
+    while (inflightRef.current) await inflightRef.current;
+    const run = async (): Promise<boolean> => {
+      const st = store.getState();
+      if (!st.doc || st.saveState === 'conflict') return false;
+      const seq = st.editSeq;
+      if (seq === savedSeqRef.current) return true;
+      if (!validateTemplate(st.doc).ok) {
+        st.setSaveState('error');
+        return false;
       }
+      const gen = loadGenRef.current;
+      st.setSaveState('saving');
+      try {
+        const res = await saveReportTemplateDraft(templateId, st.doc, revRef.current);
+        if (gen !== loadGenRef.current) return false;
+        revRef.current = res.draftRev;
+        savedSeqRef.current = seq;
+        const settled = store.getState().editSeq === seq;
+        store.getState().setSaveState(settled ? 'saved' : 'dirty');
+        return settled;
+      } catch (e) {
+        if (gen !== loadGenRef.current) return false;
+        store.getState().setSaveState(isApiError(e) && e.status === 409 ? 'conflict' : 'error');
+        return false;
+      }
+    };
+    const p = run();
+    inflightRef.current = p;
+    try {
+      return await p;
+    } finally {
+      if (inflightRef.current === p) inflightRef.current = null;
     }
   }, [store, templateId]);
+
+  /** Save until the server has exactly what is on screen (edits may land mid-save). */
+  const saveNow = useCallback(async (): Promise<boolean> => {
+    for (let i = 0; i < 4; i++) {
+      if (await save()) return true;
+      const state = store.getState().saveState;
+      if (state === 'conflict' || state === 'error') return false;
+    }
+    return false;
+  }, [save, store]);
 
   useEffect(() => {
     if (editSeq === 0 || editSeq === savedSeqRef.current) return;
@@ -162,6 +193,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      if (document.querySelector('[role="dialog"]')) return;
       const st = store.getState();
       if (!st.doc) return;
       const mod = e.metaKey || e.ctrlKey;
@@ -178,7 +210,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
       }
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        void save();
+        void saveNow();
         return;
       }
       if (mod && (e.key === '=' || e.key === '+')) {
@@ -209,6 +241,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
+        if (sel.kind === 'element' && findElement(st.doc, sel.id)?.element.locked) return;
         if (sel.kind === 'element') st.commit(removeElement(st.doc, sel.id));
         else if (sel.kind === 'block') st.commit(removeBlock(st.doc, sel.id));
         st.select(null);
@@ -233,7 +266,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [save, store]);
+  }, [saveNow, store]);
 
   // ── actions ──
   const rename = async () => {
@@ -254,7 +287,10 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
     if (!st.doc) return;
     setPdfBusy(true);
     try {
-      await save();
+      if (!(await saveNow())) {
+        notify('Save your changes first (see the status under the name).', 'error');
+        return;
+      }
       const target = st.preview;
       const res = await fetchPreviewPdf({
         doc: st.doc,
@@ -270,6 +306,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
   };
 
   const reloadFromServer = async () => {
+    loadGenRef.current += 1;
     const detail = await getReportTemplate(templateId);
     revRef.current = detail.draftRev;
     savedSeqRef.current = 0;
@@ -326,7 +363,7 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
               <span>·</span>
               {summary?.published ? <span>Published v{summary.published.versionNo}</span> : <span>Never published</span>}
               <span>·</span>
-              <SaveChip state={saveState} onRetry={save} onReload={reloadFromServer} />
+              <SaveChip state={saveState} onRetry={() => void saveNow()} onReload={reloadFromServer} />
             </div>
           </div>
 
@@ -380,8 +417,8 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
             <button
               type="button"
               onClick={async () => {
-                await save();
-                setPublishOpen(true);
+                if (await saveNow()) setPublishOpen(true);
+                else notify("Your latest changes aren't saved, so they can't be published yet.", 'error');
               }}
               className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
               data-testid="open-publish"
@@ -566,7 +603,14 @@ function PublishDialog({ open, onClose, templateId, onPublished }: { open: boole
   const notify = useNotificationStore((s) => s.showNotification);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [engineOff, setEngineOff] = useState(false);
   const check = doc ? validateTemplate(doc) : { ok: false, errors: [] };
+  useEffect(() => {
+    if (!open || !doc) return;
+    getTemplateCoverage(doc.docType)
+      .then((c) => setEngineOff(c.engineMode !== undefined && c.engineMode !== 'new'))
+      .catch(() => setEngineOff(false));
+  }, [open, doc]);
   const publish = async () => {
     setBusy(true);
     try {
@@ -585,6 +629,11 @@ function PublishDialog({ open, onClose, templateId, onPublished }: { open: boole
     <Modal isOpen={open} onClose={onClose} title="Publish this template" size="md" closeOnEscape>
       <div className="space-y-3">
         <p className="text-sm text-slate-600">Reports generated from now on use this version wherever this template is assigned. Reports already generated don&apos;t change.</p>
+        {engineOff && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Reports still print with the original layouts for now. Your published template takes over as soon as SchoolMule switches the new designs on.
+          </p>
+        )}
         {!check.ok && (
           <ul className="space-y-1 rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-800">
             {check.errors.map((e) => (
@@ -620,8 +669,17 @@ function VersionsDialog({ open, onClose, templateId, hasPublished, onRestored }:
       .then((r) => setVersions(r.versions))
       .catch(() => setVersions([]));
   }, [open, templateId]);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const askRestore = (v: ReportTemplateVersion) =>
+    setConfirm({
+      title: `Restore version ${v.versionNo}`,
+      message: `Replace the draft with version ${v.versionNo}?`,
+      consequences: ['Your unpublished changes are replaced.', 'What is published stays the same until you publish again.'],
+      confirmLabel: 'Restore to draft',
+      tone: 'warning',
+      onConfirm: () => restore(v),
+    });
   const restore = async (v: ReportTemplateVersion) => {
-    if (!window.confirm(`Replace the draft with version ${v.versionNo}? Your unpublished changes are replaced.`)) return;
     setBusy(v.versionId);
     try {
       await restoreReportTemplateVersion(templateId, v.versionId);
@@ -633,8 +691,14 @@ function VersionsDialog({ open, onClose, templateId, hasPublished, onRestored }:
       setBusy(null);
     }
   };
+  const askDiscard = () =>
+    setConfirm({
+      title: 'Discard unpublished changes',
+      message: 'Throw away the unpublished changes and go back to the published version?',
+      confirmLabel: 'Discard changes',
+      onConfirm: () => discard(),
+    });
   const discard = async () => {
-    if (!window.confirm('Throw away the unpublished changes and go back to the published version?')) return;
     setBusy('discard');
     try {
       await discardReportTemplateDraft(templateId);
@@ -662,14 +726,15 @@ function VersionsDialog({ open, onClose, templateId, hasPublished, onRestored }:
                   {v.note ? ` · ${v.note}` : ''}
                 </div>
               </div>
-              <Button variant="secondary" className="!py-1 !text-xs" loading={busy === v.versionId} onClick={() => restore(v)}>
+              <Button variant="secondary" className="!py-1 !text-xs" loading={busy === v.versionId} onClick={() => askRestore(v)}>
                 Restore to draft
               </Button>
             </li>
           ))}
         </ul>
+        <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
         {hasPublished && (
-          <button type="button" onClick={discard} className="text-xs font-semibold text-rose-600" disabled={busy === 'discard'}>
+          <button type="button" onClick={askDiscard} className="text-xs font-semibold text-rose-600" disabled={busy === 'discard'}>
             Discard unpublished changes
           </button>
         )}

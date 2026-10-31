@@ -7,7 +7,7 @@ export const SCALES = {
     name: 'JK progress',
     levels: [
       { code: 'D', label: 'Developing', description: 'Children can apply the skill or concept correctly.' },
-      { code: 'B', label: 'Beginning', description: 'Children show some understanding. Reminders, hints, or support is necessary.' },
+      { code: 'B', label: 'Beginning', description: 'Children show some understanding. Reminders, hints, or support may be needed.' },
       { code: 'I', label: 'Improvement needed', description: 'Children are experiencing difficulty with the concept or skill. Assistance at home is needed.' },
       { code: 'N', label: 'Not Assessed', description: 'Not assessed at this time' },
     ],

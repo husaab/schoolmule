@@ -1,5 +1,6 @@
 import { FONT_FAMILIES } from './fonts';
-import type { Block, CanvasElement, Condition, TemplateDoc, Zone } from './types';
+import { isBuiltinImage } from './images';
+import type { Block, CanvasElement, Condition, TableRowDef, TemplateDoc, Zone } from './types';
 
 /**
  * Structural checks for a template before it is saved or published. Shared
@@ -67,6 +68,17 @@ function checkImageUrl(url: unknown, where: string, errors: string[]): void {
   }
 }
 
+/** Any image source: an upload must be a small data URI, a built-in one of BUILTIN_IMAGES. */
+function checkImage(src: unknown, where: string, errors: string[]): void {
+  if (!isObj(src)) return;
+  if (src.kind === 'url') checkImageUrl(src.url, where, errors);
+  else if (src.kind === 'builtin' && !isBuiltinImage(src.name)) errors.push(`${where}: unknown built-in image "${String(src.name)}".`);
+}
+
+function checkRowImages(row: TableRowDef | null | undefined, where: string, errors: string[]): void {
+  (row?.cells ?? []).forEach((c) => checkImage(c?.image, where, errors));
+}
+
 function checkElement(el: unknown, where: string, ids: Set<string>, errors: string[], depth: number): void {
   if (!isObj(el)) {
     errors.push(`${where}: an element is malformed.`);
@@ -81,7 +93,7 @@ function checkElement(el: unknown, where: string, ids: Set<string>, errors: stri
     if (typeof e[k] !== 'number' || !Number.isFinite(e[k])) errors.push(`${where}: element "${e.id}" has no ${k}.`);
   }
   checkCondition(e.showWhen, where, errors);
-  if (e.type === 'image' && e.src?.kind === 'url') checkImageUrl(e.src.url, where, errors);
+  if (e.type === 'image') checkImage(e.src, where, errors);
   if (e.type === 'block') checkBlock(e.block, `${where} › box`, ids, errors, depth + 1);
 }
 
@@ -120,16 +132,25 @@ function checkBlock(b: unknown, where: string, ids: Set<string>, errors: string[
       else
         block.rows.forEach((r) => {
           checkCondition(r?.showWhen, label, errors);
-          (r?.cells ?? []).forEach((c) => {
-            if (c?.image?.kind === 'url') checkImageUrl(c.image.url, label, errors);
-          });
+          checkRowImages(r, label, errors);
         });
       break;
     case 'skillsTable':
+      if (!Array.isArray(block.columns)) errors.push(`${label}: no columns.`);
+      if (block.groupStyles !== undefined && !Array.isArray(block.groupStyles)) errors.push(`${label}: the group colours are malformed.`);
+      else (block.groupStyles ?? []).forEach((g) => checkImage(g?.icon, label, errors));
+      break;
     case 'subjectCards':
-      if (!Array.isArray((block as { columns?: unknown; fields?: unknown }).columns ?? (block as { fields?: unknown }).fields)) {
-        errors.push(`${label}: no columns.`);
+      if (!Array.isArray(block.fields)) errors.push(`${label}: no columns.`);
+      break;
+    case 'commentsTable':
+      if (block.footerRow) {
+        checkCondition(block.footerRow.showWhen, label, errors);
+        checkRowImages(block.footerRow, label, errors);
       }
+      break;
+    case 'signatures':
+      (Array.isArray(block.slots) ? block.slots : []).forEach((slot) => checkImage(slot?.image, label, errors));
       break;
     case 'columns':
       if (!Array.isArray(block.columns)) errors.push(`${label}: no columns.`);
@@ -192,6 +213,17 @@ export function validateTemplate(input: unknown): ValidationResult {
   checkZone(doc.firstFooter, 'first-page footer', ids, errors);
   if (!Array.isArray(doc.blocks)) errors.push('The template has no body.');
   else doc.blocks.forEach((b) => checkBlock(b, 'Body', ids, errors, 0));
+
+  // Belt and braces: every image source anywhere in the template, including
+  // places a future block option adds, is an upload or a built-in.
+  const sweep = (node: unknown, depth: number): void => {
+    if (depth > 40 || !node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach((n) => sweep(n, depth + 1));
+    const o = node as Record<string, unknown>;
+    if ((o.kind === 'url' && 'url' in o) || (o.kind === 'builtin' && 'name' in o)) checkImage(o, 'Template', errors);
+    Object.values(o).forEach((v) => sweep(v, depth + 1));
+  };
+  sweep(doc, 0);
 
   return { ok: errors.length === 0, errors: [...new Set(errors)].slice(0, 50) };
 }

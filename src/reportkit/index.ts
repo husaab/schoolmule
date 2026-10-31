@@ -3,7 +3,7 @@
  * backend PDF printer by scripts/build-reportkit.mjs; imported directly by
  * the designer. Bump ENGINE_VERSION whenever rendering output changes.
  */
-export const ENGINE_VERSION = 1;
+export const ENGINE_VERSION = 2;
 
 export * from './types';
 export { renderReport, ensureFonts, ensureStyles, defaultResolveImage } from './render';
@@ -18,6 +18,8 @@ export type { SampleKey } from './sample';
 export { DEFAULT_TEMPLATES, defaultTemplate } from './defaults';
 export type { DefaultTemplateDef } from './defaults';
 export { SCALES } from './defaults/scales';
+export { BUILTIN_IMAGES, BUILTIN_IMAGE_PATH, isBuiltinImage, builtinImageLabel, builtinImagesIn } from './images';
+export type { BuiltinImageDef } from './images';
 export { validateTemplate, BLOCK_TYPES } from './validate';
 export type { ValidationResult } from './validate';
 export { BLOCK_CATALOG, ELEMENT_CATALOG, blockLabel, createBlock, createElement, blankTemplate, reId } from './factory';

@@ -79,7 +79,7 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
         field: 'student.teacherAssistant',
         op: 'empty',
       }),
-      infoRow([cell('Board: {{school.board}}', { style: bold }), cell('School: {{school.name}}', { colSpan: 2 })]),
+      infoRow([cell('[[Board: {{school.board}}]]', { style: bold }), cell('School: {{school.name}}', { colSpan: 2 })]),
     ],
   });
 
@@ -94,7 +94,7 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
     marginBottom: 12,
     rows: [
       { cells: [cell('**{{school.name}}**\n{{school.address}}', { rowSpan: 2 }), cell('Website: {{school.website}}')] },
-      { cells: [cell('Principal: {{school.principal}}\u00a0\u00a0\u00a0\u00a0 Telephone: {{school.phone}}')] },
+      { cells: [cell('[[Principal: {{school.principal}}\u00a0\u00a0\u00a0\u00a0 ]]Telephone: {{school.phone}}')] },
     ],
   });
 

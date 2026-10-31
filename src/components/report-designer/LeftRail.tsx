@@ -222,7 +222,7 @@ function LayersPanel() {
         {zones
           .filter((z) => !!doc[z])
           .map((z) => (
-            <button key={z} type="button" className={rowCls(selection?.kind === 'zone' && selection.zone === z)} onClick={() => select({ kind: 'zone', zone: z })}>
+            <button key={z} type="button" className={rowCls(selection?.kind === 'zone' && selection.zone === z)} onClick={() => select({ kind: 'zone', zone: z })} data-testid={`layer-zone-${z}`}>
               {ZONE_LABELS[z]}
               <span className="ml-auto text-[10px] opacity-60">{doc[z]!.elements.length}</span>
             </button>

@@ -98,6 +98,8 @@ export interface CoverageResponse {
   terms: string[];
   grades: string[];
   cells: CoverageCell[];
+  /** legacy: reports still print with the original layouts (REPORT_ENGINE off). */
+  engineMode?: 'legacy' | 'shadow' | 'new';
 }
 
 export interface PreviewStudent {

@@ -44,6 +44,21 @@ const JK_DOMAINS: Array<[string, string[]]> = [
   ['Fine Motor Skills', ['Uses scissors with control', 'Completes simple puzzles', 'Builds with small blocks']],
 ];
 
+/** The JK progress report's sections, as Al Haadi's paper template lists them. */
+const JK_PROGRESS_DOMAINS: Array<[string, string[]]> = [
+  ['Language and Communication Skills', ['Speaks clearly and fluently.', 'Responds to direct questions.', 'Follows routines.', 'Engages in conversations.', 'Expands vocabulary.', 'Expresses thoughts and ideas.']],
+  ['Social Skills', ['Knows first name, last name and age.', 'Interacts well with peers.', 'Demonstrates good manners.', 'Follows classroom rules.', 'Shares well with others and takes turns.', 'Listens and responds to others.']],
+  ['Emotional Development', ['Expresses emotions appropriately.', 'Demonstrates independence.', 'Shows empathy towards others.', 'Copes with frustration and disappointment.']],
+  ['Reading and Writing Skills', ['Knows how to say the ABCs.', 'Recognizes the ABCs.', 'Can Print his/her first name.', 'Can print his/her last name.']],
+  ['Colours and Shapes', ['Knows primary colours.', 'Knows shapes.', 'Understands sizes(big/small).']],
+  ['Numbers', ['Recognizes numbers one to ten.', 'Understands empty and full.', 'Understands more or less.']],
+  ['Fine Motor Skills', ['Holds and uses a pencil or crayon.', 'Holds and uses scissors.', 'Can hold and use a glue stick or a paintbrush', 'Manipulates small objects.', 'Demonstrates hand-eye coordination.']],
+  ['Gross Motor Skills', ['Can bounce & kick a ball', 'Demonstrates balance and coordination.', 'Can run, jump, and climb with control.', 'Participates in physical activities and games.', 'Can swing, skip without help.', 'Can button shirt and tie shoes.', 'Follows simple movement instructions.']],
+  ['Cognitive Development', ['Participates in classroom activities.', 'Demonstrates curiosity and problem-solving skills', 'Shows interest in books and reading.', 'Engages in creative play and imaginative activities.']],
+  ['Arabic', ['Knows how to say the Arabic alphabet.', 'Recognizes some letters of the Arabic alphabet.', 'Can Print first & last name in Arabic.']],
+  ['Islamic Studies', ['Memorizes assigned surahs.', 'Listens and engages in lessons.']],
+];
+
 const SK_SUBJECTS: Array<[string, string[]]> = [
   ['Mathematics', ['Counts to 100 by ones and tens', 'Correctly writes numbers from 0 to 100', 'Represents a number of objects with a written numeral', 'Demonstrates one-to-one correspondence', 'Identifies and describes shapes (squares, circles, triangles, rectangles, hexagons, cubes, cones, cylinders, and spheres)', 'Makes accurate estimates of the number of objects in a set up to 20', 'Builds and draws shapes']],
   ['Language', ['Waits and takes turns during conversations', 'Clearly communicates needs and thoughts', 'Participates in communication around a topic', 'Understands and uses question words', 'Produces and expands complete sentences in shared language activities', 'Follows multiple step instructions']],
@@ -57,6 +72,13 @@ const SK_SUBJECTS: Array<[string, string[]]> = [
   ['French', ['Recognizes and writes French Letters', 'Overall participation', 'Basic vocabulary']],
 ];
 
+/** The JK progress report's Teacher's Comments rows (backend templates/kindergartenProgressComments.js). */
+const JK_COMMENT_ROWS: Array<[string, string, string]> = [
+  ['academic_achievement', 'Academic achievement', ''],
+  ['socio_emotional', 'Socio-emotional development', ''],
+];
+
+/** The SK progress report's Strengths/Next Steps rows (the same file). */
 const SK_COMMENT_ROWS: Array<[string, string, string]> = [
   ['language_arts', 'Language Arts', 'Reading, Writing, Oral communication, Media Literacy'],
   ['mathematics', 'Mathematics', ''],
@@ -138,12 +160,15 @@ export function sampleReportData(key: SampleKey, docType: DocType = 'progress_re
   const kinder = grade === 'JK' || grade === 'SK';
 
   let skillGroups: SkillGroup[] = [];
-  if (grade === 'JK') skillGroups = skills(JK_DOMAINS, docType === 'report_card' ? ['DV', 'BG', 'DV', 'NI'] : ['D', 'B', 'D', 'I', 'D', 'N'], 'jk', worst);
+  if (grade === 'JK') {
+    skillGroups =
+      docType === 'report_card' ? skills(JK_DOMAINS, ['DV', 'BG', 'DV', 'NI'], 'jk', worst) : skills(JK_PROGRESS_DOMAINS, ['D', 'B', 'D', 'I', 'D', 'N'], 'jk', worst);
+  }
   if (grade === 'SK') skillGroups = skills(SK_SUBJECTS, docType === 'report_card' ? ['E', 'P', 'DV', 'P', 'EM'] : ['G', 'S', 'G', 'NI', 'G', 'E'], 'sk', worst);
 
-  const comments: CommentRow[] = kinder
-    ? SK_COMMENT_ROWS.map(([k, label, caption], i) => ({ key: k, label, caption, text: comment(first, label.toLowerCase(), i, worst || i < 2) }))
-    : [];
+  // The progress reports' comment rows, every row present (as the backend sends them).
+  const commentRows = !kinder || docType !== 'progress_report' ? [] : grade === 'JK' ? JK_COMMENT_ROWS : SK_COMMENT_ROWS;
+  const comments: CommentRow[] = commentRows.map(([k, label, caption], i) => ({ key: k, label, caption, text: comment(first, label.toLowerCase(), i, worst || i < 2) }));
 
   const learningSkills: LearningSkillRow[] = LEARNING_SKILLS.map(([name, descriptors], i) => ({
     name,

@@ -15,6 +15,7 @@ import type {
   RatingKeyBlock,
   SignaturesBlock,
   SkillColumnKey,
+  SkillGroupStyle,
   SkillsTableBlock,
   SubjectCardsBlock,
   SubjectFieldKey,
@@ -330,6 +331,19 @@ function ElementPanel({ id }: { id: string }) {
               ]}
             />
           </Row>
+          {(el.fit ?? 'contain') === 'contain' && (
+            <Row label="Position in its box" hint="Where a logo narrower than its box sits.">
+              <Segmented
+                value={el.align ?? 'center'}
+                onChange={(v) => set({ align: v === 'center' ? undefined : v } as Partial<CanvasElement>)}
+                options={[
+                  { value: 'left', label: 'Left' },
+                  { value: 'center', label: 'Centre' },
+                  { value: 'right', label: 'Right' },
+                ]}
+              />
+            </Row>
+          )}
         </Section>
       )}
       {el.type === 'shape' && (
@@ -651,6 +665,9 @@ function TableEditor({ block, set }: { block: TableBlock; set: SetBlock }) {
           </IconBtn>
         </div>
         <p className="text-[10px] text-slate-400">Widths in % of the table. A cell can span several columns.</p>
+        <Row label="Minimum height" hint="The last row takes any extra space, e.g. a comments box that is always the same size.">
+          <NumberInput value={block.minHeight} min={0} max={2000} suffix="px" placeholder="auto" onChange={(v) => set({ minHeight: v || undefined } as Partial<Block>, 'minh')} />
+        </Row>
       </Section>
       <Section title={`Rows (${rows.length})`}>
         {rows.map((row, r) => (
@@ -760,6 +777,23 @@ function CellEditor({ cell, index, fields, onChange, onRemove, onError }: { cell
           </Row>
         </div>
       )}
+      <div className="mt-1.5">
+        <Toggle
+          checked={!!cell.padding}
+          onChange={(v) => onChange({ padding: v ? { top: 4, right: 6, bottom: 4, left: 6 } : undefined })}
+          label="Own padding"
+          hint="Instead of the table's cell padding."
+        />
+        {cell.padding && (
+          <div className="mt-1 grid grid-cols-4 gap-1.5">
+            {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+              <Row key={side} label={side[0].toUpperCase() + side.slice(1)}>
+                <NumberInput value={cell.padding?.[side]} min={0} max={200} step={0.5} placeholder="0" onChange={(v) => onChange({ padding: { ...cell.padding, [side]: v } }, `pad${side}`)} />
+              </Row>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -800,8 +834,21 @@ function RatingKeyEditor({ block, set }: { block: RatingKeyBlock; set: SetBlock 
                 <NumberInput value={block.codeWidth} min={2} max={40} suffix="%" placeholder="10" onChange={(v) => set({ codeWidth: v } as Partial<Block>, 'cw')} />
               </Row>
             </Grid>
+            <Grid>
+              <Row label="Side label size">
+                <NumberInput value={block.sideStyle?.fontSize} min={5} max={40} step={0.5} suffix="px" placeholder="—" onChange={(v) => set({ sideStyle: { ...block.sideStyle, fontSize: v } } as Partial<Block>, 'ssz')} />
+              </Row>
+              <Row label="Side letter spacing">
+                <NumberInput value={block.sideStyle?.letterSpacing} min={-2} max={10} step={0.25} suffix="px" placeholder="0" onChange={(v) => set({ sideStyle: { ...block.sideStyle, letterSpacing: v } } as Partial<Block>, 'sls')} />
+              </Row>
+            </Grid>
           </>
         )}
+        <Toggle
+          checked={block.codeStyle?.fontWeight !== undefined && block.codeStyle.fontWeight < 700}
+          onChange={(v) => set({ codeStyle: v ? { ...block.codeStyle, fontWeight: 400 } : undefined } as Partial<Block>)}
+          label="Codes in regular weight (not bold)"
+        />
         {block.layout === 'grid' && (
           <Row label="Per row">
             <NumberInput value={block.columns} min={1} max={8} onChange={(v) => set({ columns: v } as Partial<Block>)} />
@@ -842,6 +889,52 @@ function ListInput({ value, onChange, placeholder }: { value: string[] | undefin
   );
 }
 
+/** Per-group bar colours and icons (create, edit, delete), plus the colours for every other group. */
+function GroupStylesEditor({ block, set }: { block: SkillsTableBlock; set: SetBlock }) {
+  const notify = useNotificationStore((s) => s.showNotification);
+  const styles = block.groupStyles ?? [];
+  const setStyles = (next: SkillGroupStyle[]) => set({ groupStyles: next.length ? next : undefined } as Partial<Block>, 'gstyles');
+  const patch = (i: number, p: Partial<SkillGroupStyle>) => setStyles(styles.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  return (
+    <Section title="Group colours & icons" defaultOpen={false}>
+      <p className="text-[10px] leading-snug text-slate-400">A group whose name matches (ignoring case and a trailing “:”) gets its own bar colour and an icon after its name.</p>
+      {styles.map((g, i) => (
+        <div key={i} className="space-y-1.5 rounded-md border border-slate-200 p-2" data-testid="group-style">
+          <div className="flex items-center gap-1">
+            <input className={inputCls} defaultValue={g.match} placeholder="Group name" onBlur={(e) => patch(i, { match: e.target.value })} />
+            <IconBtn title="Remove" danger onClick={() => setStyles(styles.filter((_, j) => j !== i))}>
+              <TrashIcon className="h-3 w-3" />
+            </IconBtn>
+          </div>
+          <Grid>
+            <Row label="Bar colour">
+              <ColorInput value={g.background} onChange={(v) => patch(i, { background: v })} />
+            </Row>
+            <Row label="Text colour">
+              <ColorInput value={g.color} onChange={(v) => patch(i, { color: v })} />
+            </Row>
+          </Grid>
+          <Toggle checked={!!g.icon} onChange={(v) => patch(i, { icon: v ? { kind: 'builtin', name: 'language.png' } : undefined, iconHeight: v ? g.iconHeight : undefined })} label="Icon after the name" />
+          {g.icon && (
+            <>
+              <ImageSourcePicker value={g.icon} onChange={(src) => patch(i, { icon: src })} onError={(m) => notify(m, 'error')} />
+              <Row label="Icon height">
+                <NumberInput value={g.iconHeight} placeholder="29" min={4} max={200} suffix="px" onChange={(v) => patch(i, { iconHeight: v })} />
+              </Row>
+            </>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={() => setStyles([...styles, { match: '', background: '#c9daf8' }])} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800">
+        <PlusIcon className="h-3 w-3" /> Colour a group
+      </button>
+      <Row label="Every other group" hint="Comma-separated colours used in turn, e.g. #c9daf8, #d9ead3. Empty = the group bar's colour.">
+        <ListInput value={block.fallbackGroupColors} placeholder="The group bar's colour" onChange={(v) => set({ fallbackGroupColors: v.length ? v : undefined } as Partial<Block>)} />
+      </Row>
+    </Section>
+  );
+}
+
 function SkillsTableEditor({ block, set }: { block: SkillsTableBlock; set: SetBlock }) {
   const pairs = block.sideBySide ?? [];
   return (
@@ -864,6 +957,15 @@ function SkillsTableEditor({ block, set }: { block: SkillsTableBlock; set: SetBl
           </Row>
         )}
         <Toggle checked={block.stripeRows} onChange={(v) => set({ stripeRows: v || undefined } as Partial<Block>)} label="Striped rows" />
+        <Toggle checked={block.keepGroupsTogether} onChange={(v) => set({ keepGroupsTogether: v || undefined } as Partial<Block>)} label="Keep each group on one page" />
+        <Grid>
+          <Row label="Row height" hint="At least; long skills still wrap.">
+            <NumberInput value={block.rowHeight} min={0} max={200} step={0.5} suffix="px" placeholder="auto" onChange={(v) => set({ rowHeight: v || undefined } as Partial<Block>, 'rowh')} />
+          </Row>
+          <Row label="Space between groups">
+            <NumberInput value={block.groupGap} min={0} max={200} step={0.5} suffix="px" placeholder="0" onChange={(v) => set({ groupGap: v || undefined } as Partial<Block>, 'gap')} />
+          </Row>
+        </Grid>
       </Section>
       <Section title="Columns">
         <ColumnsEditor<SkillColumnKey> value={block.columns} keys={SKILL_KEYS} onChange={(v) => set({ columns: v } as Partial<Block>, 'cols')} />
@@ -889,10 +991,27 @@ function SkillsTableEditor({ block, set }: { block: SkillsTableBlock; set: SetBl
         <button type="button" onClick={() => set({ sideBySide: [...pairs, ['Arabic and Quran', 'French']] } as Partial<Block>)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800">
           <PlusIcon className="h-3 w-3" /> Print two groups side by side
         </button>
+        {pairs.length > 0 && (
+          <>
+            <Row label="Side-by-side columns (%)" hint="Left skill, left rating, right skill, right rating. Empty = automatic.">
+              <ListInput value={(block.pairColumns ?? []).map(String)} placeholder="auto" onChange={(v) => set({ pairColumns: v.length === 4 ? v.map(Number).filter((n) => n > 0) : undefined } as Partial<Block>)} />
+            </Row>
+            <Grid>
+              <Row label="Side-by-side row height">
+                <NumberInput value={block.pairRowHeight} min={0} max={200} step={0.5} suffix="px" placeholder="auto" onChange={(v) => set({ pairRowHeight: v || undefined } as Partial<Block>, 'prh')} />
+              </Row>
+              <Row label="Side-by-side text size">
+                <NumberInput value={block.pairStyle?.fontSize} min={5} max={40} step={0.5} suffix="px" placeholder="—" onChange={(v) => set({ pairStyle: v ? { ...block.pairStyle, fontSize: v } : undefined } as Partial<Block>, 'pfs')} />
+              </Row>
+            </Grid>
+          </>
+        )}
       </Section>
+      <GroupStylesEditor block={block} set={set} />
       <Section title="Bars" defaultOpen={false}>
         <BarStyleEditor label="Title bar" value={block.titleBar} onChange={(v) => set({ titleBar: v } as Partial<Block>, 'tb')} />
         <BarStyleEditor label="Group bar" value={block.groupBar} onChange={(v) => set({ groupBar: v } as Partial<Block>, 'gb')} />
+        <Toggle checked={block.groupBarColumns} onChange={(v) => set({ groupBarColumns: v || undefined } as Partial<Block>)} label="Group bars keep the column lines" hint="The name sits over the text and the rating cell stays empty, as on a paper grid." />
         <BarStyleEditor label="Sub-group bar" value={block.subgroupBar} onChange={(v) => set({ subgroupBar: v } as Partial<Block>, 'sb')} />
         <BarStyleEditor label="Column headings" value={block.headerBar} onChange={(v) => set({ headerBar: v } as Partial<Block>, 'hb')} />
       </Section>
@@ -955,7 +1074,7 @@ function SubjectCardsEditor({ block, set }: { block: SubjectCardsBlock; set: Set
       </Section>
       <Section title="Columns">
         <ColumnsEditor<SubjectFieldKey> value={block.fields} keys={SUBJECT_KEYS} onChange={(v) => set({ fields: v as ColumnDef<SubjectFieldKey>[] } as Partial<Block>, 'cols')} />
-        <p className="text-[10px] text-slate-400">Marks print by the template's mark rules (Settings → Marks).</p>
+        <p className="text-[10px] text-slate-400">Marks print by the template&apos;s mark rules (Rules → Marks).</p>
       </Section>
       <Section title="Look" defaultOpen={false}>
         <BarStyleEditor label="Subject bar" value={block.headerBar} onChange={(v) => set({ headerBar: v } as Partial<Block>, 'hb')} />
@@ -1034,7 +1153,21 @@ function CommentsTableEditor({ block, set }: { block: CommentsTableBlock; set: S
       </Section>
       <Section title="Look" defaultOpen={false}>
         <BarStyleEditor label="Heading row" value={block.headerBar} onChange={(v) => set({ headerBar: v } as Partial<Block>, 'hb')} />
-        <TextStyleEditor value={block.subjectStyle} onChange={(v) => set({ subjectStyle: v } as Partial<Block>, 'ss')} showAlign={false} />
+        <div className="text-[11px] font-semibold text-slate-600">Subject cells</div>
+        <TextStyleEditor value={block.subjectStyle} onChange={(v) => set({ subjectStyle: v } as Partial<Block>, 'ss')} showAlign={false} showVertical />
+        <Grid>
+          <Row label="Subject fill">
+            <ColorInput value={block.subjectBackground} onChange={(v) => set({ subjectBackground: v } as Partial<Block>)} />
+          </Row>
+          <Row label="Caption size">
+            <NumberInput value={block.captionStyle?.fontSize} min={5} max={30} step={0.5} suffix="px" placeholder="—" onChange={(v) => set({ captionStyle: v ? { ...block.captionStyle, fontSize: v } : undefined } as Partial<Block>, 'cps')} />
+          </Row>
+        </Grid>
+        <div className="text-[11px] font-semibold text-slate-600">Comment cells</div>
+        <TextStyleEditor value={block.commentStyle} onChange={(v) => set({ commentStyle: v } as Partial<Block>, 'cs')} showAlign={false} showVertical />
+        <Row label="Row height" hint="At least; a long comment still grows its row.">
+          <NumberInput value={block.rowHeight} min={0} max={400} step={0.5} suffix="px" placeholder="auto" onChange={(v) => set({ rowHeight: v || undefined } as Partial<Block>, 'rowh')} />
+        </Row>
         <TableLookEditor value={block} onChange={(p) => set(p as Partial<Block>, 'look')} />
       </Section>
     </>

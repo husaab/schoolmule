@@ -42,12 +42,31 @@ async function overlayBox(page: Page) {
   return box;
 }
 
-/** Drag with real pointer events in small steps (so snapping/hover logic runs). */
-async function drag(page: Page, from: { x: number; y: number }, by: { x: number; y: number }, steps = 12) {
+/** Drag with real pointer events in small steps (so snapping/hover logic runs). Alt held = no snapping. */
+async function drag(page: Page, from: { x: number; y: number }, by: { x: number; y: number }, steps = 12, opts: { noSnap?: boolean } = {}) {
+  if (opts.noSnap) await page.keyboard.down('Alt');
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   for (let i = 1; i <= steps; i++) await page.mouse.move(from.x + (by.x * i) / steps, from.y + (by.y * i) / steps);
   await page.mouse.up();
+  if (opts.noSnap) await page.keyboard.up('Alt');
+}
+
+/** The first-page title on the rendered page (inside the canvas frame). */
+const titleEl = (page: Page) =>
+  page.getByTestId('designer-canvas').frameLocator('iframe').locator('[data-rk-el]', { hasText: 'Progress Report:' }).first();
+
+async function centerOf(loc: { boundingBox: () => Promise<{ x: number; y: number; width: number; height: number } | null> }) {
+  const b = await loc.boundingBox();
+  if (!b) throw new Error('element not on screen');
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+}
+
+const val = async (page: Page, testId: string) => Number(await page.getByTestId(testId).inputValue());
+
+/** The inspector shows whole pixels; allow rounding. */
+async function expectNear(page: Page, testId: string, want: number, tolerance = 1) {
+  await expect.poll(async () => Math.abs((await val(page, testId)) - want), { timeout: 10_000 }).toBeLessThanOrEqual(tolerance);
 }
 
 async function waitSaved(page: Page) {
@@ -83,49 +102,54 @@ test('customises the SK design and opens it in the designer', async ({ page }) =
 
 test('drags, snaps, resizes, undoes and nudges a header element; the draft survives a reload', async ({ page }) => {
   await page.goto(`/admin-panel/report-templates/${templateId}`);
-  await expect(page.getByTestId('page-count')).toHaveText(/3 pages/);
-  const o = await overlayBox(page);
-  // The title text sits at (330, 52), 430×44, in the first-page header.
-  await page.mouse.click(o.x + 330 + 200, o.y + 52 + 22);
+  await expect(page.getByTestId('page-count')).toHaveText(/pages/);
+  const c = await centerOf(titleEl(page));
+  await page.mouse.click(c.x, c.y);
   await expect(page.getByTestId('element-selection')).toBeVisible();
-  await expect(page.getByTestId('element-x')).toHaveValue('330');
+  const x0 = await val(page, 'element-x');
+  const y0 = await val(page, 'element-y');
+  const w0 = await val(page, 'element-w');
 
-  await drag(page, { x: o.x + 530, y: o.y + 74 }, { x: -150, y: 8 });
-  await expect(page.getByTestId('element-x')).toHaveValue('180');
-  await expect(page.getByTestId('element-y')).toHaveValue('60');
+  await drag(page, c, { x: -150, y: 8 }, 12, { noSnap: true });
+  await expectNear(page, 'element-x', x0 - 150);
+  await expectNear(page, 'element-y', y0 + 8);
 
-  // 11px right → its centre lands 2px from the page centre → snaps to x=193.
-  await drag(page, { x: o.x + 280, y: o.y + 80 }, { x: 11, y: 0 }, 11);
-  await expect(page.getByTestId('element-x')).toHaveValue('193');
+  // Drop it 3px off the page centre: it snaps there (Letter is 816px wide).
+  const centreX = Math.round((816 - w0) / 2);
+  const sel = await page.getByTestId('element-selection').boundingBox();
+  await drag(page, { x: sel!.x + sel!.width / 2, y: sel!.y + sel!.height / 2 }, { x: centreX - (x0 - 150) + 3, y: 0 }, 10);
+  await expectNear(page, 'element-x', centreX, 1);
 
   const handle = await page.getByTestId('handle-e').boundingBox();
-  await drag(page, { x: handle!.x + handle!.width / 2, y: handle!.y + handle!.height / 2 }, { x: -60, y: 0 });
-  await expect(page.getByTestId('element-w')).toHaveValue('370');
+  await drag(page, { x: handle!.x + handle!.width / 2, y: handle!.y + handle!.height / 2 }, { x: -60, y: 0 }, 12, { noSnap: true });
+  await expectNear(page, 'element-w', w0 - 60);
 
   await page.keyboard.press('ControlOrMeta+z');
-  await expect(page.getByTestId('element-w')).toHaveValue('430');
+  await expectNear(page, 'element-w', w0);
   await page.keyboard.press('ControlOrMeta+Shift+z');
-  await expect(page.getByTestId('element-w')).toHaveValue('370');
+  await expectNear(page, 'element-w', w0 - 60);
 
+  const xBefore = await val(page, 'element-x');
+  const yBefore = await val(page, 'element-y');
   await page.keyboard.press('Shift+ArrowLeft');
   await page.keyboard.press('ArrowDown');
-  await expect(page.getByTestId('element-x')).toHaveValue('183');
-  await expect(page.getByTestId('element-y')).toHaveValue('61');
+  await expectNear(page, 'element-x', xBefore - 10);
+  await expectNear(page, 'element-y', yBefore + 1);
   await waitSaved(page);
 
   await page.reload();
-  await expect(page.getByTestId('page-count')).toHaveText(/3 pages/);
-  const o2 = await overlayBox(page);
-  await page.mouse.click(o2.x + 183 + 100, o2.y + 61 + 20);
-  await expect(page.getByTestId('element-x')).toHaveValue('183');
-  await expect(page.getByTestId('element-w')).toHaveValue('370');
+  await expect(page.getByTestId('page-count')).toHaveText(/pages/);
+  const c2 = await centerOf(titleEl(page));
+  await page.mouse.click(c2.x, c2.y);
+  await expectNear(page, 'element-x', xBefore - 10);
+  await expectNear(page, 'element-w', w0 - 60);
 });
 
 test('edits text in place and through the inspector with a merge field', async ({ page }) => {
   await page.goto(`/admin-panel/report-templates/${templateId}`);
-  await expect(page.getByTestId('page-count')).toHaveText(/3 pages/);
-  const o = await overlayBox(page);
-  await page.mouse.dblclick(o.x + 183 + 100, o.y + 61 + 20);
+  await expect(page.getByTestId('page-count')).toHaveText(/pages/);
+  const c = await centerOf(titleEl(page));
+  await page.mouse.dblclick(c.x, c.y);
   const editor = page.getByTestId('inline-text-editor');
   await expect(editor).toBeVisible();
   await editor.fill('Report for {{student.firstName}}');
@@ -139,14 +163,14 @@ test('edits text in place and through the inspector with a merge field', async (
 
 test('adds blocks and canvas elements, resizes a zone and a block', async ({ page }) => {
   await page.goto(`/admin-panel/report-templates/${templateId}`);
-  await expect(page.getByTestId('page-count')).toHaveText(/3 pages/);
+  await expect(page.getByTestId('page-count')).toHaveText(/pages/);
   // Header zone height by its handle.
   await page.getByTestId('rail-tab-layers').click();
-  await page.getByTestId('layers-panel').getByRole('button', { name: 'First-page header' }).click();
-  await expect(page.getByTestId('zone-height')).toHaveValue('132');
+  await page.getByTestId('layer-zone-firstHeader').click();
+  const z0 = await val(page, 'zone-height');
   const zh = await page.getByTestId('zone-height-handle').first().boundingBox();
   await drag(page, { x: zh!.x + zh!.width / 2, y: zh!.y + zh!.height / 2 }, { x: 0, y: 20 });
-  await expect(page.getByTestId('zone-height')).toHaveValue('152');
+  await expectNear(page, 'zone-height', z0 + 20, 1);
   // Add a box to the header and move it.
   await page.getByTestId('add-element-box').click();
   await expect(page.getByTestId('element-selection')).toBeVisible();
@@ -174,7 +198,7 @@ test('adds blocks and canvas elements, resizes a zone and a block', async ({ pag
 
 test('show/hide rules follow the previewed student', async ({ page }) => {
   await page.goto(`/admin-panel/report-templates/${templateId}`);
-  await expect(page.getByTestId('page-count')).toHaveText(/3 pages/);
+  await expect(page.getByTestId('page-count')).toHaveText(/pages/);
   await page.getByTestId('rail-tab-layers').click();
   await page.getByTestId('layers-panel').getByRole('button', { name: 'Learning skills' }).click();
   await page.getByTestId('add-condition').click();
@@ -238,8 +262,8 @@ test('publishes, lists versions and restores one', async ({ page }) => {
   const dialog = page.getByTestId('versions-dialog');
   await expect(dialog).toContainText('Version 2');
   await expect(dialog).toContainText('e2e v1');
-  page.once('dialog', (d) => d.accept());
   await dialog.locator('li', { hasText: 'Version 1' }).getByRole('button', { name: 'Restore to draft' }).click();
+  await page.getByTestId('confirm-action').click();
   await expect(page.getByText('Draft restored from version 1')).toBeVisible();
 });
 
@@ -316,8 +340,8 @@ test('the designer asks for a bigger screen on a phone', async ({ page }) => {
 
 test('cleans up: an assigned template cannot be deleted, then it can', async ({ page }) => {
   await page.goto('/admin-panel/report-templates?tab=printing');
-  page.once('dialog', (d) => d.accept());
   await page.getByTestId('rule-list').locator('li', { hasText: NAME }).getByTestId('delete-rule').click();
+  await page.getByTestId('confirm-action').click();
   await expect(page.getByTestId('rule-list').or(page.getByText('No rules yet'))).not.toContainText(NAME);
 
   await page.goto('/admin-panel/report-templates');

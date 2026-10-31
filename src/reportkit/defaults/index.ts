@@ -1,5 +1,6 @@
 import type { DocType, TemplateDoc } from '../types';
-import { kindergartenProgressTemplate } from './kindergartenProgress';
+import { jkProgressTemplate } from './jkProgress';
+import { skProgressTemplate } from './kindergartenProgress';
 import { kindergartenReportCardTemplate } from './kindergartenReportCard';
 import { progressStandardTemplate } from './progressStandard';
 import { reportCardStandardTemplate } from './reportCardStandard';
@@ -25,18 +26,18 @@ export const DEFAULT_TEMPLATES: DefaultTemplateDef[] = [
   {
     key: 'progress-jk',
     name: 'JK progress report',
-    description: 'Junior Kindergarten skills by domain with the D/B/I/N key, comments and signatures.',
+    description: 'Junior Kindergarten (A4): the banner, student grid and D/B/I/N key, each skill section in its own colour with its icon, then the Teacher’s Comments, signatures, date and stamp.',
     docType: 'progress_report',
     grades: ['JK'],
-    build: () => kindergartenProgressTemplate('JK'),
+    build: () => jkProgressTemplate(),
   },
   {
     key: 'progress-sk',
     name: 'SK progress report',
-    description: 'Senior Kindergarten skills by subject with the E/G/S/NI/NA key, comments and signatures.',
+    description: 'Senior Kindergarten (Letter): the student grid with the E/G/S/NI/NA key, learning skills by subject, then the nine Strengths/Next Steps rows and signatures.',
     docType: 'progress_report',
     grades: ['SK'],
-    build: () => kindergartenProgressTemplate('SK'),
+    build: () => skProgressTemplate(),
   },
   {
     key: 'progress-standard',

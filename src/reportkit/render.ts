@@ -1,6 +1,7 @@
 import { blockFlowables, elementHtml, type Flowable, type RenderCtx } from './blocks';
 import { REPORTKIT_CSS } from './css';
 import { fontFaceCss, fontStack } from './fonts';
+import { BUILTIN_IMAGE_PATH, isBuiltinImage } from './images';
 import { planPages, type Fragment, type PlanItem } from './splitPlan';
 import { num, px, safeColor } from './style';
 import {
@@ -17,7 +18,7 @@ import { escapeHtml } from './util';
 export interface RenderOptions {
   /** editor: placeholders for missing images; print: nothing. */
   mode?: 'print' | 'editor';
-  /** Turn an image source into a URL; default reads data.assets / passes urls through. */
+  /** Turn an image source into a URL; default reads data.assets, passes urls through and serves built-ins from /report-assets. */
   resolveImage?: (src: ImageSource, data: ReportData) => string | null;
 }
 
@@ -28,7 +29,11 @@ export interface RenderResult {
 }
 
 export function defaultResolveImage(src: ImageSource, data: ReportData): string | null {
-  if (src.kind === 'url') return src.url || null;
+  // Only uploaded images (data URIs): never let a template make the page fetch a URL.
+  if (src.kind === 'url') return typeof src.url === 'string' && /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,/.test(src.url) ? src.url : null;
+  // Served from the web app's public/report-assets; the PDF printer passes its
+  // own resolver with data URIs (its page has no network).
+  if (src.kind === 'builtin') return isBuiltinImage(src.name) ? `${BUILTIN_IMAGE_PATH}${src.name}` : null;
   return data.assets?.[src.asset] ?? null;
 }
 
@@ -190,7 +195,7 @@ export async function renderReport(
     const head = table?.tHead ? table.tHead.getBoundingClientRect().height : 0;
     const rows = f.rows.map((r, k) => {
       const tr = wrap?.querySelector<HTMLElement>(`tr[data-r="${k}"]`);
-      return { height: tr ? tr.getBoundingClientRect().height : 0, keepWithNext: r.keepWithNext };
+      return { height: tr ? tr.getBoundingClientRect().height : 0, keepWithNext: r.keepWithNext, dropAtTop: r.dropAtTop };
     });
     const sum = rows.reduce((s, r) => s + r.height, 0);
     const chrome = Math.max(0, (table ? table.getBoundingClientRect().height : total) - head - sum);
@@ -215,7 +220,8 @@ export async function renderReport(
     const f = flows[fr.item];
     const id = escapeHtml(f.block.id);
     const style = fragStyle(f, fr.marginTop, fr.marginBottom);
-    let inner = f.kind === 'table' && fr.rows ? tableHtml(f, fr.rows[0], fr.rows[1]) : f.kind === 'atomic' ? f.html : '';
+    // A table placed whole (kept together, or no rows) has no row range: print all of it.
+    let inner = f.kind === 'table' ? tableHtml(f, fr.rows?.[0] ?? 0, fr.rows?.[1] ?? f.rows.length) : f.kind === 'atomic' ? f.html : '';
     if (fr.oversize) {
       const avail = bodyHeight(pageIndex);
       const scale = Math.max(0.45, Math.min(1, avail / Math.max(1, fr.height)));

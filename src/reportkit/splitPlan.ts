@@ -12,13 +12,16 @@
  *     never ends a page while more rows follow.
  *   - A split carries at least `widows` (2) rows onto the next page.
  *   - breakBefore starts a new page unless the page is still empty.
- *   - A block's top margin is dropped at the top of a page.
+ *   - A block's top margin is dropped at the top of a page, and so is a
+ *     spacer row (dropAtTop) that would start one.
  *   - A full page (a free-canvas page) always sits alone.
  */
 
 export interface PlanRow {
   height: number;
   keepWithNext?: boolean;
+  /** A spacer row (the gap between groups) left out when it would start a page. */
+  dropAtTop?: boolean;
 }
 
 export type PlanItem =
@@ -128,6 +131,9 @@ export function planPages(items: PlanItem[], bodyHeight: (pageIndex: number) => 
     while (i < rows.length) {
       leaveFullPage();
       if (first && item.breakBefore && hasContent()) open();
+      // Spacer rows never start a page.
+      if (!hasContent()) while (i < rows.length && rows[i].dropAtTop) i++;
+      if (i >= rows.length) break;
       const mt = first && hasContent() ? marginTop : 0;
       const base = mt + chrome + head;
 

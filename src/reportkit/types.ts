@@ -136,7 +136,9 @@ export interface ExtraFieldDef {
 
 export type ImageSource =
   | { kind: 'asset'; asset: 'logo' | 'principalSignature' | 'stamp' | 'teacherSignature' }
-  | { kind: 'url'; url: string }; // an uploaded template image
+  | { kind: 'url'; url: string } // an uploaded template image
+  /** An image shipped with the engine (BUILTIN_IMAGES in images.ts), by file name. */
+  | { kind: 'builtin'; name: string };
 
 interface ElementBase {
   id: string;
@@ -164,6 +166,8 @@ export interface ImageElement extends ElementBase {
   type: 'image';
   src: ImageSource;
   fit?: 'contain' | 'cover' | 'fill';
+  /** Where a contained image sits in its box when it doesn't fill it (default centre). */
+  align?: 'left' | 'center' | 'right';
 }
 
 export interface ShapeElement extends ElementBase {
@@ -218,6 +222,8 @@ export interface TableCellDef {
   background?: string;
   /** Rotate the text 90° (vertical label like "EVALUATION KEY"). */
   vertical?: boolean;
+  /** This cell's own inner spacing (px), instead of the table's cell padding. */
+  padding?: Partial<Box4>;
 }
 
 export interface TableRowDef {
@@ -230,7 +236,9 @@ export interface TableLook {
   borderColor?: string;
   borderWidth?: number;
   outerBorderWidth?: number;
+  /** Cell padding (px): top/bottom, and left/right unless cellPaddingX is set (then cellPadding + 2). */
   cellPadding?: number;
+  cellPaddingX?: number;
   fontSize?: number;
   fontFamily?: FontId;
   color?: string;
@@ -245,6 +253,8 @@ export interface TableBlock extends BlockBase, TableLook {
   type: 'table';
   columns: number[]; // percent widths
   rows: TableRowDef[];
+  /** The table is at least this tall (px); the last row takes the extra space. */
+  minHeight?: number;
 }
 
 export interface TextBlock extends BlockBase {
@@ -265,6 +275,10 @@ export interface RatingKeyBlock extends BlockBase, TableLook {
   codeWidth?: number; // percent
   titleBackground?: string;
   titleColor?: string;
+  /** vertical layout: the side label's text (size, weight, letter spacing); a line break in the label starts a new line. */
+  sideStyle?: TextStyle;
+  /** The code cells' text (e.g. a regular weight instead of bold). */
+  codeStyle?: TextStyle;
   showDescriptions?: boolean;
   columns?: number; // grid layout
 }
@@ -279,6 +293,23 @@ export interface BarStyle {
   /** Inner spacing in px: top/bottom, and left/right (defaults to `padding`). */
   padding?: number;
   paddingX?: number;
+  /** Bar height in px (at least: a long text still wraps). */
+  height?: number;
+}
+
+/**
+ * A group's own bar look, e.g. each JK domain in its colour with its icon.
+ * `match` is the group's name (case-insensitive; a trailing ':' ignored);
+ * for split "Group - Part" names it matches the Group.
+ */
+export interface SkillGroupStyle {
+  match: string;
+  background?: string;
+  color?: string;
+  /** Printed after the name. */
+  icon?: ImageSource | null;
+  /** px (default 29). */
+  iconHeight?: number;
 }
 
 export type SkillColumnKey = 'name' | 'description' | 'rating' | 't1' | 't2';
@@ -311,6 +342,18 @@ export interface SkillsTableBlock extends BlockBase, TableLook {
   splitGroupNames?: boolean;
   /** Group names printed side by side, e.g. [["Arabic and Quran","French"]]. */
   sideBySide?: string[][];
+  /**
+   * Column widths (percent) once groups print side by side: left text, left
+   * rating, right text, right rating. Default: the rating column's width on
+   * the right, the rest split 40/10/50.
+   */
+  pairColumns?: number[];
+  /** Minimum height (px) of each skill row. */
+  rowHeight?: number;
+  /** Minimum height (px) of each side-by-side row (default rowHeight). */
+  pairRowHeight?: number;
+  /** Text of the side-by-side rows' skill cells, e.g. a slightly larger size. */
+  pairStyle?: TextStyle;
   /** Only these groups (by name, case-insensitive); empty = all. */
   includeGroups?: string[];
   excludeGroups?: string[];
@@ -320,7 +363,7 @@ export interface SkillsTableBlock extends BlockBase, TableLook {
   /** Put the group name in the first column header instead of a bar. */
   groupAsColumnHeader?: boolean;
   stripeRows?: boolean;
-  /** Blank space between groups (px), so each group reads as its own table. */
+  /** Blank space between groups (px), so each group reads as its own table. Never printed at the top or bottom of a page. */
   groupGap?: number;
   /** Keep each group (bar, rows, comment) on one page when it fits. */
   keepGroupsTogether?: boolean;
@@ -328,6 +371,12 @@ export interface SkillsTableBlock extends BlockBase, TableLook {
   groupCommentBar?: BarStyle;
   /** When set, the comment label prints on its own line in this style. */
   groupCommentLabelStyle?: TextStyle;
+  /** Per-group bar colours and icons; the first matching entry wins. */
+  groupStyles?: SkillGroupStyle[];
+  /** Bar colours for groups no `groupStyles` entry matches, by the group's position (cycling). */
+  fallbackGroupColors?: string[];
+  /** Draw each group bar on the table's columns (the name over the text, the rating cell blank) instead of one merged cell. */
+  groupBarColumns?: boolean;
 }
 
 export type SubjectFieldKey = 'mark' | 'workHabits' | 'behaviour' | 'overall' | 'coreStandards';
@@ -411,6 +460,14 @@ export interface CommentsTableBlock extends BlockBase, TableLook {
   subjectSpan?: number;
   headerBar?: BarStyle;
   subjectStyle?: TextStyle;
+  /** Background of the subject cells. */
+  subjectBackground?: string;
+  /** The small caption under a subject (e.g. "Reading, Writing, …"). */
+  captionStyle?: TextStyle;
+  /** The comment cells' text (size, line height, vertical alignment…). */
+  commentStyle?: TextStyle;
+  /** Minimum height (px) of each row. */
+  rowHeight?: number;
   showEmptyRows?: boolean;
   /** A last row inside the same grid, e.g. signatures. */
   footerRow?: TableRowDef | null;
@@ -590,7 +647,7 @@ export interface ReportData {
     term: string; // "Term 1"
     termNumber: number | null;
     termLabel: string; // "FIRST TERM"
-    schoolYear: string; // "2026 - 2027"
+    schoolYear: string; // "2026 - 2027"; '' on a JK/SK progress report when the school has no school year
     reportDate: string; // YYYY-MM-DD, printed as the report's date
     generatedDate: string; // YYYY-MM-DD
   };
@@ -620,12 +677,15 @@ export interface ReportData {
     grade: string; // 'JK' | 'SK' | '1'..'8'
     gradeLabel: string; // "Senior Kindergarten", "Grade 4"
     gradeNumber: number; // JK = -1, SK = 0
+    /** JK/SK progress reports: the homeroom teacher, else the grade's Kindergarten class teacher ('' if none). */
     homeroomTeacher: string;
     teacherAssistant: string;
+    /** JK/SK progress reports: absences in the report date's school year up to that date; otherwise all-time. */
     daysAbsent: number;
   };
   subjects: SubjectRow[];
   skills: SkillGroup[];
+  /** Progress reports' comment rows, every row in print order (JK 2, SK 9); [] otherwise. */
   comments: CommentRow[];
   learningSkills: LearningSkillRow[];
   extra: Record<string, string>;

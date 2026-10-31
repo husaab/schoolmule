@@ -26,6 +26,12 @@ describe('validateTemplate', () => {
     expect(validateTemplate(doc).errors.join(' ')).toMatch(/images must be uploaded/);
   });
 
+  it('rejects a remote image anywhere, even where no specific check exists', () => {
+    const doc = DEFAULT_TEMPLATES[0].build();
+    (doc as unknown as { futureOption: unknown }).futureOption = { nested: [{ kind: 'url', url: 'http://169.254.169.254/latest' }] };
+    expect(validateTemplate(doc).errors.join(' ')).toMatch(/images must be uploaded/);
+  });
+
   it('checks extra field keys and choices', () => {
     const doc = DEFAULT_TEMPLATES[0].build();
     doc.fields = [

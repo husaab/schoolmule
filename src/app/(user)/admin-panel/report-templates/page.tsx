@@ -46,8 +46,11 @@ import { defaultTemplate } from '@/reportkit/defaults';
 import { GRADES } from '@/reportkit/format';
 import type { DocType } from '@/reportkit/types';
 import TemplateThumb from '@/components/report-designer/TemplateThumb';
+import { ConfirmDialog, type ConfirmRequest } from '@/components/report-designer/ConfirmDialog';
 
 const DOC_LABEL: Record<DocType, string> = { progress_report: 'Progress report', report_card: 'Report card' };
+const gradeName = (g: string, short = false) => (g === 'JK' || g === 'SK' ? g : short ? `Gr ${g}` : `Grade ${g}`);
+const isDocType = (v: string): v is DocType => v === 'progress_report' || v === 'report_card';
 type Tab = 'templates' | 'printing' | 'fields';
 
 function ReportTemplatesContent() {
@@ -107,7 +110,8 @@ function TemplatesTab() {
   const router = useRouter();
   const notify = useNotificationStore((s) => s.showNotification);
   const [data, setData] = useState<ReportTemplateListResponse | null>(null);
-  const [createFrom, setCreateFrom] = useState<{ docType: DocType; fromDefault?: string; fromTemplateId?: string; name: string } | null>(null);
+  // mode decides the dialog; a design picked under "Start from" stays a new template.
+  const [createFrom, setCreateFrom] = useState<{ mode: 'new' | 'customize' | 'duplicate'; docType: DocType; fromDefault?: string; fromTemplateId?: string; name: string } | null>(null);
   const [renaming, setRenaming] = useState<ReportTemplateSummary | null>(null);
   const [deleting, setDeleting] = useState<ReportTemplateSummary | null>(null);
   const [busy, setBusy] = useState(false);
@@ -123,7 +127,8 @@ function TemplatesTab() {
     if (!createFrom || !createFrom.name.trim()) return;
     setBusy(true);
     try {
-      const res = await createReportTemplate({ ...createFrom, name: createFrom.name.trim() });
+      const { docType, fromDefault, fromTemplateId } = createFrom;
+      const res = await createReportTemplate({ docType, fromDefault, fromTemplateId, name: createFrom.name.trim() });
       router.push(`/admin-panel/report-templates/${res.template.templateId}`);
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Could not create the template', 'error');
@@ -167,7 +172,7 @@ function TemplatesTab() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Your templates</h2>
-          <Button onClick={() => setCreateFrom({ docType: 'progress_report', name: '' })} data-testid="new-template">
+          <Button onClick={() => setCreateFrom({ mode: 'new', docType: 'progress_report', name: '' })} data-testid="new-template">
             <PlusIcon className="h-4 w-4" /> New template
           </Button>
         </div>
@@ -180,7 +185,7 @@ function TemplatesTab() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="template-list">
             {data.templates.map((t) => (
-              <TemplateCard key={t.templateId} t={t} onRename={() => setRenaming({ ...t })} onDelete={() => setDeleting(t)} onDuplicate={() => setCreateFrom({ docType: t.docType, fromTemplateId: t.templateId, name: `${t.name} (copy)` })} />
+              <TemplateCard key={t.templateId} t={t} onRename={() => setRenaming({ ...t })} onDelete={() => setDeleting(t)} onDuplicate={() => setCreateFrom({ mode: 'duplicate', docType: t.docType, fromTemplateId: t.templateId, name: `${t.name} (copy)` })} />
             ))}
           </div>
         )}
@@ -191,21 +196,21 @@ function TemplatesTab() {
         <p className="mb-3 text-sm text-slate-500">These print by default. Customize one to change it — the original stays here.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="default-list">
           {data.defaults.map((d) => (
-            <DefaultCard key={d.key} d={d} onCustomize={() => setCreateFrom({ docType: d.docType, fromDefault: d.key, name: `${d.name}` })} />
+            <DefaultCard key={d.key} d={d} onCustomize={() => setCreateFrom({ mode: 'customize', docType: d.docType, fromDefault: d.key, name: `${d.name}` })} />
           ))}
         </div>
       </section>
 
-      <Modal isOpen={!!createFrom} onClose={() => setCreateFrom(null)} title={createFrom?.fromDefault ? 'Customize a SchoolMule design' : createFrom?.fromTemplateId ? 'Duplicate template' : 'New template'} size="md" closeOnEscape>
+      <Modal isOpen={!!createFrom} onClose={() => setCreateFrom(null)} title={createFrom?.mode === 'customize' ? 'Customize a SchoolMule design' : createFrom?.mode === 'duplicate' ? 'Duplicate template' : 'New template'} size="md" closeOnEscape>
         {createFrom && (
           <div className="space-y-4">
             <Field label="Name" htmlFor="tpl-name" required>
               <input id="tpl-name" className={inputClass} value={createFrom.name} autoFocus onChange={(e) => setCreateFrom({ ...createFrom, name: e.target.value })} data-testid="new-template-name" />
             </Field>
-            {!createFrom.fromDefault && !createFrom.fromTemplateId && (
+            {createFrom.mode === 'new' && (
               <>
                 <Field label="Document" htmlFor="tpl-doc">
-                  <select id="tpl-doc" className={selectClass} value={createFrom.docType} onChange={(e) => setCreateFrom({ ...createFrom, docType: e.target.value as DocType })}>
+                  <select id="tpl-doc" className={selectClass} value={createFrom.docType} onChange={(e) => setCreateFrom({ ...createFrom, docType: e.target.value as DocType, fromDefault: undefined })}>
                     <option value="progress_report">Progress report</option>
                     <option value="report_card">Report card</option>
                   </select>
@@ -342,7 +347,11 @@ function DefaultCard({ d, onCustomize }: { d: DefaultTemplateSummary; onCustomiz
 
 function PrintingTab() {
   const notify = useNotificationStore((s) => s.showNotification);
-  const [docType, setDocType] = useState<DocType>('progress_report');
+  const { get, setParams } = useFilterParams();
+  const docParam = get('doc', 'progress_report');
+  const docType: DocType = isDocType(docParam) ? docParam : 'progress_report';
+  const setDocType = (d: DocType) => setParams({ doc: d === 'progress_report' ? null : d });
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [coverage, setCoverage] = useState<CoverageResponse | null>(null);
   const [assignments, setAssignments] = useState<TemplateAssignment[]>([]);
   const [list, setList] = useState<ReportTemplateListResponse | null>(null);
@@ -392,15 +401,25 @@ function PrintingTab() {
     }
   };
 
-  const removeRule = async (a: TemplateAssignment) => {
-    if (!window.confirm(`Remove the rule "${a.name}"? Those grades go back to the next matching rule or the SchoolMule design.`)) return;
-    try {
-      await deleteTemplateAssignment(a.assignmentId);
-      load();
-    } catch (e) {
-      notify(e instanceof Error ? e.message : 'Could not remove the rule', 'error');
-    }
-  };
+  const removeRule = (a: TemplateAssignment) =>
+    setConfirm({
+      title: 'Remove rule',
+      message: (
+        <>
+          Remove the rule for <strong>{a.name}</strong>?
+        </>
+      ),
+      consequences: ['Those grades and terms go back to the next matching rule, or the SchoolMule design.', 'Reports already generated stay as they are.'],
+      confirmLabel: 'Remove rule',
+      onConfirm: async () => {
+        try {
+          await deleteTemplateAssignment(a.assignmentId);
+          load();
+        } catch (e) {
+          notify(e instanceof Error ? e.message : 'Could not remove the rule', 'error');
+        }
+      },
+    });
 
   const cell = (grade: string, term: string) => coverage?.cells.find((c) => c.grade === grade && c.term === term);
 
@@ -419,6 +438,11 @@ function PrintingTab() {
         </Button>
       </div>
 
+      {coverage && coverage.engineMode !== 'new' && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="engine-off-notice">
+          <strong>Not printing yet.</strong> Reports still print with the original layouts while SchoolMule finishes checking the new designs. Your templates and rules are saved and take over as soon as it&apos;s switched on.
+        </div>
+      )}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white" data-testid="coverage-matrix">
         <table className="w-full text-sm">
           <thead>
@@ -434,7 +458,7 @@ function PrintingTab() {
           <tbody>
             {(coverage?.grades ?? GRADES).map((g) => (
               <tr key={g} className="border-b border-slate-50 last:border-0">
-                <td className="px-4 py-2 font-semibold text-slate-700">{g === 'JK' || g === 'SK' ? g : `Grade ${g}`}</td>
+                <td className="px-4 py-2 font-semibold text-slate-700">{gradeName(g)}</td>
                 {coverage?.terms.map((t) => {
                   const c = cell(g, t);
                   const tone = c?.source === 'assignment' ? 'bg-indigo-50 text-indigo-800' : c?.source === 'default' ? 'bg-slate-50 text-slate-700' : 'bg-amber-50 text-amber-800';
@@ -468,7 +492,7 @@ function PrintingTab() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-800">{a.name}</p>
                   <p className="text-xs text-slate-500">
-                    {a.grades?.length ? a.grades.map((g) => (g === 'JK' || g === 'SK' ? g : `Gr ${g}`)).join(', ') : 'All grades'} · {a.terms?.length ? a.terms.join(', ') : 'Every term'} · priority {a.priority}
+                    {a.grades?.length ? a.grades.map((g) => gradeName(g, true)).join(', ') : 'All grades'} · {a.terms?.length ? a.terms.join(', ') : 'Every term'} · priority {a.priority}
                   </p>
                 </div>
                 <button type="button" onClick={() => setEditing({ ...a, target: a.templateId ? `t:${a.templateId}` : `d:${a.defaultKey}` })} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100" data-testid="edit-rule">
@@ -533,6 +557,7 @@ function PrintingTab() {
           </div>
         )}
       </Modal>
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }
@@ -542,29 +567,40 @@ function PrintingTab() {
 function FieldsTab() {
   const notify = useNotificationStore((s) => s.showNotification);
   const user = useUserStore((s) => s.user);
-  const [docType, setDocType] = useState<DocType>('report_card');
+  const { get, setParams } = useFilterParams();
+  const docParam = get('fdoc', 'report_card');
+  const docType: DocType = isDocType(docParam) ? docParam : 'report_card';
+  const setDocType = (d: DocType) => setParams({ fdoc: d === 'report_card' ? null : d });
   const [terms, setTerms] = useState<string[]>([]);
-  const [term, setTerm] = useState('');
-  const [grade, setGrade] = useState('1');
-  const [data, setData] = useState<FieldValuesResponse | null>(null);
+  const term = get('term', '') || terms[0] || '';
+  const setTerm = (t: string) => setParams({ term: t === terms[0] ? null : t });
+  const grade = get('grade', '1');
+  const setGrade = (g: string) => setParams({ grade: g === '1' ? null : g });
+  const [loaded, setLoaded] = useState<{ key: string; data: FieldValuesResponse } | null>(null);
+  const viewKey = `${docType}|${term}|${grade}`;
+  const data = loaded?.key === viewKey ? loaded.data : null;
   const [saving, setSaving] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
+  const [lastSaved, setLastSaved] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!user?.school) return;
     getTermsBySchool(user.school)
       .then((r) => {
         const names = [...new Set((r.data ?? []).map((t: { name: string }) => t.name))];
-        setTerms(names);
-        setTerm((cur) => cur || names[0] || 'Term 1');
+        setTerms(names.length ? names : ['Term 1', 'Term 2']);
       })
       .catch(() => setTerms(['Term 1', 'Term 2']));
   }, [user?.school]);
 
   useEffect(() => {
     if (!term) return;
-    setData(null);
+    const key = `${docType}|${term}|${grade}`;
     getFieldValues(docType, term, grade)
-      .then(setData)
+      .then((d) => {
+        setLoaded({ key, data: d });
+        setSaving({});
+        setLastSaved({});
+      })
       .catch((e) => notify(e instanceof Error ? e.message : 'Could not load the fields', 'error'));
   }, [docType, term, grade, notify]);
 
@@ -574,6 +610,7 @@ function FieldsTab() {
     try {
       await saveFieldValues({ docType, term, studentId, values: { [key]: value === '' ? null : value } });
       setSaving((s) => ({ ...s, [id]: 'saved' }));
+      setLastSaved((s) => ({ ...s, [id]: value }));
     } catch (e) {
       setSaving((s) => ({ ...s, [id]: 'error' }));
       notify(e instanceof Error ? e.message : 'Could not save', 'error');
@@ -605,7 +642,7 @@ function FieldsTab() {
           <select className={`${selectClass} mt-1`} value={grade} onChange={(e) => setGrade(e.target.value)} data-testid="fields-grade">
             {GRADES.map((g) => (
               <option key={g} value={g}>
-                {g === 'JK' || g === 'SK' ? g : `Grade ${g}`}
+                {gradeName(g)}
               </option>
             ))}
           </select>
@@ -640,7 +677,7 @@ function FieldsTab() {
                   {data.fields.map((f) => {
                     const id = `${s.studentId}:${f.key}`;
                     const state = saving[id];
-                    const initial = s.values[f.key] ?? '';
+                    const initial = lastSaved[id] ?? s.values[f.key] ?? '';
                     const border = state === 'error' ? 'border-rose-300' : state === 'saved' ? 'border-emerald-300' : '';
                     return (
                       <td key={f.key} className="px-3 py-1.5">

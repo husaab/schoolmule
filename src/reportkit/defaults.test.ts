@@ -137,8 +137,14 @@ describe('skills table options', () => {
     if (flow.kind !== 'table') throw new Error('expected a table');
     const gaps = flow.rows.filter((r) => r.html.includes('rk-gap'));
     expect(gaps).toHaveLength(data.skills.length - 1);
-    // A page may only end on a gap row (or the very last row).
-    flow.rows.forEach((r, i) => expect(r.keepWithNext).toBe(!(r.html.includes('rk-gap') || i === flow.rows.length - 1)));
+    // A gap goes before every group but the first, travels with its group and
+    // is dropped at the top of a page; a page may only end after a group.
+    expect(flow.rows[0].html).not.toContain('rk-gap');
+    expect(gaps.every((r) => r.keepWithNext && r.dropAtTop)).toBe(true);
+    flow.rows.forEach((r, i) => {
+      const endsGroup = i === flow.rows.length - 1 || flow.rows[i + 1].html.includes('rk-gap');
+      expect(r.keepWithNext).toBe(!endsGroup);
+    });
     expect(flow.rows[0].html).toContain('text-align:center');
   });
 });

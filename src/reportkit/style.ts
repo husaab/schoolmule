@@ -70,6 +70,8 @@ export function barCss(bar: BarStyle | undefined, fallbackBg = '', theme?: Parti
     const y = num(b.padding, 6, 0, 100);
     out.push(`padding:${y}px ${num(b.paddingX, y, 0, 100)}px`);
   }
+  // A table cell's height is a minimum: longer text still grows it.
+  if (b.height) out.push(`height:${px(b.height, 0, 0, 600)}`);
   return out.join(';');
 }
 
@@ -90,6 +92,7 @@ export function tableCss(look: TableLook, theme: Theme): string {
   out.push(`--rk-obw:${px(look.outerBorderWidth ?? look.borderWidth, 1, 0, 20)}`);
   out.push(`--rk-bc:${safeColor(look.borderColor, theme.borderColor || '#000')}`);
   out.push(`--rk-pad:${px(look.cellPadding, 4, 0, 40)}`);
+  if (look.cellPaddingX !== undefined) out.push(`--rk-padx:${px(look.cellPaddingX, 6, 0, 40)}`);
   if (look.fontSize !== undefined) out.push(`font-size:${px(look.fontSize, theme.fontSize, 4, 100)}`);
   if (look.fontFamily) out.push(`font-family:${fontStack(look.fontFamily)}`);
   const color = safeColor(look.color);

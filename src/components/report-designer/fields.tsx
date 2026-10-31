@@ -8,6 +8,7 @@ import { catalogFor, type CatalogField } from '@/reportkit/catalog';
 import { GRADES } from '@/reportkit/format';
 import { downscaleImage } from '@/lib/imageDownscale';
 import type { BarStyle, ColumnDef, Condition, ConditionOp, ExtraFieldDef, ImageSource, TableLook, TextStyle } from '@/reportkit/types';
+import { BUILTIN_IMAGES, BUILTIN_IMAGE_PATH, isBuiltinImage } from '@/reportkit/images';
 
 export const inputCls =
   'w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400';
@@ -28,13 +29,17 @@ export function Section({ title, children, defaultOpen = true, actions }: { titl
   );
 }
 
+/**
+ * A labelled control. A group, not a <label>: rows hold buttons (segmented
+ * controls, colour pickers), and a <label> would rename the first button.
+ */
 export function Row({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <label className="block">
+    <div className="block" role="group" aria-label={label}>
       <span className="mb-1 block text-[11px] font-medium text-slate-500">{label}</span>
       {children}
       {hint && <span className="mt-0.5 block text-[10px] leading-snug text-slate-400">{hint}</span>}
-    </label>
+    </div>
   );
 }
 
@@ -45,7 +50,12 @@ export function Grid({ children, cols = 2 }: { children: React.ReactNode; cols?:
 /** A number input that commits on change but tolerates an empty/partial value while typing. */
 export function NumberInput({ value, onChange, min, max, step = 1, placeholder, suffix, testId }: { value: number | undefined; onChange: (v: number | undefined) => void; min?: number; max?: number; step?: number; placeholder?: string; suffix?: string; testId?: string }) {
   const [text, setText] = useState(value === undefined ? '' : String(value));
-  useEffect(() => setText(value === undefined ? '' : String(value)), [value]);
+  // Follow outside changes (undo, drag) without clobbering what is being typed.
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    setText(value === undefined ? '' : String(value));
+  }
   return (
     <div className="relative">
       <input
@@ -265,8 +275,9 @@ export function BarStyleEditor({ label, value, onChange }: { label: string; valu
         />
         <NumberInput value={b.fontSize} min={6} max={40} step={0.5} suffix="px" placeholder="—" onChange={(v) => set({ fontSize: v })} />
       </div>
-      <div className="mt-2">
+      <div className="mt-2 grid grid-cols-[1fr_70px] items-center gap-2">
         <Toggle checked={b.uppercase} onChange={(v) => set({ uppercase: v || undefined })} label="CAPITALS" />
+        <NumberInput value={b.height} min={0} max={300} step={0.5} suffix="px" placeholder="height" onChange={(v) => set({ height: v || undefined })} />
       </div>
     </div>
   );
@@ -283,7 +294,15 @@ export function TableLookEditor({ value, onChange }: { value: TableLook; onChang
           <NumberInput value={value.outerBorderWidth} min={0} max={8} step={0.5} suffix="px" placeholder="=" onChange={(v) => onChange({ outerBorderWidth: v })} />
         </Row>
         <Row label="Padding">
-          <NumberInput value={value.cellPadding} min={0} max={30} suffix="px" placeholder="4" onChange={(v) => onChange({ cellPadding: v })} />
+          <NumberInput value={value.cellPadding} min={0} max={30} step={0.5} suffix="px" placeholder="4" onChange={(v) => onChange({ cellPadding: v })} />
+        </Row>
+      </Grid>
+      <Grid>
+        <Row label="Side padding" hint="Left and right; empty = padding + 2.">
+          <NumberInput value={value.cellPaddingX} min={0} max={30} step={0.5} suffix="px" placeholder="auto" onChange={(v) => onChange({ cellPaddingX: v })} />
+        </Row>
+        <Row label="Line height">
+          <NumberInput value={value.lineHeight} min={0.8} max={3} step={0.05} placeholder="1.3" onChange={(v) => onChange({ lineHeight: v })} />
         </Row>
       </Grid>
       <Grid>
@@ -564,10 +583,12 @@ const ASSET_OPTIONS = [
   { value: 'upload', label: 'Uploaded image…' },
 ];
 
+const BUILTIN_GROUPS = [...new Set(BUILTIN_IMAGES.map((b) => b.group))];
+
 export function ImageSourcePicker({ value, onChange, onError }: { value: ImageSource | null | undefined; onChange: (v: ImageSource) => void; onError: (msg: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const current = !value ? 'logo' : value.kind === 'asset' ? value.asset : 'upload';
+  const current = !value ? 'logo' : value.kind === 'asset' ? value.asset : value.kind === 'builtin' ? `builtin:${value.name}` : 'upload';
   const upload = async (file: File) => {
     setBusy(true);
     try {
@@ -595,6 +616,7 @@ export function ImageSourcePicker({ value, onChange, onError }: { value: ImageSo
         onChange={(e) => {
           const v = e.target.value;
           if (v === 'upload') fileRef.current?.click();
+          else if (v.startsWith('builtin:')) onChange({ kind: 'builtin', name: v.slice('builtin:'.length) });
           else onChange({ kind: 'asset', asset: v as 'logo' });
         }}
       >
@@ -603,12 +625,24 @@ export function ImageSourcePicker({ value, onChange, onError }: { value: ImageSo
             {o.label}
           </option>
         ))}
+        {BUILTIN_GROUPS.map((group) => (
+          <optgroup key={group} label={`Built-in images · ${group}`}>
+            {BUILTIN_IMAGES.filter((b) => b.group === group).map((b) => (
+              <option key={b.name} value={`builtin:${b.name}`}>
+                {b.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
       </select>
       {value?.kind === 'url' && value.url && <img src={value.url} alt="" className="max-h-20 rounded border border-slate-200 bg-white object-contain p-1" />}
+      {value?.kind === 'builtin' && isBuiltinImage(value.name) && (
+        <img src={`${BUILTIN_IMAGE_PATH}${value.name}`} alt="" className="max-h-20 rounded border border-slate-200 bg-white object-contain p-1" />
+      )}
       <button type="button" onClick={() => fileRef.current?.click()} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800" disabled={busy}>
         {busy ? 'Uploading…' : value?.kind === 'url' ? 'Replace image' : 'Upload an image instead'}
       </button>
-      <p className="text-[10px] leading-snug text-slate-400">Logo, signatures and stamp come from Admin Panel → School Assets.</p>
+      <p className="text-[10px] leading-snug text-slate-400">Logo, signatures and stamp come from Admin Panel → School Assets. Built-in images ship with SchoolMule.</p>
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
     </div>
   );
