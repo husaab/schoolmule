@@ -6,6 +6,9 @@
 // Ratings and comments autosave (D17, useCommentAutosave): a second after the
 // teacher stops, at once on leaving a field, and on every way out of the tab,
 // with the same bulk payloads Save All sends (Save All is now a manual flush).
+// Picking a Core Standards level and Work Habits builds the comment from the
+// class's standard comments (src/lib/commentBank.ts); a comment the teacher
+// typed or edited is never replaced.
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -17,6 +20,19 @@ import { getClassProgressReportFeedback } from '@/services/progressReportService
 import type { ClassProgressReportFeedbackEntry } from '@/services/progressReportService'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { commentChange, feedbackEntry, PROGRESS_FIELDS, type FeedbackEntry } from '@/lib/commentAutosave'
+import {
+  CORE_STANDARDS_LEVELS,
+  STARTER_COMMENT_BANK,
+  buildStandardComment,
+  isStandardComment,
+  suggestCoreStandards,
+  withStandardComment,
+  type StandardCommentContext,
+} from '@/lib/commentBank'
+import { firstNameOf } from '@/lib/classroomText'
+import { getClassCommentBank } from '@/services/commentBankService'
+import type { CommentBank } from '@/services/types/commentBank'
+import { RatingButtons, type RatingOption } from './RatingButtons'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -40,22 +56,15 @@ import {
 } from '@heroicons/react/24/outline'
 import { aiFetch } from '@/services/aiClient'
 
-// Core Standards options
-const CORE_STANDARDS_OPTIONS = [
-  { value: '', label: 'Select rating' },
-  { value: 'Exceeding Common Core Standards', label: 'Exceeding' },
-  { value: 'Meeting Common Core Standards', label: 'Meeting' },
-  { value: 'Working towards Common Core Standards', label: 'Working towards' },
-  { value: 'Not Meeting Common Core Standards', label: 'Not Meeting' },
-]
+// Core Standards options (the stored value is the full level name)
+const CORE_STANDARDS_OPTIONS: RatingOption[] = CORE_STANDARDS_LEVELS.map((l) => ({ value: l.value, label: l.label, title: l.value }))
 
 // Rating options for Work Habits and Behavior
-const RATING_OPTIONS = [
-  { value: '', label: 'Select rating' },
-  { value: 'E', label: 'E - Excellent' },
-  { value: 'G', label: 'G - Good' },
-  { value: 'S', label: 'S - Satisfactory' },
-  { value: 'N', label: 'N - Needs Improvement' },
+const RATING_OPTIONS: RatingOption[] = [
+  { value: 'E', label: 'E', title: 'E - Excellent' },
+  { value: 'G', label: 'G', title: 'G - Good' },
+  { value: 'S', label: 'S', title: 'S - Satisfactory' },
+  { value: 'N', label: 'N', title: 'N - Needs Improvement' },
 ]
 
 type ProgressField = 'coreStandards' | 'workHabit' | 'behavior' | 'comment'
@@ -92,6 +101,12 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
   const [modalStudent, setModalStudent] = useState<{ id: string; name: string } | null>(null)
+  // The class's standard comments; nothing builds itself until they've loaded.
+  const [bank, setBank] = useState<CommentBank>(STARTER_COMMENT_BANK)
+  const [bankState, setBankState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [bankSaved, setBankSaved] = useState(false)
+  // The student whose "Rebuild from standard comments" is waiting for Replace.
+  const [confirmRebuild, setConfirmRebuild] = useState<string | null>(null)
 
   // Student grades from localStorage (computed in the gradebook by the grade
   // engine). pct is null when nothing has been graded yet — never 0.
@@ -194,6 +209,30 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
     loadFeedback()
   }, [loadFeedback])
 
+  const loadBank = useCallback(() => {
+    setBankState('loading')
+    getClassCommentBank(classId)
+      .then((res) => {
+        if (res.status !== 'success') throw new Error(res.message || "The standard comments couldn't be loaded")
+        setBank(res.data ?? STARTER_COMMENT_BANK)
+        setBankSaved(res.data !== null)
+        setBankState('ready')
+      })
+      .catch((err) => {
+        console.error('Error loading standard comments:', err)
+        setBankState('error')
+      })
+  }, [classId])
+
+  useEffect(() => {
+    loadBank()
+  }, [loadBank])
+
+  const commentContext = (studentId: string): StandardCommentContext => {
+    const stu = students.find((s) => s.studentId === studentId)
+    return { bank, student: { name: stu?.name ?? '', gender: stu?.gender ?? null }, subject: classData.subject }
+  }
+
   // The student's entry as saved (what Save All sent for an untouched field).
   const savedEntry = (studentId: string): FeedbackEntry<ProgressField> =>
     feedbackEntry({ studentId, classId, term: selectedTerm }, PROGRESS_FIELDS, existingFeedback.get(studentId))
@@ -220,6 +259,21 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
       value,
     )
     if (next) comments.queue(studentId, next.entry, next.saved)
+  }
+
+  // A rating picked: Core Standards and Work Habits also rebuild a comment
+  // that is empty or still SchoolMule's text (once the standard comments loaded).
+  const handleRatingChange = (studentId: string, field: 'coreStandards' | 'workHabit' | 'behavior', value: string) => {
+    const local = comments.entryFor(studentId)
+    const saved = savedEntry(studentId)
+    const next = commentChange({ term: selectedTerm, savedLoaded: feedbackLoaded, saved, local }, field, value)
+    if (!next) return
+    const entry =
+      field !== 'behavior' && bankState === 'ready'
+        ? withStandardComment(local ?? saved, next.entry, commentContext(studentId))
+        : next.entry
+    comments.queue(studentId, entry, next.saved)
+    void comments.flush()
   }
 
   // Save All: send whatever has not saved yet, now
@@ -522,6 +576,19 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
             </div>
           )}
 
+          {bankState === 'error' && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+              Standard comments couldn&apos;t be loaded. Ratings still save, but comments won&apos;t fill in by themselves.
+              <button
+                type="button"
+                onClick={loadBank}
+                className="cursor-pointer rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-medium hover:bg-amber-100"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {/* Progress Table: editable only once the saved comments have loaded */}
           <div
             className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden ${feedbackError ? 'opacity-60' : ''}`}
@@ -578,6 +645,14 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                           const coreStandardsValue = getFieldValue(stu.studentId, 'coreStandards')
                           const workHabitValue = getFieldValue(stu.studentId, 'workHabit')
                           const behaviorValue = getFieldValue(stu.studentId, 'behavior')
+                          const commentValue = getFieldValue(stu.studentId, 'comment')
+                          const pct = studentGrades[stu.studentId]?.pct
+                          const suggestion = suggestCoreStandards(pct, bank.cutoffs)
+                          const picks = { coreStandards: coreStandardsValue, workHabit: workHabitValue }
+                          const ctx = commentContext(stu.studentId)
+                          const standardText = bankState === 'ready' ? buildStandardComment(picks, ctx) : ''
+                          const isStandard = bankState === 'ready' && isStandardComment(commentValue, picks, ctx)
+                          const canRebuild = standardText !== '' && commentValue.trim() !== '' && !isStandard
 
                           return (
                             <tr
@@ -630,71 +705,46 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                                 </div>
                               </td>
 
-                              {/* Core Standards Dropdown */}
+                              {/* Core Standards */}
                               <td className="px-3 py-2">
-                                <select
+                                <RatingButtons
+                                  label={`Core Standards for ${stu.name}`}
+                                  options={CORE_STANDARDS_OPTIONS}
                                   value={coreStandardsValue}
-                                  onChange={(e) => handleFieldChange(stu.studentId, 'coreStandards', e.target.value)}
-                                  onBlur={() => void comments.flush()}
-                                  className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
-                                    isFieldEdited(stu.studentId, 'coreStandards')
-                                      ? 'border-amber-300 bg-amber-50/50'
-                                      : 'border-slate-200 hover:border-slate-300'
-                                  }`}
-                                >
-                                  {CORE_STANDARDS_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  suggested={suggestion}
+                                  onChange={(v) => handleRatingChange(stu.studentId, 'coreStandards', v)}
+                                />
+                                {!coreStandardsValue && suggestion && typeof pct === 'number' && (
+                                  <p className="mt-1 text-xs text-violet-600">Suggested from {pct.toFixed(1)}%. Pick it to confirm.</p>
+                                )}
                               </td>
 
-                              {/* Work Habits Dropdown */}
+                              {/* Work Habits */}
                               <td className="px-3 py-2">
-                                <select
+                                <RatingButtons
+                                  label={`Work Habits for ${stu.name}`}
+                                  options={RATING_OPTIONS}
                                   value={workHabitValue}
-                                  onChange={(e) => handleFieldChange(stu.studentId, 'workHabit', e.target.value)}
-                                  onBlur={() => void comments.flush()}
-                                  className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
-                                    isFieldEdited(stu.studentId, 'workHabit')
-                                      ? 'border-amber-300 bg-amber-50/50'
-                                      : 'border-slate-200 hover:border-slate-300'
-                                  }`}
-                                >
-                                  {RATING_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => handleRatingChange(stu.studentId, 'workHabit', v)}
+                                />
                               </td>
 
-                              {/* Behavior Dropdown */}
+                              {/* Behavior */}
                               <td className="px-3 py-2">
-                                <select
+                                <RatingButtons
+                                  label={`Behavior for ${stu.name}`}
+                                  options={RATING_OPTIONS}
                                   value={behaviorValue}
-                                  onChange={(e) => handleFieldChange(stu.studentId, 'behavior', e.target.value)}
-                                  onBlur={() => void comments.flush()}
-                                  className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent cursor-pointer ${
-                                    isFieldEdited(stu.studentId, 'behavior')
-                                      ? 'border-amber-300 bg-amber-50/50'
-                                      : 'border-slate-200 hover:border-slate-300'
-                                  }`}
-                                >
-                                  {RATING_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => handleRatingChange(stu.studentId, 'behavior', v)}
+                                />
                               </td>
 
                               {/* Comment with AI Generate Button */}
                               <td className="px-3 py-2">
                                 <div className="flex gap-2">
                                   <textarea
-                                    value={getFieldValue(stu.studentId, 'comment')}
+                                    value={commentValue}
+                                    aria-label={`Comment for ${stu.name}`}
                                     onChange={(e) => handleFieldChange(stu.studentId, 'comment', e.target.value)}
                                     onBlur={() => void comments.flush()}
                                     placeholder="Enter comment or use AI to generate..."
@@ -736,6 +786,43 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                                     )}
                                   </div>
                                 </div>
+                                {isStandard && !ctx.student.gender && (
+                                  <p className="mt-1 text-xs text-amber-700">
+                                    No gender on file for {firstNameOf(stu.name)}: check the pronouns.
+                                  </p>
+                                )}
+                                {canRebuild &&
+                                  (confirmRebuild === stu.studentId ? (
+                                    <div className="mt-1 flex items-center gap-2 text-xs">
+                                      <span className="text-slate-600">Replace your comment?</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleFieldChange(stu.studentId, 'comment', standardText)
+                                          void comments.flush()
+                                          setConfirmRebuild(null)
+                                        }}
+                                        className="cursor-pointer rounded-md bg-emerald-600 px-2 py-1 font-medium text-white hover:bg-emerald-700"
+                                      >
+                                        Replace
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmRebuild(null)}
+                                        className="cursor-pointer rounded-md px-2 py-1 font-medium text-slate-600 hover:bg-slate-100"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmRebuild(stu.studentId)}
+                                      className="mt-1 cursor-pointer text-xs font-medium text-emerald-700 hover:text-emerald-900"
+                                    >
+                                      Rebuild from standard comments
+                                    </button>
+                                  ))}
                               </td>
                             </tr>
                           )
