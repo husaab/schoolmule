@@ -250,6 +250,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
     try {
       const response = await aiFetch('/api/ai/generate-progress-comment', {
         studentName,
+        gender: students.find((s) => s.studentId === studentId)?.gender ?? null,
         subject: classData?.subject || 'this class',
         coreStandards,
         workHabits: workHabit,
@@ -754,6 +755,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
           onClose={handleModalClose}
           studentId={modalStudent.id}
           studentName={modalStudent.name}
+          studentGender={students.find((s) => s.studentId === modalStudent.id)?.gender ?? null}
           classId={classId}
           subjectName={classData.subject}
           studentGrade={studentGrades[modalStudent.id] ? studentGrades[modalStudent.id].pct : undefined}

@@ -32,6 +32,8 @@ interface ProgressReportModalProps {
   onClose: () => void;
   studentId: string;
   studentName: string;
+  /** For the AI's pronouns; null = not recorded. */
+  studentGender?: 'male' | 'female' | null;
   classId: string;
   subjectName?: string;
   /** null = nothing graded yet; undefined = not supplied. */
@@ -45,6 +47,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   onClose,
   studentId,
   studentName,
+  studentGender,
   classId,
   subjectName,
   studentGrade,
@@ -160,6 +163,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
     try {
       const response = await aiFetch('/api/ai/generate-progress-comment', {
         studentName,
+        gender: studentGender ?? null,
         subject: subjectName || 'General',
         coreStandards,
         workHabits: workHabit,

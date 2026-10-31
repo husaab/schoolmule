@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { pronounGuidance } from '@/lib/aiCommentPronouns'
 
 // Rating labels for context
 const RATING_LABELS: Record<string, string> = {
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { studentName, subject, coreStandards, workHabits, behavior, term, grade, coverage } = body
+    // Only a recorded gender counts; anything else is treated as not recorded.
+    const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : null
 
     if (!studentName || !coreStandards || !workHabits || !behavior) {
       return NextResponse.json(
@@ -120,7 +123,8 @@ Tone Guidance from Core Standards:
 ${coreStandardsTone}
 ${gradeGuidance ? `\nAdditional grade context:\n${gradeGuidance}` : ''}
 Guidelines:
-- Write in third person, referring to the student by their first name only (e.g., "John" not "John Smith")
+- Write in third person
+${pronounGuidance(studentName, gender)}
 - Keep the comment between 2-4 sentences
 - This is a PROGRESS REPORT, so focus on current trajectory and forward-looking improvement steps
 - Be specific and encouraging while honest about areas for improvement

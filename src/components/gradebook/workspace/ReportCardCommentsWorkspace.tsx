@@ -235,6 +235,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData, onOpen
     try {
       const response = await aiFetch('/api/ai/generate-comment', {
         studentName,
+        gender: students.find((s) => s.studentId === studentId)?.gender ?? null,
         subject: classData?.subject || 'this class',
         workHabits,
         behavior,
