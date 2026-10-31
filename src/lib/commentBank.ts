@@ -104,6 +104,23 @@ export function isStandardComment(comment: string | null | undefined, picks: Sta
 }
 
 /**
+ * What the comment box offers for these ratings: 'fill' an empty comment
+ * (nothing to replace), 'rebuild' one that isn't the built text (after a
+ * confirm), or null when the ratings build nothing or it already matches.
+ */
+export function standardCommentAction(
+  comment: string | null | undefined,
+  picks: StandardPicks,
+  ctx: StandardCommentContext,
+): 'fill' | 'rebuild' | null {
+  const text = buildStandardComment(picks, ctx)
+  if (text === '') return null
+  const current = comment ?? ''
+  if (current.trim() === '') return 'fill'
+  return current === text ? null : 'rebuild'
+}
+
+/**
  * `after` with its comment rebuilt from its ratings, when the comment before
  * the change was empty or still SchoolMule's text; otherwise `after` unchanged.
  */

@@ -25,6 +25,7 @@ import {
   STARTER_COMMENT_BANK,
   buildStandardComment,
   isStandardComment,
+  standardCommentAction,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -666,7 +667,7 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                           const ctx = commentContext(stu.studentId)
                           const standardText = bankState === 'ready' ? buildStandardComment(picks, ctx) : ''
                           const isStandard = bankState === 'ready' && isStandardComment(commentValue, picks, ctx)
-                          const canRebuild = standardText !== '' && commentValue.trim() !== '' && !isStandard
+                          const action = bankState === 'ready' ? standardCommentAction(commentValue, picks, ctx) : null
 
                           return (
                             <tr
@@ -805,7 +806,19 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                                     No gender on file for {firstNameOf(stu.name)}: check the pronouns.
                                   </p>
                                 )}
-                                {canRebuild &&
+                                {action === 'fill' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleFieldChange(stu.studentId, 'comment', standardText)
+                                      void comments.flush()
+                                    }}
+                                    className="mt-1 cursor-pointer text-xs font-medium text-emerald-700 hover:text-emerald-900"
+                                  >
+                                    Fill from standard comments
+                                  </button>
+                                )}
+                                {action === 'rebuild' &&
                                   (confirmRebuild === stu.studentId ? (
                                     <div className="mt-1 flex items-center gap-2 text-xs">
                                       <span className="text-slate-600">Replace your comment?</span>

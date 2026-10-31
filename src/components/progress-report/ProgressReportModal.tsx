@@ -30,6 +30,7 @@ import {
   CORE_STANDARDS_LEVELS,
   buildStandardComment,
   isStandardComment,
+  standardCommentAction,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -257,7 +258,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const picks = { coreStandards, workHabit };
   const standardText = commentContext ? buildStandardComment(picks, commentContext) : '';
   const isStandard = commentContext ? isStandardComment(comment, picks, commentContext) : false;
-  const canRebuild = standardText !== '' && comment.trim() !== '' && !isStandard;
+  const action = commentContext ? standardCommentAction(comment, picks, commentContext) : null;
   const [confirmRebuild, setConfirmRebuild] = useState(false);
 
   const pickRating = (field: 'coreStandards' | 'workHabit', value: string) => {
@@ -406,7 +407,16 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
               {isStandard && !studentGender && (
                 <p className="mt-1 text-xs text-amber-700">No gender on file for {firstNameOf(studentName)}: check the pronouns.</p>
               )}
-              {canRebuild &&
+              {action === 'fill' && (
+                <button
+                  type="button"
+                  onClick={() => setComment(standardText)}
+                  className="mt-1 cursor-pointer text-xs font-medium text-emerald-700 hover:text-emerald-900"
+                >
+                  Fill from standard comments
+                </button>
+              )}
+              {action === 'rebuild' &&
                 (confirmRebuild ? (
                   <div className="mt-1 flex items-center gap-2 text-xs">
                     <span className="text-slate-600">Replace your comment?</span>

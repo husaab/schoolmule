@@ -5,6 +5,7 @@ import {
   commentBankProblem,
   fillPlaceholders,
   isStandardComment,
+  standardCommentAction,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -126,6 +127,29 @@ describe('isStandardComment', () => {
 
   it('is false when nothing is built', () => {
     expect(isStandardComment('', { workHabit: 'G' }, ctx)).toBe(false)
+  })
+})
+
+describe('standardCommentAction', () => {
+  const picks = { coreStandards: MEETING, workHabit: 'G' }
+
+  it('offers to fill an empty comment once the ratings build one', () => {
+    expect(standardCommentAction('', picks, ctx)).toBe('fill')
+    expect(standardCommentAction(null, picks, ctx)).toBe('fill')
+    expect(standardCommentAction('   ', picks, ctx)).toBe('fill')
+  })
+
+  it("offers to rebuild a comment that isn't the built text", () => {
+    expect(standardCommentAction('My own words.', picks, ctx)).toBe('rebuild')
+  })
+
+  it('offers nothing when the comment is already the built text', () => {
+    expect(standardCommentAction(built(MEETING, 'G'), picks, ctx)).toBeNull()
+  })
+
+  it('offers nothing when the ratings build nothing', () => {
+    expect(standardCommentAction('', { workHabit: 'G' }, ctx)).toBeNull()
+    expect(standardCommentAction('My own words.', {}, ctx)).toBeNull()
   })
 })
 
