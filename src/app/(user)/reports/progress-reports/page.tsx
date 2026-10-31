@@ -56,6 +56,7 @@ import ProgressOverview from '@/components/progress-report/roster/ProgressOvervi
 import RosterTable, { type Row, type RowActions } from '@/components/progress-report/roster/RosterTable'
 import PdfViewerModal from '@/components/reports/PdfViewerModal'
 import GenerateProgressReportModal from '@/components/progress-report/generate/generateProgressReportModal'
+import GenerateMissingModal from '@/components/progress-report/generate/GenerateMissingModal'
 import DeleteProgressReportModal from '@/components/progress-report/delete/deleteProgressReportModal'
 import BulkDeleteProgressReportModal from '@/components/progress-report/delete/bulkDeleteProgressReportModal'
 import BulkDownloadProgressReportModal from '@/components/progress-report/download/bulkDownloadProgressReportModal'
@@ -71,6 +72,7 @@ type Dialog =
   | { kind: 'bulkDelete'; paths: string[] }
   | { kind: 'bulkDownload'; paths: string[] }
   | { kind: 'bulkEmail'; preselect: string[] }
+  | { kind: 'generateMissing' }
 
 interface GenerateRun {
   students: { studentId: string; name: string }[]
@@ -181,7 +183,10 @@ const ProgressReportsContent = () => {
   const visibleIdSet = new Set(visible.map((r) => r.studentId))
   const shownSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id))
   const targets = selectionTargets(visible, shownSelectedIds)
-  const missingIds = gradeRows.filter((r) => r.status === 'none' && r.student).map((r) => r.studentId)
+  // Everyone this term without a report; "Generate missing" lists them all and
+  // ticks the grades on screen (all of them when no grade is picked).
+  const missingRows = roster.filter((r) => r.status === 'none' && r.student)
+  const missingPreselect = (selectedGrades.length > 0 ? missingRows.filter((r) => inGrades(r, selectedGrades)) : missingRows).map((r) => r.studentId)
   const unemailedReports = rawReports.filter((r) => !(r.email_sent ?? r.emailSent))
   const hasFilters = selectedGrades.length > 0 || status !== '' || search.trim() !== ''
 
@@ -338,13 +343,13 @@ const ProgressReportsContent = () => {
               </button>
               <button
                 type="button"
-                onClick={() => void runGenerate(missingIds)}
-                disabled={!reportsReady || missingIds.length === 0 || !!run?.running}
-                title={missingIds.length === 0 ? 'Everyone shown has a report' : undefined}
+                onClick={() => setDialog({ kind: 'generateMissing' })}
+                disabled={!reportsReady || missingRows.length === 0 || !!run?.running}
+                title={missingRows.length === 0 ? `Everyone has a ${selectedTerm} report` : undefined}
                 className={primaryButton}
               >
                 <DocumentPlusIcon className="h-4 w-4" />
-                Generate missing ({missingIds.length})
+                Generate missing ({missingRows.length})
               </button>
             </div>
           </div>
@@ -482,6 +487,21 @@ const ProgressReportsContent = () => {
           </section>
         </div>
       </main>
+
+      {dialog?.kind === 'generateMissing' && (
+        <GenerateMissingModal
+          onClose={() => setDialog(null)}
+          term={selectedTerm}
+          students={missingRows.map((r) => ({ studentId: r.studentId, name: r.name, grade: r.grade, photoUrl: r.student?.photoUrl, avatar: r.student?.avatar }))}
+          initialSelectedIds={missingPreselect}
+          reportDate={reportDate}
+          onReportDateChange={setReportDate}
+          onGenerate={(ids) => {
+            setDialog(null)
+            void runGenerate(ids)
+          }}
+        />
+      )}
 
       <GenerateProgressReportModal
         isOpen={!!run}

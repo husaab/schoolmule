@@ -1,10 +1,11 @@
 'use client'
 
-// Student summary: one student in one class as a PDF (every assessment, the
-// term grade, attendance), for a parent–teacher conference. Choose on the
-// left (term, then class, then the student from that class's grade, then the
-// page layout); the PDF previews on the right with Download, Full screen and
-// Next student. Choices live in the URL (term, class, student, orientation).
+// Student summary: one student in one class, or in every class they take that
+// term, as a PDF (every assessment, the term grade, attendance) for a
+// parent–teacher conference. Choose on the left (term, one class or all, then
+// the class or grade, the student, the page layout); the PDF previews on the
+// right with Download, Full screen and Next student. Choices live in the URL
+// (term, scope=all, class or grade, student, orientation).
 
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -30,17 +31,20 @@ import { can } from '@/lib/permissions'
 import { getClassesByTeacherId, getAllClasses } from '@/services/classService'
 import { getAllStudents } from '@/services/studentService'
 import { getTermsBySchool } from '@/services/termService'
-import { generateStudentSummaryReport } from '@/services/reportService'
+import { generateStudentSummaryReport, generateStudentTermSummaryReport } from '@/services/reportService'
 import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import type { TermPayload } from '@/services/types/term'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { currentTermClasses, classPickerOptions } from '@/lib/classListFilters'
+import { gradeKey, gradeRank, sectionLabel } from '@/lib/classGradeSections'
 import { saveBlob } from '@/lib/pdfDownload'
 
 type Orientation = 'horizontal' | 'vertical'
+type Scope = 'class' | 'all'
 
-const pdfKey = (studentId: string, classId: string, orientation: Orientation) => `${studentId}|${classId}|${orientation}`
+/** What a PDF was built for: a class id, or "all:<term id>" for every class that term. */
+const pdfKey = (studentId: string, target: string, orientation: Orientation) => `${studentId}|${target}|${orientation}`
 
 const toolButton =
   'inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50'
@@ -64,6 +68,8 @@ const StudentSummaryContent = () => {
   // Choices live in the URL so Back/refresh/share restore them.
   const selectedStudent = get('student')
   const selectedClass = get('class')
+  const scope: Scope = get('scope') === 'all' ? 'all' : 'class'
+  const selectedGrade = get('grade')
   const selectedTerm = get('term', 'active')
   const orientation: Orientation = get('orientation') === 'vertical' ? 'vertical' : 'horizontal'
   const [loading, setLoading] = useState(true)
@@ -131,21 +137,28 @@ const StudentSummaryContent = () => {
   }, [user?.id, user?.school, user?.role, loadClasses, loadStudents, loadTerms])
 
   const selectedClassData = classes.find((c) => c.classId === selectedClass)
-  // The class's grade is its roster here, as before; names A–Z.
-  const classStudents = selectedClassData
-    ? students.filter((student) => student.grade === selectedClassData.grade).sort((a, b) => a.name.localeCompare(b.name))
-    : []
-  const needle = studentQuery.trim().toLowerCase()
-  const shownStudents = needle ? classStudents.filter((s) => s.name.toLowerCase().includes(needle)) : classStudents
-  const selectedStudentData = students.find((s) => s.studentId === selectedStudent)
-
   // A class exists once per term, so offer only the chosen term's classes
   // (the active term by default); a deep-linked class from another term stays.
   const viewTermName = selectedTerm === 'active' ? activeTerm?.name : selectedTerm
+  const viewTerm = terms.find((t) => t.name === viewTermName)
   const classOptions = classPickerOptions(currentTermClasses(classes, viewTermName, selectedClass), viewTermName)
+  // "All classes" picks a grade instead: the grades of this term's classes.
+  const gradeOptions = [...new Set(currentTermClasses(classes, viewTermName).map((c) => gradeKey(c.grade)))]
+    .filter((key) => key !== 'none')
+    .sort((a, b) => gradeRank(a) - gradeRank(b))
+    .map((key) => ({ value: key, label: sectionLabel(key) }))
+  const rosterGrade = scope === 'all' ? selectedGrade : selectedClassData ? gradeKey(selectedClassData.grade) : ''
+  // The class's grade (or the chosen grade) is the roster here, as before; names A–Z.
+  const rosterStudents = rosterGrade
+    ? students.filter((student) => gradeKey(student.grade) === rosterGrade).sort((a, b) => a.name.localeCompare(b.name))
+    : []
+  const needle = studentQuery.trim().toLowerCase()
+  const shownStudents = needle ? rosterStudents.filter((s) => s.name.toLowerCase().includes(needle)) : rosterStudents
+  const selectedStudentData = students.find((s) => s.studentId === selectedStudent)
   const layoutName = orientation === 'horizontal' ? 'Landscape' : 'Portrait'
 
-  const currentKey = selectedStudent && selectedClass ? pdfKey(selectedStudent, selectedClass, orientation) : null
+  const target = scope === 'all' ? (viewTerm ? `all:${viewTerm.termId}` : '') : selectedClass
+  const currentKey = selectedStudent && target ? pdfKey(selectedStudent, target, orientation) : null
   const shownBlob = pdf && pdf.key === currentKey ? pdf.blob : null
   const pdfUrl = pdf && pdf.key === currentKey ? pdf.url : null
   const phase: 'empty' | 'ready' | 'busy' | 'done' = !currentKey || !selectedStudentData
@@ -157,15 +170,18 @@ const StudentSummaryContent = () => {
         : 'ready'
 
   const generateFor = async (studentId: string) => {
-    if (!studentId || !selectedClass) {
-      showNotification('Please select both a student and a class', 'error')
+    if (!studentId || !target) {
+      showNotification(scope === 'all' ? 'Please select a term and a student' : 'Please select both a student and a class', 'error')
       return
     }
-    const key = pdfKey(studentId, selectedClass, orientation)
+    const key = pdfKey(studentId, target, orientation)
     latestRequest.current = key
     setGeneratingKey(key)
     try {
-      const blob = await generateStudentSummaryReport(studentId, selectedClass, orientation)
+      const blob =
+        scope === 'all' && viewTerm
+          ? await generateStudentTermSummaryReport(studentId, viewTerm.termId, orientation)
+          : await generateStudentSummaryReport(studentId, selectedClass, orientation)
       // A quicker Next press already asked for someone else: keep theirs.
       if (latestRequest.current !== key) return
       const next = { key, blob, url: URL.createObjectURL(blob) }
@@ -180,27 +196,42 @@ const StudentSummaryContent = () => {
     }
   }
 
-  // Previous / next student in the class list, wrapping around; builds theirs straight away.
+  // Previous / next student in the list, wrapping around; builds theirs straight away.
   const stepStudent = (delta: 1 | -1) => {
-    if (classStudents.length === 0) return
-    const at = classStudents.findIndex((s) => s.studentId === selectedStudent)
-    // A student not in this class's list (an old link) steps to the first or last.
-    const next = at < 0 ? classStudents[delta === 1 ? 0 : classStudents.length - 1] : classStudents[(at + delta + classStudents.length) % classStudents.length]
+    if (rosterStudents.length === 0) return
+    const at = rosterStudents.findIndex((s) => s.studentId === selectedStudent)
+    // A student not in this list (an old link) steps to the first or last.
+    const next = at < 0 ? rosterStudents[delta === 1 ? 0 : rosterStudents.length - 1] : rosterStudents[(at + delta + rosterStudents.length) % rosterStudents.length]
     setParams({ student: next.studentId })
     void generateFor(next.studentId)
   }
   const nextStudent =
-    classStudents.length > 1
-      ? classStudents[(classStudents.findIndex((s) => s.studentId === selectedStudent) + 1) % classStudents.length]
+    rosterStudents.length > 1
+      ? rosterStudents[(rosterStudents.findIndex((s) => s.studentId === selectedStudent) + 1) % rosterStudents.length]
       : null
+
+  // Switching to "All classes" keeps the student and starts on their grade.
+  const changeScope = (next: Scope) => {
+    if (next === scope) return
+    setStudentQuery('')
+    if (next === 'all') {
+      const grade = selectedStudentData ? gradeKey(selectedStudentData.grade) : rosterGrade
+      setParams({ scope: 'all', grade: grade && grade !== 'none' ? grade : null })
+    } else {
+      setParams({ scope: null, grade: null })
+    }
+  }
+
+  const coverage = scope === 'all' ? (schoolWide ? 'All classes' : 'Your classes') : (selectedClassData?.subject ?? '')
 
   const handleDownloadPdf = () => {
     if (!shownBlob) return
-    const filename = `${selectedStudentData?.name || 'Student'}_${selectedClassData?.subject || 'Report'}_${viewTermName || 'Term'}.pdf`
+    const what = scope === 'all' ? 'All_classes' : selectedClassData?.subject || 'Report'
+    const filename = `${selectedStudentData?.name || 'Student'}_${what}_${viewTermName || 'Term'}.pdf`
     saveBlob(shownBlob, filename)
   }
 
-  const subtitle = `${selectedClassData?.subject ?? ''} · ${viewTermName ?? ''} · ${layoutName}`
+  const subtitle = `${coverage} · ${viewTermName ?? ''} · ${layoutName}`
 
   return (
     <>
@@ -216,7 +247,7 @@ const StudentSummaryContent = () => {
             </BackLink>
             <h1 className="font-display text-[26px] font-semibold leading-tight text-slate-900 sm:text-[30px]">Student summary</h1>
             <p className="mt-1 max-w-3xl text-[15px] text-slate-600">
-              One student in one class: every assessment, their term grade and attendance, as a PDF for a conference.
+              One student in one class, or in all their classes: every assessment, their term grades and attendance, as a PDF for a conference.
             </p>
           </div>
 
@@ -248,35 +279,88 @@ const StudentSummaryContent = () => {
                   </div>
 
                   <div>
-                    <span className={fieldLabel}>Class</span>
-                    <SearchableSelect
-                      options={classOptions}
-                      value={selectedClass}
-                      onChange={(v) => {
-                        // A new class has a different list of students.
-                        setStudentQuery('')
-                        setParams({ class: v, student: null })
-                      }}
-                      placeholder="Choose a class"
-                      ariaLabel="Class"
-                      searchPlaceholder="Find a class"
-                      triggerClassName={pickerTrigger}
-                    />
-                    <p className="mt-1 text-xs text-slate-500">Only {viewTermName ?? 'this term'}&apos;s classes are listed.</p>
+                    <span className={fieldLabel}>Covers</span>
+                    <div role="group" aria-label="Covers" className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { value: 'class', label: 'One class', hint: 'Its assessments in full' },
+                          { value: 'all', label: 'All classes', hint: schoolWide ? 'Every class this term' : 'Every one you teach them' },
+                        ] as const
+                      ).map((opt) => {
+                        const on = scope === opt.value
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => changeScope(opt.value)}
+                            className={`cursor-pointer rounded-xl border px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                              on ? 'border-cyan-300 bg-cyan-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="block text-sm font-medium text-slate-900">{opt.label}</span>
+                            <span className="block text-xs text-slate-500">{opt.hint}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+
+                  {scope === 'class' ? (
+                    <div>
+                      <span className={fieldLabel}>Class</span>
+                      <SearchableSelect
+                        options={classOptions}
+                        value={selectedClass}
+                        onChange={(v) => {
+                          // A new class has a different list of students.
+                          setStudentQuery('')
+                          setParams({ class: v, student: null })
+                        }}
+                        placeholder="Choose a class"
+                        ariaLabel="Class"
+                        searchPlaceholder="Find a class"
+                        triggerClassName={pickerTrigger}
+                      />
+                      <p className="mt-1 text-xs text-slate-500">Only {viewTermName ?? 'this term'}&apos;s classes are listed.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className={fieldLabel}>Grade</span>
+                      <SearchableSelect
+                        options={gradeOptions}
+                        value={selectedGrade}
+                        onChange={(v) => {
+                          setStudentQuery('')
+                          setParams({ grade: v })
+                        }}
+                        placeholder="Choose a grade"
+                        ariaLabel="Grade"
+                        searchPlaceholder="Find a grade"
+                        triggerClassName={pickerTrigger}
+                      />
+                      <p className="mt-1 text-xs text-slate-500">
+                        The PDF opens on a page of their {viewTermName ?? 'term'} grades, then one page per class.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <div className="mb-1.5 flex items-baseline justify-between gap-2">
                       <span className="text-sm font-medium text-slate-700">Student</span>
-                      {selectedClassData && <span className="text-xs text-slate-500">{classStudents.length} in this class</span>}
+                      {rosterGrade && (
+                        <span className="text-xs text-slate-500">
+                          {rosterStudents.length} in {scope === 'all' ? sectionLabel(rosterGrade) : 'this class'}
+                        </span>
+                      )}
                     </div>
-                    {!selectedClassData ? (
+                    {!rosterGrade ? (
                       <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-                        Pick a class to see its students.
+                        {scope === 'all' ? 'Pick a grade to see its students.' : 'Pick a class to see its students.'}
                       </p>
                     ) : (
                       <>
-                        {classStudents.length > 8 && (
+                        {rosterStudents.length > 8 && (
                           <div className="relative mb-2">
                             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
@@ -292,7 +376,7 @@ const StudentSummaryContent = () => {
                         <div role="group" aria-label="Students" className="max-h-80 space-y-0.5 overflow-y-auto rounded-xl border border-slate-100 p-1">
                           {shownStudents.length === 0 ? (
                             <p className="px-3 py-4 text-center text-sm text-slate-500">
-                              {classStudents.length === 0 ? 'No students in this grade yet.' : 'No one matches that name.'}
+                              {rosterStudents.length === 0 ? 'No students in this grade yet.' : 'No one matches that name.'}
                             </p>
                           ) : (
                             shownStudents.map((student) => {
@@ -361,7 +445,9 @@ const StudentSummaryContent = () => {
               {phase === 'empty' && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
                   <div className="mb-2 h-24 w-32 rounded-md border-[1.5px] border-dashed border-slate-300 bg-slate-50" aria-hidden="true" />
-                  <p className="text-[15px] font-medium text-slate-700">{selectedClassData ? 'Pick a student to see their report' : 'Pick a class and a student'}</p>
+                  <p className="text-[15px] font-medium text-slate-700">
+                    {rosterGrade ? 'Pick a student to see their report' : scope === 'all' ? 'Pick a grade and a student' : 'Pick a class and a student'}
+                  </p>
                   <p className="max-w-sm text-sm text-slate-500">The report builds here, ready to download or show full screen.</p>
                 </div>
               )}
@@ -376,11 +462,13 @@ const StudentSummaryContent = () => {
                     <span className="text-xs text-slate-500">Student summary</span>
                     <span className="font-display text-2xl font-semibold text-slate-900">{selectedStudentData.name}</span>
                     <span className="text-sm text-slate-600">
-                      Grade {selectedStudentData.grade} · {selectedClassData?.subject} · {viewTermName}
+                      {sectionLabel(gradeKey(selectedStudentData.grade))} · {coverage} · {viewTermName}
                     </span>
                     <span className="my-1 h-px bg-slate-200" />
                     <span className="text-xs leading-relaxed text-slate-600">
-                      Every assessment and category in this class, the term grade, and class attendance.
+                      {scope === 'all'
+                        ? `A page of term grades for ${schoolWide ? 'every class' : 'each of your classes'} they take, then each class's assessments and attendance.`
+                        : 'Every assessment and category in this class, the term grade, and class attendance.'}
                     </span>
                   </div>
                   <button type="button" onClick={() => void generateFor(selectedStudent)} className={`${primaryButton} px-6 py-3 text-[15px]`}>
@@ -405,7 +493,7 @@ const StudentSummaryContent = () => {
                       <p className="truncate text-xs text-slate-500">{subtitle}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {classStudents.length > 1 && (
+                      {rosterStudents.length > 1 && (
                         <>
                           <button type="button" onClick={() => stepStudent(-1)} aria-label="Previous student" className={`${toolButton} w-9 px-0`}>
                             <ChevronLeftIcon className="h-4 w-4" />
