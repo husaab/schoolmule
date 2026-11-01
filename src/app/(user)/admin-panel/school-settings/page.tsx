@@ -40,7 +40,9 @@ const SchoolSettingsPage = () => {
     timezone: '',
     academicYearStartDate: '',
     academicYearEndDate: '',
-    emailReplyTo: ''
+    emailReplyTo: '',
+    principalName: '',
+    boardName: ''
   })
   
   // Term modal states
@@ -65,7 +67,9 @@ const SchoolSettingsPage = () => {
           timezone: res.data.timezone || '',
           academicYearStartDate: res.data.academicYearStartDate ? res.data.academicYearStartDate.split('T')[0] : '',
           academicYearEndDate: res.data.academicYearEndDate ? res.data.academicYearEndDate.split('T')[0] : '',
-          emailReplyTo: (res.data.emailReplyTo || []).join(', ')
+          emailReplyTo: (res.data.emailReplyTo || []).join(', '),
+          principalName: res.data.principalName || '',
+          boardName: res.data.boardName || ''
         })
       } 
     } catch (err) {
@@ -137,7 +141,9 @@ const SchoolSettingsPage = () => {
         timezone: schoolFormData.timezone.trim(),
         academicYearStartDate: schoolFormData.academicYearStartDate || undefined,
         academicYearEndDate: schoolFormData.academicYearEndDate || undefined,
-        emailReplyTo: schoolFormData.emailReplyTo.split(/[,\n;]+/).map((e) => e.trim()).filter(Boolean)
+        emailReplyTo: schoolFormData.emailReplyTo.split(/[,\n;]+/).map((e) => e.trim()).filter(Boolean),
+        principalName: schoolFormData.principalName.trim(),
+        boardName: schoolFormData.boardName.trim()
       }
 
       const res = await updateSchool(schoolData.schoolId, payload)
@@ -214,7 +220,9 @@ const SchoolSettingsPage = () => {
         timezone: schoolData.timezone || '',
         academicYearStartDate: schoolData.academicYearStartDate ? schoolData.academicYearStartDate.split('T')[0] : '',
         academicYearEndDate: schoolData.academicYearEndDate ? schoolData.academicYearEndDate.split('T')[0] : '',
-        emailReplyTo: (schoolData.emailReplyTo || []).join(', ')
+        emailReplyTo: (schoolData.emailReplyTo || []).join(', '),
+        principalName: schoolData.principalName || '',
+        boardName: schoolData.boardName || ''
       })
     }
   }
@@ -330,6 +338,14 @@ const SchoolSettingsPage = () => {
                     </p>
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Principal</label>
+                    <p className="text-gray-900" data-testid="school-principal">{schoolData?.principalName || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">School board</label>
+                    <p className="text-gray-900" data-testid="school-board">{schoolData?.boardName || 'Not set'}</p>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Parent emails are sent from</label>
                     <p className="text-gray-900">{schoolData?.emailAddresses?.academics || 'Not set'}</p>
                     {schoolData?.emailAddresses && schoolData.emailAddresses.messages !== schoolData.emailAddresses.academics && (
@@ -425,6 +441,32 @@ const SchoolSettingsPage = () => {
                         onChange={(e) => setSchoolFormData(prev => ({ ...prev, academicYearEndDate: e.target.value }))}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />
+                    </div>
+                    <div>
+                      <label htmlFor="school-principal" className="block text-sm font-medium text-gray-700 mb-1">Principal</label>
+                      <input
+                        id="school-principal"
+                        type="text"
+                        maxLength={120}
+                        value={schoolFormData.principalName}
+                        onChange={(e) => setSchoolFormData(prev => ({ ...prev, principalName: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        placeholder="e.g., Jane Smith"
+                      />
+                      <p className="text-gray-500 text-sm mt-1">Printed on report cards that show the principal&apos;s name.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="school-board" className="block text-sm font-medium text-gray-700 mb-1">School board</label>
+                      <input
+                        id="school-board"
+                        type="text"
+                        maxLength={120}
+                        value={schoolFormData.boardName}
+                        onChange={(e) => setSchoolFormData(prev => ({ ...prev, boardName: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        placeholder="e.g., Private"
+                      />
+                      <p className="text-gray-500 text-sm mt-1">The report cards&apos; &ldquo;Board:&rdquo; line. A public school writes its school board; a private school usually writes Private.</p>
                     </div>
                     <div className="md:col-span-2">
                       <label htmlFor="school-email-reply-to" className="block text-sm font-medium text-gray-700 mb-1">Parent replies go to</label>

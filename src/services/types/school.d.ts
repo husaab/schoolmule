@@ -17,6 +17,8 @@ export interface SchoolPayload {
   emailSendingDomain?: string | null; // verified custom sending domain, null = platform domain
   emailReplyTo?: string[];          // where parent replies go (the school email is always added)
   emailAddresses?: { academics: string; messages: string }; // what parents see in the From line
+  principalName?: string;           // printed on report cards ({{school.principal}}), '' = not set
+  boardName?: string;               // the report cards' "Board:" line ({{school.board}}), e.g. "Private"
   createdAt: string;              // ISO datetime string
   lastUpdatedAt?: string;         // ISO datetime string
 }
@@ -47,6 +49,8 @@ export interface UpdateSchoolRequest {
   academicYearStartDate?: string;
   academicYearEndDate?: string;
   emailReplyTo?: string[];
+  principalName?: string;  // omitted = unchanged, '' = clear
+  boardName?: string;
 }
 
 /**

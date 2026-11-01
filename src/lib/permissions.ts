@@ -209,6 +209,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { path: '/admin-panel/school-settings', rule: NEEDS('school_setup') },
   { path: '/admin-panel/school-calendar', rule: NEEDS('school_setup') },
   { path: '/admin-panel/school-assets', rule: NEEDS('school_setup') },
+  { path: '/admin-panel/report-templates', rule: NEEDS('school_setup') },
   { path: '/admin-panel/schedule-planner', rule: NEEDS('scheduling') },
   { path: '/admin-panel/agendas', rule: NEEDS('scheduling') },
   { path: '/admin-panel/school-schedule', rule: OPEN }, // old bookmark, redirects to /school-schedule

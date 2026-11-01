@@ -29,7 +29,7 @@ describe('adminPanelNavFor', () => {
     expect(nav.overview).toBe(true)
     expect(labels(officeStaffTestUser)).toEqual([
       ['People', ['Users', 'Student accounts', 'User Approvals', 'Parent Relations', 'All Messages']],
-      ['School setup', ['School Settings', 'School Calendar', 'School Assets']],
+      ['School setup', ['School Settings', 'School Calendar', 'School Assets', 'Report Templates']],
       ['Planning', ['Schedule Planner', 'School Schedule', 'Agenda Editor']],
     ])
   })

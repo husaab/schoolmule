@@ -49,3 +49,8 @@ remotion/src/Root.tsx
 
 # git worktrees (local scratch)
 .worktrees/
+
+# Playwright
+/e2e/.auth/
+/test-results/
+/playwright-report/

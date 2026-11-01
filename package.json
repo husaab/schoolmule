@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "avatars:render": "node scripts/render-avatar-pngs.mjs"
+    "avatars:render": "node scripts/render-avatar-pngs.mjs",
+    "test:e2e": "playwright test",
+    "sync:reportkit": "node scripts/build-reportkit.mjs",
+    "check:reportkit": "node scripts/build-reportkit.mjs --check"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -39,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/dompurify": "^3.0.5",
     "@types/node": "^20",
