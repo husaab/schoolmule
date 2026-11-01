@@ -16,7 +16,7 @@ import {
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import Modal from '@/components/shared/modal';
-import { Button, ConfirmBody, Field, inputClass, selectClass } from '@/components/shared/modalKit';
+import { Button, ConfirmBody, Field, inputClass, ModalBody, ModalFooter, selectClass } from '@/components/shared/modalKit';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useUserStore } from '@/store/useUserStore';
 import { useFilterParams } from '@/hooks/useFilterParams';
@@ -203,7 +203,8 @@ function TemplatesTab() {
 
       <Modal isOpen={!!createFrom} onClose={() => setCreateFrom(null)} title={createFrom?.mode === 'customize' ? 'Customize a SchoolMule design' : createFrom?.mode === 'duplicate' ? 'Duplicate template' : 'New template'} size="md" closeOnEscape>
         {createFrom && (
-          <div className="space-y-4">
+          <>
+            <ModalBody>
             <Field label="Name" htmlFor="tpl-name" required>
               <input id="tpl-name" className={inputClass} value={createFrom.name} autoFocus onChange={(e) => setCreateFrom({ ...createFrom, name: e.target.value })} data-testid="new-template-name" />
             </Field>
@@ -229,37 +230,41 @@ function TemplatesTab() {
                 </Field>
               </>
             )}
-            <div className="flex justify-end gap-2">
+            </ModalBody>
+            <ModalFooter>
               <Button variant="secondary" onClick={() => setCreateFrom(null)}>
                 Cancel
               </Button>
               <Button onClick={create} loading={busy} disabled={!createFrom.name.trim()} data-testid="create-template">
                 Create and open
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         )}
       </Modal>
 
       <Modal isOpen={!!renaming} onClose={() => setRenaming(null)} title="Rename template" size="sm" closeOnEscape>
         {renaming && (
-          <div className="space-y-4">
+          <>
+            <ModalBody>
             <input className={inputClass} value={renaming.name} autoFocus onChange={(e) => setRenaming({ ...renaming, name: e.target.value })} data-testid="rename-input" />
-            <div className="flex justify-end gap-2">
+            </ModalBody>
+            <ModalFooter>
               <Button variant="secondary" onClick={() => setRenaming(null)}>
                 Cancel
               </Button>
               <Button onClick={rename} loading={busy} disabled={!renaming.name.trim()} data-testid="confirm-rename">
                 Save
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         )}
       </Modal>
 
       <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="Delete template" size="md" closeOnEscape>
         {deleting && (
-          <div className="space-y-4">
+          <>
+            <ModalBody>
             <ConfirmBody
               consequences={{
                 title: 'What happens',
@@ -271,15 +276,16 @@ function TemplatesTab() {
             >
               Delete <strong>{deleting.name}</strong>?
             </ConfirmBody>
-            <div className="flex justify-end gap-2">
+            </ModalBody>
+            <ModalFooter>
               <Button variant="secondary" onClick={() => setDeleting(null)}>
                 Cancel
               </Button>
               <Button variant="danger" onClick={remove} loading={busy} data-testid="confirm-delete-template">
                 Delete
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         )}
       </Modal>
     </div>
@@ -509,7 +515,8 @@ function PrintingTab() {
 
       <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={editing?.assignmentId ? 'Edit rule' : 'Which template prints'} size="md" closeOnEscape>
         {editing && (
-          <div className="space-y-4">
+          <>
+            <ModalBody>
             <Field label="Print with" htmlFor="rule-target">
               <select id="rule-target" className={selectClass} value={editing.target} onChange={(e) => setEditing({ ...editing, target: e.target.value })} data-testid="rule-target">
                 {targets.map((t) => (
@@ -546,15 +553,16 @@ function PrintingTab() {
             <Field label="Priority" hint="When two rules match, the lower number wins.">
               <input type="number" className={inputClass} value={editing.priority ?? 100} onChange={(e) => setEditing({ ...editing, priority: Number(e.target.value) || 0 })} />
             </Field>
-            <div className="flex justify-end gap-2">
+            </ModalBody>
+            <ModalFooter>
               <Button variant="secondary" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
               <Button onClick={saveRule} loading={busy} disabled={!editing.target} data-testid="save-rule">
                 Save rule
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         )}
       </Modal>
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />

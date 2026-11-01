@@ -17,7 +17,7 @@ import {
   ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
-import { Button } from '@/components/shared/modalKit';
+import { Button, ModalBody, ModalFooter } from '@/components/shared/modalKit';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { isApiError } from '@/services/apiClient';
 import {
@@ -495,13 +495,13 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
 
       <Modal isOpen={!!pdf} onClose={() => (pdf && URL.revokeObjectURL(pdf.url), setPdf(null))} title="The PDF as it will print" size="4xl" closeOnEscape maxHeightClass="max-h-[92vh]">
         {pdf && (
-          <div className="space-y-2">
+          <ModalBody className="!space-y-2">
             <p className="text-xs text-slate-500">
               Made by the server from your draft for {previewLabel}.{' '}
               {pdf.pages !== null && (pdf.pages === pageCount ? `${pdf.pages} pages — same as the editor.` : `${pdf.pages} pages here vs ${pageCount} in the editor.`)}
             </p>
             <iframe src={pdf.url} title="PDF preview" className="h-[75vh] w-full rounded-lg border border-slate-200" data-testid="pdf-frame" />
-          </div>
+          </ModalBody>
         )}
       </Modal>
 
@@ -573,7 +573,7 @@ function StudentPicker({ open, onClose, onPick }: { open: boolean; onClose: () =
   }, [open, grade, q]);
   return (
     <Modal isOpen={open} onClose={onClose} title="Preview a real student" size="md" closeOnEscape>
-      <div className="space-y-3">
+      <ModalBody className="!space-y-3">
         <div className="flex flex-wrap gap-1">
           {GRADES.map((g) => (
             <button key={g} type="button" onClick={() => setGrade(g)} className={`min-w-[36px] rounded-lg border px-2 py-1 text-xs font-semibold ${grade === g ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 text-slate-600 hover:border-indigo-300'}`} data-testid={`picker-grade-${g}`}>
@@ -593,7 +593,7 @@ function StudentPicker({ open, onClose, onPick }: { open: boolean; onClose: () =
           ))}
         </div>
         <p className="text-[11px] text-slate-500">Only you see this preview. Nothing is generated or sent.</p>
-      </div>
+      </ModalBody>
     </Modal>
   );
 }
@@ -627,7 +627,7 @@ function PublishDialog({ open, onClose, templateId, onPublished }: { open: boole
   };
   return (
     <Modal isOpen={open} onClose={onClose} title="Publish this template" size="md" closeOnEscape>
-      <div className="space-y-3">
+      <ModalBody className="!space-y-3">
         <p className="text-sm text-slate-600">Reports generated from now on use this version wherever this template is assigned. Reports already generated don&apos;t change.</p>
         {engineOff && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -645,15 +645,15 @@ function PublishDialog({ open, onClose, templateId, onPublished }: { open: boole
           <span className="mb-1 block text-xs font-medium text-slate-600">What changed? (optional)</span>
           <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. New logo, French moved beside Arabic" data-testid="publish-note" />
         </label>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={publish} loading={busy} disabled={!check.ok} data-testid="confirm-publish">
-            Publish
-          </Button>
-        </div>
-      </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={publish} loading={busy} disabled={!check.ok} data-testid="confirm-publish">
+          Publish
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 }
@@ -712,33 +712,35 @@ function VersionsDialog({ open, onClose, templateId, hasPublished, onRestored }:
   };
   return (
     <Modal isOpen={open} onClose={onClose} title="Versions" size="md" closeOnEscape>
-      <div className="space-y-3" data-testid="versions-dialog">
-        {versions === null && <p className="text-sm text-slate-500">Loading…</p>}
-        {versions?.length === 0 && <p className="text-sm text-slate-500">Nothing published yet.</p>}
-        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
-          {versions?.map((v) => (
-            <li key={v.versionId} className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-800">Version {v.versionNo}</div>
-                <div className="truncate text-xs text-slate-500">
-                  {new Date(v.publishedAt).toLocaleString()}
-                  {v.publishedBy ? ` · ${v.publishedBy}` : ''}
-                  {v.note ? ` · ${v.note}` : ''}
+      <ModalBody>
+        <div className="space-y-3" data-testid="versions-dialog">
+          {versions === null && <p className="text-sm text-slate-500">Loading…</p>}
+          {versions?.length === 0 && <p className="text-sm text-slate-500">Nothing published yet.</p>}
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
+            {versions?.map((v) => (
+              <li key={v.versionId} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-800">Version {v.versionNo}</div>
+                  <div className="truncate text-xs text-slate-500">
+                    {new Date(v.publishedAt).toLocaleString()}
+                    {v.publishedBy ? ` · ${v.publishedBy}` : ''}
+                    {v.note ? ` · ${v.note}` : ''}
+                  </div>
                 </div>
-              </div>
-              <Button variant="secondary" className="!py-1 !text-xs" loading={busy === v.versionId} onClick={() => askRestore(v)}>
-                Restore to draft
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
-        {hasPublished && (
-          <button type="button" onClick={askDiscard} className="text-xs font-semibold text-rose-600" disabled={busy === 'discard'}>
-            Discard unpublished changes
-          </button>
-        )}
-      </div>
+                <Button variant="secondary" className="!py-1 !text-xs" loading={busy === v.versionId} onClick={() => askRestore(v)}>
+                  Restore to draft
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+          {hasPublished && (
+            <button type="button" onClick={askDiscard} className="text-xs font-semibold text-rose-600" disabled={busy === 'discard'}>
+              Discard unpublished changes
+            </button>
+          )}
+        </div>
+      </ModalBody>
     </Modal>
   );
 }
