@@ -230,7 +230,7 @@ test('rules: rating scale, mark display tester and a required extra field', asyn
 test('previews a real student and the server PDF matches the editor', async ({ page }) => {
   await page.goto(`/admin-panel/report-templates/${templateId}`);
   await expect(page.getByTestId('page-count')).toHaveText(/pages/);
-  await page.getByTestId('preview-picker').selectOption('__pick');
+  await page.getByTestId('pick-real-student').click();
   await page.getByTestId('picker-grade-SK').click();
   const student = page.getByTestId('picker-student').first();
   const name = (await student.locator('span').first().innerText()).trim();
