@@ -1,5 +1,5 @@
-// src/components/progress-report/roster/RosterRowMenu.tsx
-// The ⋯ menu on a progress reports row: the less frequent actions (download,
+// src/components/reports/roster/RosterRowMenu.tsx
+// The ⋯ menu on a report roster row: the less frequent actions (download,
 // email again, regenerate, delete). It renders in a body portal so the list
 // never clips it, flips up near the bottom of the window, and takes arrow
 // keys and Escape like the Student accounts menu.

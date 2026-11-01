@@ -8,7 +8,8 @@ import type {
   BulkFeedbackResponse,
   ReportCardBulkGenerateRequest,
   ReportCardBulkGenerateResponse,
-  ReportCardStatusResponse
+  ReportCardStatusResponse,
+  ReportCardCommentsStatusResponse
 } from './types/reportCard';
 
 /**
@@ -116,6 +117,15 @@ export const getGeneratedReportCardsByStudentId = async (
   return apiClient<ReportCardStatusResponse>(
     `/report-cards/view/student?studentId=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`
   );
+};
+
+/**
+ * GET /report-cards/comments-status?term=...
+ * → For each grade 1-8 student with a class in the term, how many of those
+ *   classes have their report card comments in, and which don't.
+ */
+export const getReportCardCommentsStatus = async (term: string): Promise<ReportCardCommentsStatusResponse> => {
+  return apiClient<ReportCardCommentsStatusResponse>(`/report-cards/comments-status?term=${encodeURIComponent(term)}`);
 };
 
 export const getSignedReportCardUrl = async (filePath: string): Promise<string | null> => {

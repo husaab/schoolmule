@@ -1,14 +1,15 @@
-// src/lib/progressReportRoster.ts
-// The progress reports page lists every student once for the chosen term:
-// their report, if one was generated, and whether it went to the family. This
-// file turns the students list and the term's report rows into that roster,
-// and owns its filters and counts, so the web page and the app read the same
-// statuses. Platform-neutral: the app copies it verbatim.
+// src/lib/reportRoster.ts
+// The progress reports and report cards pages list every student once for
+// the chosen term: their report, if one was generated, and whether it went to
+// the family. This file turns the students list and the term's report rows
+// into that roster, and owns its filters and counts, so both pages and the
+// app read the same statuses. Report cards also show whose teacher comments
+// are in (`CommentsStatus`). Platform-neutral: the app copies it verbatim.
 
 import { getGradeNumericValue } from '@/lib/schoolUtils'
 
-/** A report row as GET /progress-reports/reports/term/:term/school/:school returns it (snake_case; camelCase tolerated). */
-export interface RawProgressReport {
+/** A report row as GET /progress-reports/reports/term/:term/school/:school and GET /report-cards/view return it (snake_case; camelCase tolerated). */
+export interface RawReport {
   student_id?: string
   studentId?: string
   term?: string
@@ -25,8 +26,8 @@ export interface RawProgressReport {
   emailSentAt?: string | null
 }
 
-/** One generated progress report PDF. `filePath` is the key every download, view and delete call takes. */
-export interface ProgressReportFile {
+/** One generated report PDF. `filePath` is the key every download, view and delete call takes. */
+export interface ReportFile {
   studentId: string
   studentName: string
   grade: string
@@ -53,7 +54,7 @@ export interface RosterRow<S> {
   grade: string
   /** Null for a report whose student is no longer on the list; it can still be viewed or deleted. */
   student: S | null
-  report: ProgressReportFile | null
+  report: ReportFile | null
   status: RosterStatus
 }
 
@@ -72,7 +73,7 @@ export const isStatusFilter = (value: string): value is StatusFilter => STATUS_F
 
 const gradeKey = (grade: unknown): string => (grade === null || grade === undefined || grade === '' ? '-' : String(grade))
 
-export const normalizeProgressReport = (r: RawProgressReport): ProgressReportFile => ({
+export const normalizeReport = (r: RawReport): ReportFile => ({
   studentId: r.student_id || r.studentId || '',
   studentName: r.student_name || r.studentName || '',
   grade: gradeKey(r.grade),
@@ -83,7 +84,7 @@ export const normalizeProgressReport = (r: RawProgressReport): ProgressReportFil
   emailSentAt: r.email_sent_at || r.emailSentAt || null,
 })
 
-export function reportStatus(report: ProgressReportFile | null): RosterStatus {
+export function reportStatus(report: ReportFile | null): RosterStatus {
   if (!report) return 'none'
   if (!report.emailSent) return 'ready'
   const generated = report.generatedAt ? Date.parse(report.generatedAt) : NaN
@@ -99,7 +100,7 @@ const byGradeThenName = <T extends { grade: string; name: string }>(a: T, b: T) 
 /** Every student once, with their report for the term; grades in school order, names A–Z inside. */
 export function buildRoster<S extends { studentId: string; name: string; grade?: unknown }>(
   students: S[],
-  reports: ProgressReportFile[],
+  reports: ReportFile[],
 ): RosterRow<S>[] {
   const reportFor = new Map(reports.map((r) => [r.studentId, r]))
   const rows: RosterRow<S>[] = students.map((s) => {
@@ -134,7 +135,7 @@ export function filterRoster<R extends { grade: string; name: string; status: Ro
   return rows.filter((r) => inGrades(r, grades) && matchesStatus(r, status) && (!needle || r.name.toLowerCase().includes(needle)))
 }
 
-export interface ProgressCounts {
+export interface RosterCounts {
   total: number
   /** Has a report (ready + emailed + updated). */
   generated: number
@@ -145,7 +146,7 @@ export interface ProgressCounts {
   updated: number
 }
 
-export function rosterCounts(rows: { status: RosterStatus }[]): ProgressCounts {
+export function rosterCounts(rows: { status: RosterStatus }[]): RosterCounts {
   const c = { total: rows.length, generated: 0, emailed: 0, ready: 0, none: 0, updated: 0 }
   for (const r of rows) {
     if (r.status === 'none') c.none += 1
@@ -160,7 +161,7 @@ export function rosterCounts(rows: { status: RosterStatus }[]): ProgressCounts {
 }
 
 /** Counts per grade, grades in school order ('-' last). */
-export function gradeBreakdown(rows: { grade: string; status: RosterStatus }[]): { grade: string; counts: ProgressCounts }[] {
+export function gradeBreakdown(rows: { grade: string; status: RosterStatus }[]): { grade: string; counts: RosterCounts }[] {
   const groups = new Map<string, { status: RosterStatus }[]>()
   for (const r of rows) {
     if (!groups.has(r.grade)) groups.set(r.grade, [])
@@ -194,7 +195,7 @@ export function shortDate(iso: string | null | undefined): string {
 }
 
 /** The Report column: "Not generated", "Generated Oct 12" or "Updated Oct 20". */
-export function reportLine(row: { status: RosterStatus; report: ProgressReportFile | null }): string {
+export function reportLine(row: { status: RosterStatus; report: ReportFile | null }): string {
   if (!row.report) return 'Not generated'
   const date = shortDate(row.report.generatedAt)
   const verb = row.status === 'updated' ? 'Updated' : 'Generated'
@@ -202,7 +203,7 @@ export function reportLine(row: { status: RosterStatus; report: ProgressReportFi
 }
 
 /** The family-email line for a report that was sent: "Emailed Oct 14", plus ", before the update" when regenerated since. */
-export function emailedLine(row: { status: RosterStatus; report: ProgressReportFile | null }): string {
+export function emailedLine(row: { status: RosterStatus; report: ReportFile | null }): string {
   const date = shortDate(row.report?.emailSentAt)
   const base = date ? `Emailed ${date}` : 'Emailed'
   return row.status === 'updated' ? `${base}, before the update` : base
@@ -236,4 +237,33 @@ export function generateErrorText(error: string, term: string): string {
 /** A date as YYYY-MM-DD in the device's own time zone (the default report date). */
 export function localDateISO(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * GET /report-cards/comments-status: for a grade 1-8 student with a class in
+ * the term, how many of those classes have work habits, behaviour and a
+ * comment entered, and which classes don't (with their teacher). JK and SK
+ * students aren't listed (their cards have no class comments).
+ */
+export interface CommentsStatus {
+  studentId: string
+  total: number
+  complete: number
+  missing: { classId: string; subject: string; teacherName: string | null }[]
+}
+
+export const commentsMissing = (status: CommentsStatus | null | undefined): boolean => !!status && status.complete < status.total
+
+/** The comments column: "All 8 in", "6 of 8 classes"; '' when there is nothing to count. */
+export function commentsLine(status: CommentsStatus | null | undefined): string {
+  if (!status || status.total === 0) return ''
+  if (status.complete === status.total) return status.total === 1 ? 'In' : `All ${status.total} in`
+  return `${status.complete} of ${status.total} class${status.total === 1 ? '' : 'es'}`
+}
+
+/** "Math, Science and Art": the classes still missing comments. */
+export function missingSubjects(status: CommentsStatus | null | undefined): string {
+  const subjects = (status?.missing ?? []).map((m) => m.subject || 'A class')
+  if (subjects.length <= 1) return subjects.join('')
+  return `${subjects.slice(0, -1).join(', ')} and ${subjects[subjects.length - 1]}`
 }

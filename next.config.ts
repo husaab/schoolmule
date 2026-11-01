@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       { source: '/book-a-demo', destination: '/demo', permanent: true },
       { source: '/for', destination: '/product', permanent: false },
       { source: '/islamic-schools', destination: '/for/islamic-schools', permanent: true },
+      // Report cards' Generate and View & Download pages are one page now (the query string carries over).
+      { source: '/report-cards/generate', destination: '/report-cards', permanent: true },
+      { source: '/report-cards/view', destination: '/report-cards', permanent: true },
     ];
   },
   // The app-link files phones fetch to let email links open the SchoolMule app

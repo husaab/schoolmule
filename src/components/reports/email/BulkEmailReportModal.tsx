@@ -1,3 +1,7 @@
+// src/components/reports/email/BulkEmailReportModal.tsx
+// Emails a term's reports (progress reports or report cards, per `doc`) to
+// many families at once; each gets their own child's PDF. The send is queued
+// on the server and keeps going if this window closes.
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,8 +13,9 @@ import { sendBulkReportEmails, listReportEmailRuns, generateDefaultSubject, gene
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendBulkReportEmailPayload, BulkReportEmailResponse, BulkReportEmailResult } from '@/services/types/reportEmails';
 import { getGradeNumericValue } from '@/lib/schoolUtils';
+import type { ReportDoc } from '../reportDocs';
 
-interface ProgressReportRecord {
+interface ReportRecord {
   student_id?: string;
   studentId?: string;
   term?: string;
@@ -27,24 +32,26 @@ interface ProgressReportRecord {
   email_sent_by?: string;
 }
 
-interface BulkEmailProgressReportModalProps {
+interface BulkEmailReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
-  availableReports: ProgressReportRecord[];
+  availableReports: ReportRecord[];
   term: string;
   onEmailsSent?: () => void;
   /** Students ticked when the window opens (the page's selection); none when omitted. */
   initialSelectedIds?: string[];
 }
 
-export default function BulkEmailProgressReportModal({
+export default function BulkEmailReportModal({
+  doc,
   isOpen,
   onClose,
   availableReports,
   term,
   onEmailsSent,
   initialSelectedIds
-}: BulkEmailProgressReportModalProps) {
+}: BulkEmailReportModalProps) {
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   // Form state
@@ -79,7 +86,7 @@ export default function BulkEmailProgressReportModal({
     if (!acc[grade]) acc[grade] = [];
     acc[grade].push(report);
     return acc;
-  }, {} as Record<string, ProgressReportRecord[]>);
+  }, {} as Record<string, ReportRecord[]>);
 
   const availableGrades = Object.keys(reportsByGrade).sort((a, b) => {
     if (a === 'Unknown') return 1;
@@ -91,8 +98,8 @@ export default function BulkEmailProgressReportModal({
   useEffect(() => {
     if (isOpen) {
       // Set default subject for bulk emails
-      setCustomHeader(generateDefaultSubject('Progress Reports', 'progress_report', term));
-      setCustomMessage(generateDefaultMessage('progress_report'));
+      setCustomHeader(generateDefaultSubject(doc.emailSubject, doc.type, term));
+      setCustomMessage(generateDefaultMessage(doc.type));
       setCcAddresses([]);
       setCcInput('');
       setResults(null);
@@ -109,7 +116,7 @@ export default function BulkEmailProgressReportModal({
   useEffect(() => {
     if (!isOpen) return undefined;
     let cancelled = false;
-    listReportEmailRuns({ reportType: 'progress_report', term, limit: 1 })
+    listReportEmailRuns({ reportType: doc.type, term, limit: 1 })
       .then((res) => {
         const latest = res.data?.[0];
         if (!cancelled && latest && latest.counts.pending > 0) {
@@ -121,7 +128,7 @@ export default function BulkEmailProgressReportModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, term]);
+  }, [isOpen, term, doc.type]);
 
   const handleCcInputChange = (value: string) => {
     setCcInput(value);
@@ -193,7 +200,7 @@ export default function BulkEmailProgressReportModal({
       setSummary(null);
 
       const payload: SendBulkReportEmailPayload = {
-        reportType: 'progress_report',
+        reportType: doc.type,
         studentIds: selectedStudentIds,
         term,
         bulkConfig: {
@@ -210,7 +217,7 @@ export default function BulkEmailProgressReportModal({
         setRunId(response.runId);
         const { queued, skipped } = response.summary;
         showNotification(
-          `Sending ${queued} progress report email${queued === 1 ? '' : 's'}${skipped ? ` · ${skipped} with nothing to send` : ''}`,
+          `Sending ${queued} ${doc.noun} email${queued === 1 ? '' : 's'}${skipped ? ` · ${skipped} with nothing to send` : ''}`,
           'success'
         );
       } else if (response.status === 'completed') {
@@ -221,9 +228,9 @@ export default function BulkEmailProgressReportModal({
         const failureCount = response.summary.failed;
         
         if (failureCount === 0) {
-          showNotification(`Successfully sent ${successCount} progress report emails`, 'success');
+          showNotification(`Successfully sent ${successCount} ${doc.noun} emails`, 'success');
         } else if (successCount === 0) {
-          showNotification(`Failed to send all ${failureCount} progress report emails`, 'error');
+          showNotification(`Failed to send all ${failureCount} ${doc.noun} emails`, 'error');
         } else {
           showNotification(`Sent ${successCount} emails, ${failureCount} failed`, 'error');
         }
@@ -234,7 +241,7 @@ export default function BulkEmailProgressReportModal({
       }
     } catch (error) {
       console.error('Error sending bulk emails:', error);
-      showNotification('Failed to send bulk progress report emails', 'error');
+      showNotification(`Failed to send bulk ${doc.noun} emails`, 'error');
     } finally {
       setLoading(false);
     }
@@ -252,7 +259,7 @@ export default function BulkEmailProgressReportModal({
     <Modal isOpen={isOpen} onClose={handleClose} closeOnEscape={!loading} style="w-full max-w-3xl">
       <ModalHeader
         title="Email families"
-        subtitle={`${term} progress reports. Each family gets their own child's report.`}
+        subtitle={`${term} ${doc.nouns}. Each family gets their own child's ${doc.noun}.`}
         icon={EnvelopeIcon}
       />
 
@@ -264,7 +271,7 @@ export default function BulkEmailProgressReportModal({
                 A send for {term} is still going. It keeps going if you close this window.
               </p>
             )}
-            <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailsSent} />
+            <ReportEmailProgress runId={runId} reportType={doc.type} onFinished={onEmailsSent} />
           </ModalBody>
           <ModalFooter>
             {resumed && (

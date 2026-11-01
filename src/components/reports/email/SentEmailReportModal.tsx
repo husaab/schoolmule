@@ -1,5 +1,5 @@
-// src/components/progress-report/email/sent/sentEmailProgressReportModal.tsx
-// What went to a family for one progress report: who sent it and when, every
+// src/components/reports/email/SentEmailReportModal.tsx
+// What went to a family for one report (progress report or report card): who sent it and when, every
 // address, the subject and the message. "Email again" re-sends from here (a
 // regenerated report, a new parent address, a family that lost the email).
 'use client';
@@ -11,8 +11,10 @@ import { Button, ModalBody, ModalFooter, ModalHeader, RecordFacts } from '@/comp
 import { getStudentEmailHistory } from '@/services/reportEmailService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { ReportEmailRecord } from '@/services/types/reportEmails';
+import type { ReportDoc } from '../reportDocs';
 
-interface SentEmailProgressReportModalProps {
+interface SentEmailReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
@@ -28,14 +30,15 @@ const sentDate = (iso: string) =>
 const sentDateTime = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-export default function SentEmailProgressReportModal({
+export default function SentEmailReportModal({
+  doc,
   isOpen,
   onClose,
   studentId,
   studentName,
   term,
   onEmailAgain,
-}: SentEmailProgressReportModalProps) {
+}: SentEmailReportModalProps) {
   const [emailRecord, setEmailRecord] = useState<ReportEmailRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const showNotification = useNotificationStore((state) => state.showNotification);
@@ -47,9 +50,9 @@ export default function SentEmailProgressReportModal({
     getStudentEmailHistory(studentId)
       .then((response) => {
         if (cancelled || response.status !== 'success') return;
-        // The newest send of this term's progress report.
+        // The newest send of this term's report.
         const record = response.data.find(
-          (email) => email.reportType.toLowerCase() === 'progress_report' && email.term === term
+          (email) => email.reportType.toLowerCase() === doc.type && email.term === term
         );
         setEmailRecord(record ?? null);
       })
@@ -63,7 +66,7 @@ export default function SentEmailProgressReportModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, studentId, term, showNotification]);
+  }, [isOpen, studentId, term, doc.type, showNotification]);
 
   const title = emailRecord ? `Emailed ${sentDate(emailRecord.sentAt)}` : 'Email details';
 
@@ -71,7 +74,7 @@ export default function SentEmailProgressReportModal({
     <Modal isOpen={isOpen} onClose={onClose} closeOnEscape style="w-full max-w-lg">
       <ModalHeader
         title={title}
-        subtitle={`${studentName}'s ${term} progress report`}
+        subtitle={`${studentName}'s ${term} ${doc.noun}`}
         icon={emailRecord ? CheckIcon : EnvelopeIcon}
         tone={emailRecord ? 'success' : 'brand'}
       />

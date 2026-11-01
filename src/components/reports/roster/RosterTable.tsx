@@ -1,8 +1,9 @@
-// src/components/progress-report/roster/RosterTable.tsx
+// src/components/reports/roster/RosterTable.tsx
 // The term's students, one row each: their report (or that there isn't one
 // yet) and where the family email stands, with the next step for that row
-// right there (Generate, View, Email family). A table from md up, a card per
-// student on a phone. The header row stays under the navbar while scrolling.
+// right there (Generate, View, Email family). Report cards add whose teacher
+// comments are in (`comments`). A table from md up, a card per student on a
+// phone. The header row stays under the navbar while scrolling.
 'use client'
 
 import { useEffect, useRef } from 'react'
@@ -17,9 +18,10 @@ import {
 } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
 import StudentNameLink from '@/components/student/profile/StudentNameLink'
-import { emailedLine, gradeLabel, reportLine, type RosterRow } from '@/lib/progressReportRoster'
+import { commentsLine, commentsMissing, emailedLine, gradeLabel, missingSubjects, reportLine, type CommentsStatus, type RosterRow } from '@/lib/reportRoster'
 import type { StudentPayload } from '@/services/types/student'
 import RosterRowMenu, { type RowMenuItem } from './RosterRowMenu'
+import type { ReportDoc } from '../reportDocs'
 
 export type Row = RosterRow<StudentPayload>
 
@@ -33,6 +35,7 @@ export interface RowActions {
 }
 
 interface Props {
+  doc: ReportDoc
   rows: Row[]
   selectedIds: string[]
   onToggle: (studentId: string) => void
@@ -40,6 +43,8 @@ interface Props {
   actions: RowActions
   /** The row whose PDF link is being fetched for View. */
   openingId?: string | null
+  /** Whose teacher comments are in, by student id (report cards); no column when omitted. */
+  comments?: Map<string, CommentsStatus>
 }
 
 const smallButton =
@@ -97,20 +102,54 @@ function EmailStatus({ row, actions }: { row: Row; actions: RowActions }) {
   )
 }
 
-function menuItems(row: Row, actions: RowActions): RowMenuItem[] {
+/** "All 8 in", or "6 of 8 classes" over the classes still missing (teachers on hover). */
+function CommentsCell({ row, status, prefix = '' }: { row: Row; status: CommentsStatus | undefined; prefix?: string }) {
+  if (!status || status.total === 0) {
+    const kindergarten = row.grade === 'JK' || row.grade === 'SK'
+    return (
+      <span className="text-slate-300" title={kindergarten ? 'JK and SK report cards have no class comments' : 'Not in a class this term'}>
+        —
+      </span>
+    )
+  }
+  if (!commentsMissing(status)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-teal-800">
+        <CheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
+        {prefix}
+        {commentsLine(status)}
+      </span>
+    )
+  }
+  const who = status.missing.map((m) => (m.teacherName ? `${m.subject} (${m.teacherName})` : m.subject)).join(', ')
+  return (
+    <span className="block min-w-0" title={`Missing: ${who}`}>
+      <span className="inline-flex items-center gap-2 text-amber-800">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+        {prefix}
+        {commentsLine(status)}
+      </span>
+      <span className="block max-w-[14rem] truncate text-xs text-slate-500">
+        {status.complete === 0 ? 'None in yet' : `Missing ${missingSubjects(status)}`}
+      </span>
+    </span>
+  )
+}
+
+function menuItems(row: Row, actions: RowActions, doc: ReportDoc): RowMenuItem[] {
   const items: RowMenuItem[] = [{ key: 'download', label: 'Download PDF', icon: ArrowDownTrayIcon, onSelect: () => actions.download(row) }]
   if (row.status === 'emailed' || row.status === 'updated') {
     items.push({ key: 'again', label: 'Email family again', icon: EnvelopeIcon, onSelect: () => actions.emailFamily(row) })
   }
   if (row.student) items.push({ key: 'regenerate', label: 'Regenerate', icon: ArrowPathIcon, onSelect: () => actions.generate([row.studentId]) })
-  items.push({ key: 'delete', label: 'Delete report', icon: TrashIcon, danger: true, separated: true, onSelect: () => actions.remove(row) })
+  items.push({ key: 'delete', label: `Delete ${doc.noun}`, icon: TrashIcon, danger: true, separated: true, onSelect: () => actions.remove(row) })
   return items
 }
 
-function RowButtons({ row, actions, opening }: { row: Row; actions: RowActions; opening: boolean }) {
+function RowButtons({ row, actions, opening, doc }: { row: Row; actions: RowActions; opening: boolean; doc: ReportDoc }) {
   if (!row.report) {
     return row.student ? (
-      <button type="button" onClick={() => actions.generate([row.studentId])} className={generateButton} aria-label={`Generate ${row.name}'s progress report`}>
+      <button type="button" onClick={() => actions.generate([row.studentId])} className={generateButton} aria-label={`Generate ${row.name}'s ${doc.noun}`}>
         <DocumentPlusIcon className="h-4 w-4" aria-hidden="true" />
         Generate
       </button>
@@ -118,7 +157,7 @@ function RowButtons({ row, actions, opening }: { row: Row; actions: RowActions; 
   }
   return (
     <>
-      <button type="button" onClick={() => actions.view(row)} disabled={opening} className={plainButton} aria-label={`View ${row.name}'s progress report`}>
+      <button type="button" onClick={() => actions.view(row)} disabled={opening} className={plainButton} aria-label={`View ${row.name}'s ${doc.noun}`}>
         {opening ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" aria-hidden="true" />
         ) : (
@@ -126,12 +165,13 @@ function RowButtons({ row, actions, opening }: { row: Row; actions: RowActions; 
         )}
         View
       </button>
-      <RosterRowMenu label={`More for ${row.name}`} items={menuItems(row, actions)} />
+      <RosterRowMenu label={`More for ${row.name}`} items={menuItems(row, actions, doc)} />
     </>
   )
 }
 
-export default function RosterTable({ rows, selectedIds, onToggle, onToggleAll, actions, openingId }: Props) {
+export default function RosterTable({ doc, rows, selectedIds, onToggle, onToggleAll, actions, openingId, comments }: Props) {
+  const heading = `${doc.noun[0].toUpperCase()}${doc.noun.slice(1)}`
   const allRef = useRef<HTMLInputElement>(null)
   const selectedShown = rows.filter((r) => selectedIds.includes(r.studentId)).length
   const allSelected = rows.length > 0 && selectedShown === rows.length
@@ -151,7 +191,12 @@ export default function RosterTable({ rows, selectedIds, onToggle, onToggleAll, 
             </th>
             <th scope="col" className="px-3 py-2.5">Student</th>
             <th scope="col" className="px-3 py-2.5">Grade</th>
-            <th scope="col" className="px-3 py-2.5">Report</th>
+            {comments && (
+              <th scope="col" className="px-3 py-2.5">
+                Teacher comments
+              </th>
+            )}
+            <th scope="col" className="px-3 py-2.5">{heading}</th>
             <th scope="col" className="px-3 py-2.5">Family email</th>
             <th scope="col" className="px-3 py-2.5"><span className="sr-only">Actions</span></th>
           </tr>
@@ -171,6 +216,11 @@ export default function RosterTable({ rows, selectedIds, onToggle, onToggleAll, 
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-slate-600">{row.grade === '-' ? '—' : row.grade}</td>
+                {comments && (
+                  <td className="px-3 py-2.5">
+                    <CommentsCell row={row} status={comments.get(row.studentId)} />
+                  </td>
+                )}
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <ReportStatus row={row} />
                 </td>
@@ -179,7 +229,7 @@ export default function RosterTable({ rows, selectedIds, onToggle, onToggleAll, 
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-1.5">
-                    <RowButtons row={row} actions={actions} opening={openingId === row.studentId} />
+                    <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} />
                   </div>
                 </td>
               </tr>
@@ -209,12 +259,17 @@ export default function RosterTable({ rows, selectedIds, onToggle, onToggleAll, 
                   <div className="mt-0.5 text-[13px]">
                     <ReportStatus row={row} />
                   </div>
+                  {comments && comments.get(row.studentId)?.total ? (
+                    <div className="mt-1 text-[13px]">
+                      <CommentsCell row={row} status={comments.get(row.studentId)} prefix="Comments: " />
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 pl-7">
                 <EmailStatus row={row} actions={actions} />
                 <div className="ml-auto flex items-center gap-1.5">
-                  <RowButtons row={row} actions={actions} opening={openingId === row.studentId} />
+                  <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} />
                 </div>
               </div>
             </li>

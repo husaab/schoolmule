@@ -94,3 +94,14 @@ export interface ReportEmailResponse {
     sentAt: string;
   };
 }
+
+/** GET /report-cards/comments-status: grade 1-8 students with a class in the term. */
+export type ReportCardCommentsStatusResponse = {
+  status: 'success';
+  data: {
+    studentId: string;
+    total: number;
+    complete: number;
+    missing: { classId: string; subject: string; teacherName: string | null }[];
+  }[];
+};

@@ -1,26 +1,31 @@
-// src/components/progress-report/roster/ProgressOverview.tsx
-// How far the term's progress reports have got: one bar for the school
+// src/components/reports/roster/TermOverview.tsx
+// How far the term's reports (progress reports or report cards) have got: one bar for the school
 // (emailed, ready to email, not generated) and a tile per grade with its own
 // bar. The tiles are also the grade filter: pick one or more to narrow the
-// list below, pick again to drop one.
+// list below, pick again to drop one. `children` adds a document's own line
+// under the tiles (report cards: whose teacher comments are in).
 'use client'
 
-import { gradeLabel, type ProgressCounts } from '@/lib/progressReportRoster'
+import type { ReactNode } from 'react'
+import { gradeLabel, type RosterCounts } from '@/lib/reportRoster'
 
 interface Props {
   term: string
-  counts: ProgressCounts
-  grades: { grade: string; counts: ProgressCounts }[]
+  /** "report card" */
+  noun: string
+  counts: RosterCounts
+  grades: { grade: string; counts: RosterCounts }[]
   selectedGrades: string[]
   onToggleGrade: (grade: string) => void
   onClearGrades: () => void
   loading?: boolean
+  children?: ReactNode
 }
 
 const pct = (n: number, total: number) => `${total > 0 ? (n / total) * 100 : 0}%`
 
 // Darker = further along: emailed (teal-700), ready to email (cyan-400), not generated (slate-200).
-function SegmentBar({ counts, className }: { counts: ProgressCounts; className: string }) {
+function SegmentBar({ counts, className }: { counts: RosterCounts; className: string }) {
   return (
     <div className={`flex overflow-hidden rounded-full bg-slate-200 ${className}`}>
       <div className="bg-teal-700 transition-[width] duration-500 motion-reduce:transition-none" style={{ width: pct(counts.emailed, counts.total) }} />
@@ -29,7 +34,7 @@ function SegmentBar({ counts, className }: { counts: ProgressCounts; className: 
   )
 }
 
-export default function ProgressOverview({ term, counts, grades, selectedGrades, onToggleGrade, onClearGrades, loading = false }: Props) {
+export default function TermOverview({ term, noun, counts, grades, selectedGrades, onToggleGrade, onClearGrades, loading = false, children }: Props) {
   if (loading) {
     return (
       <section aria-label="Term progress" className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] lg:p-6">
@@ -52,7 +57,7 @@ export default function ProgressOverview({ term, counts, grades, selectedGrades,
         <p className="flex items-baseline gap-2.5">
           <span className="font-display text-3xl font-semibold tabular-nums text-slate-900">{counts.generated}</span>
           <span className="text-[15px] text-slate-600">
-            of {counts.total} {counts.total === 1 ? 'student has' : 'students have'} a {term} report
+            of {counts.total} {counts.total === 1 ? 'student has' : 'students have'} a {term} {noun}
           </span>
         </p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-slate-600">
@@ -115,6 +120,7 @@ export default function ProgressOverview({ term, counts, grades, selectedGrades,
           </p>
         </>
       )}
+      {children}
     </section>
   )
 }

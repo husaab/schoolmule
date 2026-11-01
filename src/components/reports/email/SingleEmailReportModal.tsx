@@ -1,3 +1,5 @@
+// src/components/reports/email/SingleEmailReportModal.tsx
+// Emails one student's report (progress report or report card, per `doc`) to their family.
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,8 +12,10 @@ import { getStudentById } from '@/services/studentService';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import type { SendReportEmailPayload } from '@/services/types/reportEmails';
 import type { StudentPayload } from '@/services/types/student';
+import type { ReportDoc } from '../reportDocs';
 
-interface SingleEmailProgressReportModalProps {
+interface SingleEmailReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
   studentId: string;
@@ -20,14 +24,15 @@ interface SingleEmailProgressReportModalProps {
   onEmailSent?: () => void;
 }
 
-export default function SingleEmailProgressReportModal({
+export default function SingleEmailReportModal({
+  doc,
   isOpen,
   onClose,
   studentId,
   studentName,
   term,
   onEmailSent
-}: SingleEmailProgressReportModalProps) {
+}: SingleEmailReportModalProps) {
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   // Form state
@@ -75,10 +80,10 @@ export default function SingleEmailProgressReportModal({
         setEmailInput(parentEmails.join(', '));
         
         // Set default subject
-        setCustomHeader(generateDefaultSubject(studentName, 'progress_report', term));
+        setCustomHeader(generateDefaultSubject(studentName, doc.type, term));
         
         // Set default message
-        setCustomMessage(generateDefaultMessage('progress_report'));
+        setCustomMessage(generateDefaultMessage(doc.type));
       }
     } catch (error) {
       console.error('Error fetching student data:', error);
@@ -86,7 +91,7 @@ export default function SingleEmailProgressReportModal({
     } finally {
       setFetchingStudent(false);
     }
-  }, [studentId, studentName, term, showNotification]);
+  }, [studentId, studentName, term, doc.type, showNotification]);
 
     // Fetch student data when modal opens
   useEffect(() => {
@@ -100,7 +105,7 @@ export default function SingleEmailProgressReportModal({
     setEmailAddresses([]);
     setCcAddresses([]);
     setCustomHeader('');
-    setCustomMessage(generateDefaultMessage('progress_report'));
+    setCustomMessage(generateDefaultMessage(doc.type));
     setEmailInput('');
     setCcInput('');
     setStudent(null);
@@ -158,7 +163,7 @@ export default function SingleEmailProgressReportModal({
       setLoading(true);
 
       const payload: SendReportEmailPayload = {
-        reportType: 'progress_report',
+        reportType: doc.type,
         studentId,
         term,
         emailAddresses,
@@ -173,7 +178,7 @@ export default function SingleEmailProgressReportModal({
         // Queued: the email goes out from the server's queue at once; this window follows it.
         setRunId(response.runId);
       } else if (response.status === 'success') {
-        showNotification(`Progress report email sent successfully to ${emailAddresses.length} recipient${emailAddresses.length > 1 ? 's' : ''}`, 'success');
+        showNotification(`${doc.noun[0].toUpperCase()}${doc.noun.slice(1)} email sent successfully to ${emailAddresses.length} recipient${emailAddresses.length > 1 ? 's' : ''}`, 'success');
         onEmailSent?.();
         onClose();
       } else {
@@ -181,7 +186,7 @@ export default function SingleEmailProgressReportModal({
       }
     } catch (error) {
       console.error('Error sending email:', error);
-      showNotification('Failed to send progress report email', 'error');
+      showNotification(`Failed to send ${doc.noun} email`, 'error');
     } finally {
       setLoading(false);
     }
@@ -193,14 +198,14 @@ export default function SingleEmailProgressReportModal({
     <Modal isOpen={isOpen} onClose={onClose} closeOnEscape={!loading} style="w-full max-w-xl">
       <ModalHeader
         title={`Email ${studentName}'s family`}
-        subtitle={`${term} progress report, attached as a PDF${student?.grade ? ` · Grade ${student.grade}` : ''}`}
+        subtitle={`${term} ${doc.noun}, attached as a PDF${student?.grade ? ` · Grade ${student.grade}` : ''}`}
         icon={EnvelopeIcon}
       />
 
       {runId ? (
         <>
           <ModalBody>
-            <ReportEmailProgress runId={runId} reportType="progress_report" onFinished={onEmailSent} />
+            <ReportEmailProgress runId={runId} reportType={doc.type} onFinished={onEmailSent} />
           </ModalBody>
           <ModalFooter>
             <Button variant="secondary" onClick={onClose}>Close</Button>

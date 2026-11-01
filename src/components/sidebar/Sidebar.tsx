@@ -153,7 +153,7 @@ const Sidebar = () => {
   const canClassAttendance = allowed('/attendance/class');
   const canReports = allowed('/reports');
   const canStudentViews = allowed('/student-views');
-  const canReportCards = allowed('/report-cards/generate');
+  const canReportCards = allowed('/report-cards');
   const hasToolsBlock = canGeneralAttendance || canClassAttendance || canReports || canStudentViews || canReportCards;
   const adminPanel = adminPanelNavFor(user);
   const showAdminPanel = adminPanel.show;
@@ -163,7 +163,6 @@ const Sidebar = () => {
     (pathname.startsWith('/admin-panel') && !isRegistrationPath) || (showAdminPanel && isSchoolSchedulePath);
 
   const [attendanceOpen, setAttendanceOpen] = useState(isAttendancePath);
-  const [reportCardOpen, setReportCardOpen] = useState(isReportCardPath);
   const [registrationOpen, setRegistrationOpen] = useState(isRegistrationPath);
   const [adminPanelOpen, setAdminPanelOpen] = useState(isAdminPanelPath);
   const [financeOpen, setFinanceOpen] = useState(isFinancePath);
@@ -411,18 +410,9 @@ const Sidebar = () => {
               />
             )}
 
-            {/* Report Cards Dropdown */}
+            {/* Report Cards: generate, view, email and download on one page */}
             {canReportCards && (
-              <DropdownSection
-                label="Report Cards"
-                icon={DocumentChartBarIcon}
-                isOpen={reportCardOpen}
-                onToggle={() => setReportCardOpen(!reportCardOpen)}
-                isActive={isReportCardPath}
-              >
-                <SubNavItem href="/report-cards/generate" label="Generate" icon={PencilSquareIcon} />
-                <SubNavItem href="/report-cards/view" label="View & Download" icon={EyeIcon} />
-              </DropdownSection>
+              <NavItem href="/report-cards" label="Report Cards" icon={DocumentChartBarIcon} isActive={isReportCardPath} />
             )}
 
             {/* Divider */}

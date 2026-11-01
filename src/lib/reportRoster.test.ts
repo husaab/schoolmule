@@ -5,7 +5,7 @@ import {
   filterRoster,
   generateErrorText,
   gradeBreakdown,
-  normalizeProgressReport,
+  normalizeReport,
   parseGenerateResult,
   parseGradeList,
   reportLine,
@@ -13,11 +13,14 @@ import {
   rosterCounts,
   selectionTargets,
   localDateISO,
-} from './progressReportRoster'
+  commentsLine,
+  commentsMissing,
+  missingSubjects,
+} from './reportRoster'
 
 const student = (studentId: string, name: string, grade: string | number | null) => ({ studentId, name, grade })
 const report = (studentId: string, extra: Record<string, unknown> = {}) =>
-  normalizeProgressReport({
+  normalizeReport({
     student_id: studentId,
     student_name: `Report ${studentId}`,
     term: 'Term 1',
@@ -28,10 +31,10 @@ const report = (studentId: string, extra: Record<string, unknown> = {}) =>
     ...extra,
   })
 
-describe('normalizeProgressReport', () => {
+describe('normalizeReport', () => {
   it('reads the snake_case rows the API returns, and camelCase too', () => {
     expect(report('s1')).toMatchObject({ studentId: 's1', filePath: 'pr/s1.pdf', grade: '3', emailSent: false })
-    expect(normalizeProgressReport({ studentId: 's2', filePath: 'x.pdf', emailSent: true, grade: 4 })).toMatchObject({ studentId: 's2', filePath: 'x.pdf', emailSent: true, grade: '4' })
+    expect(normalizeReport({ studentId: 's2', filePath: 'x.pdf', emailSent: true, grade: 4 })).toMatchObject({ studentId: 's2', filePath: 'x.pdf', emailSent: true, grade: '4' })
   })
 })
 
@@ -130,5 +133,32 @@ describe('localDateISO', () => {
   it("writes the device's own calendar date, zero-padded", () => {
     expect(localDateISO(new Date(2026, 10, 4, 23, 30))).toBe('2026-11-04')
     expect(localDateISO(new Date(2027, 0, 31, 0, 5))).toBe('2027-01-31')
+  })
+})
+
+describe('comments status', () => {
+  const status = (complete: number, total: number, subjects: string[] = []) => ({
+    studentId: 's1',
+    complete,
+    total,
+    missing: subjects.map((subject, i) => ({ classId: `c${i}`, subject, teacherName: null })),
+  })
+
+  it('says how many classes have their comments in', () => {
+    expect(commentsLine(status(8, 8))).toBe('All 8 in')
+    expect(commentsLine(status(1, 1))).toBe('In')
+    expect(commentsLine(status(6, 8, ['Math', 'Art']))).toBe('6 of 8 classes')
+    expect(commentsLine(status(0, 1, ['Math']))).toBe('0 of 1 class')
+    expect(commentsLine(null)).toBe('')
+    expect(commentsLine(status(0, 0))).toBe('')
+  })
+
+  it('flags a student missing any and names the classes', () => {
+    expect(commentsMissing(status(6, 8, ['Math', 'Art']))).toBe(true)
+    expect(commentsMissing(status(8, 8))).toBe(false)
+    expect(commentsMissing(undefined)).toBe(false)
+    expect(missingSubjects(status(5, 8, ['Math', 'Science', 'Art']))).toBe('Math, Science and Art')
+    expect(missingSubjects(status(7, 8, ['Math']))).toBe('Math')
+    expect(missingSubjects(null)).toBe('')
   })
 })

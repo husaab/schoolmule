@@ -14,7 +14,7 @@ import { useUserStore } from '@/store/useUserStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { getTermsBySchool } from '@/services/termService'
 import { getProgressReportsByTermAndSchool } from '@/services/progressReportService'
-import { normalizeProgressReport, type RawProgressReport } from '@/lib/progressReportRoster'
+import { normalizeReport, type RawReport } from '@/lib/reportRoster'
 
 const PLANNED = ['Attendance summaries for a class or date range', 'Class overview with the grade spread', 'Grade trends across the year']
 
@@ -42,7 +42,7 @@ function useActiveTermStatus(): TermStatus | null {
         if (!active) return
         const res = await getProgressReportsByTermAndSchool(active.name, school)
         if (cancelled || res.status !== 'success') return
-        const rows = (res.data as unknown as RawProgressReport[]).map(normalizeProgressReport)
+        const rows = (res.data as unknown as RawReport[]).map(normalizeReport)
         setLoaded({ key, status: { term: active.name, generated: rows.length, emailed: rows.filter((r) => r.emailSent).length } })
       } catch {
         // The card reads fine without the line.

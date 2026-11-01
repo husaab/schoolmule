@@ -1,11 +1,13 @@
-// File: src/components/progress-report/download/bulkDownloadProgressReportModal.tsx
+// File: src/components/reports/BulkDownloadReportModal.tsx
+// Downloads a selection of generated reports (progress reports or report
+// cards, per `doc`) as one ZIP.
 'use client';
 
 import React, { useState } from 'react';
 import JSZip from 'jszip';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { getSignedProgressReportUrl } from '@/services/progressReportService';
+import type { ReportDoc } from './reportDocs';
 import {
   Button,
   ConfirmBody,
@@ -15,7 +17,8 @@ import {
 } from '@/components/shared/modalKit';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
-interface BulkDownloadProgressReportModalProps {
+interface BulkDownloadReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
   filePaths: string[];
@@ -27,7 +30,8 @@ interface BulkDownloadProgressReportModalProps {
 // exhaust the browser's connection pool on large selections.
 const BATCH_SIZE = 5;
 
-const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalProps> = ({
+const BulkDownloadReportModal: React.FC<BulkDownloadReportModalProps> = ({
+  doc,
   isOpen,
   onClose,
   filePaths,
@@ -41,7 +45,7 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
   const [failedCount, setFailedCount] = useState(0);
 
   const count = filePaths.length;
-  const noun = `progress report${count !== 1 ? 's' : ''}`;
+  const noun = count !== 1 ? doc.nouns : doc.noun;
 
   const handleDownload = async () => {
     if (count === 0) return;
@@ -55,10 +59,10 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
     let failed = 0;
     let done = 0;
 
-    // Ensure each entry has a unique name inside the zip (defensive: progress
-    // report file names are unique per term in practice).
+    // Ensure each entry has a unique name inside the zip (defensive: report
+    // file names are unique per term in practice).
     const uniqueName = (filePath: string): string => {
-      const base = filePath.split('/').pop() || 'progress-report.pdf';
+      const base = filePath.split('/').pop() || `${doc.fileStem}.pdf`;
       if (!usedNames.has(base)) {
         usedNames.add(base);
         return base;
@@ -78,7 +82,7 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
 
     const fetchOne = async (filePath: string) => {
       try {
-        const url = await getSignedProgressReportUrl(filePath);
+        const url = await doc.signedUrl(filePath);
         if (!url) throw new Error('No signed URL');
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -87,7 +91,7 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
       } catch (err) {
         failed += 1;
         setFailedCount(failed);
-        console.error(`Failed to fetch progress report: ${filePath}`, err);
+        console.error(`Failed to fetch ${doc.noun}: ${filePath}`, err);
       } finally {
         done += 1;
         setProgress(done);
@@ -102,17 +106,17 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
 
       const succeeded = count - failed;
       if (succeeded === 0) {
-        showNotification('Failed to download progress reports', 'error');
+        showNotification(`Failed to download ${doc.nouns}`, 'error');
         return;
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const blobUrl = window.URL.createObjectURL(zipBlob);
-      const safeTerm = (term || 'progress-reports').replace(/\s+/g, '_');
+      const safeTerm = (term || doc.nouns).replace(/\s+/g, '_');
 
       const anchor = document.createElement('a');
       anchor.href = blobUrl;
-      anchor.download = `progress-reports-${safeTerm}.zip`;
+      anchor.download = `${doc.fileStem}s-${safeTerm}.zip`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -120,12 +124,12 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
 
       if (failed > 0) {
         showNotification(
-          `Downloaded ${succeeded} progress report${succeeded !== 1 ? 's' : ''}; ${failed} failed`,
+          `Downloaded ${succeeded} ${succeeded !== 1 ? doc.nouns : doc.noun}; ${failed} failed`,
           'error'
         );
       } else {
         showNotification(
-          `Downloaded ${succeeded} progress report${succeeded !== 1 ? 's' : ''}`,
+          `Downloaded ${succeeded} ${succeeded !== 1 ? doc.nouns : doc.noun}`,
           'success'
         );
       }
@@ -133,7 +137,7 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
       onDownloaded?.();
       onClose();
     } catch (err) {
-      showNotification('Error downloading progress reports', 'error');
+      showNotification(`Error downloading ${doc.nouns}`, 'error');
       console.error(err);
     } finally {
       setDownloading(false);
@@ -201,4 +205,4 @@ const BulkDownloadProgressReportModal: React.FC<BulkDownloadProgressReportModalP
   );
 };
 
-export default BulkDownloadProgressReportModal;
+export default BulkDownloadReportModal;

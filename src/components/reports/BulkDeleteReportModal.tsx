@@ -1,10 +1,11 @@
-// File: src/components/progress-report/delete/bulkDeleteProgressReportModal.tsx
+// File: src/components/reports/BulkDeleteReportModal.tsx
+// Deletes a selection of generated reports (progress reports or report cards, per `doc`).
 'use client';
 
 import React, { useState } from 'react';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { deleteBulkProgressReports } from '@/services/progressReportService';
+import type { ReportDoc } from './reportDocs';
 import {
   Button,
   ConfirmBody,
@@ -14,14 +15,16 @@ import {
 } from '@/components/shared/modalKit';
 import { TrashIcon } from '@heroicons/react/24/outline';
 
-interface BulkDeleteProgressReportModalProps {
+interface BulkDeleteReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
   filePaths: string[];
   onDeleted: (filePaths: string[]) => void;
 }
 
-const BulkDeleteProgressReportModal: React.FC<BulkDeleteProgressReportModalProps> = ({
+const BulkDeleteReportModal: React.FC<BulkDeleteReportModalProps> = ({
+  doc,
   isOpen,
   onClose,
   filePaths,
@@ -31,22 +34,22 @@ const BulkDeleteProgressReportModal: React.FC<BulkDeleteProgressReportModalProps
   const [loading, setLoading] = useState(false);
 
   const count = filePaths.length;
-  const noun = `progress report${count !== 1 ? 's' : ''}`;
+  const noun = count !== 1 ? doc.nouns : doc.noun;
 
   const handleDelete = async () => {
     if (count === 0) return;
     try {
       setLoading(true);
-      const res = await deleteBulkProgressReports(filePaths);
+      const res = await doc.removeMany(filePaths);
       if (res.status === 'success') {
-        showNotification(`${count} progress report${count !== 1 ? 's' : ''} deleted`, 'success');
+        showNotification(`${count} ${noun} deleted`, 'success');
         onDeleted(filePaths);
         onClose();
       } else {
-        showNotification('Failed to delete progress reports', 'error');
+        showNotification(`Failed to delete ${doc.nouns}`, 'error');
       }
     } catch (err) {
-      showNotification('Error deleting progress reports', 'error');
+      showNotification(`Error deleting ${doc.nouns}`, 'error');
       console.error(err);
     } finally {
       setLoading(false);
@@ -69,8 +72,8 @@ const BulkDeleteProgressReportModal: React.FC<BulkDeleteProgressReportModalProps
             title: `Deleting these ${noun}:`,
             items: [
               'Removes the generated PDFs from storage',
-              'Removes their entries from the generated progress reports list',
-              'Leaves the saved feedback intact, so you can generate them again',
+              `Removes them from the ${doc.nouns} list`,
+              `Leaves ${doc.keeps} intact, so you can generate them again`,
             ],
           }}
         >
@@ -98,4 +101,4 @@ const BulkDeleteProgressReportModal: React.FC<BulkDeleteProgressReportModalProps
   );
 };
 
-export default BulkDeleteProgressReportModal;
+export default BulkDeleteReportModal;

@@ -1,5 +1,5 @@
-// src/components/progress-report/generate/generateProgressReportModal.tsx
-// Follows one Generate press on the progress reports page: a moving bar while
+// src/components/reports/roster/GenerateResultModal.tsx
+// Follows one Generate press on a report roster (progress reports or report cards): a moving bar while
 // the server builds the PDFs, then who got a report and who was skipped (and
 // why), with a shortcut to email the families whose new report hasn't gone out.
 'use client'
@@ -8,9 +8,11 @@ import { useEffect } from 'react'
 import { CheckIcon, DocumentPlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
-import { generateErrorText, type GenerateOutcome } from '@/lib/progressReportRoster'
+import { generateErrorText, type GenerateOutcome } from '@/lib/reportRoster'
+import type { ReportDoc } from '../reportDocs'
 
 interface Props {
+  doc: ReportDoc
   isOpen: boolean
   onClose: () => void
   running: boolean
@@ -28,7 +30,7 @@ interface Props {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-export default function GenerateProgressReportModal({ isOpen, onClose, running, term, students, outcome, error, emailableIds, onEmailFamilies }: Props) {
+export default function GenerateResultModal({ doc, isOpen, onClose, running, term, students, outcome, error, emailableIds, onEmailFamilies }: Props) {
   // Leaving mid-run loses the result (the server keeps going), so ask first.
   useEffect(() => {
     if (!isOpen || !running) return
@@ -49,12 +51,12 @@ export default function GenerateProgressReportModal({ isOpen, onClose, running, 
   }
 
   const header = running
-    ? { title: `Generating ${plural(total, 'progress report', 'progress reports')}`, subtitle: term, tone: 'brand' as const, icon: DocumentPlusIcon }
+    ? { title: `Generating ${plural(total, doc.noun, doc.nouns)}`, subtitle: term, tone: 'brand' as const, icon: DocumentPlusIcon }
     : error || ok === 0
-      ? { title: 'No reports were generated', subtitle: error ?? term, tone: 'danger' as const, icon: ExclamationTriangleIcon }
+      ? { title: `No ${doc.nouns} were generated`, subtitle: error ?? term, tone: 'danger' as const, icon: ExclamationTriangleIcon }
       : failed.length > 0
-        ? { title: `${ok} of ${total} reports ready`, subtitle: `${term}. ${plural(failed.length, 'student was', 'students were')} skipped.`, tone: 'warning' as const, icon: ExclamationTriangleIcon }
-        : { title: `${plural(ok, 'progress report', 'progress reports')} ready`, subtitle: `${term}. They're in the list now.`, tone: 'success' as const, icon: CheckIcon }
+        ? { title: `${ok} of ${total} ${doc.nouns} ready`, subtitle: `${term}. ${plural(failed.length, 'student was', 'students were')} skipped.`, tone: 'warning' as const, icon: ExclamationTriangleIcon }
+        : { title: `${plural(ok, doc.noun, doc.nouns)} ready`, subtitle: `${term}. They're in the list now.`, tone: 'success' as const, icon: CheckIcon }
 
   return (
     <Modal isOpen={isOpen} onClose={close} closeOnEscape={!running} style="w-full max-w-lg" ariaLabel={header.title}>
@@ -71,7 +73,7 @@ export default function GenerateProgressReportModal({ isOpen, onClose, running, 
               aria-label="Generating"
               className="h-2 w-full rounded-xl bg-[linear-gradient(90deg,#cffafe,#06b6d4,#14b8a6,#cffafe)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite] motion-reduce:animate-none"
             />
-            <p className="text-sm text-slate-500">Keep this tab open until it finishes. A report that already exists for {term} is replaced.</p>
+            <p className="text-sm text-slate-500">Keep this tab open until it finishes. A {doc.noun} that already exists for {term} is replaced.</p>
           </div>
         )}
 

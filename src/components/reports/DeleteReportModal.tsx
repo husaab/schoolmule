@@ -1,10 +1,11 @@
-// File: src/components/report-cards/delete/reportCardDeleteModal.tsx
+// File: src/components/reports/DeleteReportModal.tsx
+// Deletes one student's generated report (a progress report or report card, per `doc`).
 'use client';
 
 import React, { useState } from 'react';
 import Modal from '@/components/shared/modal';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { deleteReportCard } from '@/services/reportCardService';
+import type { ReportDoc } from './reportDocs';
 import {
   Button,
   ConfirmBody,
@@ -15,7 +16,8 @@ import {
 } from '@/components/shared/modalKit';
 import { TrashIcon } from '@heroicons/react/24/outline';
 
-interface DeleteReportCardModalProps {
+interface DeleteReportModalProps {
+  doc: ReportDoc;
   isOpen: boolean;
   onClose: () => void;
   studentName: string;
@@ -23,7 +25,8 @@ interface DeleteReportCardModalProps {
   onDeleted: (filePath: string) => void;
 }
 
-const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
+const DeleteReportModal: React.FC<DeleteReportModalProps> = ({
+  doc,
   isOpen,
   onClose,
   studentName,
@@ -36,16 +39,12 @@ const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const res = await deleteReportCard(filePath);
-      if (res.status === 'success') {
-        showNotification('Report card deleted', 'success');
-        onDeleted(filePath);
-        onClose();
-      } else {
-        showNotification('Failed to delete report card', 'error');
-      }
+      await doc.remove(filePath);
+      showNotification(`${doc.noun[0].toUpperCase()}${doc.noun.slice(1)} deleted`, 'success');
+      onDeleted(filePath);
+      onClose();
     } catch (err) {
-      showNotification('Error deleting report card', 'error');
+      showNotification(`Error deleting ${doc.noun}`, 'error');
       console.error(err);
     } finally {
       setLoading(false);
@@ -57,7 +56,7 @@ const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-md">
       <ModalHeader
-        title="Delete report card"
+        title={`Delete ${doc.noun}`}
         subtitle="This cannot be undone."
         icon={TrashIcon}
         tone="danger"
@@ -67,15 +66,15 @@ const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
         <ConfirmBody
           tone="danger"
           consequences={{
-            title: 'Deleting this report card:',
+            title: `Deleting this ${doc.noun}:`,
             items: [
               'Removes the generated PDF from storage',
-              'Removes its entry from the generated report cards list',
-              'Leaves grades and teacher feedback intact, so you can generate it again',
+              `Removes it from the ${doc.nouns} list`,
+              `Leaves ${doc.keeps} intact, so you can generate it again`,
             ],
           }}
         >
-          <strong className="font-semibold text-slate-900">{studentName}</strong>&apos;s report card
+          <strong className="font-semibold text-slate-900">{studentName}</strong>&apos;s {doc.noun}{' '}
           for this term will be permanently removed.
         </ConfirmBody>
 
@@ -92,11 +91,11 @@ const DeleteReportCardModal: React.FC<DeleteReportCardModalProps> = ({
           Cancel
         </Button>
         <Button variant="danger" onClick={handleDelete} loading={loading}>
-          {loading ? 'Deleting' : 'Delete report card'}
+          {loading ? 'Deleting' : `Delete ${doc.noun}`}
         </Button>
       </ModalFooter>
     </Modal>
   );
 };
 
-export default DeleteReportCardModal;
+export default DeleteReportModal;
