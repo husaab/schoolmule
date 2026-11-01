@@ -36,12 +36,6 @@ async function api(request: APIRequestContext, _page: Page, method: 'GET' | 'POS
   return request.fetch(`${API}${url}`, { method, data, headers: { Authorization: `Bearer ${t}` } });
 }
 
-async function overlayBox(page: Page) {
-  const box = await page.getByTestId('designer-overlay').boundingBox();
-  if (!box) throw new Error('canvas overlay not found');
-  return box;
-}
-
 /** Drag with real pointer events in small steps (so snapping/hover logic runs). Alt held = no snapping. */
 async function drag(page: Page, from: { x: number; y: number }, by: { x: number; y: number }, steps = 12, opts: { noSnap?: boolean } = {}) {
   if (opts.noSnap) await page.keyboard.down('Alt');
@@ -280,6 +274,9 @@ test('assigns the template to SK and the coverage matrix shows it', async ({ pag
 test('a required extra field blocks generation until it is filled in, then the engine prints the report', async ({ page, request }) => {
   const students = await (await api(request, page, 'GET', '/report-templates/preview/students?grade=SK')).json();
   const studentId = students.students[0].studentId;
+  // A value left by an earlier run on the same database would let it through.
+  const cleared = await api(request, page, 'PUT', '/report-templates/field-values', { docType: 'progress_report', term: 'Term 1', studentId, values: { next_year_placement: null } });
+  expect(cleared.status()).toBe(200);
 
   const blocked = await api(request, page, 'POST', '/progress-reports/generate', { studentId, term: 'Term 1' });
   expect(blocked.status()).toBe(422);
