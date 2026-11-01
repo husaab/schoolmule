@@ -15,6 +15,7 @@ import {
   MagnifyingGlassPlusIcon,
   CloudArrowUpIcon,
   ComputerDesktopIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
 import { Button, ModalBody, ModalFooter } from '@/components/shared/modalKit';
@@ -394,19 +395,28 @@ export default function DesignerShell({ templateId }: { templateId: string }) {
                 className="max-w-[210px] rounded-md border-0 bg-white py-0.5 pl-1.5 pr-6 text-xs font-semibold text-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-200"
                 value={preview.kind === 'sample' ? preview.key : '__student'}
                 onChange={(e) => {
-                  if (e.target.value === '__pick') return setPickerOpen(true);
                   if (e.target.value !== '__student') void choosePreview({ kind: 'sample', key: e.target.value as SampleKey });
                 }}
                 data-testid="preview-picker"
               >
-                {SAMPLE_OPTIONS.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
                 {preview.kind === 'student' && <option value="__student">{previewLabel}</option>}
-                <option value="__pick">A real student…</option>
+                <optgroup label="Sample students">
+                  {SAMPLE_OPTIONS.map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors ${preview.kind === 'student' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-indigo-700 hover:bg-indigo-50'}`}
+                title="Preview one of your school's students"
+                data-testid="pick-real-student"
+              >
+                <UserIcon className="h-3.5 w-3.5" /> Real student
+              </button>
             </div>
             <Button variant="secondary" onClick={checkPdf} loading={pdfBusy} className="!py-1.5 !text-xs" data-testid="check-pdf">
               <DocumentMagnifyingGlassIcon className="h-4 w-4" /> Check PDF
