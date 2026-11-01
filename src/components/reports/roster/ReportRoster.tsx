@@ -224,8 +224,9 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   const grades = useMemo(() => gradeBreakdown(roster), [roster])
   const gradeRows = roster.filter((r) => inGrades(r, selectedGrades))
   const missingCommentsIn = (rows: Row[]) => (comments ? rows.filter((r) => commentsMissing(comments.get(r.studentId))) : [])
+  // The comments filter steps aside when the counts couldn't be read (the chip is hidden then too).
   const visible = filterRoster(roster, { grades: selectedGrades, status, q: search }).filter(
-    (r) => !missingCommentsOnly || commentsMissing(comments?.get(r.studentId)),
+    (r) => !missingCommentsOnly || !comments || commentsMissing(comments.get(r.studentId)),
   )
   // Only rows on screen count as selected, so a bulk action never reaches a student a filter
   // (or a row's own change, e.g. it was just emailed) has hidden.
