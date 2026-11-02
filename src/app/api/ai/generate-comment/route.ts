@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
+import { cleanDetails, detailsPromptSection } from '@/lib/reportCardDetails'
 
 // Rating labels for context
 const RATING_LABELS: Record<string, string> = {
@@ -100,6 +101,18 @@ export async function POST(request: NextRequest) {
     // Get grade context if available
     const { gradeInfo, toneGuidance } = getGradeContext(grade, coverage)
 
+    // What the teacher picked about the student (src/lib/reportCardDetails.ts).
+    // Unknown details are dropped; with none and no note the prompt is unchanged.
+    const observations = detailsPromptSection(cleanDetails({ picks: body.details, note: body.note }), subject || 'this class')
+    const observationGuidelines = observations
+      ? `
+- Base the comment on the teacher's observations above. Do not invent specifics (units, projects, events) the teacher did not give.
+- Do not repeat the observations word for word or list them; choose the two or three that matter most and write naturally.
+- Name one strength and one clear next step.
+- If the observations and the academic grade disagree, follow the observations; the grade is context.
+- Do not mention medical, health or family matters, even if the teacher's note does.`
+      : ''
+
     const prompt = `You are a helpful assistant writing report card comments for teachers. Generate a professional, warm, and constructive report card comment for a student.
 
 Student Information:
@@ -108,12 +121,12 @@ Student Information:
 - Term: ${term || 'Current Term'}
 - Work Habits Rating: ${workHabitsLabel}
 - Behavior Rating: ${behaviorLabel}${gradeInfo ? `\n${gradeInfo}` : ''}
-
+${observations ? `\n${observations}\n` : ''}
 ${toneGuidance ? `Tone Guidance:\n${toneGuidance}\n` : ''}
 Guidelines:
 - Write in third person
 ${pronounGuidance(studentName, gender)}
-- Keep the comment between 2-4 sentences
+- Keep the comment between ${observations ? '3-5' : '2-4'} sentences${observationGuidelines}
 - Be specific and encouraging while honest about areas for improvement
 - If ratings are Excellent or Good, focus on strengths and positive contributions
 - If ratings are Satisfactory, acknowledge effort and suggest ways to improve
@@ -143,7 +156,7 @@ Generate only the comment text, no additional formatting or labels.`
             content: prompt,
           },
         ],
-        max_tokens: 200,
+        max_tokens: observations ? 300 : 200,
         temperature: 0.7,
       }),
     })
