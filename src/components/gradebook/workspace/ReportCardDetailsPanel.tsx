@@ -71,7 +71,7 @@ export function ReportCardDetailsPanel({
         {REPORT_CARD_DETAILS.filter((it) => it.group === g).map((it) => {
           const note = caption(it.key)
           return (
-            <div key={it.key} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[9rem_1fr] sm:gap-3">
+            <div key={it.key} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[10rem_1fr] sm:gap-3">
               <div className="pt-1.5 text-sm text-slate-600">
                 {it.label}
                 {note && <span className="block text-xs text-violet-600">{note}</span>}
@@ -95,7 +95,7 @@ export function ReportCardDetailsPanel({
   return (
     <div className="flex flex-col gap-4 border-l-4 border-teal-500 bg-slate-50 px-5 py-4">
       <p className="text-sm text-slate-600">Used only to write the comment. Nothing here prints on the report card.</p>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="flex flex-col gap-4">
         {group('subject', `In ${subject}`)}
         {group('skills', 'Learning skills and work habits')}
       </div>

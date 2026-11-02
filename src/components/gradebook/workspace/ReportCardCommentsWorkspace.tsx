@@ -94,6 +94,10 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
   const [confirmAi, setConfirmAi] = useState<string | null>(null)
   // The AI's last draft per student, this visit: an untouched one is replaced without asking.
   const lastAiDraft = useRef(new Map<string, string>())
+  // The table scrolls sideways on narrow screens; an open Details panel is
+  // pinned to the visible width so its buttons never sit off-screen.
+  const tableScroller = useRef<HTMLDivElement>(null)
+  const [visibleWidth, setVisibleWidth] = useState<number | null>(null)
 
   // Student grades from localStorage (computed in the gradebook by the grade
   // engine). pct is null when nothing has been graded yet — never 0.
@@ -195,6 +199,16 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
   useEffect(() => {
     loadFeedback()
   }, [loadFeedback])
+
+  useEffect(() => {
+    const el = tableScroller.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => setVisibleWidth(el.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadingFeedback])
 
   // The student's entry as saved (what Save All sent for an untouched field).
   const savedEntry = (studentId: string): FeedbackEntry<FeedbackField> =>
@@ -513,7 +527,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                 <Spinner size="md" />
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div ref={tableScroller} className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
@@ -529,7 +543,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                       <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[140px]">
                         Details
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[400px]">
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[340px]">
                         <div className="flex items-center gap-2">
                           <span>Comment</span>
                           <span className="text-xs text-slate-400 font-normal">(AI-assisted)</span>
@@ -722,6 +736,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                             {detailsOpen && (
                               <tr id={`rc-details-${stu.studentId}`}>
                                 <td colSpan={5} className="p-0">
+                                  <div className="sticky left-0" style={visibleWidth ? { width: visibleWidth } : undefined}>
                                   <ReportCardDetailsPanel
                                     studentId={stu.studentId}
                                     subject={classData.subject || 'this class'}
@@ -736,6 +751,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     aiBusy={isGenerating}
                                     onNext={index < sortedStudents.length - 1 ? () => openNextDetails(stu.studentId) : null}
                                   />
+                                  </div>
                                 </td>
                               </tr>
                             )}
