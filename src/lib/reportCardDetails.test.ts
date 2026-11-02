@@ -67,18 +67,23 @@ describe('suggestions', () => {
     expect(suggestAchievement(undefined)).toBeNull()
   })
 
-  it('suggests completion of work from the share of missing assessments', () => {
-    expect(suggestCompletion({ missing: 0, total: 12 })).toBe('consistent')
-    expect(suggestCompletion({ missing: 1, total: 12 })).toBe('usual')
-    expect(suggestCompletion({ missing: 1, total: 10 })).toBe('usual')
-    expect(suggestCompletion({ missing: 2, total: 12 })).toBe('sometimesIncomplete')
-    expect(suggestCompletion({ missing: 0, total: 0 })).toBeNull()
+  it('suggests completion of work from the share of marked work that is missing', () => {
+    expect(suggestCompletion({ missing: 0, assessed: 12 })).toBe('consistent')
+    expect(suggestCompletion({ missing: 1, assessed: 12 })).toBe('usual')
+    expect(suggestCompletion({ missing: 1, assessed: 10 })).toBe('usual')
+    expect(suggestCompletion({ missing: 2, assessed: 12 })).toBe('sometimesIncomplete')
     expect(suggestCompletion(null)).toBeNull()
     expect(suggestCompletion(undefined)).toBeNull()
   })
 
+  it('ignores work not marked yet, and suggests nothing without evidence', () => {
+    // 1 of the 4 marked pieces is missing; 8 more are not marked yet (blank)
+    expect(suggestCompletion({ missing: 1, assessed: 4, total: 12 } as { missing: number; assessed: number })).toBe('sometimesIncomplete')
+    expect(suggestCompletion({ missing: 0, assessed: 0, total: 5 } as { missing: number; assessed: number })).toBeNull()
+  })
+
   it('suggests only those two', () => {
-    expect(detailSuggestions(78.3, { missing: 1, total: 12 })).toEqual({ achievement: 'good', completion: 'usual' })
+    expect(detailSuggestions(78.3, { missing: 1, assessed: 12 })).toEqual({ achievement: 'good', completion: 'usual' })
     expect(detailSuggestions(null, null)).toEqual({})
   })
 })

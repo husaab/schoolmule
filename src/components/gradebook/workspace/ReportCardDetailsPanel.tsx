@@ -19,7 +19,7 @@ import {
 
 interface Coverage {
   missing: number
-  total: number
+  assessed: number
 }
 
 export function ReportCardDetailsPanel({
@@ -34,6 +34,9 @@ export function ReportCardDetailsPanel({
   onWriteWithAi,
   aiDisabled,
   aiBusy,
+  confirming,
+  onConfirmReplace,
+  onCancelReplace,
   onNext,
 }: {
   studentId: string
@@ -47,13 +50,17 @@ export function ReportCardDetailsPanel({
   onWriteWithAi: () => void
   aiDisabled: boolean
   aiBusy: boolean
+  /** The AI draft waits on "Replace" (shown here too: the comment cell is often scrolled out of view). */
+  confirming: boolean
+  onConfirmReplace: () => void
+  onCancelReplace: () => void
   onNext: (() => void) | null
 }) {
   const suggestions = detailSuggestions(pct, coverage)
   const caption = (key: string): string | null => {
     if (details.picks[key] || !suggestions[key]) return null
     if (key === 'achievement' && typeof pct === 'number') return `Suggested from ${pct.toFixed(1)}%`
-    if (key === 'completion' && coverage) return `Suggested: ${coverage.missing} of ${coverage.total} missing`
+    if (key === 'completion' && coverage) return `Suggested: ${coverage.missing} of ${coverage.assessed} missing`
     return null
   }
   const pick = (key: string, value: string) => {
@@ -121,7 +128,26 @@ export function ReportCardDetailsPanel({
           </span>
         </div>
       </div>
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {confirming && (
+          <div className="mr-auto flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-700">Replace your comment with a new AI draft?</span>
+            <button
+              type="button"
+              onClick={onConfirmReplace}
+              className="cursor-pointer rounded-md bg-violet-600 px-2.5 py-1 font-medium text-white hover:bg-violet-700"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={onCancelReplace}
+              className="cursor-pointer rounded-md px-2.5 py-1 font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={onWriteWithAi}

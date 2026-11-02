@@ -177,17 +177,21 @@ export function suggestAchievement(pct: number | null | undefined): string | nul
   return 'needsSignificantSupport'
 }
 
-/** Completion of work from the share of missing assessments (option key), or null with nothing to go on. */
-export function suggestCompletion(coverage: { missing: number; total: number } | null | undefined): string | null {
-  if (!coverage || !(coverage.total > 0)) return null
+/**
+ * Completion of work from the share of marked work that is missing (option
+ * key): `assessed` is graded plus missing, so work not marked yet and excused
+ * work don't count. Null with nothing marked: no evidence, no suggestion.
+ */
+export function suggestCompletion(coverage: { missing: number; assessed: number } | null | undefined): string | null {
+  if (!coverage || !(coverage.assessed > 0)) return null
   if (!(coverage.missing > 0)) return 'consistent'
-  return coverage.missing / coverage.total <= 0.1 ? 'usual' : 'sometimesIncomplete'
+  return coverage.missing / coverage.assessed <= 0.1 ? 'usual' : 'sometimesIncomplete'
 }
 
 /** The two details SchoolMule can suggest from the data. Never saved until the teacher taps them. */
 export function detailSuggestions(
   pct: number | null | undefined,
-  coverage: { missing: number; total: number } | null | undefined,
+  coverage: { missing: number; assessed: number } | null | undefined,
 ): Partial<Record<string, string>> {
   const out: Partial<Record<string, string>> = {}
   const achievement = suggestAchievement(pct)

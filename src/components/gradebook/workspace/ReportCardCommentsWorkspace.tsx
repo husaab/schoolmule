@@ -208,7 +208,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [loadingFeedback])
+  }, [loading, loadingFeedback])
 
   // The student's entry as saved (what Save All sent for an untouched field).
   const savedEntry = (studentId: string): FeedbackEntry<FeedbackField> =>
@@ -238,6 +238,24 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
     if (next) comments.queue(studentId, next.entry, next.saved)
   }
 
+  // Bring a student's row into view below the page's fixed and sticky bars
+  // (the class header and tabs; scroll-margin doesn't reach a table row there).
+  // 'top' puts it just under them (Next student: its Details follow below);
+  // 'ifNeeded' leaves the page alone when the row is already on screen.
+  const showRow = (studentId: string, align: 'top' | 'ifNeeded') =>
+    requestAnimationFrame(() => {
+      const row = document.getElementById(`rc-row-${studentId}`)
+      if (!row) return
+      const bars = Math.max(0, ...Array.from(document.querySelectorAll('nav.fixed, header.sticky'), (el) => el.getBoundingClientRect().bottom))
+      const { top, bottom } = row.getBoundingClientRect()
+      if (align === 'ifNeeded' && top >= bars + 8 && bottom <= window.innerHeight) return
+      window.scrollBy({ top: top - bars - 16, behavior: 'smooth' })
+    })
+
+  // The handlers as of the latest render, for code that resumes after an await
+  const latest = useRef({ getFieldValue, handleFieldChange })
+  latest.current = { getFieldValue, handleFieldChange }
+
   // Save All: send whatever has not saved yet, now
   const handleSaveAll = () => {
     void comments.flush()
@@ -259,6 +277,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
 
   const requestAIComment = async (studentId: string, studentName: string) => {
     setConfirmAi(null)
+    const commentBefore = getFieldValue(studentId, 'comment')
     const workHabits = getFieldValue(studentId, 'workHabits')
     const behavior = getFieldValue(studentId, 'behavior')
 
@@ -296,8 +315,15 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
       const data = await response.json()
 
       if (data.comment) {
+        // The teacher may have picked or typed while the AI wrote: save on top
+        // of what is there now, and never over a comment changed meanwhile.
+        if (latest.current.getFieldValue(studentId, 'comment') !== commentBefore) {
+          showNotification('Your comment changed while the AI was writing, so it was kept.', 'info')
+          return
+        }
         lastAiDraft.current.set(studentId, data.comment)
-        handleFieldChange(studentId, 'comment', data.comment)
+        latest.current.handleFieldChange(studentId, 'comment', data.comment)
+        showRow(studentId, 'ifNeeded')
         showNotification('Comment generated successfully', 'success')
       } else {
         throw new Error('No comment returned')
@@ -345,8 +371,9 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
     const next = sortedStudents[at + 1]
     if (!next) return
     void comments.flush()
+    setConfirmAi(null)
     setOpenDetails(next.studentId)
-    requestAnimationFrame(() => document.getElementById(`rc-row-${next.studentId}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    showRow(next.studentId, 'top')
   }
 
   return (
@@ -578,7 +605,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                             <React.Fragment key={stu.studentId}>
                             <tr
                               id={`rc-row-${stu.studentId}`}
-                              className={`hover:bg-slate-50/50 transition-colors scroll-mt-4 ${
+                              className={`hover:bg-slate-50/50 transition-colors ${
                                 saveFailed ? 'bg-rose-50/40' : hasEdits ? 'bg-amber-50/30' : ''
                               }`}
                             >
@@ -749,6 +776,9 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     onWriteWithAi={() => handleGenerateAIComment(stu.studentId, stu.name)}
                                     aiDisabled={!workHabitsValue || !behaviorValue}
                                     aiBusy={isGenerating}
+                                    confirming={confirmAi === stu.studentId}
+                                    onConfirmReplace={() => void requestAIComment(stu.studentId, stu.name)}
+                                    onCancelReplace={() => setConfirmAi(null)}
                                     onNext={index < sortedStudents.length - 1 ? () => openNextDetails(stu.studentId) : null}
                                   />
                                   </div>
