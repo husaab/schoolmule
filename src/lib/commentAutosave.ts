@@ -6,7 +6,7 @@
 // omitted when nothing is saved), so the bulk endpoints receive the same
 // payloads as before.
 
-export const REPORT_CARD_FIELDS = ['workHabits', 'behavior', 'comment'] as const
+export const REPORT_CARD_FIELDS = ['workHabits', 'behavior', 'comment', 'commentDetails'] as const
 export const PROGRESS_FIELDS = ['coreStandards', 'workHabit', 'behavior', 'comment'] as const
 
 export interface FeedbackIds {

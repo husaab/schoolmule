@@ -11,6 +11,12 @@ import type {
   ReportCardStatusResponse,
   ReportCardCommentsStatusResponse
 } from './types/reportCard';
+import { fromWireDetails, toWireDetails } from '@/lib/reportCardDetails';
+
+// The page keeps a student's comment details as one string so they autosave
+// like the other fields; the server stores the object.
+const withWireDetails = (entry: ReportCardFeedbackPayload) =>
+  entry.commentDetails === undefined ? entry : { ...entry, commentDetails: toWireDetails(entry.commentDetails) };
 
 /**
  * GET /report-cards/feedback?studentId=...&classId=...&term=...
@@ -38,7 +44,7 @@ export const upsertReportCardFeedback = async (
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: payload,
+      body: withWireDetails(payload),
     }
   );
 };
@@ -51,9 +57,11 @@ export const getClassReportCardFeedback = async (
   classId: string,
   term: string
 ): Promise<ClassFeedbackResponse> => {
-  return apiClient<ClassFeedbackResponse>(
+  const res = await apiClient<ClassFeedbackResponse>(
     `/report-cards/feedback/class/${encodeURIComponent(classId)}?term=${encodeURIComponent(term)}`
   );
+  if (!Array.isArray(res?.data)) return res;
+  return { ...res, data: res.data.map((e) => ({ ...e, commentDetails: fromWireDetails(e.commentDetails) })) };
 };
 
 /**
@@ -69,7 +77,7 @@ export const upsertBulkReportCardFeedback = async (
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: { feedbackEntries },
+      body: { feedbackEntries: feedbackEntries.map(withWireDetails) },
       keepalive: opts.keepalive,
     }
   );

@@ -16,6 +16,12 @@ describe('feedbackEntry', () => {
     )
   })
 
+  it('carries the comment details as a fourth report card field', () => {
+    expect(REPORT_CARD_FIELDS).toEqual(['workHabits', 'behavior', 'comment', 'commentDetails'])
+    const details = '{"picks":{"effort":"best"},"note":""}'
+    expect(feedbackEntry(ids, REPORT_CARD_FIELDS, { workHabits: 'G', behavior: null, comment: null, commentDetails: details }).commentDetails).toBe(details)
+  })
+
   it('covers the four progress report fields', () => {
     expect(
       feedbackEntry(ids, PROGRESS_FIELDS, { coreStandards: 'Meeting Common Core Standards', workHabit: null, behavior: 'E', comment: null }),

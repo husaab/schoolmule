@@ -7,6 +7,8 @@ export interface ReportCardFeedbackPayload {
   workHabits?: string
   behavior?: string
   comment?: string
+  /** The page's string form of the comment details (src/lib/reportCardDetails.ts); sent as an object. */
+  commentDetails?: string
   createdAt?: string
 }
 
@@ -24,6 +26,8 @@ export interface ClassFeedbackEntry {
   workHabits: string | null
   behavior: string | null
   comment: string | null
+  /** The page's string form of the comment details (reportCardService converts the stored object). */
+  commentDetails?: string | null
 }
 
 export interface ClassFeedbackResponse {
