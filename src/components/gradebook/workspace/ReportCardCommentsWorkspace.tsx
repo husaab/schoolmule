@@ -6,9 +6,12 @@
 // Ratings and comments autosave (D17, useCommentAutosave): a second after the
 // teacher stops, at once on leaving a field, and on every way out of the tab,
 // with the same bulk payloads Save All sends (Save All is now a manual flush).
+// Each student's Details (src/lib/reportCardDetails.ts) are optional picks
+// that only help the AI write the comment; nothing in them prints. An AI
+// draft asks before replacing a comment the teacher wrote or edited.
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Spinner from '@/components/Spinner'
 
 import { getStudentsInClass } from '@/services/classService'
@@ -35,17 +38,27 @@ import {
   InformationCircleIcon
 } from '@heroicons/react/24/outline'
 import { aiFetch } from '@/services/aiClient'
+import { RatingButtons, type RatingOption } from './RatingButtons'
+import { ReportCardDetailsPanel } from './ReportCardDetailsPanel'
+import {
+  REPORT_CARD_DETAILS,
+  aiDetailsPayload,
+  countDetails,
+  parseDetails,
+  serializeDetails,
+  shouldConfirmAiReplace,
+  type CommentDetails,
+} from '@/lib/reportCardDetails'
 
-// Rating options for Work Habits and Behavior
-const RATING_OPTIONS = [
-  { value: '', label: 'Select rating' },
-  { value: 'E', label: 'E - Excellent' },
-  { value: 'G', label: 'G - Good' },
-  { value: 'S', label: 'S - Satisfactory' },
-  { value: 'N', label: 'N - Needs Improvement' },
+// Rating options for Work Habits and Behavior (one tap each, as on progress comments)
+const RATING_OPTIONS: RatingOption[] = [
+  { value: 'E', label: 'E', title: 'E - Excellent' },
+  { value: 'G', label: 'G', title: 'G - Good' },
+  { value: 'S', label: 'S', title: 'S - Satisfactory' },
+  { value: 'N', label: 'N', title: 'N - Needs Improvement' },
 ]
 
-type FeedbackField = 'workHabits' | 'behavior' | 'comment'
+type FeedbackField = 'workHabits' | 'behavior' | 'comment' | 'commentDetails'
 
 
 interface ReportCardCommentsWorkspaceProps {
@@ -76,6 +89,11 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
   const [feedbackError, setFeedbackError] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
+  // The one student whose Details are open, and the one whose AI draft waits on "Replace".
+  const [openDetails, setOpenDetails] = useState<string | null>(null)
+  const [confirmAi, setConfirmAi] = useState<string | null>(null)
+  // The AI's last draft per student, this visit: an untouched one is replaced without asking.
+  const lastAiDraft = useRef(new Map<string, string>())
 
   // Student grades from localStorage (computed in the gradebook by the grade
   // engine). pct is null when nothing has been graded yet — never 0.
@@ -99,6 +117,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
             workHabits: null,
             behavior: null,
             comment: null,
+            commentDetails: null,
           }
           const next = { ...current }
           for (const field of REPORT_CARD_FIELDS) if (entry[field] !== undefined) next[field] = entry[field] as string
@@ -210,8 +229,22 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
     void comments.flush()
   }
 
-  // Generate AI comment for a student
-  const handleGenerateAIComment = async (studentId: string, studentName: string) => {
+  // A student's details as picked (the field holds their string form)
+  const detailsOf = (studentId: string): CommentDetails => parseDetails(getFieldValue(studentId, 'commentDetails'))
+  const handleDetailsChange = (studentId: string, next: CommentDetails) =>
+    handleFieldChange(studentId, 'commentDetails', serializeDetails(next))
+
+  // AI for a student: asks first when it would replace the teacher's own words
+  const handleGenerateAIComment = (studentId: string, studentName: string) => {
+    if (shouldConfirmAiReplace(getFieldValue(studentId, 'comment'), lastAiDraft.current.get(studentId))) {
+      setConfirmAi(studentId)
+      return
+    }
+    void requestAIComment(studentId, studentName)
+  }
+
+  const requestAIComment = async (studentId: string, studentName: string) => {
+    setConfirmAi(null)
     const workHabits = getFieldValue(studentId, 'workHabits')
     const behavior = getFieldValue(studentId, 'behavior')
 
@@ -239,6 +272,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
         term: selectedTerm,
         grade,
         coverage,
+        ...aiDetailsPayload(detailsOf(studentId)),
       })
 
       if (!response.ok) {
@@ -248,6 +282,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
       const data = await response.json()
 
       if (data.comment) {
+        lastAiDraft.current.set(studentId, data.comment)
         handleFieldChange(studentId, 'comment', data.comment)
         showNotification('Comment generated successfully', 'success')
       } else {
@@ -289,6 +324,16 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
 
   const { completed, total } = calculateProgress()
   const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0
+  const sortedStudents = [...students].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+  // Next student: close this one's Details, open the next one's and bring it into view
+  const openNextDetails = (studentId: string) => {
+    const at = sortedStudents.findIndex((s) => s.studentId === studentId)
+    const next = sortedStudents[at + 1]
+    if (!next) return
+    void comments.flush()
+    setOpenDetails(next.studentId)
+    requestAnimationFrame(() => document.getElementById(`rc-row-${next.studentId}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+  }
 
   return (
     <>
@@ -412,12 +457,12 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                 </h3>
                 <p className="text-sm text-purple-800/70 leading-relaxed max-w-3xl">
                   Click the <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 rounded text-purple-700 font-medium text-xs"><SparklesIcon className="w-3 h-3" />sparkle</span> button next to each comment field to generate personalized feedback.
-                  The AI combines <span className="font-medium text-purple-800">Work Habits</span>, <span className="font-medium text-purple-800">Behavior</span> ratings, and the student&apos;s <span className="font-medium text-purple-800">current grade</span> to craft appropriate comments.
+                  The AI combines <span className="font-medium text-purple-800">Work Habits</span>, <span className="font-medium text-purple-800">Behavior</span> ratings, the <span className="font-medium text-purple-800">details</span> you pick and the student&apos;s <span className="font-medium text-purple-800">current grade</span> to craft appropriate comments.
                 </p>
                 <div className="mt-3 flex items-center gap-4 text-xs text-purple-600/80">
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                    <span>Select both ratings first</span>
+                    <span>Select both ratings first; details are optional</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
@@ -475,11 +520,14 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                       <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[180px]">
                         Student Name
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[160px]">
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
                         Work Habits
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[160px]">
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
                         Behavior
+                      </th>
+                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[140px]">
+                        Details
                       </th>
                       <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[400px]">
                         <div className="flex items-center gap-2">
@@ -493,7 +541,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                   <tbody className="divide-y divide-slate-100">
                     {students.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-12 text-center">
+                        <td colSpan={5} className="px-4 py-12 text-center">
                           <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                             <UserGroupIcon className="h-8 w-8 text-slate-400" />
                           </div>
@@ -502,19 +550,21 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                         </td>
                       </tr>
                     ) : (
-                      students
-                        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
-                        .map((stu) => {
+                      sortedStudents.map((stu, index) => {
                           const hasEdits = comments.entryFor(stu.studentId) !== null
                           const saveFailed = comments.failedKeys.has(stu.studentId)
                           const isGenerating = generatingAI.has(stu.studentId)
                           const workHabitsValue = getFieldValue(stu.studentId, 'workHabits')
                           const behaviorValue = getFieldValue(stu.studentId, 'behavior')
+                          const details = detailsOf(stu.studentId)
+                          const detailsOpen = openDetails === stu.studentId
+                          const editable = feedbackLoaded && Boolean(selectedTerm)
 
                           return (
+                            <React.Fragment key={stu.studentId}>
                             <tr
-                              key={stu.studentId}
-                              className={`hover:bg-slate-50/50 transition-colors ${
+                              id={`rc-row-${stu.studentId}`}
+                              className={`hover:bg-slate-50/50 transition-colors scroll-mt-4 ${
                                 saveFailed ? 'bg-rose-50/40' : hasEdits ? 'bg-amber-50/30' : ''
                               }`}
                             >
@@ -552,44 +602,53 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                 </div>
                               </td>
 
-                              {/* Work Habits Dropdown */}
-                              <td className="px-3 py-2">
-                                <select
+                              {/* Work Habits: one tap */}
+                              <td className="px-3 py-3">
+                                <RatingButtons
+                                  label={`Work Habits for ${stu.name}`}
+                                  options={RATING_OPTIONS}
                                   value={workHabitsValue}
-                                  onChange={(e) => handleFieldChange(stu.studentId, 'workHabits', e.target.value)}
-                                  onBlur={() => void comments.flush()}
-                                  className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent cursor-pointer ${
-                                    isFieldEdited(stu.studentId, 'workHabits')
-                                      ? 'border-amber-300 bg-amber-50/50'
-                                      : 'border-slate-200 hover:border-slate-300'
-                                  }`}
-                                >
-                                  {RATING_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => {
+                                    handleFieldChange(stu.studentId, 'workHabits', v)
+                                    void comments.flush()
+                                  }}
+                                />
                               </td>
 
-                              {/* Behavior Dropdown */}
-                              <td className="px-3 py-2">
-                                <select
+                              {/* Behavior: one tap */}
+                              <td className="px-3 py-3">
+                                <RatingButtons
+                                  label={`Behavior for ${stu.name}`}
+                                  options={RATING_OPTIONS}
                                   value={behaviorValue}
-                                  onChange={(e) => handleFieldChange(stu.studentId, 'behavior', e.target.value)}
-                                  onBlur={() => void comments.flush()}
-                                  className={`w-full px-3 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent cursor-pointer ${
-                                    isFieldEdited(stu.studentId, 'behavior')
-                                      ? 'border-amber-300 bg-amber-50/50'
-                                      : 'border-slate-200 hover:border-slate-300'
+                                  onChange={(v) => {
+                                    handleFieldChange(stu.studentId, 'behavior', v)
+                                    void comments.flush()
+                                  }}
+                                />
+                              </td>
+
+                              {/* Details: optional picks for the AI */}
+                              <td className="px-3 py-3">
+                                <button
+                                  type="button"
+                                  aria-expanded={detailsOpen}
+                                  aria-controls={`rc-details-${stu.studentId}`}
+                                  onClick={() => {
+                                    if (detailsOpen) void comments.flush()
+                                    setOpenDetails(detailsOpen ? null : stu.studentId)
+                                  }}
+                                  className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                                    detailsOpen
+                                      ? 'border-teal-400 bg-teal-50 text-teal-800'
+                                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                                   }`}
                                 >
-                                  {RATING_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                  Details
+                                  <span className={`tabular-nums ${detailsOpen ? 'text-teal-700' : 'text-slate-400'}`}>
+                                    · {countDetails(details)} of {REPORT_CARD_DETAILS.length}
+                                  </span>
+                                </button>
                               </td>
 
                               {/* Comment with AI Generate Button */}
@@ -639,8 +698,48 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     )}
                                   </div>
                                 </div>
+                                {confirmAi === stu.studentId && (
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                                    <span className="text-slate-600">Replace your comment with a new AI draft?</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => void requestAIComment(stu.studentId, stu.name)}
+                                      className="cursor-pointer rounded-md bg-violet-600 px-2 py-1 font-medium text-white hover:bg-violet-700"
+                                    >
+                                      Replace
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmAi(null)}
+                                      className="cursor-pointer rounded-md px-2 py-1 font-medium text-slate-600 hover:bg-slate-100"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                             </tr>
+                            {detailsOpen && (
+                              <tr id={`rc-details-${stu.studentId}`}>
+                                <td colSpan={5} className="p-0">
+                                  <ReportCardDetailsPanel
+                                    studentId={stu.studentId}
+                                    subject={classData.subject || 'this class'}
+                                    details={details}
+                                    pct={studentGrades[stu.studentId]?.pct}
+                                    coverage={studentGrades[stu.studentId]?.coverage}
+                                    disabled={!editable}
+                                    onChange={(next) => handleDetailsChange(stu.studentId, next)}
+                                    onFlush={() => void comments.flush()}
+                                    onWriteWithAi={() => handleGenerateAIComment(stu.studentId, stu.name)}
+                                    aiDisabled={!workHabitsValue || !behaviorValue}
+                                    aiBusy={isGenerating}
+                                    onNext={index < sortedStudents.length - 1 ? () => openNextDetails(stu.studentId) : null}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                            </React.Fragment>
                           )
                         })
                     )}
