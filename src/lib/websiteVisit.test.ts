@@ -5,6 +5,7 @@ import {
   WEBSITE_REDIRECT_SCRIPT,
   VIEW_WEBSITE_HREF,
   VIEW_WEBSITE_PARAM,
+  WATCH_FILM_PARAM,
   TOKEN_KEY,
   USER_STORAGE_KEY,
 } from './websiteVisit'
@@ -167,6 +168,21 @@ describe('WEBSITE_REDIRECT_SCRIPT', () => {
     // Without ?website, or off the website, the address bar is left alone.
     expect(runScript({ path: '/', search: '?utm_source=x', local: signedIn(staff), session: memoryStorage({ 'sm.websiteVisit': '1' }) }).addressBar).toBeNull()
     expect(runScript({ path: '/privacy', search: `?${VIEW_WEBSITE_PARAM}=1`, local: signedIn(staff) }).addressBar).toBeNull()
+  })
+
+  it('lets a film link (?watch) through and leaves it in the address bar for the film', () => {
+    const session = memoryStorage()
+    const run = runScript({ path: '/', search: `?${WATCH_FILM_PARAM}`, local: signedIn(staff), session })
+    expect(run.replacedWith).toBeNull()
+    expect(run.addressBar).toBeNull()
+    // The rest of the tab is a visit, as with ?website.
+    expect(runScript({ path: '/about', local: signedIn(staff), session }).replacedWith).toBeNull()
+    // Signed out, nothing changes.
+    expect(runScript({ path: '/', search: `?${WATCH_FILM_PARAM}` }).addressBar).toBeNull()
+    // With both, only ?website comes off.
+    expect(runScript({ path: '/', search: `?${VIEW_WEBSITE_PARAM}=1&${WATCH_FILM_PARAM}`, local: signedIn(staff) }).addressBar).toBe(`/?${WATCH_FILM_PARAM}=`)
+    // Blocked storage still honours it.
+    expect(runScript({ path: '/', search: `?${WATCH_FILM_PARAM}`, local: signedIn(staff), session: throwingStorage() }).replacedWith).toBeNull()
   })
 
   it('treats blocked storage as "stay", but still honours ?website', () => {

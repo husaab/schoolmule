@@ -3,16 +3,20 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Modal from '@/components/shared/modal'
 import { CHAPTERS, DEMO_MINUTES, FILM, formatTime } from '@/lib/marketing/site'
-import { announceFilmState, OPEN_FILM, trackEvent, type OpenFilmDetail } from './filmEvents'
+import { WATCH_FILM_PARAM } from '@/lib/websiteVisit'
+import { announceFilmState, openFilm, OPEN_FILM, trackEvent, type OpenFilmDetail } from './filmEvents'
 import { ArrowDisc, buttonStyles } from '../ui'
 
 // The full film with sound, in one modal for the whole site. It opens at the
 // chapter it was asked for, lists the chapters, and ends on "Book a demo".
+// A link to any website page with ?watch opens it as the page loads.
 const CHAPTER_LIST = CHAPTERS.filter((c) => c.key !== 'reply' && c.key !== 'phones')
 
 export default function FilmModalHost() {
   const [open, setOpen] = useState(false)
   const [ended, setEnded] = useState(false)
+  // The browser refused to start the film with sound (no click opened it).
+  const [blocked, setBlocked] = useState(false)
   const [current, setCurrent] = useState(0)
   const start = useRef(0)
   const video = useRef<HTMLVideoElement>(null)
@@ -24,10 +28,12 @@ export default function FilmModalHost() {
       start.current = at
       reported.current = false
       setEnded(false)
+      setBlocked(false)
       setOpen(true)
       trackEvent('film_open', { from, start: at })
     }
     window.addEventListener(OPEN_FILM, onOpen)
+    if (new URLSearchParams(window.location.search).has(WATCH_FILM_PARAM)) openFilm(0, 'watch-link')
     return () => window.removeEventListener(OPEN_FILM, onOpen)
   }, [])
 
@@ -63,8 +69,13 @@ export default function FilmModalHost() {
             controlsList="nodownload noplaybackrate"
             poster={FILM.poster}
             onLoadedMetadata={(e) => {
-              if (start.current > 0) e.currentTarget.currentTime = start.current
+              const v = e.currentTarget
+              if (start.current > 0) v.currentTime = start.current
+              void v.play().catch((err: unknown) => {
+                if (err instanceof DOMException && err.name === 'NotAllowedError') setBlocked(true)
+              })
             }}
+            onPlay={() => setBlocked(false)}
             onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
             onEnded={() => {
               setEnded(true)
@@ -77,6 +88,23 @@ export default function FilmModalHost() {
             <source src={FILM.src720} type="video/mp4" media="(max-width: 767px)" />
             <source src={FILM.src1080} type="video/mp4" />
           </video>
+        )}
+        {blocked && (
+          <button
+            type="button"
+            onClick={() => void video.current?.play().catch(() => {})}
+            className="group absolute inset-0 grid place-items-center focus-visible:outline-none"
+          >
+            <span className="inline-flex items-center gap-3 rounded-full bg-white/95 p-2 pr-6 text-base font-semibold text-ink shadow-[0_8px_24px_-12px_rgba(11,19,36,0.5)] ring-1 ring-ink/5 transition-transform duration-200 ease-film group-hover:-translate-y-0.5 group-focus-visible:ring-4 group-focus-visible:ring-brand/40 group-active:scale-[0.97] sm:text-lg">
+              <span aria-hidden className="grid size-10 place-items-center rounded-full bg-brand-ink text-white sm:size-12">
+                <svg viewBox="0 0 10 12" className="ml-0.5 size-4 fill-current">
+                  <path d="M0 0l10 6-10 6z" />
+                </svg>
+              </span>
+              Play the tour
+              <span className="font-medium text-slate-600">{FILM.length}</span>
+            </span>
+          </button>
         )}
         {ended && (
           <div className="absolute inset-0 grid place-items-center bg-white/90 backdrop-blur-sm">

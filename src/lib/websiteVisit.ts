@@ -3,7 +3,8 @@
 // bookmark, a link from elsewhere) belongs in the app, so the website pages
 // (WEBSITE_PATHS) send them to their home page. One who chooses the website
 // from inside the app (the sidebar's "SchoolMule website", which opens
-// VIEW_WEBSITE_HREF in a new tab) browses it freely for the rest of that tab.
+// VIEW_WEBSITE_HREF in a new tab), or follows a film link (?watch), browses
+// it freely for the rest of that tab.
 //
 // Two places apply the rule, and both read it from here:
 //   - WEBSITE_REDIRECT_SCRIPT runs in the root layout's <head>, so a fresh
@@ -20,6 +21,11 @@ import { WEBSITE_PATHS, resolveRedirect, roleHome, type RouteState } from '@/lib
 // stored the visit, the script takes it back off the address bar.
 export const VIEW_WEBSITE_PARAM = 'website'
 export const VIEW_WEBSITE_HREF = `/?${VIEW_WEBSITE_PARAM}=1`
+
+// ?watch (schoolmule.ca/?watch, the link in sales emails) opens the film as
+// the page loads (FilmModalHost) and starts a visit too, so a signed-in reader
+// still gets the film. It stays in the URL: the film opens after Next starts.
+export const WATCH_FILM_PARAM = 'watch'
 
 // Per tab, so the visit ends with the tab and the app's own tab never has one.
 const VISIT_KEY = 'sm.websiteVisit'
@@ -64,6 +70,7 @@ export const websiteRedirect = (path: string, state: RouteState, visiting: boole
 const scriptConfig = {
   paths: WEBSITE_PATHS,
   param: VIEW_WEBSITE_PARAM,
+  watch: WATCH_FILM_PARAM,
   visitKey: VISIT_KEY,
   tokenKey: TOKEN_KEY,
   userKey: USER_STORAGE_KEY,
@@ -81,8 +88,8 @@ const scriptConfig = {
 // blocked the param stays: it is then the only record of the visit.
 export const WEBSITE_REDIRECT_SCRIPT = `(function(c){
 if(c.paths.indexOf(location.pathname)<0)return;
-var q=new URLSearchParams(location.search),visiting=q.has(c.param);
-try{if(visiting){sessionStorage.setItem(c.visitKey,'1');q.delete(c.param);q=q.toString();history.replaceState(history.state,'',location.pathname+(q?'?'+q:'')+location.hash)}else visiting=sessionStorage.getItem(c.visitKey)==='1'}catch(e){}
+var q=new URLSearchParams(location.search),visiting=q.has(c.param)||q.has(c.watch);
+try{if(visiting){sessionStorage.setItem(c.visitKey,'1');if(q.has(c.param)){q.delete(c.param);q=q.toString();history.replaceState(history.state,'',location.pathname+(q?'?'+q:'')+location.hash)}}else visiting=sessionStorage.getItem(c.visitKey)==='1'}catch(e){}
 if(visiting)return;
 try{
 if(!localStorage.getItem(c.tokenKey))return;
