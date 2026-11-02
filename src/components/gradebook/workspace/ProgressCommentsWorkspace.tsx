@@ -43,7 +43,6 @@ import type { ClassPayload } from '@/services/types/class'
 import type { StudentPayload } from '@/services/types/student'
 import { gradeBand, readStoredGrades, type StoredGrades } from '@/lib/bulkFeedbackGrades'
 import { formatCoverage } from '@/lib/gradeEngine'
-import type { GradesSub } from '@/lib/classroomRoutes'
 
 import {
   UserGroupIcon,
@@ -76,11 +75,9 @@ type ProgressField = 'coreStandards' | 'workHabit' | 'behavior' | 'comment'
 interface ProgressCommentsWorkspaceProps {
   classId: string
   classData: ClassPayload
-  /** Opens another Grades sub-tab (the "report card" link). */
-  onOpenSub?: (sub: GradesSub) => void
 }
 
-export default function ProgressCommentsWorkspace({ classId, classData, onOpenSub }: ProgressCommentsWorkspaceProps) {
+export default function ProgressCommentsWorkspace({ classId, classData }: ProgressCommentsWorkspaceProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -361,9 +358,6 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
       })
   }
 
-  // Open the report card comments (the Grades tab checks for unsaved changes)
-  const navigateToReportCardFeedback = () => onOpenSub?.('report-comments')
-
   // Loading state
   if (loading) {
     return (
@@ -503,29 +497,6 @@ export default function ProgressCommentsWorkspace({ classId, classData, onOpenSu
                   className="h-full bg-white transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* Destination Disclaimer Banner */}
-          <div className="mb-6 rounded-2xl bg-emerald-50 border border-emerald-200 p-5">
-            <div className="flex items-start gap-3">
-              <InformationCircleIcon className="h-6 w-6 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-emerald-900">
-                  This page is for progress reports — not report cards
-                </h3>
-                <p className="text-sm text-emerald-800/80 mt-1">
-                  Everything entered here appears on students&apos; <span className="font-semibold">progress report</span> PDFs.
-                  Looking to enter report card feedback instead?
-                </p>
-                <button
-                  onClick={navigateToReportCardFeedback}
-                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-900 cursor-pointer"
-                >
-                  Go to Report card comments
-                  <span aria-hidden>&rarr;</span>
-                </button>
               </div>
             </div>
           </div>

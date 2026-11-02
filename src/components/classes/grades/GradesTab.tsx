@@ -240,10 +240,10 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
         )}
         {sub === 'setup' && <AssessmentsSection classId={classId} openAdd={addRequested} onAddOpened={clearAdd} />}
         {sub === 'report-comments' && (
-          <ReportCardCommentsWorkspace classId={classId} classData={classData} onOpenSub={selectSub} />
+          <ReportCardCommentsWorkspace classId={classId} classData={classData} />
         )}
         {sub === 'progress-comments' && (
-          <ProgressCommentsWorkspace classId={classId} classData={classData} onOpenSub={selectSub} />
+          <ProgressCommentsWorkspace classId={classId} classData={classData} />
         )}
       </div>
 
