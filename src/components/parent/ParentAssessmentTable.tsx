@@ -107,8 +107,6 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
               score.weightPoints != null ? `Weight ${score.weightPoints}` : null,
             ]}
           />
-          {score.modified && score.modifiedLabel && <p className="mt-0.5 text-xs text-violet-700">{score.modifiedLabel}</p>}
-          {score.modified && <ModifiedExplainer firstName={firstName} />}
           <CommentChip comment={score.parentComment} />
         </div>
 
@@ -142,6 +140,10 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
           )}
         </div>
       </div>
+
+      {/* Full width under the row: beside the mark, a phone leaves it a sliver. */}
+      {score.modified && score.modifiedLabel && <p className="mt-1 text-xs text-violet-700">{score.modifiedLabel}</p>}
+      {score.modified && <ModifiedExplainer firstName={firstName} />}
 
       {ask && askOpen && (
         <InlineAskComposer
