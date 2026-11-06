@@ -619,6 +619,9 @@ export interface TermResult {
   workHabits: string;
   behaviour: string;
   comment: string;
+  /** This mark includes modified assessments: it prints an asterisk. */
+  modified?: boolean;
+  modifiedLabels?: string[];
 }
 
 export interface SubjectRow {
@@ -627,6 +630,9 @@ export interface SubjectRow {
   teacher: string;
   /** This term. */
   mark: MarkValue;
+  /** `mark` includes modified assessments: it prints an asterisk, and the card a line saying so. */
+  modified?: boolean;
+  modifiedLabels?: string[];
   workHabits: string;
   behaviour: string;
   coreStandards: string;

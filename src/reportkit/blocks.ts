@@ -1,5 +1,5 @@
 import { evaluateCondition } from './conditions';
-import { formatMark, overallRating } from './format';
+import { formatMark, modifiedNoteText, overallRating } from './format';
 import { builtinImageLabel } from './images';
 import { mergeHtml, type MergeScope } from './merge';
 import { alignClass, barCss, boxCss, colgroup, num, panelCss, px, safeColor, tableCss, textCss } from './style';
@@ -597,6 +597,9 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
       .join(';');
   const cell = (f: ColumnDef, raw: string, extra = '') =>
     `<td class="rk-c" style="${valueCss(f, raw, extra)}"><strong>${escapeHtml(shown(f.key, raw))}</strong></td>`;
+  // A mark that includes modified assessments carries an asterisk; the line under the table says why.
+  const starred = (key: string, raw: string, result: { mark: SubjectRow['mark']; modified?: boolean }) =>
+    key === 'mark' && result.modified && typeof result.mark === 'number' ? `${raw}*` : raw;
   const headTh = (label: string, cls: string, align: 'left' | 'center', own?: ColumnDef['headerAlign']) => {
     const css = [cs.markHead ? barCss({ align, ...cs.markHead }, '', theme) : '', own ? `text-align:${alignName(own)}` : ''].filter(Boolean).join(';');
     return `<th${cls ? ` class="${cls}"` : ''}${css ? ` style="${css}"` : ''}>${escapeHtml(label)}</th>`;
@@ -616,7 +619,7 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
           ? `<td style="${[barCss(cs.termCell, '', theme), bg].filter(Boolean).join(';')}">${escapeHtml(labels[t])}</td>`
           : `<td${bg ? ` style="${bg}"` : ''}><strong>${escapeHtml(labels[t])}</strong></td>`;
         return `<tr${isFinal && !bg ? ' class="rk-stripe"' : ''}>${label}${fields
-          .map((f) => (isFinal && f.key !== 'mark' ? '<td></td>' : cell(f, subjectFieldValue({ ...r, coreStandards: '' }, f.key, ctx), bg)))
+          .map((f) => (isFinal && f.key !== 'mark' ? '<td></td>' : cell(f, starred(f.key, subjectFieldValue({ ...r, coreStandards: '' }, f.key, ctx), r), bg)))
           .join('')}</tr>`;
       })
       .join('');
@@ -629,7 +632,7 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
       : 'padding:5px 10px;border-radius:3px';
     table = `<div style="display:grid;grid-template-columns:repeat(${fields.length},minmax(0,1fr));gap:${gap}px;margin-bottom:${gap}px">${fields
       .map((f) => {
-        const raw = subjectFieldValue(subject, f.key, ctx);
+        const raw = starred(f.key, subjectFieldValue(subject, f.key, ctx), subject);
         return `<div style="text-align:center"><div style="${labelCss};margin-bottom:5px">${escapeHtml(f.label)}</div><div style="${valueCss(
           f,
           raw,
@@ -639,7 +642,7 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
       .join('')}</div>`;
   } else {
     const head = `<tr>${fields.map((f) => headTh(f.label, 'rk-c', 'center', f.headerAlign)).join('')}</tr>`;
-    const body = `<tr>${fields.map((f) => cell(f, subjectFieldValue(subject, f.key, ctx))).join('')}</tr>`;
+    const body = `<tr>${fields.map((f) => cell(f, starred(f.key, subjectFieldValue(subject, f.key, ctx), subject))).join('')}</tr>`;
     table = `${tableOpen('', '', fields.map(() => 1))}<thead>${head}</thead><tbody>${body}</tbody></table>`;
   }
 
@@ -678,7 +681,13 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
         )
       : '';
   const cardCss = cs.radius ? `${look};border-radius:${px(cs.radius, 0, 0, 60)};overflow:hidden` : look;
-  const bodyHtml = tiles ? `<div style="padding:${pad}px">${table}${core}${comment}</div>` : `${table}${core}${comment}`;
+  const hasModified = block.rows === 'terms' ? subject.terms.t1?.modified || subject.terms.t2?.modified : subject.modified;
+  const modifiedLabels = block.rows === 'terms'
+    ? [...(subject.terms.t1?.modifiedLabels ?? []), ...(subject.terms.t2?.modifiedLabels ?? [])]
+    : subject.modifiedLabels ?? [];
+  const noteCss = `padding:7px ${tiles ? 0 : num(cs.labelBar?.paddingX, 15, 0, 60)}px;${rule ? `border-top:1px solid ${rule};` : ''}font-size:12.5px;line-height:1.4;font-style:italic;color:#515b69`;
+  const note = hasModified ? `<div class="rk-card-note" style="${noteCss}">${escapeHtml(modifiedNoteText(modifiedLabels))}</div>` : '';
+  const bodyHtml = tiles ? `<div style="padding:${pad}px">${table}${note}${core}${comment}</div>` : `${table}${note}${core}${comment}`;
   return `<div class="rk-card" style="${cardCss}"><div class="rk-card-head" style="${headBar}">${title}</div>${bodyHtml}</div>`;
 }
 

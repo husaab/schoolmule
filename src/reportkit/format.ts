@@ -58,6 +58,22 @@ export function formatMark(value: MarkValue | undefined, grade: string, rules: M
   return format === 'percent' ? `${pct.toFixed(decimals)}%` : pct.toFixed(decimals);
 }
 
+/**
+ * The line a subject card prints when its mark includes modified assessments.
+ * Repeats are removed ignoring case. One or two labels print; none, or more
+ * than two, stop at the sentence. The backend's utils/modifiedMark.js
+ * modifiedNote does the same for the legacy templates.
+ */
+export function modifiedNoteText(labels: Array<string | null | undefined>): string {
+  const unique = new Map<string, string>();
+  for (const raw of labels) {
+    const label = String(raw ?? '').trim().replace(/\s+/g, ' ');
+    if (label && !unique.has(label.toLowerCase())) unique.set(label.toLowerCase(), label);
+  }
+  const named = unique.size >= 1 && unique.size <= 2;
+  return named ? `* Includes modified assessments: ${[...unique.values()].join('; ')}` : '* Includes modified assessments';
+}
+
 /** E/G/S/N averaged the way the legacy progress report computes "Overall". */
 export function overallRating(workHabits: string, behaviour: string): string {
   const scale: Record<string, number> = { E: 4, G: 3, S: 2, N: 1 };
