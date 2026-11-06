@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto, Outfit } from "next/font/google";
 import "./globals.css";
-import Script from "next/script";
 import { WEBSITE_REDIRECT_SCRIPT } from "@/lib/websiteVisit";
 
 const roboto = Roboto({
@@ -28,7 +27,9 @@ export const metadata: Metadata = {
   },
   description: "Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students. Built for small independent schools in Ontario.",
   // No site-wide canonical: each marketing page sets its own (lib/marketing/seo).
-  robots: { index: true, follow: true },
+  // No site-wide robots either: indexing is the default, and the app's own
+  // pages opt out in (user)/layout and (public)/layout. A site-wide
+  // "index, follow" also contradicted the "noindex" Next adds to 404 pages.
   applicationName: 'SchoolMule',
   authors: [{ name: "SchoolMule" }],
   metadataBase: new URL('https://schoolmule.ca'),
@@ -44,10 +45,8 @@ export const metadata: Metadata = {
     title: "SchoolMule: School Management for Independent Schools",
     description: 'Attendance, grades, report cards and parent messages in one system, with a view for the office, teachers, parents and students.',
   },
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
-  },
+  // Icons come from the files in this folder (favicon.ico, icon.png at 512 px
+  // for Google's results, apple-icon.png).
 };
 
 export default function RootLayout({
@@ -58,15 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en">
        <head>
-        <Script id="schema-website" type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: "SchoolMule",
-            alternateName: ["SchoolMule"],
-            url: "https://schoolmule.ca"
-          })}
-        </Script>
+        {/* The WebSite schema (Google's site name) is on the homepage, as Google asks: lib/marketing/seo websiteSchema. */}
         {/* Before anything paints: a signed-in user arriving at the website goes to their home page (lib/websiteVisit). */}
         <script dangerouslySetInnerHTML={{ __html: WEBSITE_REDIRECT_SCRIPT }} />
       </head>

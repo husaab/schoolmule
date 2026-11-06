@@ -146,7 +146,10 @@ export default function PublicFormRenderer({ form }: Props) {
       {/* Footer */}
       <div className="mt-8 text-center">
         <p className="text-xs text-slate-400">
-          Powered by <span className="font-medium">SchoolMule</span>
+          Powered by{' '}
+          <a href="https://schoolmule.ca" className="font-medium hover:text-slate-600">
+            SchoolMule
+          </a>
         </p>
       </div>
     </div>

@@ -15,7 +15,7 @@ import ViewTabs from '@/components/marketing/ViewTabs'
 import WatchFilmButton from '@/components/marketing/film/WatchFilmButton'
 import { PhoneFrame, SampleData, Tray } from '@/components/marketing/frames'
 import { Accent, Container, H1, H2, Lead, Pill, Section, TextLink } from '@/components/marketing/ui'
-import { filmSchema, pageMetadata, softwareSchema } from '@/lib/marketing/seo'
+import { filmSchema, pageMetadata, softwareSchema, websiteSchema } from '@/lib/marketing/seo'
 import { DEMO_MINUTES, PRODUCT_LINKS, USAGE_CLAIM, VIEW_COLOURS } from '@/lib/marketing/site'
 
 // The homepage. Every section, and why it's here, is in
@@ -90,7 +90,7 @@ const FIT = [
 export default function HomePage() {
   return (
     <>
-      <JsonLd data={[softwareSchema, filmSchema('/')]} />
+      <JsonLd data={[websiteSchema, softwareSchema, filmSchema('/')]} />
 
       {/* Hero */}
       <section aria-labelledby="hero-title" className="relative overflow-hidden bg-gradient-to-b from-mist via-white to-white pt-28 sm:pt-36 lg:pt-40">

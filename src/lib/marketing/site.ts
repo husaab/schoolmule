@@ -90,3 +90,21 @@ export const MARKETING_PAGES = [
   '/demo',
   '/contact',
 ] as const
+
+// When each page's words last changed, for the sitemap's <lastmod>. Google
+// only trusts lastmod when it is accurate, so bump a page's date when you
+// change what it says (not for styling), and add new pages here.
+export const PAGE_UPDATED: Record<(typeof MARKETING_PAGES)[number] | '/privacy' | '/terms', string> = {
+  '/': '2026-11-06',
+  '/product': '2026-10-26',
+  '/for/school-leaders': '2026-10-26',
+  '/for/teachers': '2026-10-26',
+  '/for/parents': '2026-10-26',
+  '/for/students': '2026-10-26',
+  '/for/islamic-schools': '2026-10-26',
+  '/about': '2026-10-26',
+  '/demo': '2026-10-26',
+  '/contact': '2026-10-25',
+  '/privacy': '2026-10-26',
+  '/terms': '2026-10-25',
+}

@@ -1,30 +1,15 @@
-'use client'
-import { Suspense } from 'react';
-import AuthGuard from '@/components/AuthGuard';
-import Notification from '../../components/shared/notification';
-import ImpersonationBar from '@/components/impersonation/ImpersonationBar';
-import { Analytics } from "@vercel/analytics/next"
-import ClientErrorReporter from '@/components/observe/ClientErrorReporter';
-import StudentProfileHost from '@/components/student/profile/StudentProfileHost';
+import type { Metadata } from 'next'
+import UserShell from '@/components/shell/UserShell'
 
-export default function UserLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      <Notification />
-      <Analytics />
-      <ClientErrorReporter />
-      <AuthGuard>
-        {children}
-        {/* The student profile modal, opened over any page by ?profile=. useSearchParams needs Suspense. */}
-        <Suspense fallback={null}>
-          <StudentProfileHost />
-        </Suspense>
-      </AuthGuard>
-      <ImpersonationBar />
-    </>
-  );
+// The app, not the website: keep its pages out of search results. Their HTML
+// is an empty shell until the auth guard loads, so Google indexed them as
+// blank pages under the site's default title. "follow" still lets crawlers
+// follow links out (the logo goes to the homepage). /login opts back in so
+// "schoolmule login" finds it (login/layout.tsx).
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+}
+
+export default function UserLayout({ children }: { children: React.ReactNode }) {
+  return <UserShell>{children}</UserShell>
 }

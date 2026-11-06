@@ -17,6 +17,19 @@ export function pageMetadata({ title, description, path }: { title: string; desc
 
 const ORG_ID = `${SITE_URL}/#organization`
 
+// Tells Google the site's name for its results. Google reads it on the
+// homepage only, so only the homepage renders it, as a plain <script> in the
+// HTML (next/script kept it out of the HTML).
+export const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${SITE_URL}/#website`,
+  name: 'SchoolMule',
+  alternateName: ['School Mule', 'schoolmule.ca'],
+  url: `${SITE_URL}/`,
+  publisher: { '@id': ORG_ID },
+}
+
 export const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
