@@ -10,11 +10,13 @@
 // student's report once the term loads.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import {
   ArrowDownTrayIcon,
   ArrowLeftIcon,
   CalendarDaysIcon,
   DocumentPlusIcon,
+  DocumentTextIcon,
   EnvelopeIcon,
   MagnifyingGlassIcon,
   TrashIcon,
@@ -35,6 +37,7 @@ import type { TermPayload } from '@/services/types/term'
 import type { StudentPayload } from '@/services/types/student'
 import { useDebouncedParam, useFilterParams } from '@/hooks/useFilterParams'
 import { saveBlob } from '@/lib/pdfDownload'
+import { canOpenPath } from '@/lib/permissions'
 import {
   STATUS_FILTERS,
   buildRoster,
@@ -86,6 +89,8 @@ interface GenerateRun {
   outcome: GenerateOutcome | null
   error: string | null
 }
+
+const REPORT_TEMPLATES_PATH = '/admin-panel/report-templates'
 
 const secondaryButton =
   'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50'
@@ -373,7 +378,23 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
                 </BackLink>
               )}
               <h1 className="font-display text-[26px] font-semibold leading-tight text-slate-900 sm:text-[30px]">{doc.title}</h1>
-              <p className="mt-1 text-[15px] text-slate-600">{summary}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[15px] text-slate-600">
+                <span>{summary}</span>
+                {canOpenPath(REPORT_TEMPLATES_PATH, user) && (
+                  <>
+                    <span aria-hidden="true" className="text-slate-300">
+                      ·
+                    </span>
+                    <Link
+                      href={REPORT_TEMPLATES_PATH}
+                      className="inline-flex items-center gap-1 rounded font-medium text-cyan-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    >
+                      <DocumentTextIcon className="h-4 w-4" aria-hidden="true" />
+                      Report templates
+                    </Link>
+                  </>
+                )}
+              </p>
             </div>
             {/* A phone stacks them full width; wider screens keep them on one line. */}
             <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
