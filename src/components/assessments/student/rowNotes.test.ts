@@ -28,3 +28,32 @@ describe('the note under an assessment row', () => {
     expect(rowNote('excused', true)?.text).toBe('Excused (draft) — only you see it. It will not count toward the grade once it is published')
   })
 })
+
+describe('a modified mark', () => {
+  it('says what it means, with the label', () => {
+    expect(rowNote('graded', false, { label: 'Grade 3 level' })).toEqual({
+      text: "Modified: Grade 3 level. Counts in the grade, not in this column's class average",
+      tone: 'violet',
+    })
+  })
+
+  it('reads the same with no label', () => {
+    expect(rowNote('graded', false, { label: null })).toEqual({
+      text: "Modified. Counts in the grade, not in this column's class average",
+      tone: 'violet',
+    })
+  })
+
+  it('says it is a draft while it is one', () => {
+    expect(rowNote('graded', true, { label: null })).toEqual({
+      text: 'Modified draft — only you see it, and it counts once it is published',
+      tone: 'violet',
+    })
+  })
+
+  it('gives way to Missing and Excused', () => {
+    expect(rowNote('missing', false, { label: 'x' })?.tone).toBe('rose')
+    expect(rowNote('excused', false, { label: 'x' })?.tone).toBe('gray')
+  })
+})
+

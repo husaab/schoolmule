@@ -91,6 +91,11 @@ export interface AssessmentScore {
    * dashboard's recently-published feed.
    */
   publishedAt: string | null;
+  /** A real mark on a different version of the assessment; `classAvgPct` is null on it. */
+  modified?: boolean;
+  modifiedLabel?: string | null;
+  /** On a category: it holds a modified mark, so `classAvgPct` is null here too. */
+  includesModified?: boolean;
 }
 
 export interface ChildClassGrades {
@@ -110,6 +115,8 @@ export interface ChildClassGrades {
   excludedCount: number;
   /** How much of the class's work `finalPct` rests on. */
   coverage: GradeCoverage;
+  /** How many of those marks are modified. */
+  modifiedCount?: number;
   assessmentScores: AssessmentScore[];
 }
 
@@ -203,6 +210,9 @@ export interface RecentPublicationItem {
   publishedAt: string;
   /** Computed server-side against last_seen_at, so a wrong client clock can't skew it. */
   isNew: boolean;
+  modified?: boolean;
+  modifiedLabel?: string | null;
+  includesModified?: boolean;
 }
 
 export interface RecentPublicationsFeed {

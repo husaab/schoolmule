@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assessmentAverage, classAverage, inPool, leftOutIndex, leftOutSummary, statusLine, toggledColumn } from './classStats'
+import { addModifiedMarks, assessmentAverage, classAverage, inPool, leftOutIndex, leftOutSummary, statusLine, toggledColumn } from './classStats'
 import { buildScoreLookup, type EngineAssessment } from './gradeEngine'
 import type { StatsExclusion } from '@/services/types/classStatsExclusion'
 
@@ -133,3 +133,29 @@ describe('leftOutSummary and statusLine', () => {
     expect(statusLine(undefined, true, names)).toBe('Pick the assessments to leave them out of')
   })
 })
+
+describe('addModifiedMarks', () => {
+  const assessments = [
+    { assessment_id: 'cat', parent_assessment_id: null },
+    { assessment_id: 'kid', parent_assessment_id: 'cat' },
+    { assessment_id: 'alone', parent_assessment_id: null },
+  ]
+
+  it('keeps the mark out of its column and its category, not the class', () => {
+    const index = addModifiedMarks(new Map(), [{ studentId: 's1', assessmentId: 'kid' }], assessments)
+    const entry = index.get('s1')
+    expect(inPool(entry, 'counted', 'kid')).toBe(false)
+    expect(inPool(entry, 'counted', 'cat')).toBe(false)
+    expect(inPool(entry, 'counted', 'alone')).toBe(true)
+    expect(inPool(entry, 'counted')).toBe(true)
+    expect(inPool(entry, 'everyone', 'kid')).toBe(true)
+  })
+
+  it('keeps a teacher leaving the student out of the whole class', () => {
+    const start = new Map([['s1', { wholeClass: true, assessmentIds: new Set<string>() }]])
+    const index = addModifiedMarks(start, [{ studentId: 's1', assessmentId: 'alone' }], assessments)
+    expect(index.get('s1')?.wholeClass).toBe(true)
+    expect(start.get('s1')?.assessmentIds.size).toBe(0)
+  })
+})
+

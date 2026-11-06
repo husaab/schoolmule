@@ -177,7 +177,15 @@ describe('the grade', () => {
       message: null,
       quote: 'Great labels.',
       line: 'Lina Farouk · graded today',
+      modifiedLine: null,
     })
+  })
+
+  it('says when the mark was on a modified assessment', () => {
+    const graded = { score: 8, maxScore: 10, status: 'graded' as const, feedback: null, publishedAt: '2026-10-14T15:00:00Z' }
+    expect(gradeBlockCopy({ ...graded, modified: true, modifiedLabel: 'Grade 3 level' }, 'Lina Farouk', { you: true }).modifiedLine).toBe('This was a modified assessment: Grade 3 level')
+    expect(gradeBlockCopy({ ...graded, modified: true, modifiedLabel: null }, 'Lina Farouk', { you: true }).modifiedLine).toBe('This was a modified assessment.')
+    expect(gradeBlockCopy({ ...graded, modified: false, modifiedLabel: null }, 'Lina Farouk', { you: true }).modifiedLine).toBeNull()
   })
 
   it('names the child for a parent', () => {

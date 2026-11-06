@@ -144,6 +144,9 @@ export interface AssessmentContext {
   classAvgPct: number | null;
   /** RBAC: graded, but this viewer doesn't see marks (office staff without class access). */
   marksHidden?: boolean;
+  /** A real mark on a different version of the assessment; no class average beside it. */
+  modified?: boolean;
+  modifiedLabel?: string | null;
 }
 
 export interface Thread {

@@ -48,6 +48,29 @@ export function leftOutIndex(
   return index
 }
 
+/**
+ * The index with modified marks added: a modified mark stays out of its own
+ * column's average and its category's, since the student wrote a different
+ * test. The student stays in the class's figures. Only for the averages: who a
+ * teacher left out is still read from the exclusions.
+ */
+export function addModifiedMarks(
+  index: Map<string, LeftOut>,
+  marks: { studentId: string; assessmentId: string }[],
+  assessments: Pick<EngineAssessment, 'assessment_id' | 'parent_assessment_id'>[],
+): Map<string, LeftOut> {
+  const parentOf = new Map(assessments.map((a) => [a.assessment_id, a.parent_assessment_id]))
+  const out = new Map([...index].map(([id, l]) => [id, { wholeClass: l.wholeClass, assessmentIds: new Set(l.assessmentIds) }]))
+  for (const { studentId, assessmentId } of marks) {
+    const entry = out.get(studentId) ?? { wholeClass: false, assessmentIds: new Set<string>() }
+    entry.assessmentIds.add(assessmentId)
+    const parent = parentOf.get(assessmentId)
+    if (parent) entry.assessmentIds.add(parent)
+    out.set(studentId, entry)
+  }
+  return out
+}
+
 /** Whether a student is in the pool for the class, or for one assessment. */
 export function inPool(leftOut: LeftOut | undefined, pool: StatsPool, assessmentId: string | null = null): boolean {
   if (pool === 'everyone' || !leftOut) return true

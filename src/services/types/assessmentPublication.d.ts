@@ -33,6 +33,8 @@ export interface PublishPreview {
   /** Children skipped because nobody has a score for them yet. */
   skippedUngradedChildIds: string[]
   warnings: PublishWarning[]
+  /** Modified marks this publish would release. */
+  modified?: { assessmentId: string; studentId: string; studentName: string }[]
   studentCount: number
   recipientCount: number
   studentsWithoutEmail: number

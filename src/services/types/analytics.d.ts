@@ -195,6 +195,9 @@ export interface AssessmentScoreCell {
   status: AssessmentCellStatus
   isParent: boolean
   parentAssessmentId: string | null
+  /** A real mark on a different version of the assessment. */
+  modified?: boolean
+  modifiedLabel?: string | null
 }
 
 export interface ClassStudentRow {
@@ -230,6 +233,8 @@ export interface AssessmentStatsRow {
   /** The average with everyone in it, and how many are left out of this one. */
   avgAll?: number | null
   leftOutCount?: number
+  /** Modified marks kept out of this average. */
+  modifiedCount?: number
   isAnomalous: boolean
 }
 

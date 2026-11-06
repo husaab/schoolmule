@@ -157,6 +157,9 @@ export interface GradeItem {
   /** The teacher's comment on the work, once it is published. */
   feedback: string | null;
   parentComment: string | null;
+  /** A real mark on a different version of the assessment. */
+  modified?: boolean;
+  modifiedLabel?: string | null;
 }
 
 export interface ChildClassGrades {
@@ -168,6 +171,8 @@ export interface ChildClassGrades {
   finalPct: number | null;
   classAvg: number | null;
   gradedCount: number;
+  /** How many of those marks are modified. */
+  modifiedCount?: number;
   missingCount: number;
   latestPublishedAt: string | null;
   /** Newest first. */
@@ -269,6 +274,8 @@ export interface StudentItemGrade {
   status: 'graded' | 'missing' | 'excused';
   feedback: string | null;
   publishedAt: string | null;
+  modified?: boolean;
+  modifiedLabel?: string | null;
 }
 
 /** The thread about this work, once there is one. */

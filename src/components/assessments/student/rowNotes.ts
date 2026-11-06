@@ -7,7 +7,7 @@
 
 import type { ScoreStatus } from '@/lib/gradeEngine'
 
-export type RowNoteTone = 'rose' | 'gray' | 'slate'
+export type RowNoteTone = 'rose' | 'gray' | 'slate' | 'violet'
 
 export interface RowNote {
   text: string
@@ -15,7 +15,12 @@ export interface RowNote {
 }
 
 /** The note under a row, or null when its status needs none (graded, not a draft). */
-export function rowNote(status: ScoreStatus, isDraft: boolean): RowNote | null {
+export function rowNote(status: ScoreStatus, isDraft: boolean, modified?: { label: string | null } | null): RowNote | null {
+  if (modified && status === 'graded') {
+    if (isDraft) return { text: 'Modified draft — only you see it, and it counts once it is published', tone: 'violet' }
+    const label = modified.label ? `Modified: ${modified.label}.` : 'Modified.'
+    return { text: `${label} Counts in the grade, not in this column's class average`, tone: 'violet' }
+  }
   if (isDraft) {
     if (status === 'missing') return { text: 'Missing (draft) — only you see it. It counts as 0 once it is published', tone: 'rose' }
     if (status === 'excused') return { text: 'Excused (draft) — only you see it. It will not count toward the grade once it is published', tone: 'gray' }

@@ -340,6 +340,35 @@ export const setScoreStatus = async (
   );
 };
 
+interface ModifiedMarkTarget {
+  studentId: string
+  assessmentId: string
+}
+
+const modifiedMarkPath = (classId: string, { studentId, assessmentId }: ModifiedMarkTarget) =>
+  `/studentAssessments/classes/${encodeURIComponent(classId)}/modified-marks/${encodeURIComponent(studentId)}/${encodeURIComponent(assessmentId)}`
+
+/**
+ * Mark a score as modified, with an optional label. A category id marks each
+ * item in it. `published` says the family can already see this column: nothing
+ * emails them, so the teacher is told.
+ * PUT /studentAssessments/classes/:classId/modified-marks/:studentId/:assessmentId
+ */
+export const setModifiedMark = async (classId: string, payload: ModifiedMarkTarget & { label: string | null }) => {
+  const res = await apiClient<{ status: string; published: boolean; message?: string }>(modifiedMarkPath(classId, payload), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: { label: payload.label },
+  })
+  return { published: Boolean(res.published) }
+}
+
+/** Remove the flag. The score stays. DELETE on the same path. */
+export const clearModifiedMark = async (classId: string, payload: ModifiedMarkTarget) => {
+  const res = await apiClient<{ status: string; published: boolean; message?: string }>(modifiedMarkPath(classId, payload), { method: 'DELETE' })
+  return { published: Boolean(res.published) }
+}
+
 /**
  * NEW: Download the Excel (XLSX) file for this class’s gradebook.
  *

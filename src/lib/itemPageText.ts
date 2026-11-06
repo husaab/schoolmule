@@ -175,6 +175,8 @@ export interface GradeBlockCopy {
   message: string | null
   quote: string | null
   line: string | null
+  /** On a modified mark: what kind of mark this is. */
+  modifiedLine: string | null
 }
 
 /** Everything the grade block says, for the student ("Your grade") or a parent ("Amal's grade"). */
@@ -193,13 +195,14 @@ export function gradeBlockCopy(
       message: `${teacherOr(teacher)} marked this missing. It counts as 0 until it is graded.`,
       quote,
       line: null,
+      modifiedLine: null,
     }
   }
   if (grade.status === 'excused') {
-    return { tone: 'excused', label: 'Excused', score: null, message: `This one doesn't count toward ${possessive(owner)} grade.`, quote, line: null }
+    return { tone: 'excused', label: 'Excused', score: null, message: `This one doesn't count toward ${possessive(owner)} grade.`, quote, line: null, modifiedLine: null }
   }
   const line = gradedLine(teacher, grade.publishedAt, now)
-  if (grade.score == null) return { tone: 'feedback', label: 'Feedback', score: null, message: null, quote, line }
+  if (grade.score == null) return { tone: 'feedback', label: 'Feedback', score: null, message: null, quote, line, modifiedLine: null }
   return {
     tone: 'graded',
     label: cap(`${possessive(owner)} grade`),
@@ -207,6 +210,7 @@ export function gradeBlockCopy(
     message: null,
     quote,
     line,
+    modifiedLine: grade.modified ? (grade.modifiedLabel ? `This was a modified assessment: ${grade.modifiedLabel}` : 'This was a modified assessment.') : null,
   }
 }
 

@@ -79,6 +79,9 @@ export interface OverlayCellView {
   /** Past due with nothing turned in (nothing is written): a rose dot. */
   derivedMissing: boolean
   isLate: boolean
+  /** The stored flag; whether it shows depends on the cell (isEffectivelyModified). */
+  modified: boolean
+  modifiedLabel: string | null
 }
 
 /**
@@ -90,10 +93,13 @@ export function overlayCell(
   index: OverlayIndex,
   studentId: string,
   assessmentId: string,
-  matrix: { saved: CellValue; status: ScoreStatus },
+  matrix: { saved: CellValue; status: ScoreStatus; modified?: boolean; modifiedLabel?: string | null },
   columnPublished: boolean,
 ): OverlayCellView {
-  const plain = { ...matrix, draft: false, turnedIn: false, derivedMissing: false, isLate: false }
+  // The flag has its own table, so it holds whether the score is a draft or live.
+  const flag = { modified: matrix.modified ?? false, modifiedLabel: matrix.modifiedLabel ?? null }
+  const live = { saved: matrix.saved, status: matrix.status, ...flag }
+  const plain = { ...live, draft: false, turnedIn: false, derivedMissing: false, isLate: false }
   if (!isTurnInColumn(index, assessmentId)) return plain
   const cell = index.cells[keyOf(studentId, assessmentId)]
   const marks = {
@@ -103,10 +109,10 @@ export function overlayCell(
   }
   if (cell?.state === 'draft') {
     const status: ScoreStatus = cell.draftStatus ?? 'graded'
-    return { saved: status === 'missing' ? null : cell.draftScore, status, draft: true, ...marks }
+    return { saved: status === 'missing' ? null : cell.draftScore, status, draft: true, ...marks, ...flag }
   }
   const hasValue = matrix.saved !== null || matrix.status !== 'graded'
-  return { ...matrix, draft: !columnPublished && hasValue, ...marks }
+  return { ...live, draft: !columnPublished && hasValue, ...marks }
 }
 
 /**

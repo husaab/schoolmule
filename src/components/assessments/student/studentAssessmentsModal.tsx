@@ -67,7 +67,7 @@ interface StudentAssessmentsModalProps {
 
 const noDrafts = () => false
 
-const NOTE_TONE: Record<RowNoteTone, string> = { rose: 'text-rose-600', gray: 'text-gray-500', slate: 'text-slate-500' }
+const NOTE_TONE: Record<RowNoteTone, string> = { rose: 'text-rose-600', gray: 'text-gray-500', slate: 'text-slate-500', violet: 'text-violet-700' }
 
 export default function StudentAssessmentsModal({
   isOpen,

@@ -85,6 +85,8 @@ describe('overlayCell', () => {
       turnedIn: false,
       derivedMissing: false,
       isLate: false,
+      modified: false,
+      modifiedLabel: null,
     })
     expect(overlayCell(index, 's4', 'hw1', blank, false)).toMatchObject({ saved: null, status: 'missing', draft: true })
     expect(overlayCell(index, 's1', 'q1', blank, false)).toMatchObject({ saved: 4, status: 'excused', draft: true })
@@ -109,6 +111,8 @@ describe('overlayCell', () => {
       saved: 5,
       status: 'graded',
       draft: false,
+      modified: false,
+      modifiedLabel: null,
       turnedIn: false,
       derivedMissing: false,
       isLate: false,
@@ -187,3 +191,20 @@ describe('columns whose classwork is not posted', () => {
     expect(notPostedLabel(undefined)).toBeNull()
   })
 })
+
+describe('overlayCell and a modified mark', () => {
+  const flagged = { saved: null, status: 'graded' as const, modified: true, modifiedLabel: 'Grade 3 level' }
+
+  it('carries the flag on a plain cell', () => {
+    expect(overlayCell(index, 's1', 'plain', { ...flagged, saved: 36 }, true)).toMatchObject({ saved: 36, modified: true, modifiedLabel: 'Grade 3 level' })
+  })
+
+  it('keeps it on a draft, whose score lives on the submission', () => {
+    expect(overlayCell(index, 's1', 'hw1', flagged, false)).toMatchObject({ saved: 8, draft: true, modified: true, modifiedLabel: 'Grade 3 level' })
+  })
+
+  it('is off by default', () => {
+    expect(overlayCell(index, 's1', 'plain', { saved: 36, status: 'graded' }, true)).toMatchObject({ modified: false, modifiedLabel: null })
+  })
+})
+
