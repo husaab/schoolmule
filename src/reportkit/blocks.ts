@@ -575,6 +575,9 @@ function subjectFieldValue(subject: SubjectRow | { mark: SubjectRow['mark']; wor
   return '';
 }
 
+/** About two lines of the modified note, in px: an 80-character label wraps once. */
+const MODIFIED_NOTE_ROOM = 50;
+
 function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderCtx): string {
   const look = tableCss(block, ctx.doc.theme);
   const theme = ctx.doc.theme;
@@ -671,17 +674,23 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
     block.showCoreStandards && subject.coreStandards
       ? section(block.coreStandardsLabel ?? 'Core Standards Progress', boxed(dataHtml(subject.coreStandards)), true)
       : '';
+  const hasModified = block.rows === 'terms' ? subject.terms.t1?.modified || subject.terms.t2?.modified : subject.modified;
+  // The modified line takes its room from the comment box's minimum height, so
+  // a card with short comments is no taller and the page count holds.
+  const commentPanel = cs.commentPanel ?? cs.panel;
+  const roomyPanel = hasModified && commentPanel?.minHeight
+    ? { ...commentPanel, minHeight: Math.max(0, commentPanel.minHeight - MODIFIED_NOTE_ROOM) }
+    : commentPanel;
   const commentText = block.rows === 'terms' ? subject.terms.t2?.comment || subject.comment : subject.comment;
   const comment =
     block.showComment && (commentText || !block.hideEmptyComment)
       ? section(
           block.commentLabel ?? 'Teacher Comments',
-          boxed(commentText ? dataHtml(commentText) : `<em>${escapeHtml(block.emptyCommentText ?? '')}</em>`, cs.commentText, cs.commentPanel ?? cs.panel),
+          boxed(commentText ? dataHtml(commentText) : `<em>${escapeHtml(block.emptyCommentText ?? '')}</em>`, cs.commentText, roomyPanel),
           !core,
         )
       : '';
   const cardCss = cs.radius ? `${look};border-radius:${px(cs.radius, 0, 0, 60)};overflow:hidden` : look;
-  const hasModified = block.rows === 'terms' ? subject.terms.t1?.modified || subject.terms.t2?.modified : subject.modified;
   const modifiedLabels = block.rows === 'terms'
     ? [...(subject.terms.t1?.modifiedLabels ?? []), ...(subject.terms.t2?.modifiedLabels ?? [])]
     : subject.modifiedLabels ?? [];

@@ -111,6 +111,17 @@ describe('a subject card with a modified mark', () => {
     expect(out).toContain('Includes modified assessments');
   });
 
+  it('takes the room for its line from the comment box, so the page count holds', () => {
+    const style = { panel: { padding: 12, minHeight: 170 } };
+    expect(render(cards('current', style), {})).toContain('min-height:170px');
+    expect(render(cards('current', style), { modified: true, modifiedLabels: [LABEL] })).toContain('min-height:120px');
+  });
+
+  it('never gives the comment box a negative height', () => {
+    const style = { panel: { padding: 12, minHeight: 30 } };
+    expect(render(cards('current', style), { modified: true, modifiedLabels: [LABEL] })).not.toContain('min-height:-');
+  });
+
   it('changes nothing without the flag', () => {
     const plain = render(cards('current'), {});
     expect(plain).not.toContain('*');
