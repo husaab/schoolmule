@@ -445,11 +445,10 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
                     {
                       modified: Boolean(selectedRow.modified),
                       label: selectedRow.modifiedLabel ?? null,
-                      effective: isEffectivelyModified({
-                        modified: Boolean(selectedRow.modified),
-                        status: selectedRow.draftStatus ?? selectedRow.publishedStatus ?? 'graded',
-                        value: selectedRow.draftScore ?? selectedRow.publishedScore,
-                      }),
+                      effective: (() => {
+                        const shown = editedGrade(selectedRow, saver.peek()?.[selectedRow.studentId])
+                        return isEffectivelyModified({ modified: Boolean(selectedRow.modified), status: shown.status ?? 'graded', value: shown.score })
+                      })(),
                     },
                     rows.filter((r) => r.studentId === selectedRow.studentId && r.modifiedLabel).map((r) => r.modifiedLabel as string),
                   )

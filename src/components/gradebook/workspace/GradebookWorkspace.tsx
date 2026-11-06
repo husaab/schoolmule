@@ -57,7 +57,7 @@ import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
 import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
-import { isEffectivelyModified, modifiedLabelsOf } from '@/lib/modifiedMark'
+import { isEffectivelyModified, modifiedLabelsOf, modifiedMarksLine } from '@/lib/modifiedMark'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { useFrozenEdges } from '@/components/assessments/scores/useFrozenEdges'
 import { CLASS_STICKY_BOTTOM_PX } from '@/lib/classStickyHeader'
@@ -698,6 +698,14 @@ export default function GradebookWorkspace({
     setDraftPublish({ assessment: a, itemId: column.itemId, outside: false })
   }
   const draftPublishCount = draftPublish ? draftCount(overlay, draftPublish.assessment.assessmentId) : 0
+  // The last check before the drafts go out, as in the full publish dialog.
+  const draftPublishModified = draftPublish
+    ? modifiedMarksLine(
+        shownModified
+          .filter((m) => m.assessmentId === draftPublish.assessment.assessmentId)
+          .map((m) => ({ studentName: students.find((s) => s.studentId === m.studentId)?.name ?? '' })),
+      )
+    : null
   const draftPublishWord = draftPublish ? kindWord(overlay.columns[draftPublish.assessment.assessmentId]?.kind ?? 'assignment') : 'assignment'
 
   const runDraftPublish = async () => {
@@ -1388,6 +1396,7 @@ export default function GradebookWorkspace({
                   ? `This column also has grades for students the ${draftPublishWord} isn't assigned to, so it is published as a whole: its Publish window shows those grades and every draft in it.`
                   : 'Students and parents will see these grades.'}
               </ConfirmBody>
+              {draftPublishModified && <p className="mt-2 text-sm font-medium text-violet-700">{draftPublishModified}</p>}
             </ModalBody>
             <ModalFooter>
               <Button type="button" variant="secondary" onClick={() => setDraftPublish(null)} disabled={publishingDrafts}>

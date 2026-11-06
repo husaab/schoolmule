@@ -127,9 +127,12 @@ export default function ChildGradesView({
           actions={<PctBox cls={cls} />}
         />
       ) : (
-        <div className="flex items-baseline justify-between gap-3 rounded-[14px] bg-stone-50 px-[18px] py-4">
-          <span className="text-[15px]">{cls.subject}, from published grades</span>
-          <span className="font-display text-[30px] font-semibold">{pctText(cls.finalPct)}</span>
+        <div className="flex flex-col gap-1 rounded-[14px] bg-stone-50 px-[18px] py-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[15px]">{cls.subject}, from published grades</span>
+            <span className="font-display text-[30px] font-semibold">{pctText(cls.finalPct)}</span>
+          </div>
+          {(cls.modifiedCount ?? 0) > 0 && <span className="text-[13px] text-violet-700">{modifiedCountLine(cls.modifiedCount ?? 0)}</span>}
         </div>
       )}
 
