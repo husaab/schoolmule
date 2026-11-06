@@ -18,8 +18,10 @@ interface ModalProps {
   fullScreenOnMobile?: boolean
   /** Accessible name when the modal has no title. */
   ariaLabel?: string
-  /** For a viewer: edge to edge over a dark backdrop, with no white box and no close button of its own. */
-  bare?: boolean
+  /** Replaces the default dimmed blur behind the box. */
+  backdropClass?: string
+  /** For a body that has its own close button. */
+  hideClose?: boolean
   /** Keys other than Escape, while this modal is the top-most one open. */
   onKeyDown?: (e: KeyboardEvent) => void
 }
@@ -53,7 +55,8 @@ const Modal = ({
   maxHeightClass = 'max-h-[85vh]',
   fullScreenOnMobile = false,
   ariaLabel,
-  bare = false,
+  backdropClass = 'bg-slate-900/50 backdrop-blur-sm',
+  hideClose = false,
   onKeyDown,
 }: ModalProps) => {
   const [isVisible, setIsVisible] = useState(false)
@@ -117,10 +120,10 @@ const Modal = ({
   if (!shouldRender) return null
 
   const modalContent = (
-    <div className={`fixed inset-0 flex items-center justify-center z-[60] ${bare ? '' : fullScreenOnMobile ? 'p-0 sm:p-4' : 'p-4'}`}>
+    <div className={`fixed inset-0 flex items-center justify-center z-[60] ${fullScreenOnMobile ? 'p-0 sm:p-4' : 'p-4'}`}>
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 ${bare ? 'bg-slate-950' : 'bg-slate-900/50 backdrop-blur-sm'} transition-opacity duration-200 ${
+        className={`absolute inset-0 ${backdropClass} transition-opacity duration-200 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
@@ -133,8 +136,8 @@ const Modal = ({
         aria-label={ariaLabel ?? title}
         className={`
           relative z-10
-          ${bare ? '' : 'bg-white shadow-2xl'}
-          ${bare ? '' : fullScreenOnMobile ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'}
+          bg-white shadow-2xl
+          ${fullScreenOnMobile ? 'rounded-none sm:rounded-2xl' : 'rounded-2xl'}
           overflow-hidden ${maxHeightClass} flex flex-col
           transition-all duration-200 ease-out
           ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}
@@ -158,7 +161,7 @@ const Modal = ({
 
         {/* Close button (when no title). z-20 keeps it above a sticky
             ModalHeader (z-10), which otherwise paints over it. */}
-        {!title && !bare && (
+        {!title && !hideClose && (
           <button
             type="button"
             onClick={onClose}
@@ -170,7 +173,7 @@ const Modal = ({
         )}
 
         {/* Content */}
-        <div className={bare ? 'min-h-0 flex-1' : 'flex-1 overflow-y-auto'}>
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </div>

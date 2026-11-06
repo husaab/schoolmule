@@ -2,12 +2,12 @@
 // The viewer's hands on a picture, on one set of pointer events so touch, pen
 // and mouse agree: two fingers pinch, one finger pans a zoomed picture and
 // swipes a fitted one to the next, a double-tap (or a click) zooms in and back
-// out, the wheel and a trackpad pinch zoom at the cursor. Tapping the dark
-// around the picture closes. The sums are in lib/zoomMath, shared with the app.
+// out, the wheel and a trackpad pinch zoom at the cursor. The sums are in
+// lib/zoomMath, shared with the app.
 'use client'
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
-import { clampView, FIT_VIEW, isOnContent, pinchView, toggleZoom, zoomAt, type Point, type Size, type ZoomView } from '@/lib/zoomMath'
+import { clampView, FIT_VIEW, pinchView, toggleZoom, zoomAt, type Point, type Size, type ZoomView } from '@/lib/zoomMath'
 
 /** Further than this and a press is a drag, not a tap. */
 const TAP_SLOP = 8
@@ -35,10 +35,9 @@ interface UseZoomPanOptions {
   /** Any change puts the picture back to fitted: the next file, a turn. */
   resetKey: string
   onSwipe: (direction: 1 | -1) => void
-  onTapOutside: () => void
 }
 
-export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwipe, onTapOutside }: UseZoomPanOptions) {
+export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwipe }: UseZoomPanOptions) {
   const [view, setView] = useState<ZoomView>(FIT_VIEW)
   const [swipeX, setSwipeX] = useState(0)
   const [gesturing, setGesturing] = useState(false)
@@ -51,9 +50,8 @@ export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwip
   const pointers = useRef(new Map<number, Point>())
   const gesture = useRef<Gesture | null>(null)
   const lastTap = useRef<(Point & { time: number }) | null>(null)
-  const closeOnClick = useRef(false)
 
-  // Clamped on the way out, so a resized window or a turned picture can't leave it off in the dark.
+  // Clamped on the way out, so a resized window or a turned picture can't leave it out of view.
   const shown = content && stage ? clampView(view, content, stage) : FIT_VIEW
 
   const fromMiddle = (e: { clientX: number; clientY: number }): Point => {
@@ -68,7 +66,6 @@ export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwip
 
   const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
     if (!enabled || (e.pointerType === 'mouse' && e.button !== 0)) return
-    closeOnClick.current = false
     e.currentTarget.setPointerCapture(e.pointerId)
     const at = fromMiddle(e)
     pointers.current.set(e.pointerId, at)
@@ -101,20 +98,18 @@ export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwip
   }
 
   const tapped = (at: Point, pointerType: string) => {
-    if (!content || !isOnContent(shown, content, at)) {
-      // Closed on the click that follows, not here: gone already, that click would land on whatever is underneath.
-      closeOnClick.current = true
-    } else if (pointerType === 'mouse') {
+    if (!content) return
+    if (pointerType === 'mouse') {
+      setView(toggleZoom(shown, at))
+      return
+    }
+    const last = lastTap.current
+    const now = performance.now()
+    if (last && now - last.time < DOUBLE_TAP_MS && distance(last, at) < DOUBLE_TAP_REACH) {
+      lastTap.current = null
       setView(toggleZoom(shown, at))
     } else {
-      const last = lastTap.current
-      const now = performance.now()
-      if (last && now - last.time < DOUBLE_TAP_MS && distance(last, at) < DOUBLE_TAP_REACH) {
-        lastTap.current = null
-        setView(toggleZoom(shown, at))
-      } else {
-        lastTap.current = { ...at, time: now }
-      }
+      lastTap.current = { ...at, time: now }
     }
   }
 
@@ -172,11 +167,6 @@ export function useZoomPan({ stageRef, stage, content, enabled, resetKey, onSwip
       onPointerMove,
       onPointerUp: (e: ReactPointerEvent<HTMLElement>) => finish(e, false),
       onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => finish(e, true),
-      onClick: () => {
-        if (!closeOnClick.current) return
-        closeOnClick.current = false
-        onTapOutside()
-      },
     },
     zoomBy: (factor: number) => setView(zoomAt(shown, shown.scale * factor, { x: 0, y: 0 })),
   }

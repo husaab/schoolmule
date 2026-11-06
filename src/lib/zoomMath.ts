@@ -48,7 +48,7 @@ const within = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value)) + 0
 }
 
-/** Keeps the zoom in range and the picture covering the stage: no dragging it off into the dark. */
+/** Keeps the zoom in range and the picture covering the stage: no dragging it out of view. */
 export function clampView(view: ZoomView, content: Size, stage: Size): ZoomView {
   'worklet'
   const scale = within(view.scale, MIN_ZOOM, MAX_ZOOM)
@@ -76,13 +76,4 @@ export function pinchView(start: ZoomView, startAt: Point, spread: number, at: P
 export function toggleZoom(view: ZoomView, at: Point): ZoomView {
   'worklet'
   return view.scale > MIN_ZOOM ? FIT_VIEW : zoomAt(view, TAP_ZOOM, at)
-}
-
-/** Whether a point is on the picture rather than the dark around it. */
-export function isOnContent(view: ZoomView, content: Size, at: Point): boolean {
-  'worklet'
-  return (
-    Math.abs(at.x - view.x) <= (content.width * view.scale) / 2 &&
-    Math.abs(at.y - view.y) <= (content.height * view.scale) / 2
-  )
 }

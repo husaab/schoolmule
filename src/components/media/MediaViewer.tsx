@@ -1,9 +1,10 @@
 // src/components/media/MediaViewer.tsx
 // The one place a pressed picture or PDF opens, instead of a new tab on the raw
-// storage link: dark, edge to edge, with previous and next through every file
-// the surface handed over, "2 of 5", zoom, rotate and download. It is a shared
-// Modal, so opened from inside another (a student's profile) it sits on top and
-// Escape and the arrow keys reach only it. On a computer a PDF is the browser's
+// storage link: a card over the blurred page, with previous and next through
+// every file the surface handed over, "2 of 5", zoom, rotate and download. The
+// card keeps its size from file to file, so the arrows stay under the cursor. It
+// is a shared Modal, so opened from inside another (a student's profile) it sits
+// on top and Escape and the arrow keys reach only it. On a computer a PDF is the browser's
 // own frame, which has its own zoom, rotate and search; on a phone it is drawn
 // by PdfPages and the viewer's tools work on it. Files are opened with
 // useMediaViewer, and the list is fixed when it opens, so a thread refreshing
@@ -22,6 +23,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
+import { Button } from '@/components/shared/modalKit'
 import Spinner from '@/components/Spinner'
 import { counterLabel, downloadUrl, stepIndex, type ViewerItem } from '@/lib/mediaViewer'
 import { fitSize, turnedSize, type Size } from '@/lib/zoomMath'
@@ -29,7 +31,7 @@ import PdfPages from './PdfPages'
 import { useZoomPan } from './useZoomPan'
 
 const TOOL =
-  'inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white'
+  'inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
 const ZOOM_STEP = 1.5
 const MAX_PDF_ZOOM = 3
 
@@ -105,6 +107,7 @@ function Tool({ label, onClick, children }: { label: string; onClick: () => void
   )
 }
 
+/** On a phone it sits in the bottom bar, leaving the whole picture free to swipe; on a larger screen, beside the picture. */
 function StepButton({ direction, disabled, onClick }: { direction: 1 | -1; disabled: boolean; onClick: () => void }) {
   const Icon = direction === 1 ? ChevronRightIcon : ChevronLeftIcon
   const label = direction === 1 ? 'Next' : 'Previous'
@@ -115,8 +118,8 @@ function StepButton({ direction, disabled, onClick }: { direction: 1 | -1; disab
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-slate-900/70 text-white ring-1 ring-white/15 transition-colors hover:bg-slate-800 disabled:cursor-default disabled:opacity-30 sm:h-12 sm:w-12 ${
-        direction === 1 ? 'right-2 sm:right-4' : 'left-2 sm:left-4'
+      className={`absolute bottom-1.5 z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-default disabled:opacity-40 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:shadow-md ${
+        direction === 1 ? 'right-2 sm:right-3' : 'left-2 sm:left-3'
       }`}
     >
       <Icon className="h-6 w-6" aria-hidden="true" />
@@ -170,7 +173,6 @@ function ViewerBody({ items, startId, onClose, keyHandlerRef }: MediaViewerProps
     enabled: isImage,
     resetKey: `${item.id}:${turns}`,
     onSwipe: go,
-    onTapOutside: onClose,
   })
 
   const zoomIn = () => (isImage ? zoom.zoomBy(ZOOM_STEP) : setPdfZoom((z) => Math.min(MAX_PDF_ZOOM, z * ZOOM_STEP)))
@@ -209,39 +211,18 @@ function ViewerBody({ items, startId, onClose, keyHandlerRef }: MediaViewerProps
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="flex h-full flex-col text-white">
-        <header className="flex shrink-0 items-center gap-1 px-3 py-2 sm:px-4">
-          <div className="mr-auto min-w-0 flex-1 pr-2" aria-live="polite">
-            {items.length > 1 && <p className="text-xs text-white/60">{counterLabel(index, items.length)}</p>}
-            <p className="truncate text-sm font-medium">{item.name}</p>
+      <div className="relative flex h-full flex-col">
+        <header className="grid shrink-0 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1 border-b border-slate-100 px-2 py-1.5">
+          <div className="col-start-2 min-w-0 text-center" aria-live="polite">
+            {items.length > 1 && <p className="text-xs text-slate-500">{counterLabel(index, items.length)}</p>}
+            <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
           </div>
-          {/* On touch a picture pinches; PDF pages don't, so they keep the buttons. */}
-          {ownTools && (!isImage || finePointer) && (
-            <>
-              <Tool label="Zoom out" onClick={zoomOut}>
-                <MagnifyingGlassMinusIcon className="h-5 w-5" aria-hidden="true" />
-              </Tool>
-              <Tool label="Zoom in" onClick={zoomIn}>
-                <MagnifyingGlassPlusIcon className="h-5 w-5" aria-hidden="true" />
-              </Tool>
-            </>
-          )}
-          {ownTools && (
-            <Tool label="Rotate" onClick={rotate}>
-              <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
-            </Tool>
-          )}
-          {url && (
-            <a href={downloadUrl(url, item.fileName ?? item.name)} download={item.fileName ?? item.name} aria-label="Download" title="Download" className={TOOL}>
-              <ArrowDownTrayIcon className="h-5 w-5" aria-hidden="true" />
-            </a>
-          )}
           <button ref={closeRef} type="button" aria-label="Close" title="Close" onClick={onClose} className={TOOL}>
-            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+            <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
         </header>
 
-        <div className="relative min-h-0 flex-1 pb-[env(safe-area-inset-bottom)]">
+        <div className="relative min-h-0 flex-1 bg-slate-100">
           <div
             ref={stageRef}
             {...(isImage ? zoom.handlers : {})}
@@ -257,18 +238,13 @@ function ViewerBody({ items, startId, onClose, keyHandlerRef }: MediaViewerProps
 
             {loaded.status === 'error' && (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-slate-600">
                   {item.resolve ? "This file couldn't be opened." : 'The link to this file has expired. Close this and reload the page to see it.'}
                 </p>
                 {item.resolve && (
-                  <button
-                    type="button"
-                    onClick={retry}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="cursor-pointer rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
-                  >
+                  <Button type="button" variant="secondary" onClick={retry} onPointerDown={(e) => e.stopPropagation()}>
                     Try again
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -319,14 +295,38 @@ function ViewerBody({ items, startId, onClose, keyHandlerRef }: MediaViewerProps
                 <PdfPages key={url} url={url} quarterTurns={turns} zoom={pdfZoom} onBroken={onBroken} onSwipe={go} />
               ))}
           </div>
+        </div>
 
-          {items.length > 1 && (
+        <footer className="flex h-14 shrink-0 items-center justify-center gap-1 border-t border-slate-100 px-2">
+          {/* On touch a picture pinches; PDF pages don't, so they keep the buttons. */}
+          {ownTools && (!isImage || finePointer) && (
             <>
-              <StepButton direction={-1} disabled={index === 0} onClick={() => go(-1)} />
-              <StepButton direction={1} disabled={index === items.length - 1} onClick={() => go(1)} />
+              <Tool label="Zoom out" onClick={zoomOut}>
+                <MagnifyingGlassMinusIcon className="h-5 w-5" aria-hidden="true" />
+              </Tool>
+              <Tool label="Zoom in" onClick={zoomIn}>
+                <MagnifyingGlassPlusIcon className="h-5 w-5" aria-hidden="true" />
+              </Tool>
             </>
           )}
-        </div>
+          {ownTools && (
+            <Tool label="Rotate" onClick={rotate}>
+              <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
+            </Tool>
+          )}
+          {url && (
+            <a href={downloadUrl(url, item.fileName ?? item.name)} download={item.fileName ?? item.name} aria-label="Download" title="Download" className={TOOL}>
+              <ArrowDownTrayIcon className="h-5 w-5" aria-hidden="true" />
+            </a>
+          )}
+        </footer>
+
+        {items.length > 1 && (
+          <>
+            <StepButton direction={-1} disabled={index === 0} onClick={() => go(-1)} />
+            <StepButton direction={1} disabled={index === items.length - 1} onClick={() => go(1)} />
+          </>
+        )}
       </div>
     </MotionConfig>
   )
@@ -338,12 +338,13 @@ export default function MediaViewer(props: MediaViewerProps) {
   return (
     <Modal
       isOpen
-      bare
+      hideClose
       closeOnEscape
+      backdropClass="bg-black/20 backdrop-blur-md"
       onClose={props.onClose}
       onKeyDown={(e) => keyHandlerRef.current?.(e)}
       ariaLabel="File viewer"
-      style="h-full w-full"
+      style="h-[80dvh] w-full max-w-4xl sm:h-[85dvh]"
       maxHeightClass="max-h-full"
     >
       <ViewerBody {...props} keyHandlerRef={keyHandlerRef} />

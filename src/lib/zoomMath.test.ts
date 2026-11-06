@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampView, FIT_VIEW, fitSize, isOnContent, MAX_ZOOM, pinchView, TAP_ZOOM, toggleZoom, turnedSize, zoomAt } from './zoomMath'
+import { clampView, FIT_VIEW, fitSize, MAX_ZOOM, pinchView, TAP_ZOOM, toggleZoom, turnedSize, zoomAt } from './zoomMath'
 
 const stage = { width: 400, height: 800 }
 
@@ -71,19 +71,5 @@ describe('toggleZoom', () => {
     const inView = toggleZoom(FIT_VIEW, { x: 40, y: 0 })
     expect(inView.scale).toBe(TAP_ZOOM)
     expect(toggleZoom(inView, { x: 40, y: 0 })).toEqual(FIT_VIEW)
-  })
-})
-
-describe('isOnContent', () => {
-  const content = { width: 200, height: 100 }
-
-  it('tells the picture from the dark around it', () => {
-    expect(isOnContent(FIT_VIEW, content, { x: 99, y: 49 })).toBe(true)
-    expect(isOnContent(FIT_VIEW, content, { x: 101, y: 0 })).toBe(false)
-  })
-
-  it('follows the zoom and the pan', () => {
-    expect(isOnContent({ scale: 2, x: 100, y: 0 }, content, { x: 290, y: 90 })).toBe(true)
-    expect(isOnContent({ scale: 2, x: 100, y: 0 }, content, { x: -110, y: 0 })).toBe(false)
   })
 })
