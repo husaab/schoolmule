@@ -151,6 +151,7 @@ function cellHtml(ctx: RenderCtx, cell: TableCellDef, tag: 'td' | 'th' = 'td'): 
   let inner = '';
   if (cell.image) inner += imageHtml(ctx, cell.image, cell.imageHeight ?? 36, imageLabel(cell.image));
   if (cell.text) inner += (inner ? ' ' : '') + mergeHtml(cell.text, ctx.scope);
+  if (cell.label) inner = `<div${cell.labelStyle ? ` style="${textCss(cell.labelStyle)}"` : ''}>${mergeHtml(cell.label, ctx.scope)}</div>${inner}`;
   if (cell.vertical) {
     attrs.push('class="rk-vertical"');
     inner = `<span>${inner}</span>`;
@@ -623,13 +624,16 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
   } else if (cs.markLayout === 'tiles') {
     const gap = num(cs.bodyPadding, 15, 0, 60);
     const labelCss = barCss({ align: 'center', ...cs.markHead }, '', theme);
+    const tileBox = cs.tile
+      ? `padding:${num(cs.tile.padding, 5, 0, 60)}px ${num(cs.tile.paddingX, num(cs.tile.padding, 10, 0, 60), 0, 60)}px;border-radius:${num(cs.tile.borderRadius, 0, 0, 60)}px`
+      : 'padding:5px 10px;border-radius:3px';
     table = `<div style="display:grid;grid-template-columns:repeat(${fields.length},minmax(0,1fr));gap:${gap}px;margin-bottom:${gap}px">${fields
       .map((f) => {
         const raw = subjectFieldValue(subject, f.key, ctx);
         return `<div style="text-align:center"><div style="${labelCss};margin-bottom:5px">${escapeHtml(f.label)}</div><div style="${valueCss(
           f,
           raw,
-          'padding:5px 10px;border-radius:3px;font-weight:700',
+          `${tileBox};font-weight:700`,
         )}">${escapeHtml(shown(f.key, raw))}</div></div>`;
       })
       .join('')}</div>`;

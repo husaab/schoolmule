@@ -1,17 +1,7 @@
-import type { CanvasBlock, ColumnsBlock, SignaturesBlock, SubjectCardsBlock, TableBlock, TableCellDef, TableRowDef, TemplateDoc, TextBlock } from '../types';
+import type { CanvasBlock, ColumnsBlock, SignaturesBlock, SubjectCardsBlock, TableBlock, TableCellDef, TableRowDef, TemplateDoc, TextBlock, TextStyle } from '../types';
+import { HONOUR, MARGIN, WIDTH, honourHeading, honourKept, honourPageTop, honourSubjectBar, honourTitleBand } from './honourRoll';
 import { SCALES } from './scales';
 import { block, cell, logo, rect, resetIds, template, text, zone } from './kit';
-
-const BLUE = '#2c5aa0';
-const LIGHT_BLUE = '#d6e4f0';
-const LIGHTER_BLUE = '#e8f0f8';
-const PANEL = '#f8f9fa';
-const LINE = '#cccccc';
-const TEXT = '#333333';
-const GREY_TEXT = '#666666';
-/** A4 with the 18mm margins the legacy template's @page rule printed with. */
-const MARGIN = 68;
-const WIDTH = 794 - 2 * MARGIN;
 
 /** The Ontario achievement chart, verbatim from the legacy card. */
 const ACHIEVEMENT: Array<{ level: string; text: string; rows: Array<[string, string]> }> = [
@@ -53,143 +43,110 @@ const ACHIEVEMENT: Array<{ level: string; text: string; rows: Array<[string, str
   },
 ];
 
-/**
- * A legend under its shaded, centred title box ("WORK HABITS & BEHAVIOUR"),
- * grouped so the title never ends a page without its table.
- */
-function legend(label: string, widthPercent: number, table: TableBlock, marginBottom: number): ColumnsBlock {
-  const title = block<TableBlock>({
-    type: 'table',
-    name: `${label} title`,
-    columns: [100],
-    borderColor: LINE,
-    cellPadding: 8,
-    fontSize: 16,
-    lineHeight: 1.4,
-    rows: [{ cells: [cell(label, { background: LIGHT_BLUE, style: { fontWeight: 700, align: 'center' } })] }],
-  });
-  const side = (100 - widthPercent) / 2;
-  return block<ColumnsBlock>({
-    type: 'columns',
-    name: label,
-    gap: 0,
-    marginBottom,
-    columns: [
-      {
-        width: 100,
-        blocks: [
-          block<ColumnsBlock>({
-            type: 'columns',
-            name: `${label} title row`,
-            gap: 0,
-            marginBottom: 15,
-            columns: [
-              { width: side, blocks: [] },
-              { width: widthPercent, blocks: [title] },
-              { width: side, blocks: [] },
-            ],
-          }),
-          table,
-        ],
-      },
-    ],
-  });
-}
+const WORK_HABITS: Array<[string, string]> = [
+  ['Needs Improvement', 'N'],
+  ['Satisfactory', 'S'],
+  ['Good', 'G'],
+  ['Excellent', 'E'],
+];
 
 /**
- * The grades 1–8 report card (legacy templates/reportCardTemplate.js) and its
- * First / Second / Final Term variant (templates/alHaadiT2ReportCardTemplate.js):
- * the school name, contact line and "<TERM> REPORT CARD <year>" box, the
- * student grid, the work-habits key and the Ontario achievement chart on page
- * one, then two subject cards per page (mark, work habits, behaviour, teacher
- * comments) and the principal's signature / school stamp footer.
- * Georgia → Source Serif 4 (the closest bundled serif in width).
+ * The grades 1–8 report card and its First / Second / Final Term variant, in
+ * the Honour Roll look (see honourRoll.ts): the school name, contact line and
+ * "<TERM> REPORT CARD <year>" band, the student grid, the work-habits key and
+ * the Ontario achievement chart on page one, then two subject cards per page
+ * (mark, work habits, behaviour, teacher comments) and the principal's
+ * signature / school stamp footer.
+ *
+ * Subjects always start on page two, so page one's length can't shift the
+ * two-per-page pairs.
  */
 export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = 'standard'): TemplateDoc {
   resetIds();
   const terms = variant === 't1t2final';
-  const scale = SCALES.egsn;
+  const scale = SCALES.honourRoll;
 
-  const firstHeader = zone(243, [
-    text(MARGIN, 68, WIDTH, 40, '{{school.name}}', { fontSize: 28, fontWeight: 700, uppercase: true, letterSpacing: 1, color: TEXT, align: 'center', lineHeight: 1.4 }, { name: 'School name' }),
-    text(MARGIN, 112.2, WIDTH, 16, '{{school.address}}[[ | {{school.phone}}]][[ | {{school.email}}]]', { fontSize: 11, color: GREY_TEXT, align: 'center', lineHeight: 1.4 }, { name: 'Contact line' }),
-    text(
-      181,
-      152.6,
-      432,
-      47,
-      terms ? 'FINAL TERM REPORT CARD {{meta.schoolYear}}' : '{{meta.termLabel}} REPORT CARD {{meta.schoolYear}}',
-      { fontSize: 18, fontWeight: 700, color: TEXT, align: 'center', verticalAlign: 'middle', lineHeight: 1.4 },
-      { name: 'Title', box: { background: LIGHT_BLUE, borderColor: LINE, borderWidth: 1 }, overflow: 'shrink' },
-    ),
-    rect(MARGIN, 214.8, WIDTH, 3, BLUE),
-    logo(626, 68, 100, 110),
+  const firstHeader = zone(246, [
+    // A wide box: a tall crest is centred in it and a landscape logo still has room.
+    logo((794 - 240) / 2, 22, 240, 94),
+    text(MARGIN, 120, WIDTH, 34, '{{school.name}}', { fontFamily: HONOUR.HEADING_FONT, fontSize: 24, fontWeight: 700, uppercase: true, letterSpacing: 2, color: HONOUR.NAVY, align: 'center', lineHeight: 1.3 }, { name: 'School name', overflow: 'shrink' }),
+    text(MARGIN, 155, WIDTH, 16, '{{school.address}}[[ | {{school.phone}}]][[ | {{school.email}}]]', { fontSize: 11, color: HONOUR.GREY, align: 'center', lineHeight: 1.4 }, { name: 'Contact line' }),
+    ...honourTitleBand(180, 33, terms ? 'FINAL TERM REPORT CARD {{meta.schoolYear}}' : '{{meta.termLabel}} REPORT CARD {{meta.schoolYear}}'),
   ]);
 
-  // Student grid: two "label  value" columns inside a light border.
-  const label = (t: string): TableCellDef => cell(t, { style: { fontWeight: 700 } });
+  // Student grid: label / value pairs between gold row lines, the name first read.
+  const label = (t: string): TableCellDef => cell(t, { style: { fontWeight: 600, color: HONOUR.NAVY } });
   const nameRow = (oen: string, showWhen: TableRowDef['showWhen']): TableRowDef => ({
     showWhen,
-    cells: [cell(''), label('Name of Student:'), cell('{{student.name}}'), cell(''), label('OEN:'), cell(oen), cell('')],
+    cells: [label('Name of Student:'), cell('{{student.name}}', { style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 14, fontWeight: 700, color: HONOUR.NAVY } }), label('OEN:'), cell(oen)],
   });
   const studentGrid = block<TableBlock>({
     type: 'table',
     name: 'Student information',
-    columns: [13, 166, 122, 40, 166, 138, 13],
-    borderWidth: 0,
+    columns: [172, 252, 80, 154],
+    rules: 'rows',
+    borderWidth: 1,
     outerBorderWidth: 1,
-    borderColor: LINE,
-    cellPadding: 5,
+    borderColor: HONOUR.GOLD_SOFT,
+    cellPadding: 7.5,
     fontSize: 14.67,
-    lineHeight: 1.4,
+    lineHeight: 1.35,
     verticalAlign: 'top',
-    marginBottom: 20,
+    marginBottom: 22,
     rows: [
-      { height: 10, cells: [cell('', { colSpan: 7 })] },
       nameRow('{{student.oen}}', { field: 'student.oen', op: 'notEmpty' }),
       nameRow('N/A', { field: 'student.oen', op: 'empty' }),
-      { cells: [cell(''), label('Days of Absence:'), cell('{{student.daysAbsent}}'), cell(''), label('Grade:'), cell('{{student.grade}}'), cell('')] },
-      { cells: [cell(''), label('Homeroom Teacher:'), cell('{{student.homeroomTeacher}}', { colSpan: 4 }), cell('')] },
-      { height: 10, cells: [cell('', { colSpan: 7 })] },
+      { cells: [label('Days of Absence:'), cell('{{student.daysAbsent}}'), label('Grade:'), cell('{{student.grade}}')] },
+      { cells: [label('Homeroom Teacher:'), cell('{{student.homeroomTeacher}}', { colSpan: 3 })] },
+    ],
+  });
+
+  // Each rating in the colours its subject cards use, so a family learns them here.
+  const workHabitsKey = block<TableBlock>({
+    type: 'table',
+    name: 'Work habits key',
+    columns: [25, 25, 25, 25],
+    borderColor: HONOUR.GOLD_SOFT,
+    cellPadding: 9,
+    fontSize: 13.33,
+    lineHeight: 1.35,
+    rows: [
+      {
+        cells: WORK_HABITS.map(([t, code]) => {
+          const level = scale.levels.find((l) => l.code === code)!;
+          return cell(code, {
+            label: t,
+            labelStyle: { fontFamily: HONOUR.TEXT_FONT, fontSize: 13.33, fontWeight: 400, color: HONOUR.INK },
+            background: level.color,
+            style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 19, fontWeight: 700, color: level.textColor, align: 'center', lineHeight: 1.5 },
+          });
+        }),
+      },
     ],
   });
 
   const center = { align: 'center' as const };
-  const workHabitsKey = block<TableBlock>({
-    type: 'table',
-    name: 'Work habits key',
-    columns: [38.3, 25.1, 15.3, 21.3],
-    borderColor: LINE,
-    cellPadding: 10,
-    fontSize: 14.67,
-    lineHeight: 1.4,
-    rows: [
-      { cells: ['Needs Improvement', 'Satisfactory', 'Good', 'Excellent'].map((t) => cell(t, { style: center })) },
-      { cells: ['N', 'S', 'G', 'E'].map((t) => cell(t, { style: { ...center, fontWeight: 700, fontSize: 18.67 } })) },
-    ],
-  });
-
   const achievementChart = block<TableBlock>({
     type: 'table',
     name: 'Achievement chart',
-    columns: [10.3, 11.9, 10.7, 67.1],
-    borderColor: LINE,
-    cellPadding: 6,
+    columns: [9.5, 11.5, 12, 67],
+    borderColor: HONOUR.GOLD_SOFT,
+    cellPadding: 5.6,
     fontSize: 13.33,
-    lineHeight: 1.4,
+    lineHeight: 1.35,
     rows: [
       {
-        height: 35,
-        cells: ['Letter', 'Percent', 'Level', 'Description'].map((t) => cell(t, { background: PANEL, style: { ...center, fontWeight: 700 } })),
+        height: 31,
+        cells: ['Letter', 'Percent', 'Level', 'Description'].map((t) => cell(t, { background: HONOUR.GOLD_TINT, style: { ...center, fontWeight: 700, color: HONOUR.NAVY } })),
       },
-      ...ACHIEVEMENT.flatMap((band) =>
+      ...ACHIEVEMENT.flatMap((band, b) =>
         band.rows.map(([letter, percent], i) => ({
           cells: [
-            cell(letter, { style: center }),
+            cell(letter, { style: { ...center, fontWeight: 700, color: HONOUR.NAVY } }),
             cell(percent, { style: center }),
             ...(i === 0
               ? [
-                  cell(band.level, { rowSpan: 3, background: LIGHTER_BLUE, style: { ...center, fontWeight: 700 } }),
+                  cell(band.level, { rowSpan: 3, background: HONOUR.LEVEL_TINTS[b], style: { ...center, fontFamily: HONOUR.HEADING_FONT, fontSize: 12.5, fontWeight: 700, color: HONOUR.NAVY } }),
                   cell(band.text, { rowSpan: 3, style: { fontSize: 12, lineHeight: 1.3 } }),
                 ]
               : []),
@@ -199,25 +156,14 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
     ],
   });
 
-  const sectionTitle = block<CanvasBlock>({
-    type: 'canvas',
-    name: 'Academic Achievement',
-    height: 33.1,
-    marginBottom: 15,
-    elements: [
-      text(0, 0, WIDTH, 27, 'Academic Achievement', { fontSize: 18.67, fontWeight: 700, color: BLUE, lineHeight: 1.4 }),
-      rect(0, 31.1, WIDTH, 2, BLUE),
-    ],
-  });
-
-  const habit = { fontSize: 16 };
+  const heading = (size: number): TextStyle => ({ fontFamily: HONOUR.HEADING_FONT, fontSize: size, fontWeight: 700 });
   const cards = block<SubjectCardsBlock>({
     type: 'subjectCards',
     name: 'Subjects',
     fields: [
-      { key: 'mark', label: 'Grade', width: 1, style: { fontSize: terms ? 17.33 : 18.67, fontWeight: 700, color: BLUE } },
-      { key: 'workHabits', label: 'Work Habits', width: 1, style: habit },
-      { key: 'behaviour', label: 'Behaviour', width: 1, style: habit },
+      { key: 'mark', label: 'Grade', width: 1, style: { ...heading(terms ? 15 : 19), color: HONOUR.NAVY } },
+      { key: 'workHabits', label: 'Work Habits', width: 1, style: heading(15) },
+      { key: 'behaviour', label: 'Behaviour', width: 1, style: heading(15) },
     ],
     rows: terms ? 'terms' : 'current',
     showComment: true,
@@ -225,25 +171,26 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
     emptyCommentText: 'No comments provided',
     emptyRatingText: '-',
     perPage: 2,
-    cardGap: 50,
-    groupPadding: 30,
+    cardGap: 44,
+    groupPadding: 22,
     scaleId: scale.id,
-    colorRatings: false,
-    headerBar: { background: BLUE, color: '#ffffff', fontSize: 16, fontWeight: 700, padding: 10, paddingX: 15 },
-    borderColor: LINE,
+    colorRatings: true,
+    headerBar: honourSubjectBar(14.5),
+    borderColor: HONOUR.GOLD_SOFT,
     borderWidth: 1,
-    cellPadding: terms ? 8 : 11,
+    cellPadding: terms ? 7 : 9,
     fontSize: 13.33,
     lineHeight: 1.4,
-    color: TEXT,
+    color: HONOUR.INK,
     cardStyle: {
-      radius: 5,
-      markHead: { background: PANEL, fontSize: 13.33, fontWeight: 700, align: 'center' },
-      ...(terms ? { termCell: { background: PANEL, fontSize: 13.33, fontWeight: 700, align: 'center' as const }, finalRowBackground: LIGHTER_BLUE } : {}),
+      markHead: { fontSize: 12.5, fontWeight: 600, color: HONOUR.NAVY, align: 'center' },
+      ...(terms ? { termCell: { fontSize: 12.5, fontWeight: 600, color: HONOUR.NAVY, align: 'center' as const }, finalRowBackground: HONOUR.GOLD_TINT } : {}),
       bodyPadding: 0,
-      sectionRule: LINE,
-      labelBar: { background: PANEL, fontSize: 13.33, fontWeight: 700, padding: 8, paddingX: 15 },
-      panel: { padding: 12, accentColor: BLUE, accentWidth: 4, minHeight: 50 },
+      sectionRule: HONOUR.GOLD_SOFT,
+      labelBar: { fontSize: 12.5, fontWeight: 700, color: HONOUR.NAVY, padding: 8, paddingX: 15 },
+      // Tall enough to balance a page of short comments. The three-row term card
+      // needs less: two cards and the footer must still share the last page.
+      panel: { padding: 12, accentColor: HONOUR.GOLD, accentWidth: 3, minHeight: terms ? 100 : 170 },
       commentText: { fontSize: 13.33, lineHeight: 1.5 },
     },
   });
@@ -252,12 +199,12 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
     type: 'columns',
     name: 'Footer',
     gap: 0,
-    marginTop: 50,
+    marginTop: 44,
     columns: [
       {
         width: 100,
         blocks: [
-          block<CanvasBlock>({ type: 'canvas', name: 'Footer rule', height: 1, marginBottom: 15, elements: [rect(0, 0, WIDTH, 1, LINE)] }),
+          block<CanvasBlock>({ type: 'canvas', name: 'Footer rule', height: 1, marginBottom: 15, elements: [rect(0, 0, WIDTH, 1, HONOUR.GOLD_SOFT)] }),
           block<SignaturesBlock>({
             type: 'signatures',
             name: 'Signature and stamp',
@@ -276,14 +223,14 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
             ],
             imageHeight: 55,
             lineWidth: 150,
-            style: { fontSize: 12, color: GREY_TEXT, lineHeight: 1.4 },
+            style: { fontSize: 12, color: HONOUR.GREY, lineHeight: 1.4 },
           }),
           block<TextBlock>({
             type: 'text',
             name: 'Created on',
             marginTop: 15,
             text: 'Created on {{meta.generatedDate}}',
-            style: { fontSize: 12, color: '#888888', align: 'center', lineHeight: 1.4 },
+            style: { fontSize: 12, color: HONOUR.GREY, align: 'center', lineHeight: 1.4 },
           }),
         ],
       },
@@ -294,16 +241,16 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
     docType: 'report_card',
     size: 'a4',
     margin: { left: MARGIN, right: MARGIN, top: 0, bottom: 0 },
-    theme: { fontFamily: 'Source Serif 4', fontSize: 14.67, color: TEXT, borderColor: LINE, accent: BLUE },
+    theme: { fontFamily: HONOUR.TEXT_FONT, fontSize: 14.67, color: HONOUR.INK, borderColor: HONOUR.GOLD_SOFT, accent: HONOUR.NAVY },
     scales: [scale],
     firstHeader,
-    header: zone(MARGIN, []),
+    header: honourPageTop(),
     footer: zone(MARGIN, []),
     blocks: [
       studentGrid,
-      legend('WORK HABITS & BEHAVIOUR', 45.6, workHabitsKey, 20),
-      legend('ACHIEVEMENT OF THE CURRICULUM EXPECTATIONS', 77.8, achievementChart, 25),
-      sectionTitle,
+      honourKept('WORK HABITS & BEHAVIOUR', honourHeading('WORK HABITS & BEHAVIOUR', 250), workHabitsKey, 22),
+      honourKept('ACHIEVEMENT OF THE CURRICULUM EXPECTATIONS', honourHeading('ACHIEVEMENT OF THE CURRICULUM EXPECTATIONS', 440), achievementChart, 0),
+      honourHeading('Academic Achievement', 250, 18, 4, { breakBefore: true }),
       cards,
       footer,
     ],

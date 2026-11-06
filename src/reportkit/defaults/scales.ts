@@ -64,4 +64,15 @@ export const SCALES = {
       { code: 'N', label: 'Needs Improvement', color: '#f8d7da', textColor: '#721c24' },
     ],
   },
+  /** The grades 1–8 report card and progress report: muted tints, every letter at least 4.5:1 on its tint. */
+  honourRoll: {
+    id: 'egsn-honour-roll',
+    name: 'Work habits & behaviour (E/G/S/N)',
+    levels: [
+      { code: 'E', label: 'Excellent', color: '#ddebdd', textColor: '#1e5a2f' },
+      { code: 'G', label: 'Good', color: '#dce7f4', textColor: '#0f4478' },
+      { code: 'S', label: 'Satisfactory', color: '#f6eccb', textColor: '#6b5000' },
+      { code: 'N', label: 'Needs Improvement', color: '#f3ddda', textColor: '#7c2a22' },
+    ],
+  },
 } satisfies Record<string, RatingScale>;

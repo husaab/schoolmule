@@ -3,7 +3,7 @@
  * backend PDF printer by scripts/build-reportkit.mjs; imported directly by
  * the designer. Bump ENGINE_VERSION whenever rendering output changes.
  */
-export const ENGINE_VERSION = 2;
+export const ENGINE_VERSION = 3;
 
 export * from './types';
 export { renderReport, ensureFonts, ensureStyles, defaultResolveImage } from './render';

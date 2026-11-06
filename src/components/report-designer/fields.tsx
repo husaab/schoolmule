@@ -7,7 +7,7 @@ import { FONT_FAMILIES } from '@/reportkit/fonts';
 import { catalogFor, type CatalogField } from '@/reportkit/catalog';
 import { GRADES } from '@/reportkit/format';
 import { downscaleImage } from '@/lib/imageDownscale';
-import type { BarStyle, ColumnDef, Condition, ConditionOp, ExtraFieldDef, ImageSource, TableLook, TextStyle } from '@/reportkit/types';
+import type { BarStyle, ColumnDef, Condition, ConditionOp, ExtraFieldDef, ImageSource, LineStyle, TableLook, TextStyle } from '@/reportkit/types';
 import { BUILTIN_IMAGES, BUILTIN_IMAGE_PATH, isBuiltinImage } from '@/reportkit/images';
 
 export const inputCls =
@@ -249,7 +249,25 @@ export function TextStyleEditor({ value, onChange, showAlign = true, showVertica
   );
 }
 
-export function BarStyleEditor({ label, value, onChange }: { label: string; value: BarStyle | undefined; onChange: (v: BarStyle) => void }) {
+/** A line along one edge of a bar: its colour and width. Clearing both removes it. */
+export function LineEditor({ label, value, onChange, testId }: { label: string; value: LineStyle | undefined; onChange: (v: LineStyle | undefined) => void; testId?: string }) {
+  const set = (patch: Partial<LineStyle>) => {
+    const next = { ...value, ...patch };
+    onChange(next.color || next.width !== undefined ? next : undefined);
+  };
+  return (
+    <Grid>
+      <Row label={`${label} colour`}>
+        <ColorInput value={value?.color} onChange={(v) => set({ color: v })} />
+      </Row>
+      <Row label={`${label} width`}>
+        <NumberInput value={value?.width} min={0} max={40} step={0.5} suffix="px" placeholder="none" onChange={(v) => set({ width: v })} testId={testId ? `${testId}-width` : undefined} />
+      </Row>
+    </Grid>
+  );
+}
+
+export function BarStyleEditor({ label, value, onChange, testId }: { label: string; value: BarStyle | undefined; onChange: (v: BarStyle) => void; testId?: string }) {
   const b = value ?? {};
   const set = (patch: Partial<BarStyle>) => onChange({ ...b, ...patch });
   return (
@@ -279,6 +297,20 @@ export function BarStyleEditor({ label, value, onChange }: { label: string; valu
         <Toggle checked={b.uppercase} onChange={(v) => set({ uppercase: v || undefined })} label="CAPITALS" />
         <NumberInput value={b.height} min={0} max={300} step={0.5} suffix="px" placeholder="height" onChange={(v) => set({ height: v || undefined })} />
       </div>
+      <div className="mt-2 grid grid-cols-[1fr_70px] gap-2">
+        <select className={inputCls} aria-label={`${label} font`} value={b.fontFamily ?? ''} onChange={(e) => set({ fontFamily: e.target.value || undefined })} data-testid={testId ? `${testId}-font` : undefined}>
+          {FONT_OPTIONS.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <NumberInput value={b.letterSpacing} min={-2} max={20} step={0.25} suffix="px" placeholder="spacing" onChange={(v) => set({ letterSpacing: v })} />
+      </div>
+      <div className="mt-2 space-y-2">
+        <LineEditor label="Top line" value={b.ruleTop} onChange={(v) => set({ ruleTop: v })} testId={testId ? `${testId}-top` : undefined} />
+        <LineEditor label="Bottom line" value={b.ruleBottom} onChange={(v) => set({ ruleBottom: v })} testId={testId ? `${testId}-bottom` : undefined} />
+      </div>
     </div>
   );
 }
@@ -286,6 +318,16 @@ export function BarStyleEditor({ label, value, onChange }: { label: string; valu
 export function TableLookEditor({ value, onChange }: { value: TableLook; onChange: (v: Partial<TableLook>) => void }) {
   return (
     <div className="space-y-2">
+      <Row label="Which lines">
+        <Segmented
+          value={value.rules ?? 'grid'}
+          onChange={(v) => onChange({ rules: v === 'grid' ? undefined : v })}
+          options={[
+            { value: 'grid', label: 'Every line' },
+            { value: 'rows', label: 'Rows only' },
+          ]}
+        />
+      </Row>
       <Grid cols={3}>
         <Row label="Lines">
           <NumberInput value={value.borderWidth} min={0} max={6} step={0.5} suffix="px" placeholder="1" onChange={(v) => onChange({ borderWidth: v })} />

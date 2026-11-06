@@ -11,6 +11,8 @@ export interface FontFamilyDef {
   category: 'sans' | 'serif';
   weights: number[];
   italic: boolean; // a 400 italic exists
+  /** A 700 italic exists too. Without one, bold in italic text is faked, and Chromium embeds a faked face as Type 3. */
+  boldItalic?: boolean;
 }
 
 export const FONT_FAMILIES: FontFamilyDef[] = [
@@ -18,7 +20,7 @@ export const FONT_FAMILIES: FontFamilyDef[] = [
   { id: 'Inter', label: 'Inter', slug: 'inter', category: 'sans', weights: [400, 600, 700], italic: false },
   { id: 'Open Sans', label: 'Open Sans', slug: 'open-sans', category: 'sans', weights: [400, 600, 700], italic: true },
   { id: 'Lato', label: 'Lato', slug: 'lato', category: 'sans', weights: [400, 700], italic: true },
-  { id: 'Source Serif 4', label: 'Source Serif', slug: 'source-serif-4', category: 'serif', weights: [400, 600, 700], italic: true },
+  { id: 'Source Serif 4', label: 'Source Serif', slug: 'source-serif-4', category: 'serif', weights: [400, 600, 700], italic: true, boldItalic: true },
   { id: 'Libre Baskerville', label: 'Libre Baskerville', slug: 'libre-baskerville', category: 'serif', weights: [400, 700], italic: true },
   { id: 'Tinos', label: 'Times (Tinos)', slug: 'tinos', category: 'serif', weights: [400, 700], italic: true },
 ];
@@ -59,6 +61,7 @@ export function fontFiles(): string[] {
     for (const subset of ['latin', 'latin-ext']) {
       for (const w of f.weights) files.push(`${f.slug}-${subset}-${w}-normal.woff2`);
       if (f.italic) files.push(`${f.slug}-${subset}-400-italic.woff2`);
+      if (f.boldItalic) files.push(`${f.slug}-${subset}-700-italic.woff2`);
     }
   }
   for (const w of ARABIC_FAMILY.weights) files.push(`${ARABIC_FAMILY.slug}-arabic-${w}-normal.woff2`);
@@ -80,6 +83,7 @@ export function fontFaceCss(urlFor: (file: string) => string): string {
     ] as const) {
       for (const w of f.weights) rules.push(face(f.id, `${f.slug}-${subset}-${w}-normal.woff2`, w, 'normal', range));
       if (f.italic) rules.push(face(f.id, `${f.slug}-${subset}-400-italic.woff2`, 400, 'italic', range));
+      if (f.boldItalic) rules.push(face(f.id, `${f.slug}-${subset}-700-italic.woff2`, 700, 'italic', range));
     }
   }
   for (const w of ARABIC_FAMILY.weights) {

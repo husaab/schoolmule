@@ -15,8 +15,8 @@ export const REPORTKIT_CSS = `
 .rk-text.rk-clip{overflow:hidden}
 .rk-img{display:block;width:100%;height:100%}
 .rk-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;border:1px dashed #94a3b8;color:#64748b;font:600 11px/1.2 sans-serif;background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 6px,#f1f5f9 6px,#f1f5f9 12px)}
-.rk-table{width:100%;border-collapse:collapse;table-layout:fixed;border:var(--rk-obw,1px) solid var(--rk-bc,#000)}
-.rk-table td,.rk-table th{border:var(--rk-bw,1px) solid var(--rk-bc,#000);padding:var(--rk-pad,4px) var(--rk-padx,calc(var(--rk-pad,4px) + 2px));vertical-align:var(--rk-va,middle);text-align:left;font-weight:inherit;overflow-wrap:anywhere;word-wrap:break-word}
+.rk-table{width:100%;border-collapse:collapse;table-layout:fixed;border:var(--rk-obw,1px) solid var(--rk-bc,#000);border-left-width:var(--rk-ovw,var(--rk-obw,1px));border-right-width:var(--rk-ovw,var(--rk-obw,1px))}
+.rk-table td,.rk-table th{border:var(--rk-bw,1px) solid var(--rk-bc,#000);border-left-width:var(--rk-vbw,var(--rk-bw,1px));border-right-width:var(--rk-vbw,var(--rk-bw,1px));padding:var(--rk-pad,4px) var(--rk-padx,calc(var(--rk-pad,4px) + 2px));vertical-align:var(--rk-va,middle);text-align:left;font-weight:inherit;overflow-wrap:anywhere;word-wrap:break-word}
 .rk-table th{font-weight:700}
 .rk-table .rk-bar{font-weight:700}
 .rk-table .rk-c{text-align:center}

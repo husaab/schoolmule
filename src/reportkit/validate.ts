@@ -1,5 +1,6 @@
 import { FONT_FAMILIES } from './fonts';
 import { isBuiltinImage } from './images';
+import { safeColor } from './style';
 import type { Block, CanvasElement, Condition, TableRowDef, TemplateDoc, Zone } from './types';
 
 /**
@@ -75,8 +76,43 @@ function checkImage(src: unknown, where: string, errors: string[]): void {
   else if (src.kind === 'builtin' && !isBuiltinImage(src.name)) errors.push(`${where}: unknown built-in image "${String(src.name)}".`);
 }
 
-function checkRowImages(row: TableRowDef | null | undefined, where: string, errors: string[]): void {
-  (row?.cells ?? []).forEach((c) => checkImage(c?.image, where, errors));
+function checkFont(family: unknown, where: string, errors: string[]): void {
+  if (family !== undefined && !FONT_FAMILIES.some((f) => f.id === family)) errors.push(`${where}: the font "${String(family)}" isn't available.`);
+}
+
+function checkRange(value: unknown, what: string, min: number, max: number, where: string, errors: string[]): void {
+  if (value === undefined) return;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) errors.push(`${where}: ${what} must be a number from ${min} to ${max}.`);
+}
+
+function checkLine(line: unknown, where: string, errors: string[]): void {
+  if (line === undefined || line === null) return;
+  if (!isObj(line)) {
+    errors.push(`${where}: a line is malformed.`);
+    return;
+  }
+  if (line.color !== undefined && !safeColor(line.color)) errors.push(`${where}: "${String(line.color)}" isn't a colour.`);
+  checkRange(line.width, 'a line width', 0, 40, where, errors);
+}
+
+function checkBar(bar: unknown, where: string, errors: string[]): void {
+  if (!isObj(bar)) return;
+  checkFont(bar.fontFamily, where, errors);
+  checkRange(bar.letterSpacing, 'letter spacing', -10, 40, where, errors);
+  checkLine(bar.ruleTop, where, errors);
+  checkLine(bar.ruleBottom, where, errors);
+}
+
+function checkLook(look: { rules?: unknown }, where: string, errors: string[]): void {
+  if (look.rules !== undefined && look.rules !== 'grid' && look.rules !== 'rows') errors.push(`${where}: the table lines must be "grid" or "rows".`);
+}
+
+function checkRowCells(row: TableRowDef | null | undefined, where: string, errors: string[]): void {
+  (row?.cells ?? []).forEach((c) => {
+    checkImage(c?.image, where, errors);
+    if (c?.label !== undefined && typeof c.label !== 'string') errors.push(`${where}: a cell's label must be text.`);
+    checkFont(c?.labelStyle?.fontFamily, where, errors);
+  });
 }
 
 function checkElement(el: unknown, where: string, ids: Set<string>, errors: string[], depth: number): void {
@@ -132,22 +168,40 @@ function checkBlock(b: unknown, where: string, ids: Set<string>, errors: string[
       else
         block.rows.forEach((r) => {
           checkCondition(r?.showWhen, label, errors);
-          checkRowImages(r, label, errors);
+          checkRowCells(r, label, errors);
         });
+      checkLook(block, label, errors);
       break;
     case 'skillsTable':
       if (!Array.isArray(block.columns)) errors.push(`${label}: no columns.`);
       if (block.groupStyles !== undefined && !Array.isArray(block.groupStyles)) errors.push(`${label}: the group colours are malformed.`);
       else (block.groupStyles ?? []).forEach((g) => checkImage(g?.icon, label, errors));
+      checkLook(block, label, errors);
+      [block.titleBar, block.groupBar, block.subgroupBar, block.headerBar, block.groupCommentBar].forEach((bar) => checkBar(bar, label, errors));
       break;
     case 'subjectCards':
       if (!Array.isArray(block.fields)) errors.push(`${label}: no columns.`);
+      checkLook(block, label, errors);
+      [block.headerBar, block.cardStyle?.markHead, block.cardStyle?.termCell, block.cardStyle?.labelBar].forEach((bar) => checkBar(bar, label, errors));
+      checkRange(block.cardStyle?.tile?.padding, 'the tile padding', 0, 60, label, errors);
+      checkRange(block.cardStyle?.tile?.paddingX, 'the tile side padding', 0, 60, label, errors);
+      checkRange(block.cardStyle?.tile?.borderRadius, 'the tile corners', 0, 60, label, errors);
       break;
     case 'commentsTable':
       if (block.footerRow) {
         checkCondition(block.footerRow.showWhen, label, errors);
-        checkRowImages(block.footerRow, label, errors);
+        checkRowCells(block.footerRow, label, errors);
       }
+      checkLook(block, label, errors);
+      checkBar(block.headerBar, label, errors);
+      break;
+    case 'learningSkills':
+      checkLook(block, label, errors);
+      checkBar(block.titleBar, label, errors);
+      checkBar(block.nameBar, label, errors);
+      break;
+    case 'ratingKey':
+      checkLook(block, label, errors);
       break;
     case 'signatures':
       (Array.isArray(block.slots) ? block.slots : []).forEach((slot) => checkImage(slot?.image, label, errors));

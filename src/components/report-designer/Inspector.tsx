@@ -12,11 +12,13 @@ import type {
   CommentsTableBlock,
   ImageSource,
   LearningSkillsBlock,
+  PanelStyle,
   RatingKeyBlock,
   SignaturesBlock,
   SkillColumnKey,
   SkillGroupStyle,
   SkillsTableBlock,
+  SubjectCardStyle,
   SubjectCardsBlock,
   SubjectFieldKey,
   TableBlock,
@@ -739,6 +741,21 @@ function CellEditor({ cell, index, fields, onChange, onRemove, onError }: { cell
         </IconBtn>
       </div>
       <MergeTextArea value={cell.text ?? ''} rows={1} onChange={(v) => onChange({ text: v }, 'text')} fields={fields} />
+      <div className="mt-1.5">
+        <Row label="Label above the text" hint="Small text inside the cell, e.g. a rating's name over its letter.">
+          <TextInput value={cell.label} onChange={(v) => onChange({ label: v || undefined, labelStyle: v ? cell.labelStyle : undefined }, 'label')} testId="cell-label" />
+        </Row>
+        {cell.label && (
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+            <Row label="Label size">
+              <NumberInput value={cell.labelStyle?.fontSize} min={5} max={60} step={0.5} suffix="px" placeholder="—" onChange={(v) => onChange({ labelStyle: { ...cell.labelStyle, fontSize: v } }, 'lfs')} testId="cell-label-size" />
+            </Row>
+            <Row label="Label colour">
+              <ColorInput value={cell.labelStyle?.color} onChange={(v) => onChange({ labelStyle: { ...cell.labelStyle, color: v } })} />
+            </Row>
+          </div>
+        )}
+      </div>
       <div className="mt-1.5 grid grid-cols-3 gap-1.5">
         <Row label="Span">
           <NumberInput value={cell.colSpan ?? 1} min={1} max={20} onChange={(v) => onChange({ colSpan: v && v > 1 ? v : undefined })} />
@@ -763,6 +780,20 @@ function CellEditor({ cell, index, fields, onChange, onRemove, onError }: { cell
         <div className="w-16">
           <NumberInput value={cell.style?.fontSize} min={5} max={60} step={0.5} placeholder="size" onChange={(v) => onChange({ style: { ...cell.style, fontSize: v } }, 'fs')} />
         </div>
+      </div>
+      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <Row label="Text colour">
+          <ColorInput value={cell.style?.color} onChange={(v) => onChange({ style: { ...cell.style, color: v } })} />
+        </Row>
+        <Row label="Font">
+          <select className={inputCls} value={cell.style?.fontFamily ?? ''} onChange={(e) => onChange({ style: { ...cell.style, fontFamily: e.target.value || undefined } })}>
+            {FONT_OPTIONS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </Row>
       </div>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
         <Toggle checked={(cell.style?.fontWeight ?? 400) >= 700} onChange={(v) => onChange({ style: { ...cell.style, fontWeight: v ? 700 : undefined } })} label="Bold" />
@@ -1077,10 +1108,120 @@ function SubjectCardsEditor({ block, set }: { block: SubjectCardsBlock; set: Set
         <p className="text-[10px] text-slate-400">Marks print by the template&apos;s mark rules (Rules → Marks).</p>
       </Section>
       <Section title="Look" defaultOpen={false}>
-        <BarStyleEditor label="Subject bar" value={block.headerBar} onChange={(v) => set({ headerBar: v } as Partial<Block>, 'hb')} />
+        <BarStyleEditor label="Subject bar" value={block.headerBar} onChange={(v) => set({ headerBar: v } as Partial<Block>, 'hb')} testId="bar-subject" />
         <TableLookEditor value={block} onChange={(p) => set(p as Partial<Block>, 'look')} />
       </Section>
+      <CardDetailsEditor block={block} set={set} />
     </>
+  );
+}
+
+/** A text box inside a card: its fill, the bar down its left edge, its spacing and smallest height. */
+function PanelEditor({ label, value, onChange, testId }: { label: string; value: PanelStyle | undefined; onChange: (v: PanelStyle, key?: string) => void; testId: string }) {
+  const p = value ?? {};
+  const set = (patch: Partial<PanelStyle>, key?: string) => onChange({ ...p, ...patch }, key ? `${testId}-${key}` : undefined);
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+      <div className="mb-2 text-[11px] font-semibold text-slate-600">{label}</div>
+      <Grid>
+        <Row label="Fill">
+          <ColorInput value={p.background} onChange={(v) => set({ background: v })} />
+        </Row>
+        <Row label="Smallest height" hint="A longer comment still grows the box.">
+          <NumberInput value={p.minHeight} min={0} max={1000} suffix="px" placeholder="auto" onChange={(v) => set({ minHeight: v }, 'mh')} testId={`${testId}-min-height`} />
+        </Row>
+        <Row label="Side bar colour">
+          <ColorInput value={p.accentColor} onChange={(v) => set({ accentColor: v })} />
+        </Row>
+        <Row label="Side bar width">
+          <NumberInput value={p.accentWidth} min={0} max={40} suffix="px" placeholder="4" onChange={(v) => set({ accentWidth: v }, 'aw')} testId={`${testId}-accent-width`} />
+        </Row>
+        <Row label="Padding">
+          <NumberInput value={p.padding} min={0} max={100} suffix="px" placeholder="0" onChange={(v) => set({ padding: v }, 'pad')} />
+        </Row>
+        <Row label="Rounded">
+          <NumberInput value={p.borderRadius} min={0} max={100} suffix="px" placeholder="0" onChange={(v) => set({ borderRadius: v }, 'br')} />
+        </Row>
+      </Grid>
+    </div>
+  );
+}
+
+/** Everything else on a card: the tiles, the column and term labels, the comment box. */
+function CardDetailsEditor({ block, set }: { block: SubjectCardsBlock; set: SetBlock }) {
+  const cs = block.cardStyle ?? {};
+  const patch = (p: Partial<SubjectCardStyle>, key?: string) => set({ cardStyle: { ...cs, ...p } } as Partial<Block>, key);
+  const terms = block.rows === 'terms';
+  const tiles = !terms && cs.markLayout === 'tiles';
+  // With core standards the comment has its own box; otherwise it uses the card's one box.
+  const commentKey = cs.commentPanel || block.showCoreStandards ? 'commentPanel' : 'panel';
+  return (
+    <Section title="Card details" defaultOpen={false}>
+      {!terms && (
+        <Row label="Marks layout">
+          <Segmented
+            value={cs.markLayout ?? 'table'}
+            onChange={(v) => patch({ markLayout: v })}
+            options={[
+              { value: 'table', label: 'Table' },
+              { value: 'tiles', label: 'Tiles' },
+            ]}
+          />
+        </Row>
+      )}
+      {tiles && (
+        <Grid cols={3}>
+          <Row label="Tile padding">
+            <NumberInput value={cs.tile?.padding} min={0} max={60} suffix="px" placeholder="5" onChange={(v) => patch({ tile: { ...cs.tile, padding: v } }, 'tp')} testId="tile-padding" />
+          </Row>
+          <Row label="Side padding">
+            <NumberInput value={cs.tile?.paddingX} min={0} max={60} suffix="px" placeholder="10" onChange={(v) => patch({ tile: { ...cs.tile, paddingX: v } }, 'tx')} testId="tile-padding-x" />
+          </Row>
+          <Row label="Rounded">
+            <NumberInput value={cs.tile?.borderRadius} min={0} max={60} suffix="px" placeholder="3" onChange={(v) => patch({ tile: { ...cs.tile, borderRadius: v } }, 'tr')} testId="tile-radius" />
+          </Row>
+        </Grid>
+      )}
+      <BarStyleEditor label="Column labels" value={cs.markHead} onChange={(v) => patch({ markHead: v }, 'mh')} />
+      {terms && (
+        <>
+          <BarStyleEditor label="Term labels" value={cs.termCell} onChange={(v) => patch({ termCell: v }, 'tc')} />
+          <div data-testid="final-row-fill">
+            <Row label="Final row fill">
+              <ColorInput value={cs.finalRowBackground} onChange={(v) => patch({ finalRowBackground: v })} />
+            </Row>
+          </div>
+        </>
+      )}
+      {cs.labelBar ? (
+        <BarStyleEditor label="Comment heading" value={cs.labelBar} onChange={(v) => patch({ labelBar: v }, 'lb')} />
+      ) : (
+        <>
+          <div className="text-[11px] font-semibold text-slate-600">Section headings</div>
+          <TextStyleEditor value={cs.label} onChange={(v) => patch({ label: v }, 'lbl')} showAlign={false} />
+        </>
+      )}
+      <PanelEditor label="Comment box" value={cs[commentKey] ?? cs.panel} onChange={(v, key) => patch({ [commentKey]: v }, key)} testId="comment-box" />
+      {block.showCoreStandards && <PanelEditor label="Core standards box" value={cs.panel} onChange={(v, key) => patch({ panel: v }, key)} testId="core-box" />}
+      <div className="text-[11px] font-semibold text-slate-600">Comment text</div>
+      <TextStyleEditor value={cs.commentText} onChange={(v) => patch({ commentText: v }, 'ct')} showAlign={false} />
+      <Grid>
+        <Row label="Line between sections">
+          <ColorInput value={cs.sectionRule} onChange={(v) => patch({ sectionRule: v })} />
+        </Row>
+        <Row label="Card corners">
+          <NumberInput value={cs.radius} min={0} max={60} suffix="px" placeholder="0" onChange={(v) => patch({ radius: v }, 'cr')} />
+        </Row>
+        <Row label="Space inside the card">
+          <NumberInput value={cs.bodyPadding} min={0} max={60} suffix="px" placeholder="auto" onChange={(v) => patch({ bodyPadding: v }, 'bp')} />
+        </Row>
+        {tiles && (
+          <Row label="Empty rating fill">
+            <ColorInput value={cs.emptyRating?.background} onChange={(v) => patch({ emptyRating: { ...cs.emptyRating, background: v } })} />
+          </Row>
+        )}
+      </Grid>
+    </Section>
   );
 }
 

@@ -1,5 +1,5 @@
 import { fontStack, nearestWeight } from './fonts';
-import type { BarStyle, BoxStyle, PanelStyle, TableLook, TextStyle, Theme } from './types';
+import type { BarStyle, BoxStyle, LineStyle, PanelStyle, TableLook, TextStyle, Theme } from './types';
 
 /**
  * Template values become CSS only through these guards, so a template can
@@ -55,6 +55,11 @@ export function boxCss(box: BoxStyle | undefined): string {
   return out.join(';');
 }
 
+/** One line along a bar's edge; a bad colour falls back to black, never into the CSS. */
+function lineCss(side: 'top' | 'bottom', line: LineStyle): string {
+  return `border-${side}:${px(line.width, 1, 0, 40)} solid ${safeColor(line.color, '#000')}`;
+}
+
 export function barCss(bar: BarStyle | undefined, fallbackBg = '', theme?: Partial<Theme>): string {
   const b = bar ?? {};
   const out: string[] = [];
@@ -63,7 +68,11 @@ export function barCss(bar: BarStyle | undefined, fallbackBg = '', theme?: Parti
   const color = safeColor(b.color);
   if (color) out.push(`color:${color}`);
   if (b.fontSize !== undefined) out.push(`font-size:${px(b.fontSize, 12, 4, 200)}`);
-  out.push(`font-weight:${nearestWeight(theme?.fontFamily, b.fontWeight ?? 700)}`);
+  if (b.fontFamily) out.push(`font-family:${fontStack(b.fontFamily)}`);
+  out.push(`font-weight:${nearestWeight(b.fontFamily ?? theme?.fontFamily, b.fontWeight ?? 700)}`);
+  if (b.letterSpacing !== undefined) out.push(`letter-spacing:${px(b.letterSpacing, 0, -10, 40)}`);
+  if (b.ruleTop) out.push(lineCss('top', b.ruleTop));
+  if (b.ruleBottom) out.push(lineCss('bottom', b.ruleBottom));
   out.push(`text-align:${b.align && ['left', 'center', 'right'].includes(b.align) ? b.align : 'left'}`);
   if (b.uppercase) out.push('text-transform:uppercase');
   if (b.padding !== undefined || b.paddingX !== undefined) {
@@ -99,6 +108,7 @@ export function tableCss(look: TableLook, theme: Theme): string {
   if (color) out.push(`color:${color}`);
   if (look.verticalAlign && ['top', 'middle', 'bottom'].includes(look.verticalAlign)) out.push(`--rk-va:${look.verticalAlign}`);
   if (look.lineHeight !== undefined) out.push(`line-height:${num(look.lineHeight, 1.3, 0.6, 4)}`);
+  if (look.rules === 'rows') out.push('--rk-vbw:0px', '--rk-ovw:0px');
   return out.join(';');
 }
 

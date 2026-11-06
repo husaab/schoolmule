@@ -212,7 +212,16 @@ interface BlockBase {
   hideWhenEmpty?: boolean;
 }
 
+/** A line along one edge of a bar. */
+export interface LineStyle {
+  color?: string;
+  width?: number; // px
+}
+
 export interface TableCellDef {
+  /** A small label printed above the cell's text, inside the cell. */
+  label?: RichText;
+  labelStyle?: TextStyle;
   text?: RichText;
   image?: ImageSource;
   imageHeight?: number;
@@ -246,6 +255,8 @@ export interface TableLook {
   verticalAlign?: 'top' | 'middle' | 'bottom';
   /** Line height of the block's text, a unitless multiple (default the page's). */
   lineHeight?: number;
+  /** Which lines the table draws: every line (default), or the lines between rows only. */
+  rules?: 'grid' | 'rows';
 }
 
 /** A free-form grid: title bars, the student info grid, forms. */
@@ -295,6 +306,11 @@ export interface BarStyle {
   paddingX?: number;
   /** Bar height in px (at least: a long text still wraps). */
   height?: number;
+  fontFamily?: FontId;
+  letterSpacing?: number; // px
+  /** Lines along the bar's top and bottom edges. */
+  ruleTop?: LineStyle;
+  ruleBottom?: LineStyle;
 }
 
 /**
@@ -419,9 +435,20 @@ export interface PanelStyle extends BoxStyle {
   minHeight?: number; // px
 }
 
+/** One tile of a card's marks row (markLayout 'tiles'). */
+export interface TileStyle {
+  /** Inner spacing in px: top/bottom, and left/right unless paddingX is set. */
+  padding?: number;
+  paddingX?: number;
+  /** Rounded corners (px; default square once a tile style is set). */
+  borderRadius?: number;
+}
+
 export interface SubjectCardStyle {
   /** Rounded card corners (px). */
   radius?: number;
+  /** The tiles' spacing and corners, instead of the small rounded default. */
+  tile?: TileStyle;
   /** table: a bordered marks table (default); tiles: each label over its value, no grid. */
   markLayout?: 'table' | 'tiles';
   /** The marks table's column labels (or the tile labels). */
