@@ -109,6 +109,25 @@ export function statusLine(e: StatsExclusion | undefined, picking: boolean, name
 const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null)
 
 /**
+ * A column window's class average and its "N left out · X% with everyone" line.
+ * A modified mark stays out of the column's average, but no teacher chose that:
+ * it isn't in the left-out count, and "with everyone" doesn't bring it back.
+ */
+export function columnAverageFacts(
+  rows: { studentId: string; pct: number; modified: boolean }[],
+  leftOut: Map<string, LeftOut>,
+  assessmentId: string,
+): { average: number | null; leftOutCount: number; everyoneAverage: number | null } {
+  const everyone = rows.filter((r) => !r.modified)
+  const pooled = everyone.filter((r) => inPool(leftOut.get(r.studentId), 'counted', assessmentId))
+  return {
+    average: mean(pooled.map((r) => r.pct)),
+    leftOutCount: everyone.length - pooled.length,
+    everyoneAverage: pooled.length < everyone.length ? mean(everyone.map((r) => r.pct)) : null,
+  }
+}
+
+/**
  * The class average over the pool: the mean of the term grades of students in
  * it who have one (unrounded), or null when nobody does.
  */

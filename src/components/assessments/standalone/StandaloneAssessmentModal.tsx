@@ -39,7 +39,7 @@ import GridLegend from '@/components/gradebook/GridLegend'
 import type { ScoreAutosave } from '@/hooks/useScoreAutosave'
 import { classItemHref } from '@/lib/classroomRoutes'
 import { draftCount, EMPTY_OVERLAY, overlayCell, type OverlayIndex } from '@/lib/gridOverlay'
-import { inPool, type LeftOut } from '@/lib/classStats'
+import { columnAverageFacts, type LeftOut } from '@/lib/classStats'
 
 interface StandaloneAssessmentModalProps {
   isOpen: boolean
@@ -66,7 +66,7 @@ interface StandaloneAssessmentModalProps {
   keepsDrafts?: (assessmentId: string) => boolean
   /** "Publish N" on a turn-in column holding drafts. */
   onPublishDrafts?: (assessment: AssessmentPayload) => void
-  /** Students left out of the class's statistics (lib/classStats): not in this column's class average. */
+  /** Students a teacher left out of the class's statistics (lib/classStats): not in this column's class average. */
   leftOut?: Map<string, LeftOut>
   /** The class's grade, for the modified label's suggestions. */
   classGrade?: string | number | null
@@ -145,17 +145,20 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
     const mark = column
       ? { draft, turnedIn: cell.turnedIn, late: cell.isLate, derivedMissing: cell.derivedMissing }
       : undefined
-    return { student, key, saved, value, status, result, mark, modified: cell.modified, modifiedLabel: cell.modifiedLabel }
+    // The mark the average reads, which for a draft isn't the one on screen.
+    const averagedModified = isEffectivelyModified({ modified: cell.modified, status: counted.status, value: counted.score })
+    return { student, key, saved, value, status, result, mark, modified: cell.modified, modifiedLabel: cell.modifiedLabel, averagedModified }
   })
   const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
   const counted = rows.filter((r) => r.result.isCounted)
-  const meanOf = (list: typeof rows) =>
-    list.length ? list.reduce((sum, r) => sum + (r.result.pct as number), 0) / list.length : null
   // The class average leaves out students left out of the class's statistics
-  // (or of this column); staff see the figure with everyone beside it.
-  const pooled = counted.filter((r) => inPool(leftOut.get(r.student.studentId), 'counted', assessment.assessmentId))
-  const average = meanOf(pooled)
-  const everyoneAverage = pooled.length < counted.length ? meanOf(counted) : null
+  // (or of this column) and modified marks; staff see the figure with everyone
+  // beside it.
+  const { average, leftOutCount, everyoneAverage } = columnAverageFacts(
+    counted.map((r) => ({ studentId: r.student.studentId, pct: r.result.pct as number, modified: r.averagedModified })),
+    leftOut,
+    assessment.assessmentId,
+  )
   const asScore = (pct: number) => `${((pct / 100) * maxScore).toFixed(1)} / ${maxScore} · ${pct.toFixed(1)}%`
 
   return (
@@ -219,7 +222,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                       {average == null ? '—' : asScore(average)}
                       {everyoneAverage != null && (
                         <span className="block text-xs font-normal text-slate-500">
-                          {counted.length - pooled.length} left out · {everyoneAverage.toFixed(1)}% with everyone
+                          {leftOutCount} left out · {everyoneAverage.toFixed(1)}% with everyone
                         </span>
                       )}
                     </>

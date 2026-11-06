@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addModifiedMarks, assessmentAverage, classAverage, inPool, leftOutIndex, leftOutSummary, statusLine, toggledColumn } from './classStats'
+import { addModifiedMarks, assessmentAverage, classAverage, columnAverageFacts, inPool, leftOutIndex, leftOutSummary, statusLine, toggledColumn } from './classStats'
 import { buildScoreLookup, type EngineAssessment } from './gradeEngine'
 import type { StatsExclusion } from '@/services/types/classStatsExclusion'
 
@@ -131,6 +131,45 @@ describe('leftOutSummary and statusLine', () => {
     expect(statusLine(exclusion('s1', { scope: 'assessments', assessmentIds: ['q1'] }), false, names)).toBe('Left out of the average for Quiz 1')
     expect(statusLine(exclusion('s1', { scope: 'assessments', assessmentIds: ['q1', 'q2'] }), false, names)).toBe('Left out of 2 assessment averages')
     expect(statusLine(undefined, true, names)).toBe('Pick the assessments to leave them out of')
+  })
+})
+
+describe('columnAverageFacts', () => {
+  const row = (studentId: string, pct: number, modified = false) => ({ studentId, pct, modified })
+  const leftOut = (...ids: string[]) => new Map(ids.map((id) => [id, { wholeClass: true, assessmentIds: new Set<string>() }]))
+
+  it('leaves a modified mark out without calling it left out', () => {
+    expect(columnAverageFacts([row('s1', 40, true), row('s2', 80), row('s3', 60)], new Map(), 'a1')).toEqual({
+      average: 70,
+      leftOutCount: 0,
+      everyoneAverage: null,
+    })
+  })
+
+  it('counts only the teacher\'s choices, and with everyone keeps the modified mark out', () => {
+    expect(columnAverageFacts([row('s1', 40, true), row('s2', 80), row('s3', 60)], leftOut('s3'), 'a1')).toEqual({
+      average: 80,
+      leftOutCount: 1,
+      everyoneAverage: 70,
+    })
+  })
+
+  it('counts a student who is both left out and modified once, as nothing to bring back', () => {
+    expect(columnAverageFacts([row('s1', 40, true), row('s2', 80)], leftOut('s1'), 'a1')).toEqual({
+      average: 80,
+      leftOutCount: 0,
+      everyoneAverage: null,
+    })
+  })
+
+  it('has no average when every mark is modified', () => {
+    expect(columnAverageFacts([row('s1', 40, true)], new Map(), 'a1')).toEqual({ average: null, leftOutCount: 0, everyoneAverage: null })
+  })
+
+  it('reads a left-out column by its id', () => {
+    const one = new Map([['s2', { wholeClass: false, assessmentIds: new Set(['a1']) }]])
+    expect(columnAverageFacts([row('s1', 50), row('s2', 90)], one, 'a1')).toEqual({ average: 50, leftOutCount: 1, everyoneAverage: 70 })
+    expect(columnAverageFacts([row('s1', 50), row('s2', 90)], one, 'a2')).toEqual({ average: 70, leftOutCount: 0, everyoneAverage: null })
   })
 })
 

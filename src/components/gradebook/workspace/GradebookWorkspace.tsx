@@ -106,7 +106,7 @@ import Spinner from '@/components/Spinner'
 import Avatar from '@/components/avatar/Avatar'
 import ClassStatsModal from '@/components/gradebook/classStats/ClassStatsModal'
 import { useStatsExclusions } from '@/hooks/useStatsExclusions'
-import { addModifiedMarks, classAverage as poolAverage, leftOutIndex, leftOutOfClassCount, leftOutSummary, statusLine, toggledColumn } from '@/lib/classStats'
+import { classAverage as poolAverage, leftOutIndex, leftOutOfClassCount, leftOutSummary, statusLine, toggledColumn } from '@/lib/classStats'
 import type { StatsLeftOutControl } from '@/components/assessments/scores/StatusControl'
 import { readGridDensity, scoreTone, writeGridDensity, type GridDensity } from '@/lib/gradesLayout'
 
@@ -480,10 +480,6 @@ export default function GradebookWorkspace({
   const leftOut = useMemo(
     () => leftOutIndex(statsExclusions.exclusions, engineAssessments),
     [statsExclusions.exclusions, engineAssessments],
-  )
-  const columnAveragePool = useMemo(
-    () => addModifiedMarks(leftOut, shownModified, engineAssessments),
-    [leftOut, shownModified, engineAssessments],
   )
   const termGrades = [...liveByStudent.entries()].map(([studentId, v]) => ({ studentId, pct: v.grade.pct }))
   const assessedCount = termGrades.filter((g) => g.pct != null).length
@@ -1301,7 +1297,7 @@ export default function GradebookWorkspace({
           onPublishDrafts={openDraftPublish}
           assessment={standaloneAssessment}
           allAssessments={assessments}
-          leftOut={columnAveragePool}
+          leftOut={leftOut}
           classGrade={classData.grade}
           students={sortedStudents}
           scoresMatrix={scoresMatrix}
