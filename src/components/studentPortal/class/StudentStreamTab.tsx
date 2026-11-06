@@ -9,11 +9,9 @@ import LoadError from '@/components/classroom/LoadError'
 import StreamFeed from '@/components/classroom/StreamFeed'
 import UpcomingList from '@/components/classroom/UpcomingList'
 import { useLoad } from '@/hooks/useLoad'
-import { openSignedUrl } from '@/lib/openSignedUrl'
 import { studentItemHref } from '@/lib/portalRoutes'
 import { getStudentAttachmentUrl, getStudentClassStream, markStudentAnnouncementRead } from '@/services/studentPortalService'
-import type { StudentAnnouncement, StudentAttachment, TodoItem } from '@/services/types/studentPortal'
-import { useNotificationStore } from '@/store/useNotificationStore'
+import type { StudentAnnouncement, TodoItem } from '@/services/types/studentPortal'
 
 interface StudentStreamTabProps {
   classId: string
@@ -23,7 +21,6 @@ interface StudentStreamTabProps {
 }
 
 export default function StudentStreamTab({ classId, upcoming, focusId }: StudentStreamTabProps) {
-  const notify = useNotificationStore((s) => s.showNotification)
   const stream = useLoad(`stream:${classId}`, () => getStudentClassStream(classId).then((r) => r.data))
   const { patch } = stream
 
@@ -39,15 +36,9 @@ export default function StudentStreamTab({ classId, upcoming, focusId }: Student
     [patch],
   )
 
-  const onOpenAttachment = useCallback(
-    async (post: StudentAnnouncement, file: StudentAttachment) => {
-      try {
-        await openSignedUrl(async () => (await getStudentAttachmentUrl(post.announcementId, file.attachmentId)).data.url)
-      } catch (err) {
-        notify(err instanceof Error && err.message ? err.message : "This file couldn't be opened.", 'error')
-      }
-    },
-    [notify],
+  const resolveAttachmentUrl = useCallback(
+    async (post: StudentAnnouncement, attachmentId: string) => (await getStudentAttachmentUrl(post.announcementId, attachmentId)).data.url,
+    [],
   )
 
   if (stream.error && !stream.data) {
@@ -66,7 +57,7 @@ export default function StudentStreamTab({ classId, upcoming, focusId }: Student
           <StreamFeed
             announcements={stream.data.announcements}
             notices={stream.data.notices}
-            onOpenAttachment={onOpenAttachment}
+            resolveAttachmentUrl={resolveAttachmentUrl}
             onSeen={onSeen}
             noticeHref={(n) => studentItemHref(n.itemId)}
             focusId={focusId}

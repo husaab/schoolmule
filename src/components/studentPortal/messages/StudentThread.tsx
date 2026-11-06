@@ -15,11 +15,13 @@ import Link from 'next/link'
 import { ArrowLeftIcon, PaperAirplaneIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
 import LoadError from '@/components/classroom/LoadError'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { toneClasses } from '@/components/messaging/tones'
 import { useLoad } from '@/hooks/useLoad'
 import { defaultIdentity } from '@/lib/classIdentity'
 import { isTouchKeyboard, shouldSendOnKey } from '@/lib/enterToSend'
+import { threadFiles } from '@/lib/mediaViewer'
 import { studentItemHref } from '@/lib/portalRoutes'
 import {
   BODY_MAX,
@@ -32,6 +34,7 @@ import {
 import {
   deleteStudentMessage,
   editStudentMessage,
+  freshStudentAttachmentUrl,
   getStudentConversation,
   postStudentMessage,
 } from '@/services/studentMessagingService'
@@ -62,6 +65,7 @@ const messageOf = (err: unknown, fallback: string): string => (err instanceof Er
 
 export default function StudentThread({ conversationId, userId, classes, previewing = false, onChanged, onRead, onBack }: StudentThreadProps) {
   const notify = useNotificationStore((s) => s.showNotification)
+  const media = useMediaViewer()
   const loaded = useLoad<Thread>(`student-thread:${userId}:${conversationId}`, () => getStudentConversation(conversationId).then((r) => r.data))
   const { reload, patch } = loaded
   const thread = loaded.data
@@ -327,7 +331,11 @@ export default function StudentThread({ conversationId, userId, classes, preview
                     {!removed && m.attachments.length > 0 && (
                       <div className={`flex flex-wrap gap-2 ${mine ? 'justify-end' : ''}`}>
                         {m.attachments.map((a) => (
-                          <AttachmentChip key={a.attachmentId} attachment={a} />
+                          <AttachmentChip
+                            key={a.attachmentId}
+                            attachment={a}
+                            onView={() => media.open(threadFiles(thread.messages, (id) => freshStudentAttachmentUrl(conversationId, id)), a.attachmentId)}
+                          />
                         ))}
                       </div>
                     )}
@@ -377,6 +385,7 @@ export default function StudentThread({ conversationId, userId, classes, preview
           </button>
         </form>
       </div>
+      {media.viewer}
     </div>
   )
 }

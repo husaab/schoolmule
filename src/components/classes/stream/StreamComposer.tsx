@@ -13,6 +13,7 @@ import { EyeIcon, MegaphoneIcon, PaperClipIcon, DocumentIcon, XMarkIcon } from '
 import Avatar from '@/components/avatar/Avatar'
 import StudentPicker from '@/components/announcements/StudentPicker'
 import { useAnnouncementFiles } from '@/components/announcements/useAnnouncementFiles'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
 import { MAX_BODY } from '@/components/messaging/formatters'
 import { Button, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import { classTitle } from '@/lib/classesHome'
@@ -63,6 +64,7 @@ export default function StreamComposer({
   const bump = useMessagingStore((s) => s.bump)
   const user = useUserStore((s) => s.user)
   const files = useAnnouncementFiles(0)
+  const media = useMediaViewer()
   const resetFiles = files.reset
 
   const [title, setTitle] = useState('')
@@ -191,6 +193,13 @@ export default function StreamComposer({
   }
 
   const previewFile = (file: File) => {
+    if (canView({ name: file.name, mimeType: file.type })) {
+      const shown = files.files
+        .filter((f) => canView({ name: f.name, mimeType: f.type }))
+        .map((f) => ({ id: `${f.name}-${f.size}`, name: f.name, mimeType: f.type, url: URL.createObjectURL(f) }))
+      media.open(shown, `${file.name}-${file.size}`, () => shown.forEach((s) => URL.revokeObjectURL(s.url)))
+      return
+    }
     const url = URL.createObjectURL(file)
     window.open(url, '_blank', 'noopener')
     // The new tab has its own reference once it has loaded.
@@ -358,6 +367,7 @@ export default function StreamComposer({
           Post
         </Button>
       </div>
+      {media.viewer}
     </form>
   )
 }

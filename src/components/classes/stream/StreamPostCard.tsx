@@ -2,8 +2,8 @@
 // One announcement in the teacher's Stream (the Teacher-Stream board): the
 // author's avatar and name ("· co-teacher"), "Oct 12 · emailed to students
 // and parents" (or "not emailed"), a ⋮ with Edit and Delete for those who may
-// change it, the title and message, attachments that open a fresh signed link
-// on click, and the footer chips (seen by parents, seen by students, Got it)
+// change it, the title and message, attachments that open in the media viewer
+// or on a fresh signed link, and the footer chips (seen by parents, seen by students, Got it)
 // which open who has seen it. The list carries only counts, so the post's
 // files and receipts come from its own detail, fetched when they are needed.
 'use client'
@@ -13,12 +13,14 @@ import { DocumentIcon, DocumentTextIcon, PencilSquareIcon, PhotoIcon, TrashIcon 
 import Avatar from '@/components/avatar/Avatar'
 import ReadReceipts from '@/components/announcements/ReadReceipts'
 import KebabMenu, { type KebabItem } from '@/components/classes/shared/KebabMenu'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
 import { formatBytes, isImage } from '@/components/messaging/formatters'
 import { postByline, seenChips, type PostAuthor } from '@/lib/classStream'
+import { attachmentFiles } from '@/lib/mediaViewer'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import {
+  freshAnnouncementAttachmentUrl,
   getAnnouncement,
-  getAnnouncementAttachmentUrl,
   retryAnnouncementEmails,
 } from '@/services/announcementService'
 import type { AnnouncementAttachment, AnnouncementDetail, AnnouncementItem } from '@/services/types/announcement'
@@ -69,22 +71,21 @@ function useAnnouncementDetail(item: AnnouncementItem, enabled: boolean, nonce: 
   }
 }
 
-/** A file on the post: opens a freshly signed link in a new tab (the old one may have expired). */
-function AttachmentButton({ announcementId, attachment }: { announcementId: string; attachment: AnnouncementAttachment }) {
+/** A file on the post: a picture or PDF opens in the viewer (`onView`), anything else on a freshly signed link in a new tab. */
+function AttachmentButton({ announcementId, attachment, onView }: { announcementId: string; attachment: AnnouncementAttachment; onView: () => void }) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const [opening, setOpening] = useState(false)
   const Icon = attachment.mimeType === 'application/pdf' ? DocumentTextIcon : isImage(attachment.mimeType) ? PhotoIcon : DocumentIcon
 
   const open = async () => {
+    if (canView({ name: attachment.fileName, mimeType: attachment.mimeType })) {
+      onView()
+      return
+    }
     if (opening) return
     setOpening(true)
     try {
-      await openSignedUrl(async () => {
-        const res = await getAnnouncementAttachmentUrl(announcementId, attachment.attachmentId)
-        const url = res.data?.url
-        if (!url) throw new Error("This file couldn't be opened.")
-        return url
-      })
+      await openSignedUrl(() => freshAnnouncementAttachmentUrl(announcementId, attachment.attachmentId))
     } catch (err) {
       showNotification(err instanceof Error && err.message ? err.message : "This file couldn't be opened.", 'error')
     } finally {
@@ -127,6 +128,7 @@ interface StreamPostCardProps {
 
 export default function StreamPostCard({ item, audience, author, canChange, canRetryEmails, onEdit, onDelete, onChanged }: StreamPostCardProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const media = useMediaViewer()
   const [receiptsOpen, setReceiptsOpen] = useState(false)
   // Moves each time the receipts open, so the numbers are current when looked at.
   const [receiptsNonce, setReceiptsNonce] = useState(0)
@@ -140,6 +142,7 @@ export default function StreamPostCard({ item, audience, author, canChange, canR
   const long = item.body.length > CLAMP_CHARS
   const shown = long && !expanded ? `${item.body.slice(0, CLAMP_CHARS).trimEnd()}…` : item.body
   const chips = seenChips(item)
+  const files = attachmentFiles(detail?.attachments ?? [], (id) => freshAnnouncementAttachmentUrl(item.announcementId, id))
 
   const toggleReceipts = () => {
     if (!receiptsOpen) setReceiptsNonce((n) => n + 1)
@@ -212,7 +215,9 @@ export default function StreamPostCard({ item, audience, author, canChange, canR
       {item.attachmentCount > 0 && (
         <div className="flex flex-wrap gap-2">
           {detail
-            ? detail.attachments.map((a) => <AttachmentButton key={a.attachmentId} announcementId={item.announcementId} attachment={a} />)
+            ? detail.attachments.map((a) => (
+                <AttachmentButton key={a.attachmentId} announcementId={item.announcementId} attachment={a} onView={() => media.open(files, a.attachmentId)} />
+              ))
             : failed
               ? <span className="text-xs text-slate-500">{item.attachmentCount} {item.attachmentCount === 1 ? 'file' : 'files'} could not be loaded. Reload to try again.</span>
               : loading && Array.from({ length: item.attachmentCount }, (_, i) => (
@@ -259,6 +264,7 @@ export default function StreamPostCard({ item, audience, author, canChange, canR
         ) : (
           <div className="h-24 animate-pulse rounded-2xl bg-slate-100" aria-hidden="true" />
         ))}
+      {media.viewer}
     </article>
   )
 }

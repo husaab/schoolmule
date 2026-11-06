@@ -23,7 +23,6 @@ import { useFilterParams, type FilterPatch } from '@/hooks/useFilterParams'
 import { useClassTermGrades } from '@/hooks/useClassTermGrades'
 import { useLoad } from '@/hooks/useLoad'
 import { classPageMeta, firstNameOf, missingFlag, noMarksNote, pickClass } from '@/lib/classroomText'
-import { openSignedUrl } from '@/lib/openSignedUrl'
 import {
   PARENT_CLASS_TABS,
   parentClassesHref,
@@ -33,13 +32,13 @@ import {
 } from '@/lib/portalRoutes'
 import {
   acknowledgeAnnouncement,
-  getAnnouncementAttachmentUrl,
+  freshAnnouncementAttachmentUrl,
   markAnnouncementRead,
   unacknowledgeAnnouncement,
 } from '@/services/announcementService'
 import { getLensClass, getLensClasses, getLensGrades, getLensStream } from '@/services/parentClassroomService'
 import type { Thread } from '@/services/types/messaging'
-import type { StudentAnnouncement, StudentAttachment, StudentClassCard, StudentClassHeader } from '@/services/types/studentPortal'
+import type { StudentAnnouncement, StudentClassCard, StudentClassHeader } from '@/services/types/studentPortal'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
@@ -91,19 +90,9 @@ function StreamBody({ studentId, classId }: { studentId: string; classId: string
     [setPost, bump, notify],
   )
 
-  const onOpenAttachment = useCallback(
-    async (post: StudentAnnouncement, file: StudentAttachment) => {
-      try {
-        await openSignedUrl(async () => {
-          const res = await getAnnouncementAttachmentUrl(post.announcementId, file.attachmentId)
-          if (!res.data?.url) throw new Error("This file couldn't be opened.")
-          return res.data.url
-        })
-      } catch (err) {
-        notify(err instanceof Error && err.message ? err.message : "This file couldn't be opened.", 'error')
-      }
-    },
-    [notify],
+  const resolveAttachmentUrl = useCallback(
+    (post: StudentAnnouncement, attachmentId: string) => freshAnnouncementAttachmentUrl(post.announcementId, attachmentId),
+    [],
   )
 
   if (stream.error && !stream.data) {
@@ -115,7 +104,7 @@ function StreamBody({ studentId, classId }: { studentId: string; classId: string
       tone="parent"
       announcements={stream.data.announcements}
       notices={stream.data.notices}
-      onOpenAttachment={onOpenAttachment}
+      resolveAttachmentUrl={resolveAttachmentUrl}
       onAck={onAck}
       onSeen={onSeen}
       noticeHref={(n) => parentItemHref(studentId, n.itemId)}

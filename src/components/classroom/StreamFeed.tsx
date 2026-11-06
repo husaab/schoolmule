@@ -1,7 +1,8 @@
 // src/components/classroom/StreamFeed.tsx
 // A class Stream as a student or parent reads it (Student-Class and
 // Parent-Lens boards): posts with the teacher's avatar, "New" on what has not
-// been opened, attachments that open a freshly signed link, and "Got it" where
+// been opened, attachments that open in the media viewer or on a freshly signed
+// link, and "Got it" where
 // the teacher asked for one (parents only). Posted assignments, quizzes and
 // materials sit between the posts as notice rows. There is no reply button on
 // a post: the one "Message {teacher}" button at the top of the page is how to
@@ -19,19 +20,23 @@ import {
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
 import { formatBytes, isImage } from '@/components/messaging/formatters'
 import { dueLine, postedAtLabel } from '@/lib/classroomText'
+import { attachmentFiles } from '@/lib/mediaViewer'
+import { openSignedUrl } from '@/lib/openSignedUrl'
 import { buildStreamFeed, noticeLead } from '@/lib/streamFeed'
 import { shortDate } from '@/lib/studentAccounts'
 import type { ClassNotice, StudentAnnouncement, StudentAttachment } from '@/services/types/studentPortal'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 const CLAMP_CHARS = 600
 
 interface StreamFeedProps {
   announcements: StudentAnnouncement[]
   notices: ClassNotice[]
-  /** Open one file (the page asks for a fresh signed link). */
-  onOpenAttachment: (announcement: StudentAnnouncement, attachment: StudentAttachment) => Promise<void> | void
+  /** A fresh signed link for one file (the student's route or the parent's). */
+  resolveAttachmentUrl: (announcement: StudentAnnouncement, attachmentId: string) => Promise<string>
   /** "Got it" (true) and its undo (false). Left out where nobody is asked for one. */
   onAck?: (announcement: StudentAnnouncement, acked: boolean) => Promise<void> | void
   /** Show posts and their state, but offer no "Got it". */
@@ -105,13 +110,15 @@ interface PostCardProps {
   focused: boolean
   tone: 'student' | 'parent'
   now: Date
-  onOpenAttachment: StreamFeedProps['onOpenAttachment']
+  resolveAttachmentUrl: StreamFeedProps['resolveAttachmentUrl']
   onAck?: StreamFeedProps['onAck']
   onSeen?: (post: StudentAnnouncement) => void
 }
 
-function PostCard({ post, isNew, focused, tone, now, onOpenAttachment, onAck, onSeen }: PostCardProps) {
+function PostCard({ post, isNew, focused, tone, now, resolveAttachmentUrl, onAck, onSeen }: PostCardProps) {
   const t = TONE[tone]
+  const notify = useNotificationStore((s) => s.showNotification)
+  const media = useMediaViewer()
   const ref = useRef<HTMLElement>(null)
   const [expanded, setExpanded] = useState(false)
   const [acking, setAcking] = useState(false)
@@ -144,6 +151,18 @@ function PostCard({ post, isNew, focused, tone, now, onOpenAttachment, onAck, on
 
   const long = post.body.length > CLAMP_CHARS
   const shown = long && !expanded ? `${post.body.slice(0, CLAMP_CHARS).trimEnd()}…` : post.body
+
+  const openAttachment = async (a: StudentAttachment) => {
+    if (canView({ name: a.fileName, mimeType: a.mimeType })) {
+      media.open(attachmentFiles(post.attachments, (id) => resolveAttachmentUrl(post, id)), a.attachmentId)
+      return
+    }
+    try {
+      await openSignedUrl(() => resolveAttachmentUrl(post, a.attachmentId))
+    } catch (err) {
+      notify(err instanceof Error && err.message ? err.message : "This file couldn't be opened.", 'error')
+    }
+  }
 
   const ack = async (acked: boolean) => {
     if (!onAck || acking) return
@@ -193,7 +212,7 @@ function PostCard({ post, isNew, focused, tone, now, onOpenAttachment, onAck, on
       {post.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {post.attachments.map((a) => (
-            <AttachmentButton key={a.attachmentId} attachment={a} onOpen={() => onOpenAttachment(post, a)} />
+            <AttachmentButton key={a.attachmentId} attachment={a} onOpen={() => openAttachment(a)} />
           ))}
         </div>
       )}
@@ -231,6 +250,7 @@ function PostCard({ post, isNew, focused, tone, now, onOpenAttachment, onAck, on
           )}
         </div>
       )}
+      {media.viewer}
     </article>
   )
 }
@@ -269,7 +289,7 @@ function NoticeRow({ notice, href, tone, now }: { notice: ClassNotice; href: str
 export default function StreamFeed({
   announcements,
   notices,
-  onOpenAttachment,
+  resolveAttachmentUrl,
   onAck,
   readOnly = false,
   onSeen,
@@ -308,7 +328,7 @@ export default function StreamFeed({
             focused={focusId === entry.post.announcementId}
             tone={tone}
             now={now}
-            onOpenAttachment={onOpenAttachment}
+            resolveAttachmentUrl={resolveAttachmentUrl}
             onAck={readOnly ? undefined : onAck}
             onSeen={readOnly ? undefined : onSeen}
           />

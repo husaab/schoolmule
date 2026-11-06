@@ -14,6 +14,12 @@ export { deleteStudentMessage, editStudentMessage } from './studentPortalService
 const base = '/student/conversations';
 const thread = (id: string) => `${base}/${encodeURIComponent(id)}`;
 
+/** GET /student/conversations/:id/attachments/:attachmentId/url: a fresh signed link, good for an hour. */
+export const freshStudentAttachmentUrl = async (id: string, attachmentId: string): Promise<string> => {
+  const res = await apiClient<StudentPortalEnvelope<{ url: string }>>(`${thread(id)}/attachments/${encodeURIComponent(attachmentId)}/url`);
+  return res.data.url;
+};
+
 export interface StudentListFilters {
   status?: 'open' | 'resolved';
   classId?: string;

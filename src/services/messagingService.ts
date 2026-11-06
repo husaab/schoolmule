@@ -188,3 +188,10 @@ export const setMuted = async (id: string, muted: boolean): Promise<SetMutedResp
  */
 export const getAttachmentUrl = async (id: string, attachmentId: string): Promise<AttachmentUrlResponse> =>
   apiClient<AttachmentUrlResponse>(`${thread(id)}/attachments/${encodeURIComponent(attachmentId)}/url`);
+
+/** Just the fresh address, for the media viewer. */
+export const freshAttachmentUrl = async (id: string, attachmentId: string): Promise<string> => {
+  const res = await getAttachmentUrl(id, attachmentId);
+  if (!res.data?.url) throw new Error("This file couldn't be opened.");
+  return res.data.url;
+};

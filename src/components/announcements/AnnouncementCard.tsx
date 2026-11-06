@@ -3,8 +3,11 @@
 import React, { useEffect, useRef } from 'react'
 import { ChatBubbleLeftRightIcon, CheckIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
+import { attachmentFiles } from '@/lib/mediaViewer'
+import { freshAnnouncementAttachmentUrl } from '@/services/announcementService'
 import type { AnnouncementAttachment, AnnouncementItem } from '@/services/types/announcement'
 import AnnouncementScopeChip from './AnnouncementScopeChip'
 
@@ -25,6 +28,7 @@ const PREVIEW_CHARS = 220
 /** One announcement in the parent feed: full body when unread or expanded, clipped otherwise. */
 const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, onToggle, onAsk, onRead, onAck, onUnack }) => {
   const ref = useRef<HTMLElement>(null)
+  const media = useMediaViewer()
   const unread = !item.read
   const long = item.body.length > PREVIEW_CHARS
   const showFull = unread || expanded || !long
@@ -48,6 +52,7 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
 
   const child = item.children?.[0] ?? null
   const askLabel = item.authorRole === 'ADMIN' ? 'Reply privately' : `Reply privately to ${item.authorName}`
+  const files = attachmentFiles(attachments, (id) => freshAnnouncementAttachmentUrl(item.announcementId, id))
 
   return (
     <article ref={ref} className={`relative rounded-2xl border bg-white p-4 shadow-sm sm:p-5 ${item.isPinned ? 'border-amber-200' : 'border-stone-200/70'}`}>
@@ -76,7 +81,7 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
         {attachments.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {attachments.map((a) => (
-              <AttachmentChip key={a.attachmentId} attachment={{ ...a, messageId: item.announcementId }} />
+              <AttachmentChip key={a.attachmentId} attachment={{ ...a, messageId: item.announcementId }} onView={() => media.open(files, a.attachmentId)} />
             ))}
           </div>
         )}
@@ -121,6 +126,7 @@ const AnnouncementCard: React.FC<Props> = ({ item, attachments = [], expanded, o
           </span>
         </div>
       </div>
+      {media.viewer}
     </article>
   )
 }

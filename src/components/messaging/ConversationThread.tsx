@@ -14,13 +14,16 @@ import type { Message, SenderRole, Thread } from '@/services/types/messaging'
 import {
   deleteMessage,
   editMessage,
+  freshAttachmentUrl,
   getConversation,
   markRead,
   postMessage,
   setMuted,
   setStatus,
 } from '@/services/messagingService'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
 import { classItemHref } from '@/lib/classroomRoutes'
+import { threadFiles } from '@/lib/mediaViewer'
 import { parentItemHref } from '@/lib/portalRoutes'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
@@ -74,6 +77,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
   const user = useUserStore((s) => s.user)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
+  const media = useMediaViewer()
 
   const [thread, setThreadState] = useState<Thread | null>(null)
   // Signed attachment URLs are good for an hour; keep the ones we already
@@ -414,6 +418,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
               canDelete={row.message.senderId === user.id || can(user, 'messages.all')}
               onEdit={(body) => edit(row.message, body)}
               onDelete={() => remove(row.message)}
+              onViewAttachment={(attachmentId) => media.open(threadFiles(thread.messages, (id) => freshAttachmentUrl(conversationId, id)), attachmentId)}
             />
           ),
         )}
@@ -432,6 +437,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
           compact
         />
       </div>
+      {media.viewer}
     </div>
   )
 }

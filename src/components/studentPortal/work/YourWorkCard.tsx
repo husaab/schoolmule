@@ -26,10 +26,12 @@
 'use client'
 
 import { useRef, useState, type ReactNode } from 'react'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
 import { useDebouncedSave } from '@/hooks/useDebouncedSave'
 import { classifyAnswerSaveError, forgetRefusedAnswer, recallUsableRefusedAnswer, rememberRefusedAnswer, type RefusedAnswer as Refused } from '@/lib/answerSaveFailure'
 import { downscaleImage } from '@/lib/imageDownscale'
 import { closedNote, isFeedbackOnly, itemStatusOf, lateNote, lensQuizLine, turnedInNote, turnInHint, turnInLabel, workHeading, type Owner } from '@/lib/itemPageText'
+import { submissionFiles } from '@/lib/mediaViewer'
 import { openSignedUrl } from '@/lib/openSignedUrl'
 import { batchesOf, checkSubmissionFiles, UPLOAD_BATCH, withMimeType } from '@/lib/submissionFiles'
 import { displayStatus, workStatusLabel } from '@/lib/workStatusLabels'
@@ -107,6 +109,7 @@ export default function YourWorkCard({
   now = new Date(),
 }: YourWorkCardProps) {
   const notify = useNotificationStore((s) => s.showNotification)
+  const media = useMediaViewer()
   const sub = item.submission
   const teacherName = item.teacher?.name ?? null
   const kindWord = item.kind === 'quiz' ? 'quiz' : 'assignment'
@@ -215,6 +218,10 @@ export default function YourWorkCard({
   }
 
   const openFile = async (file: SubmissionFile) => {
+    if (canView({ name: file.fileName, mimeType: file.mimeType })) {
+      media.open(submissionFiles(files, resolveFileUrl), file.fileId)
+      return
+    }
     try {
       await openSignedUrl(() => resolveFileUrl(file))
     } catch (err) {
@@ -404,6 +411,7 @@ export default function YourWorkCard({
       ) : null}
 
       {bar && <TurnInBar view={bar} />}
+      {media.viewer}
     </section>
   )
 }

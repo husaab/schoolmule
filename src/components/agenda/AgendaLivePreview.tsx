@@ -12,6 +12,7 @@ import type {
   AgendaManifestItem,
 } from '@/services/types/agenda';
 import { renderAgendaMonth, getAgendaPageSignedUrl } from '@/services/agendaService';
+import { loadPdfjs, type PdfDocumentProxy } from '@/components/media/loadPdfjs';
 import { placementToCss, DEFAULT_PLACEMENT } from './imagePlacement';
 import { ArrowsPointingOutIcon } from '@heroicons/react/24/outline';
 
@@ -22,24 +23,6 @@ const PAGE_H = 1056;
 // Signed URLs expire server-side after 1 hour; refresh a cached one just
 // before that so long editing sessions don't hit dead links.
 const SIGNED_URL_TTL_MS = 50 * 60 * 1000;
-
-// pdfjs is loaded once, lazily, on the client
-type PdfJsModule = typeof import('pdfjs-dist');
-type PdfDocumentProxy = import('pdfjs-dist').PDFDocumentProxy;
-
-let pdfjsPromise: Promise<PdfJsModule> | null = null;
-const loadPdfjs = (): Promise<PdfJsModule> => {
-  if (!pdfjsPromise) {
-    pdfjsPromise = import('pdfjs-dist').then((pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url
-      ).toString();
-      return pdfjs;
-    });
-  }
-  return pdfjsPromise;
-};
 
 interface Props {
   agendaId: string;

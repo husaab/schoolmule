@@ -168,3 +168,10 @@ export const retryAnnouncementEmails = async (id: string): Promise<RetryAnnounce
  */
 export const getAnnouncementAttachmentUrl = async (id: string, attachmentId: string): Promise<AnnouncementAttachmentUrlResponse> =>
   apiClient<AnnouncementAttachmentUrlResponse>(`${one(id)}/attachments/${encodeURIComponent(attachmentId)}/url`);
+
+/** Just the fresh address, for opening a file. */
+export const freshAnnouncementAttachmentUrl = async (id: string, attachmentId: string): Promise<string> => {
+  const res = await getAnnouncementAttachmentUrl(id, attachmentId);
+  if (!res.data?.url) throw new Error("This file couldn't be opened.");
+  return res.data.url;
+};
