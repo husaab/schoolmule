@@ -273,7 +273,7 @@ const ClassStatsModal: React.FC<ClassStatsModalProps> = ({
                             disabled={readOnly || busy}
                             onChange={(ev) => setNoteDrafts((prev) => ({ ...prev, [stu.studentId]: ev.target.value }))}
                             onBlur={() => saveNote(stu.studentId, stu.name)}
-                            placeholder="e.g. ESL newcomer, modified expectations"
+                            placeholder="e.g. ESL newcomer, new to the school"
                             className={textareaClass}
                           />
                         </label>

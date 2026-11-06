@@ -5,10 +5,14 @@
 // "M" Missing (counts as 0). The category window adds how it saves and that a
 // column name opens the grading view.
 
+import { MODIFIED_LEGEND } from '@/lib/modifiedMark'
+
 interface GridLegendProps {
   variant: 'grid' | 'category'
   /** The class has turn-in columns (assignments or quizzes in the gradebook). */
   classwork: boolean
+  /** The class has a modified mark. */
+  modified?: boolean
 }
 
 function Swatch({ className, children }: { className: string; children: React.ReactNode }) {
@@ -19,7 +23,13 @@ function Swatch({ className, children }: { className: string; children: React.Re
   )
 }
 
-export default function GridLegend({ variant, classwork }: GridLegendProps) {
+export default function GridLegend({ variant, classwork, modified = false }: GridLegendProps) {
+  const modifiedSwatch = modified && (
+    <span className="flex items-center gap-1.5">
+      <Swatch className="bg-violet-600 text-[10px] font-bold text-white">MOD</Swatch>
+      {MODIFIED_LEGEND}
+    </span>
+  )
   const swatches = classwork && (
     <>
       <span className="flex items-center gap-1.5">
@@ -41,6 +51,7 @@ export default function GridLegend({ variant, classwork }: GridLegendProps) {
     return (
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-slate-600">
         {swatches}
+        {modifiedSwatch}
         <span className="text-slate-500 sm:ml-auto">
           Type scores straight into the cells. Each one saves by itself; there is no Save button.
           {classwork && " Click a column name to grade with the student's work."}
@@ -62,6 +73,7 @@ export default function GridLegend({ variant, classwork }: GridLegendProps) {
         </span>
       )}
       {swatches}
+      {modifiedSwatch}
       <span className="text-slate-500">Click a category (or any score in it) to open its assessments.</span>
     </div>
   )

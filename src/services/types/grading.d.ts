@@ -42,6 +42,9 @@ export interface GradingRow {
   publishedStatus: GradeStatus | null
   publishedAt: string | null
   feedback: string | null
+  /** Marked as modified: the stored flag, whether or not there's a mark yet. */
+  modified?: boolean
+  modifiedLabel?: string | null
   /** Counted by "Publish to N students". */
   needsPublish: boolean
   /** A thread about this work exists (the chat icon beside the student). */

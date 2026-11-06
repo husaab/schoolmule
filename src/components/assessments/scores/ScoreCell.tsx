@@ -20,12 +20,17 @@
 // layer marks the cell (`mark`, Teacher-Grades board): a draft only the
 // teacher sees is grey and italic, work turned in with no grade yet reads
 // "In" in cyan, and work past due with nothing turned in gets a rose dot.
+//
+// A modified mark (`modified`) keeps its number: the cell is tinted violet with
+// a small MOD tag. A Missing or Excused pill wins over it. Right-clicking a cell
+// opens the same menu as the "…".
 
 import React, { KeyboardEvent, useRef, useState } from 'react'
 import { inputClass } from '@/components/shared/modalKit'
 import type { ScoreStatus } from '@/lib/gradeEngine'
 import { clampScoreInput, type CellValue } from '@/lib/scoreAutosaveQueue'
 import StatusControl, { StatsLeftOutMark, type StatsLeftOutControl } from './StatusControl'
+import type { ModifiedCellControl } from './useModifiedMarks'
 
 interface ScoreCellProps {
   /** DOM id used by useScoreGridNav to move focus (input or pill). */
@@ -56,6 +61,8 @@ interface ScoreCellProps {
   mark?: ScoreCellMark
   /** "Leave out of the class average" in the menu (the gradebook's grid only). */
   statsLeftOut?: StatsLeftOutControl
+  /** Mark as modified in the menu, and how the cell shows it. */
+  modified?: ModifiedCellControl
 }
 
 export interface ScoreCellMark {
@@ -73,6 +80,7 @@ export interface ScoreCellMark {
 const BASE_TONE = { bg: 'bg-slate-50', text: 'text-slate-900', placeholder: 'placeholder:text-slate-400' }
 const DRAFT_TONE = { bg: 'bg-slate-100', text: 'text-slate-500 italic', placeholder: 'placeholder:text-slate-400' }
 const IN_TONE = { bg: 'bg-cyan-100', text: 'text-cyan-800', placeholder: 'placeholder:text-cyan-800' }
+const MODIFIED_TONE = { bg: 'bg-violet-50', text: 'text-violet-800', placeholder: 'placeholder:text-slate-400' }
 // Scores read at a glance in a wide grid (UX review E1): a larger figure than the form inputs.
 const cellInputClass = inputClass.replace('text-sm', 'text-base font-medium')
 const toned = (tone: typeof BASE_TONE) =>
@@ -119,8 +127,10 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
   corner,
   mark,
   statsLeftOut,
+  modified,
 }) => {
   const isDraft = Boolean(mark?.draft)
+  const showsModified = Boolean(modified?.effective) && status === 'graded'
   const isIn = Boolean(mark?.turnedIn) && value == null
   const pastDue = Boolean(mark?.derivedMissing) && value == null && status === 'graded'
   const guarded = (next: ScoreStatus) => {
@@ -134,7 +144,14 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
 
   // An open menu lifts its cell over the grid's frozen header row and pinned columns.
   return (
-    <td className={`group relative px-2 py-1.5 text-center has-[[aria-expanded=true]]:z-50 ${className}`}>
+    <td
+      className={`group relative px-2 py-1.5 text-center has-[[aria-expanded=true]]:z-50 ${className}`}
+      onContextMenu={(e) => {
+        if (toggleDisabled || isToggling || window.getSelection()?.toString()) return
+        e.preventDefault()
+        setMenuOpen(true)
+      }}
+    >
       <StatusControl
         label={label}
         status={status}
@@ -145,6 +162,7 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         onOpenChange={setMenuOpen}
         triggerRef={pillRef}
         statsLeftOut={statsLeftOut}
+        modified={modified}
       />
       {corner}
       {statsLeftOut?.state === 'assessment' && <StatsLeftOutMark />}
@@ -182,16 +200,16 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
         </div>
       ) : (
         <div className="flex items-center justify-center gap-1">
-          <div className={`w-[4.5rem] rounded-xl ${failed ? 'ring-2 ring-rose-400' : ''}`}>
+          <div className={`relative w-[4.5rem] rounded-xl ${failed ? 'ring-2 ring-rose-400' : ''}`}>
             <input
               id={inputId}
               type="number"
               min="0"
               max={maxScore}
               step="1"
-              aria-label={isIn ? `${label} (turned in${mark?.late ? ' late' : ''}, not graded yet)` : isDraft && value != null ? `${label} (draft)` : label}
+              aria-label={isIn ? `${label} (turned in${mark?.late ? ' late' : ''}, not graded yet)` : isDraft && value != null ? `${label} (draft)` : showsModified ? `${label} (modified)` : label}
               aria-invalid={failed || undefined}
-              className={`${isIn ? toned(IN_TONE) : isDraft && value != null ? toned(DRAFT_TONE) : cellInputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+              className={`${isIn ? toned(IN_TONE) : isDraft && value != null ? toned(DRAFT_TONE) : showsModified ? toned(MODIFIED_TONE) : cellInputClass} text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
                 value == null && !isIn ? 'border-dashed' : ''
               } ${failed ? 'border-rose-300' : ''}`}
               value={value ?? ''}
@@ -221,6 +239,14 @@ const ScoreCell: React.FC<ScoreCellProps> = ({
                           : undefined
               }
             />
+            {showsModified && (
+              <span
+                className="absolute -bottom-1.5 -left-1.5 rounded bg-violet-600 px-1 text-[9px] font-bold leading-[13px] text-white"
+                title={`Modified${modified?.label ? `: ${modified.label}` : ''}. Counts in the student's grade, not this column's class average.`}
+              >
+                MOD
+              </span>
+            )}
           </div>
           <span className="text-sm text-slate-500">/{maxScore}</span>
           {pastDue && (

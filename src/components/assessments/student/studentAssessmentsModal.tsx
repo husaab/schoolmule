@@ -14,6 +14,8 @@ import {
   type ScoreStatus,
 } from '@/lib/gradeEngine'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
+import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
+import { isEffectivelyModified } from '@/lib/modifiedMark'
 import StatusControl from '@/components/assessments/scores/StatusControl'
 import { pillClass } from '@/components/assessments/scores/ScoreCell'
 import { rowNote, type RowNoteTone } from './rowNotes'
@@ -35,6 +37,9 @@ interface StudentScore {
   score: number | null
   /** graded (blank when score is null) | missing (counts as 0) | excused (never counts) */
   status?: ScoreStatus
+  /** Marked as modified: the stored flag. */
+  modified?: boolean
+  modifiedLabel?: string | null
 }
 
 interface StudentAssessmentsModalProps {
@@ -47,6 +52,8 @@ interface StudentAssessmentsModalProps {
   classId: string
   assessments: Assessment[]
   existingScores: StudentScore[]
+  /** The class's grade, for the modified label's suggestions. */
+  classGrade?: string | number | null
   currentEditedScores: { [key: string]: number | '' }
   onRefreshScores: () => void
   /** Parent conversations keyed "studentId|assessmentId" (gradebook page loads them). */
@@ -76,6 +83,7 @@ export default function StudentAssessmentsModal({
   classId,
   assessments,
   existingScores,
+  classGrade = null,
   currentEditedScores,
   onRefreshScores,
   threadStubs = {},
@@ -92,6 +100,7 @@ export default function StudentAssessmentsModal({
 
   // Missing / excused flags save straight away and the gradebook re-reads.
   const { togglingKey, setStatus: setCellStatus } = useCellStatus({ classId, onRefresh: onRefreshScores })
+  const modifiedMarks = useModifiedMarks({ classId, grade: classGrade, onRefresh: onRefreshScores })
   // A status flag replaces whatever the teacher had typed into that cell.
   const setStatus = async (studentId: string, assessmentId: string, next: ScoreStatus) => {
     setEditedScores((prev) => {
@@ -320,7 +329,11 @@ export default function StudentAssessmentsModal({
     const muted = status !== 'graded'
     const isDraft = Boolean(draftFor(assessment.assessmentId)) || (keepsDrafts(assessment.assessmentId) && (scoreValue !== '' || muted))
     const label = `${student.name} score for ${assessment.name}`
-    const note = rowNote(status, isDraft)
+    const savedScore = existingScores.find((s) => s.studentId === student.studentId && s.assessmentId === assessment.assessmentId)
+    const flagged = Boolean(savedScore?.modified)
+    const flagLabel = savedScore?.modifiedLabel ?? null
+    const showsModified = isEffectivelyModified({ modified: flagged, status, value: scoreValue === '' ? null : scoreValue })
+    const note = rowNote(status, isDraft, showsModified ? { label: flagLabel } : null)
 
     return (
       <div
@@ -333,6 +346,12 @@ export default function StudentAssessmentsModal({
           busy={togglingKey === key}
           disabled={togglingKey !== null}
           onSetStatus={(next) => setStatus(student.studentId, assessment.assessmentId, next)}
+          modified={modifiedMarks.controlFor(
+            student.studentId,
+            assessment.assessmentId,
+            { modified: flagged, effective: showsModified, label: flagLabel },
+            existingScores.filter((s) => s.studentId === student.studentId && s.modified && s.modifiedLabel).map((s) => s.modifiedLabel as string),
+          )}
         />
         <div className="flex-1">
           <div className="font-medium">{assessment.name}</div>
@@ -462,11 +481,13 @@ export default function StudentAssessmentsModal({
           ))}
         </div>
 
+        {modifiedMarks.editor}
+
         {/* Summary */}
         <div className="border-t pt-4">
           <div className="text-sm text-gray-600">
             <p>&bull; Enter scores for each assessment. Blank cells are not yet graded and carry no weight; a typed 0 is a real 0.</p>
-            <p>&bull; Hover a row (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear.</p>
+            <p>&bull; Hover a row (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Mark as modified keeps the mark and adds a label for the family.</p>
             <p>&bull; Click &quot;Save Changes&quot; to update the gradebook</p>
           </div>
         </div>

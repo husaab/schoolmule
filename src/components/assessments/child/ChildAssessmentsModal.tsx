@@ -24,6 +24,8 @@ import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
+import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
+import { isEffectivelyModified, modifiedLabelsOf } from '@/lib/modifiedMark'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { useFrozenEdges } from '@/components/assessments/scores/useFrozenEdges'
 import { buildScoreLookup, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
@@ -58,6 +60,8 @@ interface ChildAssessmentsModalProps {
   keepsDrafts?: (assessmentId: string) => boolean
   /** "Draft · not posted" and the like, by assessment, for columns whose classwork students can't see yet. */
   notPosted?: Record<string, string>
+  /** The class's grade, for the modified label's suggestions. */
+  classGrade?: string | number | null
   /** A column to bring into view and flash when the window opens (?focus=). */
   highlightAssessmentId?: string | null
   /** "Publish N" on a turn-in column holding drafts. */
@@ -90,6 +94,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   overlay = EMPTY_OVERLAY,
   keepsDrafts = noDrafts,
   notPosted = {},
+  classGrade = null,
   highlightAssessmentId = null,
   onPublishDrafts,
 }) => {
@@ -97,6 +102,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   // select-then-publish affordance as the columns in the main gradebook.
   const [selectedChildIds, setSelectedChildIds] = useState<Set<string>>(new Set())
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
+  const modifiedMarks = useModifiedMarks({ classId, grade: classGrade, onRefresh, autosave })
   const nav = useScoreGridNav('child-grade', students.length, childAssessments.length)
   const [scrollBox, setScrollBox] = useState<HTMLDivElement | null>(null)
   useFrozenEdges(scrollBox)
@@ -128,7 +134,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
   }
 
   const selectedChildren = childAssessments.filter((c) => selectedChildIds.has(c.assessmentId))
-  const { existing: existingScoreMap, status: statusMap } = useMemo(
+  const { existing: existingScoreMap, status: statusMap, modified: modifiedMap, modifiedLabel: modifiedLabelMap } = useMemo(
     () => buildScoreLookups(scoresMatrix),
     [scoresMatrix]
   )
@@ -371,7 +377,7 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                             overlay,
                             student.studentId,
                             child.assessmentId,
-                            { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded' },
+                            { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded', modified: modifiedMap[key], modifiedLabel: modifiedLabelMap[key] },
                             !keepsDrafts(child.assessmentId),
                           )
                           const shown = autosave.displayValue(key, cell.saved)
@@ -408,6 +414,16 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                               onCommit={() => void autosave.flush()}
                               onSetStatus={(status) => setStatus(student.studentId, child.assessmentId, status)}
                               onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
+                              modified={modifiedMarks.controlFor(
+                                student.studentId,
+                                child.assessmentId,
+                                {
+                                  modified: cell.modified,
+                                  label: cell.modifiedLabel,
+                                  effective: isEffectivelyModified({ modified: cell.modified, status: cell.status, value: shown }),
+                                },
+                                modifiedLabelsOf(scoresMatrix, student.studentId),
+                              )}
                             />
                           )
                         })}
@@ -421,6 +437,20 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
                           toggleDisabled={togglingKey !== null}
                           onSetStatus={(status) => setStatus(student.studentId, parentAssessment.assessmentId, status)}
                           className={`${TOTAL_PIN} z-20 bg-cyan-50 px-4 ${TOTAL_SHADOW}`}
+                          modified={modifiedMarks.controlFor(
+                            student.studentId,
+                            parentAssessment.assessmentId,
+                            {
+                              category: true,
+                              label: null,
+                              modified: childAssessments.some((c) => modifiedMap[`${student.studentId}|${c.assessmentId}`]),
+                              effective: childAssessments.some((c) => {
+                                const k = `${student.studentId}|${c.assessmentId}`
+                                return isEffectivelyModified({ modified: modifiedMap[k], status: statusMap[k] ?? 'graded', value: existingScoreMap[k] ?? null })
+                              }),
+                            },
+                            modifiedLabelsOf(scoresMatrix, student.studentId),
+                          )}
                         />
                       </tr>
                     )
@@ -431,11 +461,12 @@ const ChildAssessmentsModal: React.FC<ChildAssessmentsModalProps> = ({
           </div>
         )}
 
-        <GridLegend variant="category" classwork={hasClasswork} />
+        <GridLegend variant="category" classwork={hasClasswork} modified={scoresMatrix.some((r) => r.is_modified)} />
+        {modifiedMarks.editor}
         <ul className="space-y-1 text-xs text-slate-400">
           <li>Arrow keys move between score cells; Enter moves down.</li>
           <li>Each score is weighted by its points to make up the category score. Blank cells are not yet graded and carry no weight; drafts count once published.</li>
-          <li>Hover a cell (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses.</li>
+          <li>Hover a cell (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses. Mark as modified keeps the mark and adds a label for the family.</li>
         </ul>
       </ModalBody>
 

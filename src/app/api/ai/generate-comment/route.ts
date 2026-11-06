@@ -16,6 +16,8 @@ interface Coverage {
   total?: number
   missing?: number
   excused?: number
+  /** Marks on a modified version of the work, included in the grade. */
+  modifiedCount?: number
 }
 
 // Get grade context and tone guidance based on percentage. A null grade means
@@ -56,11 +58,20 @@ const getGradeContext = (grade: number | null | undefined, coverage?: Coverage |
     toneGuidance = `The student has a grade of ${grade.toFixed(1)}% and requires significant support. Use a caring, supportive tone. Focus on encouragement and concrete next steps. Emphasize that improvement is possible with effort and support. Avoid negative language.`
   }
 
+  const modifiedCount = coverage?.modifiedCount ?? 0
+  if (modifiedCount > 0) {
+    toneGuidance += ' Some marks are for a modified version of the work; do not compare the grade with the class or other students.'
+  }
+
   const basis =
     coverage && typeof coverage.assessed === 'number' && typeof coverage.total === 'number'
       ? `\n- Grade basis: based on ${coverage.assessed} of ${coverage.total} assessments${
           coverage.missing ? ` (${coverage.missing} missing, counted as 0)` : ''
-        }${coverage.excused ? ` (${coverage.excused} excused)` : ''}`
+        }${coverage.excused ? ` (${coverage.excused} excused)` : ''}${
+          modifiedCount > 0
+            ? ` (includes ${modifiedCount} modified assessment${modifiedCount === 1 ? ', which is' : 's, which are'} not comparable with the class)`
+            : ''
+        }`
       : ''
 
   return {

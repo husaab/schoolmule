@@ -10,10 +10,13 @@
 // box has no room for it below, so the bottom row's menu is never cut off.
 // The gradebook's grid adds a fourth item (`statsLeftOut`): leave this student
 // out of the column's class average, which never changes their own mark.
+// `modified` adds Mark as modified: a real mark on a different version of the
+// assessment. A modified mark is already out of the column's average.
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowPathIcon, CheckIcon, EllipsisHorizontalIcon } from '@heroicons/react/24/outline'
 import type { ScoreStatus } from '@/lib/gradeEngine'
+import type { ModifiedCellControl } from './useModifiedMarks'
 
 /** The cell's student and the class average of its column. */
 export interface StatsLeftOutControl {
@@ -51,6 +54,8 @@ interface StatusControlProps {
   triggerRef?: React.RefObject<HTMLElement | null>
   /** Offers "Leave out of the class average" (the gradebook's grid only). */
   statsLeftOut?: StatsLeftOutControl
+  /** Offers Mark as modified. */
+  modified?: ModifiedCellControl
 }
 
 const itemClass =
@@ -81,6 +86,7 @@ const StatusControl: React.FC<StatusControlProps> = ({
   onOpenChange,
   triggerRef,
   statsLeftOut,
+  modified,
 }) => {
   const [ownOpen, setOwnOpen] = useState(false)
   const open = openProp ?? ownOpen
@@ -138,6 +144,9 @@ const StatusControl: React.FC<StatusControlProps> = ({
   }
 
   const placement = 'mt-1 data-[up=true]:bottom-full data-[up=true]:mb-1 data-[up=true]:mt-0'
+  // A modified mark is out of this column's average already, so the choice isn't the teacher's here.
+  const outByMark = Boolean(modified?.effective)
+  const leftOutChecked = outByMark || statsLeftOut?.state != null
 
   return (
     // stopPropagation: category cells open a modal on click.
@@ -194,7 +203,7 @@ const StatusControl: React.FC<StatusControlProps> = ({
           ref={menuRef}
           role="menu"
           className={`absolute right-0 z-20 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg ${
-            statsLeftOut ? 'w-56 pointer-coarse:w-60' : 'w-40 pointer-coarse:w-44'
+            statsLeftOut || modified ? 'w-56 pointer-coarse:w-60' : 'w-40 pointer-coarse:w-44'
           } ${placement}`}
         >
           {status !== 'missing' && (
@@ -215,14 +224,50 @@ const StatusControl: React.FC<StatusControlProps> = ({
               <kbd className="font-sans text-[10px] text-slate-400 pointer-coarse:hidden">⌫</kbd>
             </button>
           )}
+          {modified && (
+            <>
+              <div className="my-1 border-t border-slate-100" role="separator" />
+              <button
+                type="button"
+                role="menuitem"
+                className={`${itemClass} text-violet-700`}
+                onClick={() => {
+                  setOpen(false)
+                  if (rootRef.current) modified.onEdit(rootRef.current)
+                }}
+              >
+                {modified.modified && !modified.category ? (
+                  <span>Edit modified label…</span>
+                ) : (
+                  <span>
+                    Mark as modified…
+                    <span className="block text-[11px] text-slate-500">Keeps the mark, adds a label for the family</span>
+                  </span>
+                )}
+              </button>
+              {modified.modified && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={itemClass}
+                  onClick={() => {
+                    setOpen(false)
+                    modified.onRemove()
+                  }}
+                >
+                  <span>Remove modified</span>
+                </button>
+              )}
+            </>
+          )}
           {statsLeftOut && (
             <>
               <div className="my-1 border-t border-slate-100" role="separator" />
               <button
                 type="button"
                 role="menuitemcheckbox"
-                aria-checked={statsLeftOut.state !== null}
-                disabled={statsLeftOut.state === 'class'}
+                aria-checked={leftOutChecked}
+                disabled={statsLeftOut.state === 'class' || outByMark}
                 className={checkItemClass}
                 onClick={() => {
                   setOpen(false)
@@ -231,17 +276,19 @@ const StatusControl: React.FC<StatusControlProps> = ({
               >
                 <span
                   className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border ${
-                    statsLeftOut.state ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-slate-300'
+                    leftOutChecked ? 'border-cyan-600 bg-cyan-600 text-white' : 'border-slate-300'
                   }`}
                 >
-                  {statsLeftOut.state && <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />}
+                  {leftOutChecked && <CheckIcon className="h-2.5 w-2.5" strokeWidth={3} />}
                 </span>
                 <span>
                   Leave out of the class average
                   <span className="block text-[11px] text-slate-500">
-                    {statsLeftOut.state === 'class'
-                      ? 'Left out of the whole class. Change it in Who counts.'
-                      : 'Their own mark still counts'}
+                    {outByMark
+                      ? 'Modified marks are already left out'
+                      : statsLeftOut.state === 'class'
+                        ? 'Left out of the whole class. Change it in Who counts.'
+                        : 'Their own mark still counts'}
                   </span>
                 </span>
               </button>

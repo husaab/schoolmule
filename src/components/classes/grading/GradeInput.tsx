@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { clampScoreInput, type CellValue } from '@/lib/scoreAutosaveQueue'
 import { formatScore } from '@/lib/gradingView'
 import type { GradeStatus } from '@/services/types/grading'
+import type { ModifiedCellControl } from '@/components/assessments/scores/useModifiedMarks'
 
 interface GradeInputProps {
   studentName: string
@@ -26,6 +27,8 @@ interface GradeInputProps {
   onMarkMissing: () => void
   onClearMissing: () => void
   onExcuse: (excused: boolean) => void
+  /** Mark as modified: only on a turn-in linked to the gradebook. */
+  modified?: ModifiedCellControl
 }
 
 const toggleClass = (on: boolean, tone: 'rose' | 'slate') =>
@@ -48,6 +51,7 @@ export default function GradeInput({
   onScore,
   onCommit,
   onMarkMissing,
+  modified,
   onClearMissing,
   onExcuse,
 }: GradeInputProps) {
@@ -113,6 +117,30 @@ export default function GradeInput({
           {excused ? 'Excused' : 'Excuse'}
         </button>
       </div>
+      {modified && (
+        <div className="flex flex-col gap-1.5">
+          {modified.effective && (
+            <span className="text-[13px] font-medium text-violet-700">
+              Modified{modified.label ? `: ${modified.label}` : ''}. Counts in the grade, not in this column&apos;s class average.
+            </span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={disabled || busy}
+              onClick={(e) => modified.onEdit(e.currentTarget)}
+              className="cursor-pointer rounded-[10px] border border-violet-200 bg-white px-[11px] py-[7px] text-[13px] text-violet-700 transition-colors hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {modified.modified ? 'Edit modified label…' : 'Mark as modified…'}
+            </button>
+            {modified.modified && (
+              <button type="button" disabled={disabled || busy} onClick={modified.onRemove} className={toggleClass(false, 'slate')}>
+                Remove modified
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

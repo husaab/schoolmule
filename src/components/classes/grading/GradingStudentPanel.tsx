@@ -42,6 +42,7 @@ import type { GradePatch, GradeStatus, GradingItem, GradingRow, SubmissionDetail
 import type { Question } from '@/services/types/quiz'
 import FeedbackBox from './FeedbackBox'
 import GradeInput from './GradeInput'
+import type { ModifiedCellControl } from '@/components/assessments/scores/useModifiedMarks'
 import QuickCommentChips from './QuickCommentChips'
 import QuizAnswersReview from './QuizAnswersReview'
 import { appendQuickComment } from './quickComments'
@@ -85,6 +86,8 @@ interface GradingStudentPanelProps {
   onClearMissing: () => void
   onExcuse: (excused: boolean) => void
   onPublish: () => void
+  /** Mark as modified, on a linked column. */
+  modified?: ModifiedCellControl
   /** A quiz: its questions (the choices' words), the signed-in teacher, and what follows a saved point change. */
   quiz?: {
     questions: Map<string, Question> | null
@@ -125,6 +128,7 @@ export default function GradingStudentPanel({
   onClearMissing,
   onExcuse,
   onPublish,
+  modified,
   quiz = null,
 }: GradingStudentPanelProps) {
   const first = firstName(row.name)
@@ -331,6 +335,7 @@ export default function GradingStudentPanel({
             onMarkMissing={onMarkMissing}
             onClearMissing={clearMissing}
             onExcuse={onExcuse}
+            modified={modified}
           />
         )}
 

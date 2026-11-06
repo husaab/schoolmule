@@ -29,6 +29,8 @@ import { summarizePublication } from '@/lib/publicationSummary'
 import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import { buildScoreLookups, type ScoreRow } from '@/components/assessments/scores/types'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
+import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
+import { isEffectivelyModified, modifiedLabelsOf } from '@/lib/modifiedMark'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { cellState, computeAssessmentForStudent, type CellState } from '@/lib/gradeEngine'
 import { toEngineAssessment } from '@/components/assessments/scores/liveGrade'
@@ -66,6 +68,8 @@ interface StandaloneAssessmentModalProps {
   onPublishDrafts?: (assessment: AssessmentPayload) => void
   /** Students left out of the class's statistics (lib/classStats): not in this column's class average. */
   leftOut?: Map<string, LeftOut>
+  /** The class's grade, for the modified label's suggestions. */
+  classGrade?: string | number | null
 }
 
 const noDrafts = () => false
@@ -97,12 +101,14 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   keepsDrafts = noDrafts,
   onPublishDrafts,
   leftOut = NOBODY_LEFT_OUT,
+  classGrade = null,
 }) => {
   // The page keys this modal by assessment id, so switching columns remounts
   // it and the editor starts closed.
   const [editing, setEditing] = useState(false)
 
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh, autosave })
+  const modifiedMarks = useModifiedMarks({ classId, grade: classGrade, onRefresh, autosave })
   const nav = useScoreGridNav('standalone-grade', students.length, 1)
   const lookups = useMemo(() => buildScoreLookups(scoresMatrix), [scoresMatrix])
 
@@ -120,7 +126,12 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
   // Drafts are not grades: the average reads the gradebook's own value for them.
   const rows = students.map((student) => {
     const key = `${student.studentId}|${assessment.assessmentId}`
-    const matrix = { saved: lookups.existing[key] ?? null, status: lookups.status[key] ?? 'graded' }
+    const matrix = {
+      saved: lookups.existing[key] ?? null,
+      status: lookups.status[key] ?? 'graded',
+      modified: lookups.modified[key],
+      modifiedLabel: lookups.modifiedLabel[key],
+    }
     const cell = overlayCell(overlay, student.studentId, assessment.assessmentId, matrix, !holdsDrafts)
     const saved = cell.saved
     const value = autosave.displayValue(key, saved)
@@ -134,7 +145,7 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
     const mark = column
       ? { draft, turnedIn: cell.turnedIn, late: cell.isLate, derivedMissing: cell.derivedMissing }
       : undefined
-    return { student, key, saved, value, status, result, mark }
+    return { student, key, saved, value, status, result, mark, modified: cell.modified, modifiedLabel: cell.modifiedLabel }
   })
   const countBy = (state: CellState) => rows.filter((r) => r.result.state === state).length
   const counted = rows.filter((r) => r.result.isCounted)
@@ -260,6 +271,16 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
                             onSetStatus={(status) => setStatus(row.student.studentId, assessment.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, 0)}
                             mark={row.mark}
+                            modified={modifiedMarks.controlFor(
+                              row.student.studentId,
+                              assessment.assessmentId,
+                              {
+                                modified: row.modified,
+                                label: row.modifiedLabel,
+                                effective: isEffectivelyModified({ modified: row.modified, status: row.status, value: row.value }),
+                              },
+                              modifiedLabelsOf(scoresMatrix, row.student.studentId),
+                            )}
                           />
                           <td className="px-4 py-2 text-right text-sm tabular-nums text-slate-500">
                             {pct == null ? '—' : `${(Math.round(pct * 10) / 10).toFixed(1)}%`}
@@ -272,11 +293,12 @@ const StandaloneAssessmentModal: React.FC<StandaloneAssessmentModalProps> = ({
               </div>
             )}
 
-            {column && <GridLegend variant="category" classwork />}
+            {(column || rows.some((r) => r.modified)) && <GridLegend variant="category" classwork={Boolean(column)} modified={rows.some((r) => r.modified)} />}
+            {modifiedMarks.editor}
             <ul className="space-y-1 text-xs text-slate-400">
               <li>Arrow keys move between students; Enter moves down.</li>
               <li>Blank cells are not yet graded and carry no weight anywhere in SchoolMule. A typed 0 is a real 0.</li>
-              <li>Hover a score (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses.</li>
+              <li>Hover a score (on a phone or tablet, tap its …) for its status menu: Mark missing (counts as 0), Excuse (never counts) or Clear. Click an M or Excused to change or clear it. On a focused cell, M marks missing and X excuses. Mark as modified keeps the mark and adds a label for the family.</li>
               <li>Scores save by themselves as you type; there is no Save button.</li>
               <li>To delete this assessment, use Assessments &amp; categories.</li>
             </ul>

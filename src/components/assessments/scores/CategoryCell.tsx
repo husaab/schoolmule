@@ -10,12 +10,13 @@
 // turned in or holds a draft, waiting for the teacher. The score is large and
 // coloured by band.
 
-import React from 'react'
+import React, { useState } from 'react'
 import type { AssessmentResult, CellState, ScoreStatus } from '@/lib/gradeEngine'
 import type { CategoryDot } from '@/lib/gridOverlay'
 import { categoryFlag, scoreTone } from '@/lib/gradesLayout'
 import StatusControl, { StatsLeftOutMark, type StatsLeftOutControl } from './StatusControl'
 import { pillClass } from './ScoreCell'
+import type { ModifiedCellControl } from './useModifiedMarks'
 
 interface CategoryCellProps {
   /** Accessible name, e.g. "Student A score for Unit tests". */
@@ -39,6 +40,8 @@ interface CategoryCellProps {
   dense?: boolean
   /** "Leave out of the class average" in the menu (the gradebook's grid only). */
   statsLeftOut?: StatsLeftOutControl
+  /** Mark as modified in the menu: it marks each item inside. */
+  modified?: ModifiedCellControl
 }
 
 /**
@@ -67,7 +70,9 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
   title,
   dense = false,
   statsLeftOut,
+  modified,
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false)
   const excused = result.state === 'excused'
   const gradedChildren = childStates.filter((st) => st === 'graded').length
   // Something inside is flagged missing (counts as 0): the board's rose dot.
@@ -92,6 +97,7 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
     <span className={`inline-flex items-center px-1 ${dense ? 'flex-row gap-2' : 'flex-col gap-0.5'}`}>
       {score}
       {flag && <span className={`text-xs font-medium ${flag.className}`}>{flag.text}</span>}
+      {modified?.effective && <span className="text-xs font-medium text-violet-700">Includes modified</span>}
     </span>
   )
   // An open menu lifts its cell over the grid's frozen header row and pinned columns.
@@ -99,6 +105,11 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
     <td
       className={`group relative px-2 py-2 text-center has-[[aria-expanded=true]]:z-50 ${onClick ? 'cursor-pointer' : ''} ${failed ? 'ring-2 ring-inset ring-rose-400' : ''} ${className}`}
       onClick={onClick}
+      onContextMenu={(e) => {
+        if (toggleDisabled || isToggling || window.getSelection()?.toString()) return
+        e.preventDefault()
+        setMenuOpen(true)
+      }}
       title={failed ? "A score in this category didn't save. Use Retry above the grid." : title}
     >
       <StatusControl
@@ -113,6 +124,9 @@ const CategoryCell: React.FC<CategoryCellProps> = ({
             : undefined
         }
         statsLeftOut={statsLeftOut}
+        modified={modified}
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
       />
       {statsLeftOut?.state === 'assessment' && <StatsLeftOutMark />}
       {onClick ? (

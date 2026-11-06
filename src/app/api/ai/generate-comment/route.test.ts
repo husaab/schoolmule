@@ -41,6 +41,33 @@ const call = async (body: Record<string, unknown>) => {
 }
 
 describe('generate-comment', () => {
+  describe('a grade that includes modified marks', () => {
+    const generate = async (coverage: Record<string, number>) => {
+      const req = new Request('http://localhost/api/ai/generate-comment', { method: 'POST', body: JSON.stringify({ ...BASE, grade: 72, coverage }) })
+      await POST(req as never)
+      return sent!.messages.map((m) => m.content).join('\n')
+    }
+
+    it('tells the model, and not to compare the grade', async () => {
+      const prompt = await generate({ assessed: 3, total: 3, modifiedCount: 2 })
+      expect(prompt).toContain('includes 2 modified assessments, which are not comparable with the class')
+      expect(prompt).toContain('Some marks are for a modified version of the work; do not compare the grade with the class or other students.')
+    })
+
+    it('uses the singular for one', async () => {
+      expect(await generate({ assessed: 3, total: 3, modifiedCount: 1 })).toContain('includes 1 modified assessment, which is not comparable with the class')
+    })
+
+    it('never names a plan', async () => {
+      expect(await generate({ assessed: 3, total: 3, modifiedCount: 2 })).not.toMatch(/\biep\b/i)
+    })
+
+    it('says nothing with none', async () => {
+      expect(await generate({ assessed: 3, total: 3, modifiedCount: 0 })).not.toMatch(/modified/i)
+      expect(await generate({ assessed: 3, total: 3 })).not.toMatch(/modified/i)
+    })
+  })
+
   it("sends today's prompt when no details are given", async () => {
     const { prompt, maxTokens } = await call(BASE)
     expect(prompt).toContain('- Work Habits Rating: Good')

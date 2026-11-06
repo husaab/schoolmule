@@ -56,6 +56,8 @@ import { groupRowsByStudent, liveRowsForStudent, toEngineAssessments } from '@/c
 import ScoreCell from '@/components/assessments/scores/ScoreCell'
 import CategoryCell from '@/components/assessments/scores/CategoryCell'
 import { useCellStatus } from '@/components/assessments/scores/useCellStatus'
+import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
+import { isEffectivelyModified, modifiedLabelsOf } from '@/lib/modifiedMark'
 import { useScoreGridNav } from '@/components/assessments/scores/useScoreGridNav'
 import { useFrozenEdges } from '@/components/assessments/scores/useFrozenEdges'
 import { CLASS_STICKY_BOTTOM_PX } from '@/lib/classStickyHeader'
@@ -104,7 +106,7 @@ import Spinner from '@/components/Spinner'
 import Avatar from '@/components/avatar/Avatar'
 import ClassStatsModal from '@/components/gradebook/classStats/ClassStatsModal'
 import { useStatsExclusions } from '@/hooks/useStatsExclusions'
-import { classAverage as poolAverage, leftOutIndex, leftOutOfClassCount, leftOutSummary, statusLine, toggledColumn } from '@/lib/classStats'
+import { addModifiedMarks, classAverage as poolAverage, leftOutIndex, leftOutOfClassCount, leftOutSummary, statusLine, toggledColumn } from '@/lib/classStats'
 import type { StatsLeftOutControl } from '@/components/assessments/scores/StatusControl'
 import { readGridDensity, scoreTone, writeGridDensity, type GridDensity } from '@/lib/gradesLayout'
 
@@ -343,6 +345,7 @@ export default function GradebookWorkspace({
   // Missing / excused flags save straight away (after any typed score), then
   // the matrix is re-read.
   const { togglingKey, setStatus } = useCellStatus({ classId, onRefresh: refreshScoresMatrix, autosave })
+  const modifiedMarks = useModifiedMarks({ classId, grade: classData.grade, onRefresh: refreshScoresMatrix, autosave })
   const nav = useScoreGridNav('grade', students.length, assessments.filter((a) => !a.parentAssessmentId).length)
   const [gridBox, setGridBox] = useState<HTMLDivElement | null>(null)
   const gridRef = useCallback((el: HTMLDivElement | null) => {
@@ -391,7 +394,7 @@ export default function GradebookWorkspace({
   // ---- Derived grid data (all grade maths goes through the engine) ----
   const displayedAssessments = useMemo(() => assessments.filter((a) => !a.parentAssessmentId), [assessments])
   const sortedStudents = useMemo(() => [...students].sort((a, b) => a.name.localeCompare(b.name)), [students])
-  const { existing: existingScoreMap, status: statusMap } = useMemo(() => buildScoreLookups(scoresMatrix), [scoresMatrix])
+  const { existing: existingScoreMap, status: statusMap, modified: modifiedMap, modifiedLabel: modifiedLabelMap } = useMemo(() => buildScoreLookups(scoresMatrix), [scoresMatrix])
   const engineAssessments = useMemo(() => toEngineAssessments(assessments), [assessments])
   const engineById = useMemo(
     () => Object.fromEntries(engineAssessments.map((a) => [a.assessment_id, a])),
@@ -439,12 +442,24 @@ export default function GradebookWorkspace({
         overlay,
         studentId,
         assessmentId,
-        { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded' },
+        { saved: existingScoreMap[key] ?? null, status: statusMap[key] ?? 'graded', modified: modifiedMap[key], modifiedLabel: modifiedLabelMap[key] },
         !keepsDrafts(assessmentId),
       )
     },
-    [overlay, existingScoreMap, statusMap, keepsDrafts],
+    [overlay, existingScoreMap, statusMap, modifiedMap, modifiedLabelMap, keepsDrafts],
   )
+
+  // The marks that show as modified. They stay out of their column's average;
+  // who a teacher left out is still read from the exclusions (statsControl).
+  const flaggedRows = useMemo(() => scoresMatrix.filter((r) => r.is_modified), [scoresMatrix])
+  const shownModified = useMemo(
+    () =>
+      flaggedRows
+        .map((r) => ({ studentId: r.student_id, assessmentId: r.assessment_id, cell: cellFor(r.student_id, r.assessment_id) }))
+        .filter(({ cell }) => isEffectivelyModified({ modified: cell.modified, status: cell.status, value: cell.saved })),
+    [flaggedRows, cellFor],
+  )
+  const labelsFor = useCallback((studentId: string) => modifiedLabelsOf(flaggedRows, studentId), [flaggedRows])
 
   // Live rows merge the values not yet confirmed by the server over the saved
   // matrix, so totals show what the grid shows. Drafts are not grades: a
@@ -465,6 +480,10 @@ export default function GradebookWorkspace({
   const leftOut = useMemo(
     () => leftOutIndex(statsExclusions.exclusions, engineAssessments),
     [statsExclusions.exclusions, engineAssessments],
+  )
+  const columnAveragePool = useMemo(
+    () => addModifiedMarks(leftOut, shownModified, engineAssessments),
+    [leftOut, shownModified, engineAssessments],
   )
   const termGrades = [...liveByStudent.entries()].map(([studentId, v]) => ({ studentId, pct: v.grade.pct }))
   const assessedCount = termGrades.filter((g) => g.pct != null).length
@@ -495,10 +514,11 @@ export default function GradebookWorkspace({
     const out: StoredGrades = {}
     students.forEach((stu) => {
       const grade = liveByStudent.get(stu.studentId)?.grade
-      out[stu.studentId] = { pct: grade?.pct ?? null, coverage: grade?.coverage ?? null }
+      const modifiedCount = shownModified.filter((m) => m.studentId === stu.studentId).length
+      out[stu.studentId] = { pct: grade?.pct ?? null, coverage: grade?.coverage ? { ...grade.coverage, modifiedCount } : null }
     })
     return JSON.stringify(out)
-  }, [students, liveByStudent])
+  }, [students, liveByStudent, shownModified])
   useEffect(() => {
     if (loading || error || students.length === 0) return
     writeStoredGrades(classId, JSON.parse(storedGrades) as StoredGrades)
@@ -515,6 +535,8 @@ export default function GradebookWorkspace({
         assessmentId: score.assessment_id,
         score: score.score,
         status: score.status,
+        modified: Boolean(score.is_modified),
+        modifiedLabel: score.modified_label ?? null,
       })),
     [scoresMatrix],
   )
@@ -1099,6 +1121,17 @@ export default function GradebookWorkspace({
                               title="Open this category's assessments"
                               dense={density === 'compact'}
                               statsLeftOut={statsControl(stu, a)}
+                              modified={modifiedMarks.controlFor(
+                                stu.studentId,
+                                a.assessmentId,
+                                {
+                                  category: true,
+                                  label: null,
+                                  modified: (childIdsOf[a.assessmentId] ?? []).some((id) => cellFor(stu.studentId, id).modified),
+                                  effective: shownModified.some((m) => m.studentId === stu.studentId && (childIdsOf[a.assessmentId] ?? []).includes(m.assessmentId)),
+                                },
+                                labelsFor(stu.studentId),
+                              )}
                             />
                           )
                         }
@@ -1122,6 +1155,16 @@ export default function GradebookWorkspace({
                             onSetStatus={(status) => setStatus(stu.studentId, a.assessmentId, status)}
                             onKeyDown={(e) => nav.onKeyDown(e, rowIndex, colIndex)}
                             statsLeftOut={statsControl(stu, a)}
+                            modified={modifiedMarks.controlFor(
+                              stu.studentId,
+                              a.assessmentId,
+                              {
+                                modified: cell.modified,
+                                label: cell.modifiedLabel,
+                                effective: isEffectivelyModified({ modified: cell.modified, status: cell.status, value: shown }),
+                              },
+                              labelsFor(stu.studentId),
+                            )}
                             className={`border-l border-t border-slate-100 ${rowPad} ${highlight}`}
                             corner={
                               threadStubs[key] && (
@@ -1171,7 +1214,8 @@ export default function GradebookWorkspace({
         </div>
       </div>
 
-      <GridLegend variant="grid" classwork={Object.keys(overlay.columns).length > 0} />
+      <GridLegend variant="grid" classwork={Object.keys(overlay.columns).length > 0} modified={flaggedRows.length > 0} />
+      {modifiedMarks.editor}
 
 
       {/* Floating publish tray: appears when columns are ticked. */}
@@ -1208,6 +1252,7 @@ export default function GradebookWorkspace({
 
       {selectedParentAssessment && (
         <ChildAssessmentsModal
+          classGrade={classData.grade}
           isOpen
           onClose={() => {
             void autosave.flush()
@@ -1248,7 +1293,8 @@ export default function GradebookWorkspace({
           onPublishDrafts={openDraftPublish}
           assessment={standaloneAssessment}
           allAssessments={assessments}
-          leftOut={leftOut}
+          leftOut={columnAveragePool}
+          classGrade={classData.grade}
           students={sortedStudents}
           scoresMatrix={scoresMatrix}
           autosave={autosave}
@@ -1285,6 +1331,7 @@ export default function GradebookWorkspace({
         keepsDrafts={keepsDrafts}
         currentEditedScores={studentModalLocal}
         onRefreshScores={refreshScoresMatrix}
+        classGrade={classData.grade}
         threadStubs={threadStubs}
         onOpenConversation={(conversationId) => router.push(`/messages?thread=${encodeURIComponent(conversationId)}`)}
         onMessageGuardians={(assessmentId) => {

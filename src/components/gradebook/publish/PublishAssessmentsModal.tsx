@@ -25,6 +25,7 @@ import Spinner from '@/components/Spinner'
 import Modal from '@/components/shared/modal'
 import DeliveryList from '@/components/gradebook/publish/DeliveryList'
 import { emailingLine } from '@/lib/emailDelivery'
+import { modifiedMarksLine } from '@/lib/modifiedMark'
 
 interface PublishAssessmentsModalProps {
   isOpen: boolean
@@ -235,6 +236,7 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
 
   if (!isOpen) return null
 
+  const modifiedLine = modifiedMarksLine(preview?.modified ?? [])
   const recipientLabel = preview
     ? `${preview.recipientCount} parent${preview.recipientCount === 1 ? '' : 's'}`
     : '…'
@@ -438,6 +440,7 @@ const PublishAssessmentsModal: React.FC<PublishAssessmentsModalProps> = ({
                       Students and parents will see these grades.
                     </p>
                   )}
+                  {modifiedLine && <p className="font-medium text-violet-700">{modifiedLine}</p>}
                   <p className="text-slate-500">
                     Students not yet graded are left out of this send — publish again once
                     they&rsquo;re marked. Students marked missing are included with a 0.

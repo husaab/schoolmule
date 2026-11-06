@@ -6,7 +6,8 @@ import type { Coverage } from '@/lib/gradeEngine'
 
 export interface StoredGrade {
   pct: number | null
-  coverage: Coverage | null
+  /** `modifiedCount`: modified marks in the grade, which the AI comment is told about. */
+  coverage: (Coverage & { modifiedCount?: number }) | null
 }
 
 export type StoredGrades = Record<string, StoredGrade>

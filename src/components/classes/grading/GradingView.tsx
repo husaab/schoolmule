@@ -66,6 +66,8 @@ import { useUserStore } from '@/store/useUserStore'
 import GradingHeader from './GradingHeader'
 import GradingStudentList from './GradingStudentList'
 import GradingStudentPanel from './GradingStudentPanel'
+import { useModifiedMarks } from '@/components/assessments/scores/useModifiedMarks'
+import { isEffectivelyModified } from '@/lib/modifiedMark'
 
 interface GradingViewProps {
   classId: string
@@ -112,6 +114,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
     const [page, list] = await Promise.all([getClassPage(classId), getGradingList(itemId)])
     return { page: page.data, list: list.data }
   })
+  const modifiedMarks = useModifiedMarks({ classId, grade: data?.page.class.grade, onRefresh: reload })
 
   const linked = Boolean(data?.list.item.gradebook)
   const rows = useMemo(() => data?.list.students ?? [], [data])
@@ -411,6 +414,7 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
           linked={linked}
         />
 
+        {modifiedMarks.editor}
         {selectedRow ? (
           <GradingStudentPanel
             key={`${selectedRow.studentId}:${resetKey}`}
@@ -433,6 +437,24 @@ export default function GradingView({ classId, itemId, from = null }: GradingVie
             nextName={around.next ? nameOf(around.next) : null}
             onPrev={() => select(around.prev)}
             onNext={() => select(around.next)}
+            modified={
+              assessmentId
+                ? modifiedMarks.controlFor(
+                    selectedRow.studentId,
+                    assessmentId,
+                    {
+                      modified: Boolean(selectedRow.modified),
+                      label: selectedRow.modifiedLabel ?? null,
+                      effective: isEffectivelyModified({
+                        modified: Boolean(selectedRow.modified),
+                        status: selectedRow.draftStatus ?? selectedRow.publishedStatus ?? 'graded',
+                        value: selectedRow.draftScore ?? selectedRow.publishedScore,
+                      }),
+                    },
+                    rows.filter((r) => r.studentId === selectedRow.studentId && r.modifiedLabel).map((r) => r.modifiedLabel as string),
+                  )
+                : undefined
+            }
             onEdit={(change) => edit(selectedRow.studentId, change)}
             onCommit={commit}
             onMarkMissing={() =>
