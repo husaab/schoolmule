@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
 import CategoryTag from '@/components/patchNotes/CategoryTag';
-import ImageLightbox from '@/components/patchNotes/ImageLightbox';
+import { useMediaViewer } from '@/components/media/useMediaViewer';
+import { patchNoteFiles } from '@/lib/mediaViewer';
 import { getPatchNotes } from '@/services/patchNoteService';
 import type { PatchNote } from '@/services/types/patchNote';
 import DOMPurify from 'dompurify';
@@ -12,7 +13,7 @@ import DOMPurify from 'dompurify';
 export default function WhatsNewPage() {
   const [notes, setNotes] = useState<PatchNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const media = useMediaViewer();
 
   useEffect(() => {
     const load = async () => {
@@ -102,7 +103,7 @@ export default function WhatsNewPage() {
                           />
                           {note.imageUrl && (
                             <button
-                              onClick={() => setLightboxImage(note.imageUrl)}
+                              onClick={() => media.open(patchNoteFiles(notes), note.patchNoteId)}
                               className="mt-3 w-full rounded-lg overflow-hidden border border-slate-200 hover:border-slate-300 transition-colors"
                             >
                               <img
@@ -123,12 +124,7 @@ export default function WhatsNewPage() {
         </div>
       </main>
 
-      <ImageLightbox
-        src={lightboxImage || ''}
-        alt="Screenshot"
-        isOpen={!!lightboxImage}
-        onClose={() => setLightboxImage(null)}
-      />
+      {media.viewer}
     </>
   );
 }

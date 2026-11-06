@@ -1,14 +1,17 @@
 // src/components/classroom/AttachmentList.tsx
 // Read-only attachment rows (type badge or thumbnail, name, size or site)
-// with Preview, which opens the shared viewer in place. Used wherever an item
-// is read rather than edited: the student's and the parent's item pages, the
-// messages about a piece of work. A plain web link opens in a new tab.
+// with Preview, which opens in place: pictures and PDFs in the media viewer with
+// next and previous, a video or a download in the preview window. Used wherever
+// an item is read rather than edited: the student's and the parent's item pages,
+// the messages about a piece of work. A plain web link opens in a new tab.
 'use client'
 
 import { useState } from 'react'
 import { ArrowTopRightOnSquareIcon, PlayIcon } from '@heroicons/react/24/solid'
 import AttachmentPreviewModal from '@/components/classroom/AttachmentPreviewModal'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
 import { attachmentBadge, attachmentMeta, attachmentName, previewKind } from '@/lib/attachments'
+import { classworkFiles } from '@/lib/mediaViewer'
 import type { Attachment } from '@/services/types/classwork'
 
 /** The small picture at the start of a row: a photo's thumbnail, a video tile, or the type badge. */
@@ -49,7 +52,15 @@ const BUTTON =
 
 export default function AttachmentList({ attachments, resolveUrl, className = '' }: AttachmentListProps) {
   const [previewing, setPreviewing] = useState<Attachment | null>(null)
+  const media = useMediaViewer()
   if (attachments.length === 0) return null
+
+  const files = classworkFiles(attachments, attachmentName, resolveUrl)
+  const preview = (a: Attachment) => {
+    const file = files.find((f) => f.id === a.attachmentId)
+    if (file && canView(file)) media.open(files, a.attachmentId)
+    else setPreviewing(a)
+  }
 
   return (
     <>
@@ -74,7 +85,7 @@ export default function AttachmentList({ attachments, resolveUrl, className = ''
                   Open
                 </a>
               ) : (
-                <button type="button" onClick={() => setPreviewing(a)} className={BUTTON} aria-label={`Preview ${name}`}>
+                <button type="button" onClick={() => preview(a)} className={BUTTON} aria-label={`Preview ${name}`}>
                   Preview
                 </button>
               )}
@@ -89,6 +100,7 @@ export default function AttachmentList({ attachments, resolveUrl, className = ''
           onClose={() => setPreviewing(null)}
         />
       )}
+      {media.viewer}
     </>
   )
 }

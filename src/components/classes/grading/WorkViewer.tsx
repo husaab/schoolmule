@@ -1,6 +1,6 @@
 // src/components/classes/grading/WorkViewer.tsx
 // What the student turned in (Teacher-Grading board): a photo fitted to the
-// box (open full size, rotate, download), a PDF in place, other files listed
+// box (full size in the media viewer, rotate, download), a PDF in place, other files listed
 // to download, the typed answer, "Marked as done", or "Not turned in yet".
 // Files are signed for an hour; one that no longer loads offers a reload.
 // A quiz's answers are shown by QuizAnswersReview instead.
@@ -10,13 +10,15 @@ import { useState } from 'react'
 import {
   ArrowDownTrayIcon,
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
+  ArrowsPointingOutIcon,
   CheckCircleIcon,
   DocumentIcon,
   PhotoIcon,
 } from '@heroicons/react/24/outline'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
 import Spinner from '@/components/Spinner'
 import { formatSize, previewKind } from '@/lib/attachments'
+import { downloadUrl, submissionFiles } from '@/lib/mediaViewer'
 import type { SubmissionMode } from '@/services/types/classwork'
 import type { SubmissionDetail, SubmissionFile } from '@/services/types/grading'
 
@@ -43,21 +45,28 @@ function Frame({ children, striped = false }: { children: React.ReactNode; strip
   )
 }
 
-function ActionLink({ href, download, children }: { href: string; download?: string; children: React.ReactNode }) {
+const ACTION = 'inline-flex items-center gap-1 rounded-lg px-1.5 py-1 font-medium text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800'
+
+/** Saves the file where the teacher is, rather than opening its raw link in a tab. */
+function DownloadLink({ url, fileName }: { url: string; fileName: string }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      download={download}
-      className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 font-medium text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800"
-    >
-      {children}
+    <a href={downloadUrl(url, fileName)} download={fileName} className={ACTION}>
+      <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      Download
     </a>
   )
 }
 
-function FileView({ file, first, onReload }: { file: SubmissionFile; first: string; onReload: () => void }) {
+function FullSizeButton({ onView }: { onView: () => void }) {
+  return (
+    <button type="button" onClick={onView} className={`${ACTION} cursor-pointer`}>
+      <ArrowsPointingOutIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      Open full size
+    </button>
+  )
+}
+
+function FileView({ file, first, onReload, onView }: { file: SubmissionFile; first: string; onReload: () => void; onView: () => void }) {
   const [turns, setTurns] = useState(0)
   const [broken, setBroken] = useState(false)
   const kind = kindOf(file)
@@ -89,7 +98,7 @@ function FileView({ file, first, onReload }: { file: SubmissionFile; first: stri
   if (kind === 'image') {
     return (
       <Frame striped>
-        <a href={file.url} target="_blank" rel="noopener noreferrer" className="flex max-h-[600px] w-full flex-1 items-center justify-center overflow-hidden">
+        <button type="button" onClick={onView} aria-label={`Open ${file.fileName} full size`} className="flex max-h-[600px] w-full flex-1 cursor-pointer items-center justify-center overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL, not a static asset */}
           <img
             src={file.url}
@@ -98,30 +107,20 @@ function FileView({ file, first, onReload }: { file: SubmissionFile; first: stri
             style={{ transform: `rotate(${turns * 90}deg)` }}
             className="max-h-[560px] max-w-full object-contain transition-transform duration-200"
           />
-        </a>
+        </button>
         <figcaption className="flex flex-col items-center gap-1 text-center text-sm">
           <span className="text-slate-700">
             {first}&apos;s photo: {file.fileName}
           </span>
           <span className="flex flex-wrap items-center justify-center gap-1 text-[13px] text-slate-500">
-            <ActionLink href={file.url}>
-              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              Open full size
-            </ActionLink>
+            <FullSizeButton onView={onView} />
             ·
-            <button
-              type="button"
-              onClick={() => setTurns((t) => (t + 1) % 4)}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-1.5 py-1 font-medium text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800"
-            >
+            <button type="button" onClick={() => setTurns((t) => (t + 1) % 4)} className={`${ACTION} cursor-pointer`}>
               <ArrowPathIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Rotate
             </button>
             ·
-            <ActionLink href={file.url} download={file.fileName}>
-              <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              Download
-            </ActionLink>
+            <DownloadLink url={file.url} fileName={file.fileName} />
           </span>
         </figcaption>
       </Frame>
@@ -138,15 +137,9 @@ function FileView({ file, first, onReload }: { file: SubmissionFile; first: stri
         />
         <div className="flex flex-wrap items-center gap-1 text-[13px] text-slate-500">
           <span className="mr-1 text-slate-700">{file.fileName}</span>·
-          <ActionLink href={file.url}>
-            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
-            Open full size
-          </ActionLink>
+          <FullSizeButton onView={onView} />
           ·
-          <ActionLink href={file.url} download={file.fileName}>
-            <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-            Download
-          </ActionLink>
+          <DownloadLink url={file.url} fileName={file.fileName} />
         </div>
       </div>
     )
@@ -160,16 +153,14 @@ function FileView({ file, first, onReload }: { file: SubmissionFile; first: stri
         <br />
         <span className="text-[13px] text-slate-500">{formatSize(file.sizeBytes)} · opens in its own app</span>
       </figcaption>
-      <ActionLink href={file.url} download={file.fileName}>
-        <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" />
-        Download
-      </ActionLink>
+      <DownloadLink url={file.url} fileName={file.fileName} />
     </Frame>
   )
 }
 
 export default function WorkViewer({ detail, loading, error, onReload, mode, first }: WorkViewerProps) {
   const [selected, setSelected] = useState(0)
+  const media = useMediaViewer()
 
   if (!detail) {
     return (
@@ -246,7 +237,15 @@ export default function WorkViewer({ detail, loading, error, onReload, mode, fir
   return (
     <div className="flex flex-1 flex-col gap-3">
       {draftNote}
-      {current && <FileView key={current.fileId} file={current} first={first} onReload={onReload} />}
+      {current && (
+        <FileView
+          key={current.fileId}
+          file={current}
+          first={first}
+          onReload={onReload}
+          onView={() => media.open(submissionFiles(files), current.fileId)}
+        />
+      )}
       {files.length > 1 && (
         <ul className="flex flex-wrap gap-2" aria-label={`${first}'s files`}>
           {files.map((f, i) => (
@@ -271,6 +270,7 @@ export default function WorkViewer({ detail, loading, error, onReload, mode, fir
           ))}
         </ul>
       )}
+      {media.viewer}
     </div>
   )
 }

@@ -3,15 +3,17 @@
 import React, { useEffect, useState } from 'react'
 import { ArrowLeftIcon, ArrowPathIcon, CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Avatar from '@/components/avatar/Avatar'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
 import AttachmentChip from '@/components/messaging/AttachmentChip'
 import { formatDayLabel, formatTime } from '@/components/messaging/formatters'
 import { toneClasses, type Tone } from '@/components/messaging/tones'
-import { getAnnouncement, markAnnouncementRead, retryAnnouncementEmails } from '@/services/announcementService'
+import { freshAnnouncementAttachmentUrl, getAnnouncement, markAnnouncementRead, retryAnnouncementEmails } from '@/services/announcementService'
 import { isApiError } from '@/services/apiClient'
 import type { AnnouncementDetail as Detail, AnnouncementItem } from '@/services/types/announcement'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { attachmentFiles } from '@/lib/mediaViewer'
 import { can } from '@/lib/permissions'
 import AnnouncementScopeChip from './AnnouncementScopeChip'
 import ReadReceipts from './ReadReceipts'
@@ -38,6 +40,7 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
   const user = useUserStore((s) => s.user)
   const bump = useMessagingStore((s) => s.bump)
   const showNotification = useNotificationStore((s) => s.showNotification)
+  const media = useMediaViewer()
   const [state, setState] = useState<{ key: string; detail: Detail | null; removed: boolean; error: string | null }>({
     key: '',
     detail: null,
@@ -108,9 +111,11 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
 
   const isStaff = user.role !== 'PARENT'
   const child = detail.children?.[0] ?? null
+  const files = attachmentFiles(detail.attachments, (id) => freshAnnouncementAttachmentUrl(detail.announcementId, id))
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {media.viewer}
       <div className={`flex items-start gap-3 border-b px-5 py-4 ${t.divider}`}>
         <button type="button" onClick={onBack} aria-label="Back" className="mt-0.5 rounded-lg p-1 text-slate-500 hover:bg-slate-100 lg:hidden cursor-pointer">
           <ArrowLeftIcon className="h-5 w-5" />
@@ -168,7 +173,7 @@ const AnnouncementDetail: React.FC<Props> = ({ announcementId, tone, onEdit, onD
         {detail.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {detail.attachments.map((a) => (
-              <AttachmentChip key={a.attachmentId} attachment={{ ...a, messageId: detail.announcementId }} />
+              <AttachmentChip key={a.attachmentId} attachment={{ ...a, messageId: detail.announcementId }} onView={() => media.open(files, a.attachmentId)} />
             ))}
           </div>
         )}

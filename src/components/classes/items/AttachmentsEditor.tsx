@@ -10,7 +10,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowUpTrayIcon, LinkIcon } from '@heroicons/react/24/outline'
 import AttachmentPreviewModal from '@/components/classroom/AttachmentPreviewModal'
-import { ATTACHMENT_ACCEPT, UPLOAD_BATCH, checkNewFiles, fileTitlePatch, youtubeIdOf } from '@/lib/attachments'
+import { canView, useMediaViewer } from '@/components/media/useMediaViewer'
+import { ATTACHMENT_ACCEPT, UPLOAD_BATCH, attachmentName, checkNewFiles, fileTitlePatch, youtubeIdOf } from '@/lib/attachments'
 import { prepareUploads } from '@/lib/uploadPrep'
 import {
   addLink as apiAddLink,
@@ -379,6 +380,24 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [addingLink, setAddingLink] = useState(false)
   const [previewing, setPreviewing] = useState<AttachmentEditorRow | null>(null)
+  const media = useMediaViewer()
+
+  // A picture or PDF, saved or still waiting to go up, opens in the media viewer; the rest in the preview window.
+  const preview = (row: AttachmentEditorRow) => {
+    const files = state.rows
+      .filter((r) => r.attachment.kind === 'file')
+      .map((r) => ({
+        id: r.key,
+        name: attachmentName(r.attachment),
+        mimeType: r.attachment.mimeType,
+        fileName: r.attachment.fileName,
+        url: r.localUrl ?? r.attachment.url,
+        resolve: () => state.resolveUrl(r),
+      }))
+    const file = files.find((f) => f.id === row.key)
+    if (file && canView(file)) media.open(files, row.key)
+    else setPreviewing(row)
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -412,7 +431,7 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
                 key={row.key}
                 row={row}
                 disabled={disabled}
-                onPreview={() => setPreviewing(row)}
+                onPreview={() => preview(row)}
                 onReplace={(file) => void state.replace(row.key, file)}
                 onEdit={() => {
                   setAddingLink(false)
@@ -504,6 +523,7 @@ export default function AttachmentsEditor({ state, label = 'Attachments', option
           onClose={() => setPreviewing(null)}
         />
       )}
+      {media.viewer}
     </div>
   )
 }

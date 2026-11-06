@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/shared/modal'
+import { useMediaViewer } from '@/components/media/useMediaViewer'
+import { patchNoteFiles } from '@/lib/mediaViewer'
 import CategoryTag from './CategoryTag'
-import ImageLightbox from './ImageLightbox'
 import { dismissPatchNotes } from '@/services/patchNoteService'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -21,7 +21,7 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
   const router = useRouter()
   const clearUnread = usePatchNotesStore((s) => s.clearUnread)
   const isParent = useUserStore((s) => s.user.role === 'PARENT')
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const media = useMediaViewer()
 
   if (notes.length === 0) return null
 
@@ -78,7 +78,7 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
                 />
                 {note.imageUrl && (
                   <button
-                    onClick={() => setLightboxImage(note.imageUrl)}
+                    onClick={() => media.open(patchNoteFiles(notes), note.patchNoteId)}
                     className="mt-3 w-full rounded-lg overflow-hidden border border-slate-200 hover:border-slate-300 transition-colors bg-white"
                   >
                     <img
@@ -113,12 +113,7 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
         </div>
       </Modal>
 
-      <ImageLightbox
-        src={lightboxImage || ''}
-        alt="Patch note screenshot"
-        isOpen={!!lightboxImage}
-        onClose={() => setLightboxImage(null)}
-      />
+      {media.viewer}
     </>
   )
 }

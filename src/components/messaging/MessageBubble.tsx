@@ -16,6 +16,8 @@ interface MessageBubbleProps {
   canDelete: boolean
   onEdit: (body: string) => Promise<void>
   onDelete: () => Promise<void>
+  /** A picture or PDF on this message was pressed. */
+  onViewAttachment: (attachmentId: string) => void
 }
 
 /**
@@ -26,7 +28,7 @@ interface MessageBubbleProps {
  * its place as a quiet "Message removed" line so the conversation still
  * reads in order.
  */
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canEdit, canDelete, onEdit, onDelete }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canEdit, canDelete, onEdit, onDelete, onViewAttachment }) => {
   const t = toneClasses(tone)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -169,7 +171,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, mine, tone, canE
         {!removed && message.attachments.length > 0 && (
           <div className={`flex flex-wrap gap-2 ${mine ? 'justify-end' : ''}`}>
             {message.attachments.map((a) => (
-              <AttachmentChip key={a.attachmentId} attachment={a} />
+              <AttachmentChip key={a.attachmentId} attachment={a} onView={() => onViewAttachment(a.attachmentId)} />
             ))}
           </div>
         )}

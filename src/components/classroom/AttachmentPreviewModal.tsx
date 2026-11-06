@@ -1,9 +1,9 @@
 // src/components/classroom/AttachmentPreviewModal.tsx
-// The one viewer for a classwork attachment, for teachers, students and
-// parents alike: an image, a PDF or a video opens right here, a YouTube link
-// plays through youtube-nocookie, any other link opens in a new tab and any
-// other file downloads. The address is asked for when the window opens
-// (`resolveUrl`), so a signed link is always fresh.
+// The preview window for the classwork attachments the media viewer doesn't
+// show, for teachers, students and parents alike: a video opens right here, a
+// YouTube link plays through youtube-nocookie, any other link opens in a new
+// tab and any other file downloads. The address is asked for when the window
+// opens (`resolveUrl`), so a signed link is always fresh.
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -107,13 +107,6 @@ export default function AttachmentPreviewModal({ attachment, resolveUrl, onClose
               Try again
             </Button>
           </div>
-        ) : kind === 'image' ? (
-          <div className="flex justify-center rounded-xl bg-slate-50 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL, not a static asset */}
-            <img src={url!} alt={name} className="max-h-[65vh] w-auto max-w-full rounded-lg object-contain" />
-          </div>
-        ) : kind === 'pdf' ? (
-          <iframe src={url!} title={name} className="h-[68vh] w-full rounded-xl border border-slate-200 bg-slate-50" />
         ) : kind === 'video' ? (
           <video src={url!} controls className="max-h-[68vh] w-full rounded-xl bg-slate-900">
             <track kind="captions" />
