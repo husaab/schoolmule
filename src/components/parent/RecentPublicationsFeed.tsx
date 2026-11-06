@@ -8,6 +8,7 @@ import { RecentPublicationItem } from '@/services/types/parentPortal'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { gradeTextColor } from './childColors'
 import ChildAvatar from './ChildAvatar'
+import { ModifiedChip } from './ModifiedChip'
 
 const formatRelativeDate = (iso: string) => {
   const then = new Date(iso)
@@ -48,6 +49,8 @@ const FeedRow: React.FC<{ item: RecentPublicationItem; showChild: boolean }> = (
             New
           </span>
         )}
+        {item.modified && <ModifiedChip />}
+        {item.includesModified && <ModifiedChip text="Includes modified" />}
         <span className={`text-sm font-semibold ${gradeTextColor(item.pct)}`}>{item.pct}%</span>
       </div>
     </li>

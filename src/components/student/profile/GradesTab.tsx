@@ -268,7 +268,17 @@ const ClassGradeCard = ({
                     const pct = cellPct(cell)
                     return (
                       <tr key={cell.assessmentId} className="border-b border-slate-50 last:border-0">
-                        <td className={`py-2 pr-4 text-slate-800 ${depth ? 'pl-4' : ''}`}>{cell.name}</td>
+                        <td className={`py-2 pr-4 text-slate-800 ${depth ? 'pl-4' : ''}`}>
+                          {cell.name}
+                          {cell.modified && (
+                            <span
+                              title={cell.modifiedLabel ?? undefined}
+                              className="ml-1.5 rounded bg-violet-600 px-1 text-[9px] font-bold leading-[13px] text-white"
+                            >
+                              MOD
+                            </span>
+                          )}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2 text-slate-500">{cell.date ? formatDay(cell.date) : '—'}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-slate-600">
                           {cell.status === 'graded' && cell.score != null ? `${cell.score} / ${cell.maxScore ?? '—'}` : '—'}

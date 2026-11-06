@@ -20,6 +20,7 @@ import ChildJumpNav from '@/components/parent/ChildJumpNav'
 import ParentFilterBar from '@/components/parent/ParentFilterBar'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import ParentAssessmentTable from '@/components/parent/ParentAssessmentTable'
+import { modifiedCountLine } from '@/lib/modifiedMark'
 import { formatAssessmentDate } from '@/lib/assessmentDate'
 import Link from 'next/link'
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
@@ -133,6 +134,9 @@ const ClassCard: React.FC<{
                     }`}
               </span>
             )}
+            {(cls.modifiedCount ?? 0) > 0 && (
+              <span className="text-[11px] text-violet-700 whitespace-nowrap">{modifiedCountLine(cls.modifiedCount ?? 0)}</span>
+            )}
           </span>
           {canExpand && (
             <span
@@ -162,6 +166,7 @@ const ClassCard: React.FC<{
           )}
           <div className="pt-3">
             <ParentAssessmentTable
+              firstName={child.name.split(' ')[0]}
               scores={cls.assessmentScores}
               threadStubs={threadStubs}
               ask={

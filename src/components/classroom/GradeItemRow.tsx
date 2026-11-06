@@ -10,6 +10,7 @@ import Avatar from '@/components/avatar/Avatar'
 import { gradeMeta, isNewToday, scoreText } from '@/lib/classroomText'
 import type { PersonLite } from '@/services/types/profile'
 import type { GradeItem } from '@/services/types/studentPortal'
+import { ModifiedChip } from '@/components/parent/ModifiedChip'
 
 interface GradeItemRowProps {
   item: GradeItem
@@ -32,8 +33,12 @@ export default function GradeItemRow({ item, teacher = null, href = null, linkLa
     <article className={`flex flex-col gap-3 rounded-2xl border bg-white px-5 py-[18px] ${border}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-[17px] font-medium text-slate-900">{item.title}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-[17px] font-medium text-slate-900">{item.title}</h3>
+            {item.modified && <ModifiedChip />}
+          </div>
           <span className="text-[13px] text-slate-500">{gradeMeta(item, now)}</span>
+          {item.modified && item.modifiedLabel && <span className="text-[13px] text-violet-700">{item.modifiedLabel}</span>}
         </div>
         <span className={`font-display text-[26px] font-semibold ${scoreInk}`}>{scoreText(item)}</span>
       </div>

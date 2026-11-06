@@ -267,7 +267,17 @@ const StudentView: React.FC<StudentViewProps> = ({ student, params, aiPanel }) =
                             : null
                         return (
                           <tr key={a.assessmentId} className="border-b border-slate-50">
-                            <td className="py-2 pr-4 text-slate-800">{a.name}</td>
+                            <td className="py-2 pr-4 text-slate-800">
+                              {a.name}
+                              {a.modified && (
+                                <span
+                                  title={a.modifiedLabel ?? undefined}
+                                  className="ml-1.5 rounded bg-violet-600 px-1 text-[9px] font-bold leading-[13px] text-white"
+                                >
+                                  MOD
+                                </span>
+                              )}
+                            </td>
                             <td className="py-2 px-4 text-right tabular-nums">{status === 'graded' ? (a.score ?? '—') : '—'}</td>
                             <td className="py-2 px-4 text-right tabular-nums text-slate-500">{a.maxScore ?? '—'}</td>
                             <td className={`py-2 px-4 text-right tabular-nums font-medium ${pct == null ? 'text-slate-400' : pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-slate-900' : 'text-rose-600'}`}>

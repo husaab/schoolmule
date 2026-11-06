@@ -16,6 +16,7 @@ import { gradeTextColor } from './childColors'
 import AssessmentStatusBadge from './AssessmentStatusBadge'
 import { formatAssessmentDate } from '@/lib/assessmentDate'
 import InlineAskComposer from '@/components/messaging/InlineAskComposer'
+import { ModifiedChip, ModifiedExplainer } from './ModifiedChip'
 
 /** Small dot-separated meta line; skips anything absent. */
 const MetaLine: React.FC<{ parts: (string | null)[] }> = ({ parts }) => {
@@ -55,6 +56,8 @@ interface RowProps {
   ask?: AskContext
   askOpen: boolean
   onToggleAsk: () => void
+  /** The child's first name, for what "modified" means. */
+  firstName: string
 }
 
 /**
@@ -65,7 +68,7 @@ interface RowProps {
  * A row with an existing conversation shows a chip into it; any other row
  * offers "Ask the teacher", which opens an inline composer underneath.
  */
-const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask, askOpen, onToggleAsk }) => {
+const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask, askOpen, onToggleAsk, firstName }) => {
   // Status comes from the API's resolved cell state (see assessmentGrouping):
   // a graded leaf shows its mark; anything else shows a badge instead of a
   // number — a blank cell is "Not yet graded", never "Missing" and never 0.
@@ -79,6 +82,7 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm text-slate-700">{score.name}</p>
+            {score.modified && <ModifiedChip />}
             {stub && (
               <Link
                 href={`/parent/messages?thread=${encodeURIComponent(stub.conversationId)}`}
@@ -103,6 +107,8 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
               score.weightPoints != null ? `Weight ${score.weightPoints}` : null,
             ]}
           />
+          {score.modified && score.modifiedLabel && <p className="mt-0.5 text-xs text-violet-700">{score.modifiedLabel}</p>}
+          {score.modified && <ModifiedExplainer firstName={firstName} />}
           <CommentChip comment={score.parentComment} />
         </div>
 
@@ -130,7 +136,8 @@ const AssessmentRow: React.FC<RowProps> = ({ score, indented = false, stub, ask,
                 </span>{' '}
                 <span className={`font-medium ${gradeTextColor(pct)}`}>{pct}%</span>
               </span>
-              <ClassAvg pct={score.classAvgPct} />
+              {/* It would compare a different test with the class's. The API sends none; this holds for a stale payload too. */}
+              {!score.modified && <ClassAvg pct={score.classAvgPct} />}
             </span>
           )}
         </div>
@@ -158,13 +165,14 @@ interface GroupProps {
   ask?: AskContext
   askingId: string | null
   onToggleAsk: (assessmentId: string) => void
+  firstName: string
 }
 
 /**
  * A category and its children. Expanded by default — a parent should never
  * have to discover that marks are hidden behind a chevron.
  */
-const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onToggleAsk }) => {
+const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onToggleAsk, firstName }) => {
   const [expanded, setExpanded] = useState(true)
   const status = categoryStatus(group)
   const childCount = group.children.length
@@ -182,7 +190,10 @@ const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onTo
             <ChevronRightIcon className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
           )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800">{group.parent.name}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-slate-800">{group.parent.name}</p>
+              {group.parent.includesModified && <ModifiedChip text="Includes modified" />}
+            </div>
             <MetaLine
               parts={[
                 childCount > 0 ? `${childCount} ${childCount === 1 ? 'item' : 'items'}` : null,
@@ -199,7 +210,7 @@ const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onTo
               <span className={`text-sm font-semibold ${gradeTextColor(group.pct)}`}>
                 {group.pct}%
               </span>
-              <ClassAvg pct={group.parent.classAvgPct} />
+              {!group.parent.includesModified && <ClassAvg pct={group.parent.classAvgPct} />}
             </span>
           )}
         </div>
@@ -218,6 +229,7 @@ const CategoryGroup: React.FC<GroupProps> = ({ group, stubs, ask, askingId, onTo
               ask={ask}
               askOpen={askingId === child.assessmentId}
               onToggleAsk={() => onToggleAsk(child.assessmentId)}
+              firstName={firstName}
             />
           ))}
         </div>
@@ -232,6 +244,8 @@ interface ParentAssessmentTableProps {
   threadStubs?: Record<string, ThreadStub>
   /** When set, published rows get an "Ask the teacher" action. */
   ask?: AskContext
+  /** The child's first name, for what "modified" means. */
+  firstName: string
 }
 
 /**
@@ -240,7 +254,7 @@ interface ParentAssessmentTableProps {
  * Categories are nested rather than listed flat alongside their own
  * children, and carry the rollup percentage the API computes for them.
  */
-const ParentAssessmentTable: React.FC<ParentAssessmentTableProps> = ({ scores, threadStubs = {}, ask }) => {
+const ParentAssessmentTable: React.FC<ParentAssessmentTableProps> = ({ scores, threadStubs = {}, ask, firstName }) => {
   const groups = useMemo(() => groupAssessmentScores(scores), [scores])
   const [askingId, setAskingId] = useState<string | null>(null)
   const toggleAsk = (id: string) => setAskingId((cur) => (cur === id ? null : id))
@@ -260,6 +274,7 @@ const ParentAssessmentTable: React.FC<ParentAssessmentTableProps> = ({ scores, t
             ask={ask}
             askingId={askingId}
             onToggleAsk={toggleAsk}
+            firstName={firstName}
           />
         ) : (
           <AssessmentRow
@@ -269,6 +284,7 @@ const ParentAssessmentTable: React.FC<ParentAssessmentTableProps> = ({ scores, t
             ask={ask}
             askOpen={askingId === group.parent.assessmentId}
             onToggleAsk={() => toggleAsk(group.parent.assessmentId)}
+            firstName={firstName}
           />
         ),
       )}

@@ -63,7 +63,9 @@ const ThreadContextCard: React.FC<ThreadContextCardProps> = ({ context, title, c
             <p className="text-xs text-slate-500">
               {context.pct != null ? `${context.pct}%` : ''}
               {context.classAvgPct != null ? ` · class avg ${context.classAvgPct}%` : ''}
+              {context.modified && <span className="font-medium text-violet-700"> · Modified</span>}
             </p>
+            {context.modified && context.modifiedLabel && <p className="text-xs text-violet-700">{context.modifiedLabel}</p>}
           </>
         ) : context && !context.isPublished && isParent ? (
           <p className="text-xs font-medium text-slate-500">Not shared yet</p>

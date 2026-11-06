@@ -72,10 +72,11 @@ const ClassView: React.FC<ClassViewProps> = ({ classData, params, aiPanel }) => 
       accessor: (a) => a.stats?.avg ?? null,
       // A student left out of this average: the figure with everyone underneath.
       render: (a) =>
-        a.leftOutCount ? (
-          <span className="inline-flex flex-col items-end leading-tight" title={`${a.leftOutCount} left out by the teacher`}>
+        a.leftOutCount || a.modifiedCount ? (
+          <span className="inline-flex flex-col items-end leading-tight" title={[a.leftOutCount ? `${a.leftOutCount} left out by the teacher` : '', a.modifiedCount ? `${a.modifiedCount} modified, left out of this average` : ''].filter(Boolean).join(' · ')}>
             {fmtPct(a.stats?.avg)}
-            <span className="text-[10px] font-normal text-slate-400">{fmtPct(a.avgAll)} with everyone</span>
+            {a.leftOutCount ? <span className="text-[10px] font-normal text-slate-400">{fmtPct(a.avgAll)} with everyone</span> : null}
+            {a.modifiedCount ? <span className="text-[10px] font-normal text-violet-700">{a.modifiedCount} modified</span> : null}
           </span>
         ) : (
           fmtPct(a.stats?.avg)

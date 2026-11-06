@@ -44,6 +44,7 @@ export default function GradeBlock({ grade, teacherName, owner, now = new Date()
           </span>
         )}
       </div>
+      {copy.modifiedLine && <p className="text-[14px] font-medium text-violet-700">{copy.modifiedLine}</p>}
       {copy.message && <p className="text-[15px] leading-relaxed text-slate-700">{copy.message}</p>}
       {copy.quote && <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-slate-800">&ldquo;{copy.quote}&rdquo;</p>}
       {copy.line && <span className="text-[13px] text-slate-600">{copy.line}</span>}

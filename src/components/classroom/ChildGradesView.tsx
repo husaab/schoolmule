@@ -10,6 +10,7 @@
 
 import ClassBannerHeader from '@/components/classroom/ClassBannerHeader'
 import GradeItemRow from '@/components/classroom/GradeItemRow'
+import { modifiedCountLine } from '@/lib/modifiedMark'
 import { classDetailLine, classNote, gradeLinkLabel, pctText, pickGradesClass } from '@/lib/classroomText'
 import type { PersonLite } from '@/services/types/profile'
 import type { ChildClassGrades, ChildGrades, GradeItem } from '@/services/types/studentPortal'
@@ -41,6 +42,7 @@ function PctBox({ cls }: { cls: ChildClassGrades }) {
       <span className="font-display text-[34px] font-semibold leading-none sm:text-[40px]">{pctText(cls.finalPct)}</span>
       <span className="text-[13px]">{cls.finalPct == null ? 'nothing graded yet' : 'from published grades'}</span>
       {cls.classAvg != null && <span className="mt-1 text-[12px]">Class average {pctText(cls.classAvg)}</span>}
+      {(cls.modifiedCount ?? 0) > 0 && <span className="mt-1 text-[12px]">{modifiedCountLine(cls.modifiedCount ?? 0)}</span>}
     </div>
   )
 }
