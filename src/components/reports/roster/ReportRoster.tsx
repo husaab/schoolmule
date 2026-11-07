@@ -7,7 +7,10 @@
 // downloads or deletes in bulk. Report cards also show whose teacher comments
 // are in, and can narrow to the students still missing some. Filters live in
 // the URL (term, grades, status, comments, q); ?preview=<studentId> opens that
-// student's report once the term loads.
+// student's report once the term loads. Generate queues the students on the
+// server and answers at once (useReportGenerationRuns): a card follows the
+// term's generation, waiting rows say so, and the results wait on the page
+// until someone dismisses them. Nobody has to keep the page open.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -50,17 +53,19 @@ import {
   matchesStatus,
   missingSubjects,
   normalizeReport,
-  parseGenerateResult,
+  generateErrorText,
   parseGradeList,
   rosterCounts,
   selectionTargets,
   shortDate,
   type CommentsStatus,
-  type GenerateOutcome,
   type RawReport,
   type StatusFilter,
 } from '@/lib/reportRoster'
+import { withUnlistedReports } from '@/lib/reportGeneration'
+import { useReportGenerationRuns } from '@/hooks/useReportGenerationRuns'
 import TermOverview from './TermOverview'
+import GenerationCard from './GenerationCard'
 import RosterTable, { type Row, type RowActions } from './RosterTable'
 import GenerateMissingModal from './GenerateMissingModal'
 import GenerateResultModal from './GenerateResultModal'
@@ -83,12 +88,8 @@ type Dialog =
   | { kind: 'bulkEmail'; preselect: string[] }
   | { kind: 'generateMissing' }
 
-interface GenerateRun {
-  students: { studentId: string; name: string }[]
-  running: boolean
-  outcome: GenerateOutcome | null
-  error: string | null
-}
+// While a run goes, the report list is read again at most this often (and once at the end).
+const REPORTS_REFRESH_MS = 10 * 1000
 
 const REPORT_TEMPLATES_PATH = '/admin-panel/report-templates'
 
@@ -140,7 +141,7 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [openingId, setOpeningId] = useState<string | null>(null)
-  const [run, setRun] = useState<GenerateRun | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   // The date JK/SK progress reports print (other grades and documents don't print one).
   const [reportDate, setReportDate] = useState(() => localDateISO())
 
@@ -165,6 +166,11 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
     const activeTerm = terms.find((t) => t.isActive)
     if (activeTerm) setParams({ term: activeTerm.name })
   }, [terms, selectedTerm, setParams])
+
+  const generation = useReportGenerationRuns(
+    selectedTerm ? { reportType: doc.type, term: selectedTerm, yearId: selectedYearId ?? null } : null,
+    user?.id ?? null,
+  )
 
   const fetchGeneratedReports = useCallback(async () => {
     if (!user?.school || !selectedTerm) return
@@ -225,6 +231,11 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
     () => (doc.commentsStatus && reportsReady && commentsFor && !commentsFor.failed ? new Map(commentsFor.rows.map((c) => [c.studentId, c])) : undefined),
     [doc.commentsStatus, reportsReady, commentsFor],
   )
+  // Students waiting to be generated, and anyone just made whose new report the list hasn't read yet.
+  const waiting = useMemo(
+    () => withUnlistedReports(generation.summary.waiting, generation.runs, (id) => !!rosterById.get(id)?.report),
+    [generation.summary.waiting, generation.runs, rosterById],
+  )
   const counts = useMemo(() => rosterCounts(roster), [roster])
   const grades = useMemo(() => gradeBreakdown(roster), [roster])
   const gradeRows = roster.filter((r) => inGrades(r, selectedGrades))
@@ -237,12 +248,13 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   // (or a row's own change, e.g. it was just emailed) has hidden.
   const visibleIdSet = new Set(visible.map((r) => r.studentId))
   const shownSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id))
-  const targets = selectionTargets(visible, shownSelectedIds)
-  // Everyone this term without a report; "Generate missing" lists them all and
+  const targets = selectionTargets(visible, shownSelectedIds, waiting)
+  // Everyone this term without a report and not waiting for one; "Generate missing" lists them all and
   // ticks the grades on screen (all of them when no grade is picked).
-  const missingRows = roster.filter((r) => r.status === 'none' && r.student)
+  const missingRows = roster.filter((r) => r.status === 'none' && r.student && !waiting.has(r.studentId))
   const missingPreselect = (selectedGrades.length > 0 ? missingRows.filter((r) => inGrades(r, selectedGrades)) : missingRows).map((r) => r.studentId)
-  const unemailedReports = rawReports.filter((r) => !(r.email_sent ?? r.emailSent))
+  // A report being made again isn't offered for email: it would attach the old PDF.
+  const unemailedReports = rawReports.filter((r) => !(r.email_sent ?? r.emailSent) && !waiting.has(r.student_id || r.studentId || ''))
   const hasFilters = selectedGrades.length > 0 || status !== '' || missingCommentsOnly || search.trim() !== ''
 
   // Report cards: who'd print with blank comments, for the Generate missing list.
@@ -267,24 +279,58 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
     setParams({ grades: null, status: null, comments: null, q: null })
   }
 
+  // Queues the students on the server; the card and the rows follow from here.
   const runGenerate = async (studentIds: string[]) => {
     if (!selectedTerm || studentIds.length === 0) return
-    const runStudents = studentIds.map((id) => ({ studentId: id, name: rosterById.get(id)?.name ?? 'Student' }))
-    setRun({ students: runStudents, running: true, outcome: null, error: null })
     setSelectedIds([])
     try {
-      const outcome = parseGenerateResult(
-        await doc.generate({ studentIds, term: selectedTerm, reportDate: doc.reportDate ? reportDate || undefined : undefined }),
-      )
-      setRun({ students: runStudents, running: false, outcome, error: null })
-      const ok = outcome.generated.length
-      const failed = outcome.failed.length
-      showNotification(`Generated ${ok} ${ok !== 1 ? doc.nouns : doc.noun}${failed > 0 ? `, ${failed} skipped` : ''}`, ok > 0 ? 'success' : 'error')
-      await fetchGeneratedReports()
+      const { run, alreadyQueued } = await generation.start(studentIds, doc.reportDate ? reportDate || undefined : undefined)
+      if (!run) {
+        showNotification(studentIds.length === 1 ? `That ${doc.noun} is already being generated` : `Those ${doc.nouns} are already being generated`, 'info')
+      } else if (alreadyQueued > 0) {
+        showNotification(`${alreadyQueued} ${alreadyQueued === 1 ? 'was' : 'were'} already being generated; the rest are queued`, 'info')
+      }
     } catch (err) {
-      console.error('Error generating reports:', err)
-      setRun({ students: runStudents, running: false, outcome: null, error: `The server could not generate the ${doc.nouns}. Try again.` })
-      showNotification(`Failed to generate ${doc.nouns}`, 'error')
+      console.error('Error starting report generation:', err)
+      showNotification(`Couldn't start generating the ${doc.nouns}. Try again.`, 'error')
+    }
+  }
+
+  // One student pressed here: a toast when it's done, instead of a card.
+  const toasted = useRef(new Set<string>())
+  useEffect(() => {
+    for (const run of generation.finishedHere) {
+      if (toasted.current.has(run.runId)) continue
+      toasted.current.add(run.runId)
+      const item = run.items[0]
+      if (!item || item.status === 'cancelled') continue
+      const name = rosterById.get(item.studentId)?.name ?? 'This student'
+      if (item.status === 'generated') showNotification(`${name}'s ${doc.noun} is ready`, 'success')
+      else showNotification(`${name}'s ${doc.noun} couldn't be made. ${generateErrorText(item.error || 'Unknown error', run.term)}`, 'error')
+    }
+  }, [generation.finishedHere, rosterById, doc.noun, showNotification])
+
+  // New reports show up as they're made: the list is read again at most every
+  // 10 seconds while a run goes, and once more when it ends.
+  const generatedSoFar = generation.runs.reduce((n, r) => n + r.counts.generated, 0)
+  const anyRunning = generation.runs.some((r) => !r.finishedAt)
+  const reportsRead = useRef({ at: 0, generated: 0, running: false })
+  useEffect(() => {
+    const last = reportsRead.current
+    const newReports = generatedSoFar !== last.generated
+    const due = anyRunning ? newReports && Date.now() - last.at >= REPORTS_REFRESH_MS : last.running
+    reportsRead.current = { ...last, running: anyRunning }
+    if (!due) return
+    reportsRead.current = { at: Date.now(), generated: generatedSoFar, running: anyRunning }
+    void fetchGeneratedReports()
+  }, [generatedSoFar, anyRunning, fetchGeneratedReports])
+
+  const guarded = (what: string, fn: () => Promise<void>) => async () => {
+    try {
+      await fn()
+    } catch (err) {
+      console.error(`Error: ${what}`, err)
+      showNotification(`Couldn't ${what}. Try again.`, 'error')
     }
   }
 
@@ -354,7 +400,9 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   const summary = selectedTerm ? `${selectedTerm} · ${counts.total} student${counts.total !== 1 ? 's' : ''}` : doc.blurb
 
   const sentRow = dialog?.kind === 'sent' ? dialog.row : null
-  const generatedEmailable = (run?.outcome?.generated ?? []).filter((id) => rosterById.get(id)?.status === 'ready')
+  const finished = generation.summary.finished
+  const generatedEmailable = (finished?.generatedIds ?? []).filter((id) => rosterById.get(id)?.status === 'ready' && !waiting.has(id))
+  const names = useMemo(() => new Map(roster.map((r) => [r.studentId, r.name])), [roster])
 
   // Report cards: how many grade 1-8 students have every class's comments in.
   const commentsCounted = comments ? roster.filter((r) => (comments.get(r.studentId)?.total ?? 0) > 0) : []
@@ -436,7 +484,7 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
               <button
                 type="button"
                 onClick={() => setDialog({ kind: 'generateMissing' })}
-                disabled={!reportsReady || missingRows.length === 0 || !!run?.running}
+                disabled={!reportsReady || missingRows.length === 0}
                 title={missingRows.length === 0 ? `Everyone has a ${selectedTerm} ${doc.noun}` : undefined}
                 className={primaryButton}
               >
@@ -450,6 +498,19 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
             <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Pick a term to see its {doc.nouns}.
             </div>
+          )}
+
+          {selectedTerm && (
+            <GenerationCard
+              doc={doc}
+              summary={generation.summary}
+              emailableCount={generatedEmailable.length}
+              onStop={guarded('stop generating', () => generation.stop(generation.summary.active?.runIds ?? []))}
+              onRetry={guarded('try those again', () => generation.retry(finished?.runIds ?? []))}
+              onDismiss={guarded('dismiss this', () => generation.dismiss(finished?.runIds ?? []))}
+              onSeeDetails={() => setDetailsOpen(true)}
+              onEmailFamilies={() => setDialog({ kind: 'bulkEmail', preselect: generatedEmailable })}
+            />
           )}
 
           <TermOverview
@@ -543,9 +604,9 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
                   <EnvelopeIcon className="h-4 w-4 text-slate-500" />
                   Email families ({targets.emailIds.length})
                 </button>
-                <button type="button" onClick={() => setDialog({ kind: 'bulkDownload', paths: targets.filePaths })} disabled={targets.filePaths.length === 0} className={bulkButton}>
+                <button type="button" onClick={() => setDialog({ kind: 'bulkDownload', paths: targets.downloadPaths })} disabled={targets.downloadPaths.length === 0} className={bulkButton}>
                   <ArrowDownTrayIcon className="h-4 w-4 text-slate-500" />
-                  Download ZIP ({targets.filePaths.length})
+                  Download ZIP ({targets.downloadPaths.length})
                 </button>
                 <button type="button" onClick={() => setDialog({ kind: 'bulkDelete', paths: targets.filePaths })} disabled={targets.filePaths.length === 0} className={dangerBulkButton}>
                   <TrashIcon className="h-4 w-4" />
@@ -593,6 +654,7 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
                 actions={actions}
                 openingId={openingId}
                 comments={comments}
+                waiting={waiting}
               />
             )}
 
@@ -632,21 +694,21 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
         />
       )}
 
-      <GenerateResultModal
-        doc={doc}
-        isOpen={!!run}
-        onClose={() => setRun(null)}
-        running={!!run?.running}
-        term={selectedTerm}
-        students={run?.students ?? []}
-        outcome={run?.outcome ?? null}
-        error={run?.error ?? null}
-        emailableIds={generatedEmailable}
-        onEmailFamilies={(ids) => {
-          setRun(null)
-          setDialog({ kind: 'bulkEmail', preselect: ids })
-        }}
-      />
+      {finished && (
+        <GenerateResultModal
+          doc={doc}
+          isOpen={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          term={selectedTerm}
+          names={names}
+          outcome={{ generated: finished.generatedIds, failed: finished.failed }}
+          emailableIds={generatedEmailable}
+          onEmailFamilies={(ids) => {
+            setDetailsOpen(false)
+            setDialog({ kind: 'bulkEmail', preselect: ids })
+          }}
+        />
+      )}
 
       <PdfViewerModal
         isOpen={dialog?.kind === 'view'}
@@ -665,15 +727,18 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
                 <ArrowDownTrayIcon className="h-4 w-4 text-slate-500" aria-hidden="true" />
                 <span className="hidden sm:inline">Download</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setDialog({ kind: 'email', row: dialog.row })}
-                aria-label={dialog.row.status === 'ready' ? 'Email family' : 'Email family again'}
-                className={primaryButton}
-              >
-                <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{dialog.row.status === 'ready' ? 'Email family' : 'Email again'}</span>
-              </button>
+              {/* Not while a new version is being made: the email would attach this one. */}
+              {!waiting.has(dialog.row.studentId) && (
+                <button
+                  type="button"
+                  onClick={() => setDialog({ kind: 'email', row: dialog.row })}
+                  aria-label={dialog.row.status === 'ready' ? 'Email family' : 'Email family again'}
+                  className={primaryButton}
+                >
+                  <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{dialog.row.status === 'ready' ? 'Email family' : 'Email again'}</span>
+                </button>
+              )}
             </>
           ) : null
         }

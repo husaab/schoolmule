@@ -2,8 +2,11 @@
 // The term's students, one row each: their report (or that there isn't one
 // yet) and where the family email stands, with the next step for that row
 // right there (Generate, View, Email family). Report cards add whose teacher
-// comments are in (`comments`). A table from md up, a card per student on a
-// phone. The header row stays under the navbar while scrolling.
+// comments are in (`comments`). A student waiting to be generated
+// (`waiting`) shows Queued or Generating… instead, with no Generate, email or
+// delete until their report is made; their current PDF can still be viewed
+// and downloaded. A table from md up, a card per student on a phone. The
+// header row stays under the navbar while scrolling.
 'use client'
 
 import { useEffect, useRef } from 'react'
@@ -19,6 +22,7 @@ import {
 import Avatar from '@/components/avatar/Avatar'
 import StudentNameLink from '@/components/student/profile/StudentNameLink'
 import { commentsLine, commentsMissing, emailedLine, gradeLabel, missingSubjects, reportLine, type CommentsStatus, type RosterRow } from '@/lib/reportRoster'
+import type { WaitingState } from '@/lib/reportGeneration'
 import type { StudentPayload } from '@/services/types/student'
 import RosterRowMenu, { type RowMenuItem } from './RosterRowMenu'
 import type { ReportDoc } from '../reportDocs'
@@ -45,6 +49,8 @@ interface Props {
   openingId?: string | null
   /** Whose teacher comments are in, by student id (report cards); no column when omitted. */
   comments?: Map<string, CommentsStatus>
+  /** Students waiting to be generated, by id. */
+  waiting?: Map<string, WaitingState>
 }
 
 const smallButton =
@@ -76,8 +82,19 @@ function ReportStatus({ row }: { row: Row }) {
   )
 }
 
-function EmailStatus({ row, actions }: { row: Row; actions: RowActions }) {
+function EmailStatus({ row, actions, waiting }: { row: Row; actions: RowActions; waiting?: WaitingState }) {
   if (row.status === 'none') return <span className="text-slate-300">—</span>
+  // An email now would attach the PDF being replaced.
+  if (waiting) {
+    return row.status === 'ready' ? (
+      <span className="text-[13px] text-slate-400">After the new version</span>
+    ) : (
+      <span className={`inline-flex items-center gap-1.5 text-[13px] ${row.status === 'updated' ? 'text-amber-800' : 'text-teal-800'}`}>
+        <CheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
+        {emailedLine(row)}
+      </span>
+    )
+  }
   if (row.status === 'ready') {
     return (
       <button type="button" onClick={() => actions.emailFamily(row)} className={tintButton}>
@@ -136,8 +153,9 @@ function CommentsCell({ row, status, prefix = '' }: { row: Row; status: Comments
   )
 }
 
-function menuItems(row: Row, actions: RowActions, doc: ReportDoc): RowMenuItem[] {
+function menuItems(row: Row, actions: RowActions, doc: ReportDoc, waiting?: WaitingState): RowMenuItem[] {
   const items: RowMenuItem[] = [{ key: 'download', label: 'Download PDF', icon: ArrowDownTrayIcon, onSelect: () => actions.download(row) }]
+  if (waiting) return items
   if (row.status === 'emailed' || row.status === 'updated') {
     items.push({ key: 'again', label: 'Email family again', icon: EnvelopeIcon, onSelect: () => actions.emailFamily(row) })
   }
@@ -146,8 +164,21 @@ function menuItems(row: Row, actions: RowActions, doc: ReportDoc): RowMenuItem[]
   return items
 }
 
-function RowButtons({ row, actions, opening, doc }: { row: Row; actions: RowActions; opening: boolean; doc: ReportDoc }) {
+function WaitingChip({ state }: { state: WaitingState }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-cyan-800" role="status">
+      <span
+        className={`h-3.5 w-3.5 rounded-full border-2 ${state === 'printing' ? 'animate-spin border-cyan-200 border-t-cyan-600 motion-reduce:animate-none' : 'border-slate-300'}`}
+        aria-hidden="true"
+      />
+      {state === 'printing' ? 'Generating…' : 'Queued'}
+    </span>
+  )
+}
+
+function RowButtons({ row, actions, opening, doc, waiting }: { row: Row; actions: RowActions; opening: boolean; doc: ReportDoc; waiting?: WaitingState }) {
   if (!row.report) {
+    if (waiting) return <WaitingChip state={waiting} />
     return row.student ? (
       <button type="button" onClick={() => actions.generate([row.studentId])} className={generateButton} aria-label={`Generate ${row.name}'s ${doc.noun}`}>
         <DocumentPlusIcon className="h-4 w-4" aria-hidden="true" />
@@ -157,6 +188,7 @@ function RowButtons({ row, actions, opening, doc }: { row: Row; actions: RowActi
   }
   return (
     <>
+      {waiting && <WaitingChip state={waiting} />}
       <button type="button" onClick={() => actions.view(row)} disabled={opening} className={plainButton} aria-label={`View ${row.name}'s ${doc.noun}`}>
         {opening ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" aria-hidden="true" />
@@ -165,12 +197,12 @@ function RowButtons({ row, actions, opening, doc }: { row: Row; actions: RowActi
         )}
         View
       </button>
-      <RosterRowMenu label={`More for ${row.name}`} items={menuItems(row, actions, doc)} />
+      <RosterRowMenu label={`More for ${row.name}`} items={menuItems(row, actions, doc, waiting)} />
     </>
   )
 }
 
-export default function RosterTable({ doc, rows, selectedIds, onToggle, onToggleAll, actions, openingId, comments }: Props) {
+export default function RosterTable({ doc, rows, selectedIds, onToggle, onToggleAll, actions, openingId, comments, waiting }: Props) {
   const heading = `${doc.noun[0].toUpperCase()}${doc.noun.slice(1)}`
   const allRef = useRef<HTMLInputElement>(null)
   const selectedShown = rows.filter((r) => selectedIds.includes(r.studentId)).length
@@ -225,11 +257,11 @@ export default function RosterTable({ doc, rows, selectedIds, onToggle, onToggle
                   <ReportStatus row={row} />
                 </td>
                 <td className="px-3 py-2.5">
-                  <EmailStatus row={row} actions={actions} />
+                  <EmailStatus row={row} actions={actions} waiting={waiting?.get(row.studentId)} />
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-1.5">
-                    <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} />
+                    <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} waiting={waiting?.get(row.studentId)} />
                   </div>
                 </td>
               </tr>
@@ -267,9 +299,9 @@ export default function RosterTable({ doc, rows, selectedIds, onToggle, onToggle
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 pl-7">
-                <EmailStatus row={row} actions={actions} />
+                <EmailStatus row={row} actions={actions} waiting={waiting?.get(row.studentId)} />
                 <div className="ml-auto flex items-center gap-1.5">
-                  <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} />
+                  <RowButtons row={row} actions={actions} opening={openingId === row.studentId} doc={doc} waiting={waiting?.get(row.studentId)} />
                 </div>
               </div>
             </li>

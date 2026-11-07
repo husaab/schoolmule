@@ -175,15 +175,24 @@ export function gradeBreakdown(rows: { grade: string; status: RosterStatus }[]):
 /** "Grade 3", "JK", "SK"; '-' reads as "No grade". */
 export const gradeLabel = (grade: string): string => (grade === '-' ? 'No grade' : grade === 'JK' || grade === 'SK' ? grade : `Grade ${grade}`)
 
-/** What a selection can act on: generate needs a student on the list; download and delete need a report; email needs one not yet sent. */
-export function selectionTargets<S>(rows: RosterRow<S>[], selectedIds: string[]) {
+/**
+ * What a selection can act on: generate needs a student on the list; download
+ * and delete need a report; email needs one not yet sent. A student waiting
+ * to be generated (`waiting`, src/lib/reportGeneration.ts) is left out of
+ * generate, email and delete: an email would attach the old PDF, and a
+ * delete would be undone when the new one prints. Their current PDF can
+ * still be downloaded (`downloadPaths`).
+ */
+export function selectionTargets<S>(rows: RosterRow<S>[], selectedIds: string[], waiting?: Map<string, unknown>) {
   const picked = rows.filter((r) => selectedIds.includes(r.studentId))
+  const settled = picked.filter((r) => !waiting?.has(r.studentId))
   return {
     rows: picked,
-    generateIds: picked.filter((r) => r.student).map((r) => r.studentId),
-    filePaths: picked.map((r) => r.report?.filePath || '').filter(Boolean),
-    emailIds: picked.filter((r) => r.status === 'ready').map((r) => r.studentId),
-    replacing: picked.filter((r) => r.student && r.report).length,
+    generateIds: settled.filter((r) => r.student).map((r) => r.studentId),
+    filePaths: settled.map((r) => r.report?.filePath || '').filter(Boolean),
+    downloadPaths: picked.map((r) => r.report?.filePath || '').filter(Boolean),
+    emailIds: settled.filter((r) => r.status === 'ready').map((r) => r.studentId),
+    replacing: settled.filter((r) => r.student && r.report).length,
   }
 }
 
@@ -209,21 +218,10 @@ export function emailedLine(row: { status: RosterStatus; report: ReportFile | nu
   return row.status === 'updated' ? `${base}, before the update` : base
 }
 
+/** What a finished Generate made, and who was skipped and why. */
 export interface GenerateOutcome {
   generated: string[]
   failed: { studentId: string; error: string }[]
-}
-
-/** POST /progress-reports/generate/bulk answers { generated: [{ studentId }], failed: [{ studentId, error }] }. */
-export function parseGenerateResult(res: { generated?: unknown[]; failed?: unknown[] } | null | undefined): GenerateOutcome {
-  const idOf = (x: unknown) => (x && typeof x === 'object' && 'studentId' in x ? String((x as { studentId: unknown }).studentId ?? '') : '')
-  return {
-    generated: (res?.generated ?? []).map(idOf).filter(Boolean),
-    failed: (res?.failed ?? []).map((x) => ({
-      studentId: idOf(x),
-      error: x && typeof x === 'object' && 'error' in x ? String((x as { error: unknown }).error || 'Unknown error') : 'Unknown error',
-    })),
-  }
 }
 
 /** The server's skip reasons, said the way the results list shows them. */

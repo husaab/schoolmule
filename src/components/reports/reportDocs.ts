@@ -2,18 +2,18 @@
 // What differs between the two term rosters (progress reports and report
 // cards): their words and the API calls behind them. Everything else, the
 // roster, its dialogs and filters, is shared and reads it from here.
+// Generating goes through report generation runs (`type`,
+// src/hooks/useReportGenerationRuns.ts).
 
 import {
   deleteBulkProgressReports,
   deleteProgressReport,
-  generateBulkProgressReports,
   getProgressReportsByTermAndSchool,
   getSignedProgressReportUrl,
 } from '@/services/progressReportService'
 import {
   deleteBulkReportCards,
   deleteReportCard,
-  generateBulkReportCards,
   getGeneratedReportCards,
   getReportCardCommentsStatus,
   getSignedReportCardUrl,
@@ -45,7 +45,6 @@ export interface ReportDoc {
   /** JK and SK progress reports print a report date; the page asks for it. */
   reportDate: boolean
   list: (term: string, school: string) => Promise<RawReport[]>
-  generate: (payload: { studentIds: string[]; term: string; reportDate?: string }) => Promise<{ generated?: unknown[]; failed?: unknown[] }>
   signedUrl: (filePath: string) => Promise<string | null>
   remove: (filePath: string) => Promise<unknown>
   removeMany: (filePaths: string[]) => Promise<{ status: string }>
@@ -69,7 +68,6 @@ export const PROGRESS_REPORTS: ReportDoc = {
     const res = await getProgressReportsByTermAndSchool(term, school)
     return res.status === 'success' ? (res.data as unknown as RawReport[]) : []
   },
-  generate: (payload) => generateBulkProgressReports(payload),
   signedUrl: getSignedProgressReportUrl,
   remove: deleteProgressReport,
   removeMany: deleteBulkProgressReports,
@@ -90,7 +88,6 @@ export const REPORT_CARDS: ReportDoc = {
     const res = await getGeneratedReportCards(term, school)
     return res.status === 'success' ? (res.data as RawReport[]) : []
   },
-  generate: ({ studentIds, term }) => generateBulkReportCards({ studentIds, term }),
   signedUrl: getSignedReportCardUrl,
   remove: deleteReportCard,
   removeMany: deleteBulkReportCards,

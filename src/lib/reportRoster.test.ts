@@ -6,7 +6,6 @@ import {
   generateErrorText,
   gradeBreakdown,
   normalizeReport,
-  parseGenerateResult,
   parseGradeList,
   reportLine,
   reportStatus,
@@ -104,6 +103,18 @@ describe('filters and counts', () => {
     expect(t.replacing).toBe(2)
   })
 
+  it('selection leaves waiting students out of generate, email and delete', () => {
+    // b is waiting to be generated again, d for the first time.
+    const waiting = new Map([['b', 'queued' as const], ['d', 'printing' as const]])
+    const t = selectionTargets(rows, ['a', 'b', 'd'], waiting)
+    expect(t.generateIds).toEqual(['a'])
+    expect(t.emailIds).toEqual([])
+    expect(t.filePaths).toEqual(['pr/a.pdf'])
+    // Its current PDF can still be downloaded.
+    expect(t.downloadPaths).toEqual(['pr/a.pdf', 'pr/b.pdf'])
+    expect(t.replacing).toBe(1)
+  })
+
   it('says each row the way the list shows it', () => {
     const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((id) => rows.find((r) => r.studentId === id)!)
     expect(reportLine(d)).toBe('Not generated')
@@ -114,16 +125,8 @@ describe('filters and counts', () => {
   })
 })
 
-describe('parseGenerateResult', () => {
-  it('reads who was generated and who failed, with the reason', () => {
-    expect(parseGenerateResult({ generated: [{ studentId: 'a', message: 'ok' }], failed: [{ studentId: 'b', error: 'Student not enrolled in any classes for Term 1' }] })).toEqual({
-      generated: ['a'],
-      failed: [{ studentId: 'b', error: 'Student not enrolled in any classes for Term 1' }],
-    })
-    expect(parseGenerateResult(null)).toEqual({ generated: [], failed: [] })
-  })
-
-  it('says the skip reasons in plain words', () => {
+describe('generateErrorText', () => {
+  it('generateErrorText still explains a skip', () => {
     expect(generateErrorText('Student not enrolled in any classes for Term 1', 'Term 1')).toBe('Not in any Term 1 class yet. Add them to a class, then generate again.')
     expect(generateErrorText('Puppeteer timed out', 'Term 1')).toBe('Puppeteer timed out')
   })

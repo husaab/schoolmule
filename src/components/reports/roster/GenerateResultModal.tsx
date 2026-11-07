@@ -1,11 +1,12 @@
 // src/components/reports/roster/GenerateResultModal.tsx
-// Follows one Generate press on a report roster (progress reports or report cards): a moving bar while
-// the server builds the PDFs, then who got a report and who was skipped (and
-// why), with a shortcut to email the families whose new report hasn't gone out.
+// What a report roster's finished generation made (progress reports or
+// report cards): who was skipped and why, then who got a report, with a
+// shortcut to email the families whose new report hasn't gone out. Opened
+// from the generation card's See details; the printing itself happens on
+// the server, so nothing here waits.
 'use client'
 
-import { useEffect } from 'react'
-import { CheckIcon, DocumentPlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, ModalBody, ModalFooter, ModalHeader } from '@/components/shared/modalKit'
 import { generateErrorText, type GenerateOutcome } from '@/lib/reportRoster'
@@ -15,14 +16,10 @@ interface Props {
   doc: ReportDoc
   isOpen: boolean
   onClose: () => void
-  running: boolean
   term: string
-  /** The students this press covers, in list order. */
-  students: { studentId: string; name: string }[]
-  /** Set once the server answers. */
-  outcome: GenerateOutcome | null
-  /** The whole request failed (network, server error). */
-  error: string | null
+  /** Student names by id. */
+  names: Map<string, string>
+  outcome: GenerateOutcome
   /** Ids of students whose new report hasn't been emailed; offers "Email these families". */
   emailableIds: string[]
   onEmailFamilies: (studentIds: string[]) => void
@@ -30,93 +27,55 @@ interface Props {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-export default function GenerateResultModal({ doc, isOpen, onClose, running, term, students, outcome, error, emailableIds, onEmailFamilies }: Props) {
-  // Leaving mid-run loses the result (the server keeps going), so ask first.
-  useEffect(() => {
-    if (!isOpen || !running) return
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [isOpen, running])
+export default function GenerateResultModal({ doc, isOpen, onClose, term, names, outcome, emailableIds, onEmailFamilies }: Props) {
+  const ok = outcome.generated.length
+  const failed = outcome.failed
+  const total = ok + failed.length
+  const nameOf = (id: string) => names.get(id) ?? 'A student'
 
-  const nameOf = new Map(students.map((s) => [s.studentId, s.name]))
-  const total = students.length
-  const ok = outcome?.generated.length ?? 0
-  const failed = outcome?.failed ?? []
-  const close = () => {
-    if (!running) onClose()
-  }
-
-  const header = running
-    ? { title: `Generating ${plural(total, doc.noun, doc.nouns)}`, subtitle: term, tone: 'brand' as const, icon: DocumentPlusIcon }
-    : error || ok === 0
-      ? { title: `No ${doc.nouns} were generated`, subtitle: error ?? term, tone: 'danger' as const, icon: ExclamationTriangleIcon }
+  const header =
+    ok === 0
+      ? { title: `No ${doc.nouns} were generated`, subtitle: term, tone: 'danger' as const, icon: ExclamationTriangleIcon }
       : failed.length > 0
         ? { title: `${ok} of ${total} ${doc.nouns} ready`, subtitle: `${term}. ${plural(failed.length, 'student was', 'students were')} skipped.`, tone: 'warning' as const, icon: ExclamationTriangleIcon }
         : { title: `${plural(ok, doc.noun, doc.nouns)} ready`, subtitle: `${term}. They're in the list now.`, tone: 'success' as const, icon: CheckIcon }
 
   return (
-    <Modal isOpen={isOpen} onClose={close} closeOnEscape={!running} style="w-full max-w-lg" ariaLabel={header.title}>
+    <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-lg" ariaLabel={header.title}>
       <ModalHeader title={header.title} subtitle={header.subtitle} tone={header.tone} icon={header.icon} />
-      {/* Screen readers hear the outcome when the run finishes. */}
-      <p className="sr-only" role="status" aria-live="polite">
-        {running ? '' : `${header.title}. ${header.subtitle ?? ''}`}
-      </p>
       <ModalBody>
-        {running && (
-          <div className="space-y-2">
-            <div
-              role="progressbar"
-              aria-label="Generating"
-              className="h-2 w-full rounded-xl bg-[linear-gradient(90deg,#cffafe,#06b6d4,#14b8a6,#cffafe)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite] motion-reduce:animate-none"
-            />
-            <p className="text-sm text-slate-500">Keep this tab open until it finishes. A {doc.noun} that already exists for {term} is replaced.</p>
-          </div>
-        )}
-
         {failed.length > 0 && (
           <ul className="space-y-2">
             {failed.map((f) => (
               <li key={f.studentId || f.error} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
-                <p className="font-medium">{nameOf.get(f.studentId) ?? 'A student'}</p>
+                <p className="font-medium">{nameOf(f.studentId)}</p>
                 <p className="mt-0.5">{generateErrorText(f.error, term)}</p>
               </li>
             ))}
           </ul>
         )}
 
-        {!error && (
+        {ok > 0 && (
           <ul className="max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100">
-            {students
-              .filter((s) => running || outcome?.generated.includes(s.studentId))
-              .map((s) => (
-                <li key={s.studentId} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-                  <span className="truncate text-slate-800">{s.name}</span>
-                  {running ? <span className="text-slate-500">Waiting</span> : <span className="text-emerald-700">Generated</span>}
+            {[...outcome.generated]
+              .sort((a, b) => nameOf(a).localeCompare(nameOf(b)))
+              .map((id) => (
+                <li key={id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                  <span className="truncate text-slate-800">{nameOf(id)}</span>
+                  <span className="text-emerald-700">Generated</span>
                 </li>
               ))}
           </ul>
         )}
       </ModalBody>
       <ModalFooter>
-        {running ? (
-          <Button variant="secondary" loading disabled>
-            Generating
+        <Button variant="secondary" onClick={onClose}>
+          Done
+        </Button>
+        {emailableIds.length > 0 && (
+          <Button variant="primary" onClick={() => onEmailFamilies(emailableIds)}>
+            Email {emailableIds.length === 1 ? 'this family' : `these ${emailableIds.length} families`}
           </Button>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={onClose}>
-              Done
-            </Button>
-            {emailableIds.length > 0 && (
-              <Button variant="primary" onClick={() => onEmailFamilies(emailableIds)}>
-                Email {emailableIds.length === 1 ? 'this family' : `these ${emailableIds.length} families`}
-              </Button>
-            )}
-          </>
         )}
       </ModalFooter>
     </Modal>
