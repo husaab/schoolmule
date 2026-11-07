@@ -13,6 +13,8 @@ export interface ReportRunItem {
   status: ReportRunItemStatus
   /** Why it couldn't be made (failed). */
   error: string | null
+  /** When it was made, skipped or stopped; null while it waits. */
+  finishedAt: string | null
 }
 
 export interface ReportRun {

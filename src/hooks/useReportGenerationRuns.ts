@@ -96,8 +96,20 @@ export function useReportGenerationRuns(scope: ReportRunsScope | null, currentUs
     [reload],
   )
   const stop = useMemo(() => each(cancelReportRun), [each])
-  const retry = useMemo(() => each(retryReportRun), [each])
   const dismiss = useMemo(() => each(dismissReportRun), [each])
+  /** Try again for these skipped students, each in the run that holds their result. */
+  const retry = useCallback(
+    async (failed: { runId: string; studentId: string }[]) => {
+      const byRun = new Map<string, string[]>()
+      for (const f of failed) byRun.set(f.runId, [...(byRun.get(f.runId) ?? []), f.studentId])
+      try {
+        await Promise.all([...byRun].map(([runId, studentIds]) => retryReportRun(runId, studentIds)))
+      } finally {
+        await reload()
+      }
+    },
+    [reload],
+  )
 
   const summary = useMemo(() => summarizeRuns(runs, currentUserId), [runs, currentUserId])
   const finishedHere = useMemo(() => runs.filter((r) => r.finishedAt && startedHere.includes(r.runId)), [runs, startedHere])

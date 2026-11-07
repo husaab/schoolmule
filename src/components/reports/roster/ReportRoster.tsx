@@ -62,7 +62,7 @@ import {
   type RawReport,
   type StatusFilter,
 } from '@/lib/reportRoster'
-import { withUnlistedReports } from '@/lib/reportGeneration'
+import { summarizeRuns, withUnlistedReports } from '@/lib/reportGeneration'
 import { useReportGenerationRuns } from '@/hooks/useReportGenerationRuns'
 import TermOverview from './TermOverview'
 import GenerationCard from './GenerationCard'
@@ -231,10 +231,15 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
     () => (doc.commentsStatus && reportsReady && commentsFor && !commentsFor.failed ? new Map(commentsFor.rows.map((c) => [c.studentId, c])) : undefined),
     [doc.commentsStatus, reportsReady, commentsFor],
   )
+  // The card's numbers; a skip the list has a newer report for was fixed since, and isn't shown.
+  const generationSummary = useMemo(
+    () => summarizeRuns(generation.runs, user?.id ?? null, (id) => rosterById.get(id)?.report?.generatedAt),
+    [generation.runs, user?.id, rosterById],
+  )
   // Students waiting to be generated, and anyone just made whose new report the list hasn't read yet.
   const waiting = useMemo(
-    () => withUnlistedReports(generation.summary.waiting, generation.runs, (id) => !!rosterById.get(id)?.report),
-    [generation.summary.waiting, generation.runs, rosterById],
+    () => withUnlistedReports(generationSummary.waiting, generation.runs, (id) => !!rosterById.get(id)?.report),
+    [generationSummary.waiting, generation.runs, rosterById],
   )
   const counts = useMemo(() => rosterCounts(roster), [roster])
   const grades = useMemo(() => gradeBreakdown(roster), [roster])
@@ -400,7 +405,7 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   const summary = selectedTerm ? `${selectedTerm} · ${counts.total} student${counts.total !== 1 ? 's' : ''}` : doc.blurb
 
   const sentRow = dialog?.kind === 'sent' ? dialog.row : null
-  const finished = generation.summary.finished
+  const finished = generationSummary.finished
   const generatedEmailable = (finished?.generatedIds ?? []).filter((id) => rosterById.get(id)?.status === 'ready' && !waiting.has(id))
   const names = useMemo(() => new Map(roster.map((r) => [r.studentId, r.name])), [roster])
 
@@ -503,10 +508,10 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
           {selectedTerm && (
             <GenerationCard
               doc={doc}
-              summary={generation.summary}
+              summary={generationSummary}
               emailableCount={generatedEmailable.length}
-              onStop={guarded('stop generating', () => generation.stop(generation.summary.active?.runIds ?? []))}
-              onRetry={guarded('try those again', () => generation.retry(finished?.runIds ?? []))}
+              onStop={guarded('stop generating', () => generation.stop(generationSummary.active?.runIds ?? []))}
+              onRetry={guarded('try those again', () => generation.retry(finished?.failed ?? []))}
               onDismiss={guarded('dismiss this', () => generation.dismiss(finished?.runIds ?? []))}
               onSeeDetails={() => setDetailsOpen(true)}
               onEmailFamilies={() => setDialog({ kind: 'bulkEmail', preselect: generatedEmailable })}

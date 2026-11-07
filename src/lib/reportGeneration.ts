@@ -26,7 +26,8 @@ export interface ActiveGeneration {
 
 export interface FinishedGeneration {
   generatedIds: string[]
-  failed: { studentId: string; error: string }[]
+  /** Who was skipped, why, and the run that holds that result (Try again goes to it). */
+  failed: { studentId: string; error: string; runId: string }[]
   /** Students a Stop left out. */
   cancelled: number
   runIds: string[]
@@ -44,22 +45,41 @@ export interface GenerationSummary {
 const isWaiting = (status: ReportRunItemStatus): status is WaitingState => status === 'queued' || status === 'printing'
 const byCreated = (runs: ReportRun[]) => [...runs].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
-/** Each student's latest state: a later run decides. */
-function latestStates(runs: ReportRun[]): Map<string, { status: ReportRunItemStatus; error: string | null }> {
-  const latest = new Map<string, { status: ReportRunItemStatus; error: string | null }>()
+interface LatestState {
+  status: ReportRunItemStatus
+  error: string | null
+  runId: string
+  /** When it finished (when its run was made, if it hasn't). */
+  at: number
+}
+
+/**
+ * Each student's latest state. Waiting wins (a student waits in one run at
+ * most); otherwise the result that finished last, whichever run it's in.
+ */
+function latestStates(runs: ReportRun[]): Map<string, LatestState> {
+  const latest = new Map<string, LatestState>()
   for (const run of byCreated(runs)) {
     for (const item of run.items) {
-      // A student can wait in only one run; that state wins over an older result.
+      const next: LatestState = { status: item.status, error: item.error, runId: run.runId, at: Date.parse(item.finishedAt ?? run.createdAt) || 0 }
       const current = latest.get(item.studentId)
-      if (current && isWaiting(current.status) && !isWaiting(item.status)) continue
-      latest.set(item.studentId, { status: item.status, error: item.error })
+      if (!current || (!isWaiting(current.status) && (isWaiting(next.status) || next.at >= current.at))) latest.set(item.studentId, next)
     }
   }
   return latest
 }
 
-/** The card's numbers and each waiting student, from the runs a page lists. */
-export function summarizeRuns(runs: ReportRun[], currentUserId: string | null): GenerationSummary {
+/**
+ * The card's numbers and each waiting student, from the runs a page lists.
+ * `reportedAt` (optional): when the page's list says a student's current
+ * report was made; a skip older than that report was fixed since (made again
+ * from its row, say, in a run that has left the list) and isn't shown.
+ */
+export function summarizeRuns(
+  runs: ReportRun[],
+  currentUserId: string | null,
+  reportedAt?: (studentId: string) => string | null | undefined,
+): GenerationSummary {
   const latest = latestStates(runs)
   const waiting = new Map<string, WaitingState>()
   for (const [studentId, { status }] of latest) if (isWaiting(status)) waiting.set(studentId, status)
@@ -67,7 +87,8 @@ export function summarizeRuns(runs: ReportRun[], currentUserId: string | null): 
   const running = byCreated(runs).filter((r) => !r.finishedAt)
   const total = running.reduce((n, r) => n + r.studentCount - r.counts.cancelled, 0)
   const active: ActiveGeneration | null =
-    running.length > 0 && total >= 2
+    // One student's run gets a card only once it has stalled: it needs saying, and a Stop.
+    running.length > 0 && (total >= 2 || running.some((r) => r.stalled))
       ? {
           done: running.reduce((n, r) => n + r.counts.generated + r.counts.failed, 0),
           total,
@@ -83,9 +104,14 @@ export function summarizeRuns(runs: ReportRun[], currentUserId: string | null): 
   const done = byCreated(runs).filter((r) => r.finishedAt && r.studentCount > 1)
   const students = [...new Set(done.flatMap((r) => r.items.map((i) => i.studentId)))]
   const generatedIds = students.filter((id) => latest.get(id)?.status === 'generated')
+  const fixedSince = (studentId: string, at: number) => {
+    const made = reportedAt?.(studentId)
+    return !!made && Date.parse(made) > at
+  }
   const failed = students
-    .filter((id) => latest.get(id)?.status === 'failed')
-    .map((studentId) => ({ studentId, error: latest.get(studentId)?.error || 'Unknown error' }))
+    .map((studentId) => ({ studentId, state: latest.get(studentId)! }))
+    .filter(({ studentId, state }) => state.status === 'failed' && !fixedSince(studentId, state.at))
+    .map(({ studentId, state }) => ({ studentId, error: state.error || 'Unknown error', runId: state.runId }))
   const cancelled = students.filter((id) => latest.get(id)?.status === 'cancelled').length
   const finished: FinishedGeneration | null =
     generatedIds.length + failed.length + cancelled > 0 ? { generatedIds, failed, cancelled, runIds: done.map((r) => r.runId) } : null

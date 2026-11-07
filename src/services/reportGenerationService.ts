@@ -21,12 +21,12 @@ export const startReportRun = async (payload: StartReportRunPayload): Promise<Re
 export const listReportRuns = async ({ reportType, term }: { reportType: ReportGenerationType; term: string }): Promise<ReportGenerationEnvelope<ReportRun[]>> =>
   apiClient<ReportGenerationEnvelope<ReportRun[]>>(`${RUNS}?reportType=${encodeURIComponent(reportType)}&term=${encodeURIComponent(term)}`)
 
-const control = (action: 'cancel' | 'retry' | 'dismiss') => async (runId: string): Promise<ReportGenerationEnvelope<ReportRun>> =>
-  apiClient<ReportGenerationEnvelope<ReportRun>, Record<string, never>>(`${RUNS}/${encodeURIComponent(runId)}/${action}`, { method: 'POST', body: {} })
+const control = (action: 'cancel' | 'retry' | 'dismiss') => async (runId: string, body: { studentIds?: string[] } = {}): Promise<ReportGenerationEnvelope<ReportRun>> =>
+  apiClient<ReportGenerationEnvelope<ReportRun>, { studentIds?: string[] }>(`${RUNS}/${encodeURIComponent(runId)}/${action}`, { method: 'POST', body })
 
 /** Stop: what hasn't started is dropped; a report being made now finishes. */
-export const cancelReportRun = control('cancel')
-/** Try again: the failed students wait again. */
-export const retryReportRun = control('retry')
+export const cancelReportRun = (runId: string) => control('cancel')(runId)
+/** Try again: these failed students (all of the run's, when none are named) wait again. */
+export const retryReportRun = (runId: string, studentIds?: string[]) => control('retry')(runId, studentIds ? { studentIds } : {})
 /** Clear a finished run's results from the page, for everyone. */
-export const dismissReportRun = control('dismiss')
+export const dismissReportRun = (runId: string) => control('dismiss')(runId)

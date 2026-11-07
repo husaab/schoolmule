@@ -3,24 +3,30 @@ import { generationCardText, summarizeRuns, withUnlistedReports } from './report
 import type { ReportRun, ReportRunItemStatus } from '@/services/types/reportGeneration'
 
 let seq = 0
-// A run of students in the order given, each with its status.
-function run(items: [string, ReportRunItemStatus, string?][], over: Partial<ReportRun> = {}): ReportRun {
+// A run of students in the order given, each with its status (and, optionally, when it finished).
+function run(items: [string, ReportRunItemStatus, string?, string?][], over: Partial<ReportRun> = {}): ReportRun {
   seq += 1
   const counts = { pending: 0, generated: 0, failed: 0, cancelled: 0 }
   for (const [, status] of items) counts[status === 'queued' || status === 'printing' ? 'pending' : status] += 1
   const active = items.some(([, status]) => status === 'queued' || status === 'printing')
+  const finishedAt = `2026-11-07T11:${String(seq).padStart(2, '0')}:00Z`
   return {
     runId: `run-${seq}`,
     reportType: 'report_card',
     term: 'Term 1',
     studentCount: items.length,
     createdAt: `2026-11-07T10:${String(seq).padStart(2, '0')}:00Z`,
-    finishedAt: active ? null : `2026-11-07T11:${String(seq).padStart(2, '0')}:00Z`,
+    finishedAt: active ? null : finishedAt,
     createdBy: 'me',
     createdByName: 'Office Admin',
     stalled: false,
     counts,
-    items: items.map(([studentId, status, error]) => ({ studentId, status, error: error ?? null })),
+    items: items.map(([studentId, status, error, at]) => ({
+      studentId,
+      status,
+      error: error ?? null,
+      finishedAt: status === 'queued' || status === 'printing' ? null : at ?? finishedAt,
+    })),
     ...over,
   }
 }
@@ -67,8 +73,32 @@ describe('summarizeRuns', () => {
     const again = run([['a', 'queued']])
     const s = summarizeRuns([first, again], 'me')
     expect(s.waiting.get('a')).toBe('queued')
-    expect(s.finished!.failed).toEqual([{ studentId: 'c', error: 'Timed out' }])
+    expect(s.finished!.failed).toEqual([{ studentId: 'c', error: 'Timed out', runId: first.runId }])
     expect(s.finished!.generatedIds).toEqual(['b'])
+  })
+
+  it('the latest finish decides, whatever order the runs were made in', () => {
+    // Run A was made first but printed X last (Try again); run B's failure is older.
+    const a = run([['x', 'generated', undefined, '2026-11-07T12:00:00Z'], ['y', 'generated']])
+    const b = run([['x', 'failed', 'No classes found', '2026-11-07T11:30:00Z'], ['z', 'generated']])
+    const { finished } = summarizeRuns([a, b], 'me')
+    expect(finished!.failed).toEqual([])
+    expect(finished!.generatedIds.sort()).toEqual(['x', 'y', 'z'])
+  })
+
+  it('drops a failure the page already has a newer report for', () => {
+    const done = run([['x', 'failed', 'No classes found', '2026-11-07T11:00:00Z'], ['y', 'generated']])
+    // X was fixed and made again from its row; that run has left the list.
+    const newer = summarizeRuns([done], 'me', (id) => (id === 'x' ? '2026-11-07T11:30:00Z' : null))
+    expect(newer.finished!.failed).toEqual([])
+    // An older report doesn't count.
+    const older = summarizeRuns([done], 'me', (id) => (id === 'x' ? '2026-11-06T09:00:00Z' : null))
+    expect(older.finished!.failed.map((f) => f.studentId)).toEqual(['x'])
+  })
+
+  it('shows the card for one student whose run has stalled, so it can be stopped', () => {
+    const s = summarizeRuns([run([['s1', 'queued']], { stalled: true })], 'me')
+    expect(s.active).toMatchObject({ done: 0, total: 1, stalled: true })
   })
 
   it('marks printing and queued apart in waiting', () => {
