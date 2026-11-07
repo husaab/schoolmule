@@ -3,9 +3,10 @@ import { block, rect, text, zone } from './kit';
 
 /**
  * The Honour Roll look shared by the grades 1–8 report card and progress
- * report: a diploma. The crest sits over a centred school name, thick-and-thin
- * rules frame the title, and navy ink carries the text. Gold is only ever a
- * line or a tint: it doesn't reach 4.5:1 on white, so it never carries text.
+ * report: a diploma. The logo sits in the page's top right corner, the school
+ * name is centred, thick-and-thin rules frame the title, and navy ink carries
+ * the text. Gold is only ever a line or a tint: it doesn't reach 4.5:1 on white,
+ * so it never carries text.
  */
 export const HONOUR = {
   NAVY: '#003068',

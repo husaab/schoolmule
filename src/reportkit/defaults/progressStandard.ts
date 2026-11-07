@@ -1,11 +1,11 @@
 import type { CanvasBlock, ColumnsBlock, SignaturesBlock, SubjectCardsBlock, TableBlock, TableCellDef, TemplateDoc, TextBlock, TextStyle } from '../types';
 import { HONOUR, MARGIN, WIDTH, honourHeading, honourKept, honourPageTop, honourSubjectBar, honourTitleBand } from './honourRoll';
 import { SCALES } from './scales';
-import { block, cell, logo, rect, resetIds, template, text, zone } from './kit';
+import { block, cell, cornerLogo, rect, resetIds, template, text, zone } from './kit';
 
 /**
  * The grades 1–8 progress report in the Honour Roll look (see honourRoll.ts):
- * the crest over the centred school name, the title band, the student grid, the
+ * the logo in the page's corner, the centred school name, the title band, the student grid, the
  * E/G/S/N assessment scale, then one card per subject (work habits, behaviour
  * and overall as tiles, core standards, the teacher's comment) and a footer
  * with the principal's signature and the school stamp.
@@ -16,8 +16,7 @@ export function progressStandardTemplate(): TemplateDoc {
 
   const center = { align: 'center' as const, lineHeight: 1.4 };
   const firstHeader = zone(246, [
-    // A wide box: a tall crest is centred in it and a landscape logo still has room.
-    logo((794 - 240) / 2, 22, 240, 84),
+    cornerLogo(794, 190, 64),
     text(MARGIN, 108, WIDTH, 32, '{{school.name}}', { fontFamily: HONOUR.HEADING_FONT, fontSize: 22, fontWeight: 700, color: HONOUR.NAVY, align: 'center', lineHeight: 1.3 }, { name: 'School name', overflow: 'shrink' }),
     text(MARGIN, 141, WIDTH, 16, '{{school.address}}', { ...center, fontSize: 11.5, color: HONOUR.GREY }, { name: 'Address' }),
     text(MARGIN, 157, WIDTH, 16, '[[Phone: {{school.phone}}]][[ | Email: {{school.email}}]]', { ...center, fontSize: 11.5, color: HONOUR.GREY }, {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { defaultTemplate } from './defaults';
+import { DEFAULT_TEMPLATES, defaultTemplate } from './defaults';
 import { SCALES } from './defaults/scales';
 import { FONT_FAMILIES } from './fonts';
-import type { Block, CanvasElement, ColumnsBlock, SubjectCardsBlock, TemplateDoc } from './types';
+import { PAGE_SIZES } from './types';
+import type { Block, CanvasElement, ColumnsBlock, ImageElement, SubjectCardsBlock, TemplateDoc } from './types';
 
 /** The Honour Roll look on the grades 1–8 report card and progress report. */
 
@@ -171,5 +172,66 @@ describe('the Honour Roll look', () => {
   it("leaves the kindergarten scales' colours alone", () => {
     expect(SCALES.egsn.levels.map((l) => l.color)).toEqual(['#d4edda', '#d1ecf1', '#fff3cd', '#f8d7da']);
     expect(SCALES.egsnProgress.levels.map((l) => l.color)).toEqual(['#d4edda', '#cce7ff', '#fff3cd', '#f8d7da']);
+  });
+});
+
+describe('the school logo', () => {
+  const isLogo = (e: CanvasElement): e is ImageElement => e.type === 'image' && e.src.kind === 'asset' && e.src.asset === 'logo';
+  const firstPage = (d: TemplateDoc) => d.firstHeader?.elements ?? d.header.elements;
+  const logoOf = (d: TemplateDoc) => firstPage(d).find(isLogo) as ImageElement;
+  const named = (d: TemplateDoc, name: string) => firstPage(d).find((e) => e.name === name) as CanvasElement;
+
+  it.each(DEFAULT_TEMPLATES.map((t) => [t.key, t.build()] as const))('%s prints it in the very corner of the page', (_key, doc) => {
+    const width = PAGE_SIZES[doc.page.size].width;
+    const logos = zoneElements(doc).filter(isLogo);
+    expect(logos.length).toBeGreaterThan(0);
+    for (const l of logos) {
+      expect(width - (l.x + l.w)).toBeCloseTo(20, 5);
+      expect(l.y).toBe(20);
+      expect(l.align).toBe('right');
+    }
+  });
+
+  const HONOUR_ROLL = [
+    ['report-card-standard', STANDARD],
+    ['report-card-t1t2final', TERMS],
+    ['progress-standard', PROGRESS],
+  ] as const;
+
+  it.each(HONOUR_ROLL)('%s: pages after the first have no logo', (_key, doc) => {
+    expect(doc.header.elements.filter(isLogo)).toEqual([]);
+  });
+
+  it.each(HONOUR_ROLL)('%s: the school name sits well below the logo, not beside it', (_key, doc) => {
+    const logo = logoOf(doc);
+    expect(named(doc, 'School name').y).toBeGreaterThanOrEqual(logo.y + logo.h + 20);
+  });
+
+  it('leaves the school name, contact lines and title band where they were', () => {
+    const where = (d: TemplateDoc, name: string) => {
+      const { x, y, w, h } = named(d, name);
+      return { x, y, w, h };
+    };
+    for (const doc of [STANDARD, TERMS]) {
+      expect(where(doc, 'School name')).toEqual({ x: 68, y: 120, w: 658, h: 34 });
+      expect(where(doc, 'Contact line')).toEqual({ x: 68, y: 155, w: 658, h: 16 });
+      expect(named(doc, 'Title').y).toBe(184.75);
+    }
+    expect(where(PROGRESS, 'School name')).toEqual({ x: 68, y: 108, w: 658, h: 32 });
+    expect(where(PROGRESS, 'Address')).toEqual({ x: 68, y: 141, w: 658, h: 16 });
+    expect(where(PROGRESS, 'Phone and email')).toEqual({ x: 68, y: 157, w: 658, h: 16 });
+    expect(named(PROGRESS, 'Title').y).toBe(185.75);
+    for (const doc of ALL) expect(doc.firstHeader?.height).toBe(246);
+  });
+
+  it.each(['report-card-jk', 'report-card-sk'])('%s: the title starts clearly below the logo', (key) => {
+    const doc = defaultTemplate(key)!;
+    const logo = logoOf(doc);
+    expect(named(doc, 'Title').y).toBeGreaterThanOrEqual(logo.y + logo.h + 12);
+  });
+
+  it('centres the SK progress title on the page now the logo has left its row', () => {
+    const title = named(defaultTemplate('progress-sk')!, 'Title');
+    expect(title.x + title.w / 2).toBeCloseTo(816 / 2, 1);
   });
 });

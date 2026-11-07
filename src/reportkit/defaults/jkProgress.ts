@@ -1,6 +1,6 @@
 import type { CanvasBlock, SkillGroupStyle, SkillsTableBlock, TableBlock, TemplateDoc } from '../types';
 import { SCALES } from './scales';
-import { block, cell, id, logo, resetIds, template, text, zone } from './kit';
+import { block, cell, cornerLogo, id, resetIds, template, text, zone } from './kit';
 
 const PINK = '#f4cccc';
 const GREEN = '#b6d7a8';
@@ -48,7 +48,7 @@ export function jkProgressTemplate(): TemplateDoc {
   resetIds();
   const scale = SCALES.jkProgress;
 
-  const header = zone(TOP, [logo(WIDTH - 33.33 - 146.67, CHROME_EDGE + 11.4, 146.67, 45.33, { align: 'right' })]);
+  const header = zone(TOP, [cornerLogo(WIDTH, 146.67, 45.33)]);
   // Bottom-aligned 20.7px above the page edge, as Chrome prints the footer.
   const footerTop = BOTTOM - CHROME_EDGE - 54.4;
   const footer = zone(BOTTOM, [

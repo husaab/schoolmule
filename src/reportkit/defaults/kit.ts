@@ -35,6 +35,14 @@ export function logo(x: number, y: number, w: number, h: number, extra: Partial<
   return { id: id('img'), name: 'Logo', type: 'image', x, y, w, h, src: { kind: 'asset', asset: 'logo' }, fit: 'contain', ...extra };
 }
 
+/** How far the corner logo sits from the page's top and right edges: as close as a printer reliably reaches. */
+const CORNER_INSET = 20;
+
+/** The school logo in the very top right corner of the page. A logo narrower than its box still sits against the right. */
+export function cornerLogo(pageWidth: number, w: number, h: number): ImageElement {
+  return logo(pageWidth - CORNER_INSET - w, CORNER_INSET, w, h, { align: 'right' });
+}
+
 /** A filled rectangle, e.g. a coloured rule under a header. */
 export function rect(x: number, y: number, w: number, h: number, fill: string, extra: Partial<ShapeElement> = {}): ShapeElement {
   return { id: id('s'), name: 'Rule', type: 'shape', shape: 'rect', x, y, w, h, fill, strokeWidth: 0, ...extra };

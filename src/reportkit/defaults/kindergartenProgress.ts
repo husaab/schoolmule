@@ -1,7 +1,7 @@
 import type { CommentsTableBlock, RatingKeyBlock, SkillsTableBlock, TableBlock, TemplateDoc } from '../types';
 import { jkProgressTemplate } from './jkProgress';
 import { SCALES } from './scales';
-import { block, cell, logo, resetIds, template, text, zone } from './kit';
+import { block, cell, cornerLogo, resetIds, template, text, zone } from './kit';
 
 const BLUE = '#9bc2e6';
 const LIGHT_BLUE = '#bdd7ee';
@@ -21,7 +21,7 @@ const CHROME_EDGE = 20.7;
 
 /**
  * The SK progress report on Al Haadi's paper layout (Letter, Mulish, solid
- * black grid): logo + "Progress Report: <year>", the date box, the student
+ * black grid): the logo in the page's corner, "Progress Report: <year>", the date box, the student
  * grid with the rotated EVALUATION KEY, one LEARNING SKILLS table (grey
  * subject bars, blue LITERACY parts, Arabic and Quran beside French), then on
  * a new page the nine "Strengths/Next Steps for Improvement" rows with the
@@ -32,13 +32,13 @@ export function skProgressTemplate(): TemplateDoc {
   resetIds();
   const scale = SCALES.skProgress;
 
-  // Page 1: no running header; the masthead (logo, title) sits under the top margin.
+  // Page 1: no running header; the logo is in the page's corner, the title under the top margin.
   const firstHeader = zone(TOP + 61.33 + 5.33, [
-    logo(SIDE + 9.33, TOP + 1.33, 186.67, 58.67, { align: 'left' }),
+    cornerLogo(WIDTH, 186.67, 58.67),
     text(
-      SIDE + 249.33,
+      SIDE,
       TOP,
-      CONTENT - 249.33,
+      CONTENT,
       61.33,
       'Progress Report:  {{meta.schoolYear}}',
       { fontSize: 24, fontWeight: 800, letterSpacing: -0.27, align: 'center', verticalAlign: 'middle', lineHeight: 1.3 },

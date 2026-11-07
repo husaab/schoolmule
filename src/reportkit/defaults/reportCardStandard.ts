@@ -1,7 +1,7 @@
 import type { CanvasBlock, ColumnsBlock, SignaturesBlock, SubjectCardsBlock, TableBlock, TableCellDef, TableRowDef, TemplateDoc, TextBlock, TextStyle } from '../types';
 import { HONOUR, MARGIN, WIDTH, honourHeading, honourKept, honourPageTop, honourSubjectBar, honourTitleBand } from './honourRoll';
 import { SCALES } from './scales';
-import { block, cell, logo, rect, resetIds, template, text, zone } from './kit';
+import { block, cell, cornerLogo, rect, resetIds, template, text, zone } from './kit';
 
 /** The Ontario achievement chart, verbatim from the legacy card. */
 const ACHIEVEMENT: Array<{ level: string; text: string; rows: Array<[string, string]> }> = [
@@ -67,8 +67,7 @@ export function reportCardStandardTemplate(variant: 'standard' | 't1t2final' = '
   const scale = SCALES.honourRoll;
 
   const firstHeader = zone(246, [
-    // A wide box: a tall crest is centred in it and a landscape logo still has room.
-    logo((794 - 240) / 2, 22, 240, 94),
+    cornerLogo(794, 190, 64),
     text(MARGIN, 120, WIDTH, 34, '{{school.name}}', { fontFamily: HONOUR.HEADING_FONT, fontSize: 24, fontWeight: 700, uppercase: true, letterSpacing: 2, color: HONOUR.NAVY, align: 'center', lineHeight: 1.3 }, { name: 'School name', overflow: 'shrink' }),
     text(MARGIN, 155, WIDTH, 16, '{{school.address}}[[ | {{school.phone}}]][[ | {{school.email}}]]', { fontSize: 11, color: HONOUR.GREY, align: 'center', lineHeight: 1.4 }, { name: 'Contact line' }),
     ...honourTitleBand(180, 33, terms ? 'FINAL TERM REPORT CARD {{meta.schoolYear}}' : '{{meta.termLabel}} REPORT CARD {{meta.schoolYear}}'),

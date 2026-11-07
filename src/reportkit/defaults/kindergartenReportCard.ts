@@ -1,6 +1,6 @@
 import type { Block, LearningSkillsBlock, SignaturesBlock, SkillsTableBlock, SpacerBlock, TableBlock, TableRowDef, TemplateDoc, TextBlock } from '../types';
 import { SCALES } from './scales';
-import { block, cell, logo, resetIds, template, text, zone } from './kit';
+import { block, cell, cornerLogo, resetIds, template, text, zone } from './kit';
 
 const BLUE = '#2c5aa0';
 const DARK = '#333333';
@@ -31,14 +31,14 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
   const firstHeader = zone(125, [
     text(
       MARGIN,
-      MARGIN,
+      MARGIN + 14,
       WIDTH,
       30,
       `${jk ? 'Kindergarten' : 'Senior Kindergarten'} Report Card:\u00a0 {{meta.schoolYear}}`,
       { fontSize: 22, fontWeight: 700, color: BLUE, align: 'center', lineHeight: 1.35 },
       { name: 'Title', overflow: 'shrink' },
     ),
-    logo(794 - MARGIN - 90, MARGIN, 90, 60),
+    cornerLogo(794, 110, 36),
   ]);
   const pageFooter = zone(MARGIN, [
     text(MARGIN, 16, WIDTH, 16, 'Page {{page.number}} of {{page.count}}', { fontSize: 10.67, color: '#999999', align: 'center' }, { name: 'Page number' }),
