@@ -44,8 +44,6 @@ yarn-error.log*
 next-env.d.ts
 /remotion
 public/videos/al-haadi-finance-guide.mp4
-remotion/src/Root.tsx
-remotion/src/Root.tsx
 
 # git worktrees (local scratch)
 .worktrees/
