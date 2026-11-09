@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bubbleKind, displayName, editDraftState, enterBreaksLine, generalKindLabel, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
+import { anyGuardianReachable, bubbleKind, displayName, editDraftState, enterBreaksLine, generalKindLabel, guardianRelationOptions, guardianStatus, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
 import { toneClasses } from './tones'
 
 describe('who is who in a thread with a student', () => {
@@ -185,5 +185,28 @@ describe('the Enter key in the message box', () => {
   it('adds a new line for everyone on a phone', () => {
     expect(enterBreaksLine('parent', true)).toBe(true)
     expect(enterBreaksLine('student', true)).toBe(true)
+  })
+})
+
+describe('guardians in the New message window', () => {
+  const person = { hasAccount: false, invitePending: false, email: 'maya.h@example.com' }
+
+  it('says where each guardian stands', () => {
+    expect(guardianStatus({ ...person, hasAccount: true })).toBe('account')
+    expect(guardianStatus({ ...person, invitePending: true })).toBe('invited')
+    expect(guardianStatus(person)).toBe('none')
+    expect(guardianStatus({ ...person, email: null })).toBe('no-email')
+  })
+
+  it('counts someone reachable only when there is an email to write to', () => {
+    expect(anyGuardianReachable([])).toBe(false)
+    expect(anyGuardianReachable([{ email: null }])).toBe(false)
+    expect(anyGuardianReachable([{ email: null }, { email: 'sam.h@example.com' }])).toBe(true)
+  })
+
+  it('offers the usual relations, and keeps an unusual one when editing it', () => {
+    expect(guardianRelationOptions()).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent'])
+    expect(guardianRelationOptions('Mother')).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent'])
+    expect(guardianRelationOptions('Aunt')).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent', 'Aunt'])
   })
 })

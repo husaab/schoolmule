@@ -189,3 +189,30 @@ export const inboxBadgeLabel = (s: UnreadSummary, isParent: boolean): string => 
   if (s.unreadAnnouncements > 0) parts.push(`${s.unreadAnnouncements} new announcement${s.unreadAnnouncements === 1 ? '' : 's'}`)
   return parts.join(' · ')
 }
+
+// ── Guardians in the New message window ──────────────────────────────
+
+export type GuardianStatus = 'account' | 'invited' | 'none' | 'no-email'
+
+/** Where a guardian stands, for the line under their name. */
+export const guardianStatus = (g: { hasAccount: boolean; invitePending: boolean; email: string | null }): GuardianStatus =>
+  g.hasAccount ? 'account' : g.invitePending ? 'invited' : g.email ? 'none' : 'no-email'
+
+export const GUARDIAN_STATUS_TEXT: Record<GuardianStatus, string> = {
+  account: 'has an account',
+  invited: 'invited, not signed up yet',
+  none: 'no account yet',
+  'no-email': 'no email on file',
+}
+
+/** False when a message would be saved with no one to read it. */
+export const anyGuardianReachable = (guardians: { email: string | null }[]): boolean => guardians.some((g) => Boolean(g.email))
+
+const GUARDIAN_RELATIONS = ['Mother', 'Father', 'Guardian', 'Grandparent']
+
+/** The relations to offer; `current` keeps an unusual one when editing it. */
+export const guardianRelationOptions = (current?: string | null): string[] =>
+  current && !GUARDIAN_RELATIONS.includes(current) ? [...GUARDIAN_RELATIONS, current] : GUARDIAN_RELATIONS
+
+/** Said wherever staff type in a guardian: this is what the person gets. */
+export const GUARDIAN_ACCESS_NOTE = 'They will get this student’s messages and grade emails, and can see grades and reports once they sign up.'

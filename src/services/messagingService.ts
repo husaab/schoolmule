@@ -14,6 +14,8 @@ import type {
   EditContextResponse,
   EditMessageInput,
   EditMessageResponse,
+  GuardianInput,
+  GuardiansResponse,
   ListFilters,
   MarkReadResponse,
   NewConversationInput,
@@ -97,6 +99,21 @@ export const getStaffTargetsForStudent = async (studentId: string): Promise<Staf
  */
 export const resendInvite = async (linkId: string): Promise<ResendInviteResponse> =>
   apiClient<ResendInviteResponse>(`${base}/invites/${encodeURIComponent(linkId)}/resend`, { method: 'POST' });
+
+/**
+ * Type in a guardian for a student. Every guardian call answers with the student's new list.
+ * POST /messaging/students/:studentId/guardians
+ */
+export const addGuardian = async (studentId: string, input: GuardianInput): Promise<GuardiansResponse> =>
+  apiClient<GuardiansResponse, GuardianInput>(`/messaging/students/${encodeURIComponent(studentId)}/guardians`, { method: 'POST', body: input });
+
+/** PATCH /messaging/guardians/:linkId */
+export const updateGuardian = async (linkId: string, input: GuardianInput): Promise<GuardiansResponse> =>
+  apiClient<GuardiansResponse, GuardianInput>(`/messaging/guardians/${encodeURIComponent(linkId)}`, { method: 'PATCH', body: input });
+
+/** DELETE /messaging/guardians/:linkId */
+export const removeGuardian = async (linkId: string): Promise<GuardiansResponse> =>
+  apiClient<GuardiansResponse>(`/messaging/guardians/${encodeURIComponent(linkId)}`, { method: 'DELETE' });
 
 /**
  * Existing threads for chips on the gradebook / grades page.

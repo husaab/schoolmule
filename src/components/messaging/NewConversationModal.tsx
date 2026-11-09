@@ -13,6 +13,8 @@ import { createConversation, getParentTargets, getStaffRoster, getStaffTargets, 
 import type { ParentTargets, SenderRole, StaffTargetGuardian, StaffTargets, Thread } from '@/services/types/messaging'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 import Composer from './Composer'
+import { anyGuardianReachable } from './formatters'
+import GuardiansField from './GuardiansField'
 import { toneClasses, type Tone } from './tones'
 
 type Mode = 'assessment' | 'general'
@@ -205,6 +207,12 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const unlinked = guardians.filter((g) => !g.hasAccount && !g.invitePending && g.email)
   const pending = guardians.filter((g) => g.invitePending)
   const withAccount = guardians.filter((g) => g.hasAccount)
+  const setGuardians = (next: StaffTargetGuardian[]) => {
+    const patch = (targets: StaffTargets | null) =>
+      targets && { ...targets, students: targets.students.map((s) => (s.studentId === studentId ? { ...s, guardians: next } : s)) }
+    if (rosterMode) setRoster(patch)
+    else setStaffTargets(patch)
+  }
   const existingId = isParent && mode === 'assessment' ? parentClass?.assessments.find((a) => a.assessmentId === assessmentId)?.conversationId ?? null : null
   const fromAnnouncement = Boolean(preset?.announcementId)
   const teacher =
@@ -223,6 +231,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
   const ready =
     !blockedByTerm &&
     Boolean(studentId) &&
+    (isParent || anyGuardianReachable(guardians)) &&
     (mode === 'assessment'
       ? Boolean(assessmentId) && (isParent ? Boolean(pickedClassId) : Boolean(staffClassId))
       : Boolean(title.trim()) && title.trim().length <= MAX_TITLE && (isParent ? Boolean(teacherId) : true))
@@ -408,23 +417,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
 
           {!isParent && (
             <Field label="Guardians" htmlFor="nc-guardians">
-              <div id="nc-guardians" className="min-h-[42px] rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs text-slate-600">
-                {guardians.length > 0 ? (
-                  <ul className="space-y-0.5">
-                    {guardians.map((g) => (
-                      <li key={g.linkId} className="flex items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${g.hasAccount ? 'bg-emerald-500' : g.invitePending ? 'bg-sky-500' : 'bg-amber-500'}`} />
-                        {g.name ?? 'Guardian'}
-                        {g.relation ? ` (${g.relation})` : ''}
-                        {g.invitePending && <span className="text-sky-700"> · invited, not signed up yet</span>}
-                        {!g.hasAccount && !g.invitePending && <span className="text-amber-700"> · no account yet</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="text-slate-400">{studentId ? 'No guardians on file' : 'Pick a student'}</span>
-                )}
-              </div>
+              <GuardiansField key={studentId} studentId={studentId} guardians={guardians} onChange={setGuardians} />
             </Field>
           )}
 

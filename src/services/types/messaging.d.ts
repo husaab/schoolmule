@@ -264,13 +264,22 @@ export interface ParentTargets {
 }
 
 export interface StaffTargetGuardian {
-  linkId: string;
+  /** Null for someone read straight from the student file. */
+  linkId: string | null;
   name: string | null;
   relation: string | null;
   email: string | null;
   hasAccount: boolean;
   invitePending: boolean;
   invitedAt: string | null;
+  /** True for a typed-in guardian not yet invited. Everyone else is changed by the office. */
+  canEdit?: boolean;
+}
+
+export interface GuardianInput {
+  name: string;
+  email: string;
+  relation: string;
 }
 
 export interface StaffTargetAssessment {
@@ -340,6 +349,7 @@ export type ThreadStubsResponse = MessagingResponse<ThreadStub[]>;
 export type ParentTargetsResponse = MessagingResponse<ParentTargets>;
 export type ResendInviteResponse = MessagingResponse<{ linkId: string; status: InviteStatus }>;
 export type StaffTargetsResponse = MessagingResponse<StaffTargets>;
+export type GuardiansResponse = MessagingResponse<{ guardians: StaffTargetGuardian[] }>;
 export type EditMessageResponse = MessagingResponse<{ messageId: string; body: string; editedAt: string; correctionsQueued: number }>;
 export type EditContextResponse = MessagingResponse<{ emailedTo: EmailedPerson[] }>;
 export type DeleteMessageResponse = MessagingResponse<{ messageId: string; deletedAt: string }>;
