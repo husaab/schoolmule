@@ -216,3 +216,7 @@ export const guardianRelationOptions = (current?: string | null): string[] =>
 
 /** Said wherever staff type in a guardian: this is what the person gets. */
 export const GUARDIAN_ACCESS_NOTE = 'They will get this student’s messages and grade emails, and can see grades and reports once they sign up.'
+
+/** Under New message's box: words are needed unless a file is going instead. */
+export const messageFieldHint = (fileCount: number): string =>
+  fileCount === 0 ? 'Write a message, or attach a file.' : 'Optional with a file attached.'

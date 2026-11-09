@@ -6,7 +6,7 @@ import { Button, inputClass, selectClass } from '@/components/shared/modalKit'
 import { addGuardian, removeGuardian, updateGuardian } from '@/services/messagingService'
 import type { GuardianInput, GuardiansResponse, StaffTargetGuardian } from '@/services/types/messaging'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { GUARDIAN_ACCESS_NOTE, GUARDIAN_STATUS_TEXT, guardianRelationOptions, guardianStatus, type GuardianStatus } from './formatters'
+import { GUARDIAN_ACCESS_NOTE, GUARDIAN_STATUS_TEXT, anyGuardianReachable, guardianRelationOptions, guardianStatus, type GuardianStatus } from './formatters'
 
 const STATUS_TEXT_CLASS: Record<GuardianStatus, string> = {
   account: 'text-emerald-700',
@@ -26,7 +26,8 @@ const GuardianForm: React.FC<{
   initial?: StaffTargetGuardian
   busy: boolean
   onSave: (input: GuardianInput) => void
-  onCancel: () => void
+  /** Left out when an email is needed before anything can be sent. */
+  onCancel?: () => void
 }> = ({ initial, busy, onSave, onCancel }) => {
   const [name, setName] = useState(initial?.name ?? '')
   const [email, setEmail] = useState(initial?.email ?? '')
@@ -51,9 +52,11 @@ const GuardianForm: React.FC<{
       </select>
       <p className="text-xs text-slate-500">{GUARDIAN_ACCESS_NOTE}</p>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" className="!px-3 !py-1.5" onClick={onCancel}>
-          Cancel
-        </Button>
+        {onCancel && (
+          <Button type="button" variant="secondary" className="!px-3 !py-1.5" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         <Button type="submit" className="!px-3 !py-1.5" loading={busy}>
           {initial ? 'Save' : 'Add'}
         </Button>
@@ -65,15 +68,19 @@ const GuardianForm: React.FC<{
 interface GuardiansFieldProps {
   studentId: string
   guardians: StaffTargetGuardian[]
+  /** The list is still on its way, so an empty one means nothing yet. */
+  loading?: boolean
   onChange: (guardians: StaffTargetGuardian[]) => void
 }
 
 /**
  * Who a staff message about this student will reach: name, account status and
- * email for each person, then a place to type in someone missing. A typed-in
- * guardian can be corrected or removed until the first message invites them.
+ * email for each person, then a place to type in someone missing. With no
+ * email on file the form is already open, since nothing can be sent until
+ * someone is added. A typed-in guardian can be corrected or removed until the
+ * first message invites them.
  */
-const GuardiansField: React.FC<GuardiansFieldProps> = ({ studentId, guardians, onChange }) => {
+const GuardiansField: React.FC<GuardiansFieldProps> = ({ studentId, guardians, loading = false, onChange }) => {
   const showNotification = useNotificationStore((s) => s.showNotification)
   // 'new', or the link id of the guardian being edited.
   const [form, setForm] = useState<string | null>(null)
@@ -98,6 +105,8 @@ const GuardiansField: React.FC<GuardiansFieldProps> = ({ studentId, guardians, o
   if (!studentId) {
     return <div className="min-h-[42px] rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs text-slate-400">Pick a student</div>
   }
+
+  const needsEmail = !loading && !anyGuardianReachable(guardians)
 
   return (
     <div className="space-y-2">
@@ -153,12 +162,14 @@ const GuardiansField: React.FC<GuardiansFieldProps> = ({ studentId, guardians, o
             })}
           </ul>
         ) : (
-          <span className="text-slate-500">No guardians on file. Add one so this message reaches someone.</span>
+          <span className="text-slate-500">{loading ? 'Loading…' : 'No guardians on file.'}</span>
         )}
       </div>
 
-      {form === 'new' ? (
-        <GuardianForm busy={busy} onCancel={() => setForm(null)} onSave={(input) => void run(() => addGuardian(studentId, input))} />
+      {needsEmail && <p className="text-xs font-medium text-amber-700">No email on file for this student. Add a guardian so this message reaches someone.</p>}
+
+      {form === 'new' || needsEmail ? (
+        <GuardianForm busy={busy} onCancel={needsEmail ? undefined : () => setForm(null)} onSave={(input) => void run(() => addGuardian(studentId, input))} />
       ) : (
         <button type="button" className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-cyan-700 hover:text-cyan-800" onClick={() => { setForm('new'); setRemoving(null) }}>
           <PlusIcon className="h-3.5 w-3.5" /> Add guardian

@@ -417,7 +417,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
 
           {!isParent && (
             <Field label="Guardians" htmlFor="nc-guardians">
-              <GuardiansField key={studentId} studentId={studentId} guardians={guardians} onChange={setGuardians} />
+              <GuardiansField key={studentId} studentId={studentId} guardians={guardians} loading={loading} onChange={setGuardians} />
             </Field>
           )}
 
@@ -518,6 +518,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
         <div className={ready ? '' : 'pointer-events-none opacity-50'}>
           <Composer
             tone={tone}
+            label="Message"
             placeholder={isParent ? 'What would you like to ask or share?' : 'What would you like the guardians to know?'}
             recipientsLabel={recipients}
             onSend={send}

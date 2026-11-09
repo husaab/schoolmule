@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react'
 import { CheckIcon, PaperAirplaneIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Field } from '@/components/shared/modalKit'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { uploadSizeLabel } from '@/lib/uploadPrep'
 import { isTouchKeyboard, shouldSendOnKey } from '@/lib/enterToSend'
-import { ACCEPT_ATTR, MAX_BODY, MAX_FILES, enterBreaksLine, isImage } from './formatters'
+import { ACCEPT_ATTR, MAX_BODY, MAX_FILES, enterBreaksLine, isImage, messageFieldHint } from './formatters'
 import { toneClasses, type Tone } from './tones'
 import { usePickedFiles } from './usePickedFiles'
 
@@ -20,7 +21,11 @@ interface ComposerProps {
   compact?: boolean
   autoFocus?: boolean
   submitLabel?: string
+  /** A label above the box, marked required until a file is attached (New message). */
+  label?: string
 }
+
+const BOX_ID = 'composer-message'
 
 /**
  * The message box: text, attachments as removable chips, limits spelled out
@@ -40,6 +45,7 @@ const Composer: React.FC<ComposerProps> = ({
   compact = false,
   autoFocus = false,
   submitLabel = 'Send',
+  label,
 }) => {
   const t = toneClasses(tone)
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -62,6 +68,26 @@ const Composer: React.FC<ComposerProps> = ({
       setSending(false)
     }
   }
+
+  const box = (
+    <textarea
+      id={label ? BOX_ID : undefined}
+      value={body}
+      onChange={(e) => setBody(e.target.value)}
+      onKeyDown={(e) => {
+        if (shouldSendOnKey(e.nativeEvent, enterBreaksLine(tone, isTouchKeyboard()))) {
+          e.preventDefault()
+          void send()
+        }
+      }}
+      placeholder={placeholder}
+      rows={compact ? 2 : 3}
+      autoFocus={autoFocus}
+      disabled={disabled || sending}
+      maxLength={MAX_BODY + 1}
+      className={`w-full resize-y rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 ${t.focus} disabled:opacity-60`}
+    />
+  )
 
   return (
     <div className={`flex flex-col gap-2.5 ${compact ? '' : 'pt-1'}`}>
@@ -93,22 +119,13 @@ const Composer: React.FC<ComposerProps> = ({
         </div>
       )}
 
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if (shouldSendOnKey(e.nativeEvent, enterBreaksLine(tone, isTouchKeyboard()))) {
-            e.preventDefault()
-            void send()
-          }
-        }}
-        placeholder={placeholder}
-        rows={compact ? 2 : 3}
-        autoFocus={autoFocus}
-        disabled={disabled || sending}
-        maxLength={MAX_BODY + 1}
-        className={`w-full resize-y rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 ${t.focus} disabled:opacity-60`}
-      />
+      {label ? (
+        <Field label={label} htmlFor={BOX_ID} required={files.length === 0} hint={messageFieldHint(files.length)}>
+          {box}
+        </Field>
+      ) : (
+        box
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <input

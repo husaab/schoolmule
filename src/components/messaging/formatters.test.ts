@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { anyGuardianReachable, bubbleKind, displayName, editDraftState, enterBreaksLine, generalKindLabel, guardianRelationOptions, guardianStatus, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
+import { anyGuardianReachable, messageFieldHint, bubbleKind, displayName, editDraftState, enterBreaksLine, generalKindLabel, guardianRelationOptions, guardianStatus, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
 import { toneClasses } from './tones'
 
 describe('who is who in a thread with a student', () => {
@@ -208,5 +208,12 @@ describe('guardians in the New message window', () => {
     expect(guardianRelationOptions()).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent'])
     expect(guardianRelationOptions('Mother')).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent'])
     expect(guardianRelationOptions('Aunt')).toEqual(['Mother', 'Father', 'Guardian', 'Grandparent', 'Aunt'])
+  })
+})
+
+describe('the message box in New message', () => {
+  it('asks for words unless a file is going instead', () => {
+    expect(messageFieldHint(0)).toBe('Write a message, or attach a file.')
+    expect(messageFieldHint(2)).toBe('Optional with a file attached.')
   })
 })
