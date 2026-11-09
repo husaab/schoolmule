@@ -505,7 +505,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
               <p>
                 <strong className="font-medium">{unlinked.map((g) => g.name ?? 'A guardian').join(' and ')}</strong>{' '}
                 {unlinked.length === 1 ? 'has' : 'have'} no SchoolMule account yet. We can email{' '}
-                {unlinked.map((g) => g.email).join(', ')} a short note with a link to sign up; this conversation will be waiting for them.
+                {unlinked.map((g) => g.email).join(', ')} with a link to sign up, and your later messages will reach them by email too.
               </p>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} /> Invite guardians without an account
@@ -518,7 +518,7 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({
         )}
         {!isParent && pending.length > 0 && unlinked.length === 0 && (
           <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-            {pending.map((g) => g.name ?? 'A guardian').join(' and ')} {pending.length === 1 ? 'was' : 'were'} invited and will see this once they sign up.
+            {pending.map((g) => g.name ?? 'A guardian').join(' and ')} {pending.length === 1 ? 'was' : 'were'} invited and will get this by email.
           </p>
         )}
 
