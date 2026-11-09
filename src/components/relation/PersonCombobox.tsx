@@ -6,7 +6,7 @@
 // from getBoundingClientRect (mini-portal) instead of absolute.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { MagnifyingGlassIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, MagnifyingGlassIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export interface ComboOption {
   id: string
@@ -22,6 +22,12 @@ interface PersonComboboxProps {
   placeholder: string
   loading?: boolean
   searchKeys?: (opt: ComboOption) => string
+  /**
+   * Picks several people from one search: the list stays open after a pick and
+   * these ids get a tick. `onSelect` toggles, and the caller shows the picks
+   * (pass `selected={null}`).
+   */
+  pickedIds?: ReadonlySet<string>
 }
 
 const PersonCombobox: React.FC<PersonComboboxProps> = ({
@@ -32,7 +38,9 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
   placeholder,
   loading = false,
   searchKeys,
+  pickedIds,
 }) => {
+  const multi = pickedIds !== undefined
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(0)
@@ -42,11 +50,14 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        if (multi) setQuery('')
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  }, [multi])
 
   // Inside a scrollable modal the dropdown can open below the fold — reveal it
   useEffect(() => {
@@ -62,6 +73,8 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
 
   const pick = (opt: ComboOption) => {
     onSelect(opt)
+    // Siblings share a surname: keep the search up for the next one.
+    if (multi) return
     setQuery('')
     setOpen(false)
   }
@@ -106,6 +119,7 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
           setHighlighted(0)
         }}
         onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
         onKeyDown={(e) => {
           if (!open || matches.length === 0) return
           if (e.key === 'ArrowDown') {
@@ -117,6 +131,11 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
           } else if (e.key === 'Enter') {
             e.preventDefault()
             pick(matches[highlighted])
+            // From the keyboard, the next name is typed fresh.
+            if (multi) {
+              setQuery('')
+              setHighlighted(0)
+            }
           } else if (e.key === 'Escape') {
             // Close only the list — not a drawer or dialog this sits in.
             e.preventDefault()
@@ -145,6 +164,7 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
               <button
                 key={opt.id}
                 type="button"
+                aria-pressed={multi ? pickedIds.has(opt.id) : undefined}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   pick(opt)
@@ -163,8 +183,25 @@ const PersonCombobox: React.FC<PersonComboboxProps> = ({
                     <span className="block text-xs text-slate-500 truncate">{opt.secondary}</span>
                   )}
                 </span>
+                {pickedIds?.has(opt.id) && <CheckIcon className="w-4 h-4 text-cyan-600 flex-shrink-0 ml-auto" />}
               </button>
             ))
+          )}
+          {/* The open list covers what's below it, so give it a way out. */}
+          {multi && !loading && (
+            <div className="sticky bottom-0 -mb-1.5 mt-1 bg-white border-t border-slate-100 p-1.5">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setOpen(false)
+                  setQuery('')
+                }}
+                className="w-full py-1.5 rounded-lg text-sm font-medium text-cyan-700 hover:bg-cyan-50 transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           )}
         </div>
       )}
