@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bubbleKind, displayName, generalKindLabel, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
+import { bubbleKind, displayName, editDraftState, enterBreaksLine, generalKindLabel, inboxBadgeCount, inboxBadgeLabel, isFamilyRole, lastSenderWord, othersLabel, parentsAbsent, previewPrefix, recipientsLabel, senderLabelOf, waitingOn } from './formatters'
 import { toneClasses } from './tones'
 
 describe('who is who in a thread with a student', () => {
@@ -136,5 +136,54 @@ describe('the Messages badge', () => {
     expect(inboxBadgeLabel({ ...summary, needsReply: 1, unreadAnnouncements: 2 }, false)).toBe('1 unread · 1 needs your reply · 2 new announcements')
     expect(inboxBadgeLabel(summary, true)).toBe('1 unread · 1 new announcement')
     expect(inboxBadgeLabel({ ...summary, unreadConversations: 0, needsReply: 0, unreadAnnouncements: 0 }, false)).toBe('')
+  })
+})
+
+describe('editing a sent message', () => {
+  const draft = (over: Partial<{ original: string; text: string; before: number; removed: number; added: number }> = {}) => {
+    const d = { original: 'Hello', text: 'Hello', before: 0, removed: 0, added: 0, ...over }
+    return editDraftState(d.original, d.text, d.before, d.removed, d.added)
+  }
+
+  it('knows when nothing changed', () => {
+    expect(draft().changed).toBe(false)
+    expect(draft({ text: '  Hello  ' }).changed).toBe(false)
+    expect(draft({ text: 'Hello there' }).changed).toBe(true)
+    expect(draft({ before: 2, removed: 1 }).changed).toBe(true)
+    expect(draft({ added: 1 }).changed).toBe(true)
+  })
+
+  it('needs words or a file left on the message', () => {
+    expect(draft({ text: '' }).valid).toBe(false)
+    expect(draft({ text: '   ', before: 1 }).valid).toBe(true)
+    expect(draft({ text: '', before: 1, removed: 1 }).valid).toBe(false)
+    expect(draft({ text: '', before: 1, removed: 1, added: 1 }).valid).toBe(true)
+  })
+
+  it('counts the files already there toward the cap', () => {
+    expect(draft({ before: 4, added: 1 }).valid).toBe(true)
+    expect(draft({ before: 4, added: 2 }).valid).toBe(false)
+    expect(draft({ before: 4, removed: 1, added: 2 }).valid).toBe(true)
+  })
+
+  it('stops at the longest message allowed', () => {
+    expect(draft({ text: 'x'.repeat(5000) }).valid).toBe(true)
+    expect(draft({ text: 'x'.repeat(5001) }).valid).toBe(false)
+  })
+})
+
+describe('the Enter key in the message box', () => {
+  it('adds a new line for staff, even on a computer', () => {
+    expect(enterBreaksLine('staff', false)).toBe(true)
+  })
+
+  it('still sends for parents and students on a computer', () => {
+    expect(enterBreaksLine('parent', false)).toBe(false)
+    expect(enterBreaksLine('student', false)).toBe(false)
+  })
+
+  it('adds a new line for everyone on a phone', () => {
+    expect(enterBreaksLine('parent', true)).toBe(true)
+    expect(enterBreaksLine('student', true)).toBe(true)
   })
 })

@@ -11,6 +11,8 @@ import type {
   ConversationListResponse,
   ConversationStatus,
   DeleteMessageResponse,
+  EditContextResponse,
+  EditMessageInput,
   EditMessageResponse,
   ListFilters,
   MarkReadResponse,
@@ -145,14 +147,24 @@ export const postMessage = async (id: string, input: NewMessageInput): Promise<T
 };
 
 /**
- * Edit your own message within 15 minutes.
- * PATCH /messaging/conversations/:id/messages/:messageId
+ * Change your own message: its words and its files, and optionally email the
+ * corrected version to whoever was already emailed. The server applies the time limits.
+ * PATCH /messaging/conversations/:id/messages/:messageId (multipart)
  */
-export const editMessage = async (id: string, messageId: string, body: string): Promise<EditMessageResponse> =>
-  apiClient<EditMessageResponse, { body: string }>(`${thread(id)}/messages/${encodeURIComponent(messageId)}`, {
-    method: 'PATCH',
-    body: { body },
-  });
+export const editMessage = async (id: string, messageId: string, input: EditMessageInput): Promise<EditMessageResponse> => {
+  const form = new FormData();
+  form.set('body', input.body);
+  (input.removeAttachmentIds ?? []).forEach((attachmentId) => form.append('removeAttachmentIds', attachmentId));
+  if (input.emailCorrection) form.set('emailCorrection', 'true');
+  return apiUpload<EditMessageResponse>(`${thread(id)}/messages/${encodeURIComponent(messageId)}`, withFiles(form, input.files), { method: 'PATCH' });
+};
+
+/**
+ * Who already has your message by email, for the editor's tick box.
+ * GET /messaging/conversations/:id/messages/:messageId/edit-context
+ */
+export const getEditContext = async (id: string, messageId: string): Promise<EditContextResponse> =>
+  apiClient<EditContextResponse>(`${thread(id)}/messages/${encodeURIComponent(messageId)}/edit-context`);
 
 /**
  * Remove your own message (admins: any message). Soft delete.

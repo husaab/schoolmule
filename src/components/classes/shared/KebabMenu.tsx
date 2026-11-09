@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type SVGProps } from 'react'
 import { createPortal } from 'react-dom'
-import { EllipsisVerticalIcon } from '@heroicons/react/24/outline'
+import { EllipsisHorizontalIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline'
 
 export interface KebabItem {
   key: string
@@ -28,12 +28,14 @@ interface KebabMenuProps {
   busy?: boolean
   width?: number
   className?: string
+  /** A small ⋯ for tight rows such as under a message; touch screens still get a full-size target. */
+  compact?: boolean
 }
 
 const ITEM_BASE =
   'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500'
 
-export default function KebabMenu({ label, items, busy = false, width = 208, className = '' }: KebabMenuProps) {
+export default function KebabMenu({ label, items, busy = false, width = 208, className = '', compact = false }: KebabMenuProps) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -115,10 +117,12 @@ export default function KebabMenu({ label, items, busy = false, width = 208, cla
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
-        className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-wait disabled:opacity-50 ${className}`}
+        className={`flex shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-wait disabled:opacity-50 ${compact ? 'h-7 w-7 [@media(hover:none)]:h-10 [@media(hover:none)]:w-10' : 'h-9 w-9'} ${className}`}
       >
         {busy ? (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" aria-hidden="true" />
+        ) : compact ? (
+          <EllipsisHorizontalIcon className="h-5 w-5" />
         ) : (
           <EllipsisVerticalIcon className="h-5 w-5" />
         )}

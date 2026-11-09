@@ -127,6 +127,27 @@ export const MAX_FILE_BYTES = 10 * 1024 * 1024
 export const MAX_FILES = 5
 export const MAX_BODY = 5000
 
+/**
+ * Where an edit stands: `changed` when there is anything to save, `valid` when
+ * the message would still have words or a file and fit the limits (the same
+ * rules as the server). `filesBefore` are the files on the message now.
+ */
+export const editDraftState = (original: string, text: string, filesBefore: number, removed: number, added: number): { changed: boolean; valid: boolean } => {
+  const words = text.trim()
+  const filesAfter = filesBefore - removed + added
+  return {
+    changed: words !== original || removed > 0 || added > 0,
+    valid: (words.length > 0 || filesAfter > 0) && words.length <= MAX_BODY && filesAfter <= MAX_FILES,
+  }
+}
+
+/**
+ * True when Enter starts a new line. On a phone it always does. Staff get it
+ * on a computer too: teachers were sending half-finished messages to families
+ * by pressing Enter, so for them the Send button or Cmd/Ctrl+Enter sends.
+ */
+export const enterBreaksLine = (tone: 'staff' | 'parent' | 'student', touch: boolean): boolean => touch || tone === 'staff'
+
 /** Returns a human reason when a file must be refused, else null. */
 export const fileProblem = (file: File): string | null => {
   const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase()

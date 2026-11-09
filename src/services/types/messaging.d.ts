@@ -96,7 +96,25 @@ export interface Message {
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+  /** The viewer may still edit this message (the server applies the time limits). */
+  canEdit?: boolean;
   attachments: Attachment[];
+}
+
+/** Changes to a sent message. */
+export interface EditMessageInput {
+  /** The whole text as it should read; may be empty while a file stays on the message. */
+  body: string;
+  removeAttachmentIds?: string[];
+  files?: File[];
+  /** Send the corrected version to the people already emailed the first one. */
+  emailCorrection?: boolean;
+}
+
+/** Someone who already has a message in their inbox. */
+export interface EmailedPerson {
+  userId: string;
+  name: string;
 }
 
 export interface Participant {
@@ -322,7 +340,8 @@ export type ThreadStubsResponse = MessagingResponse<ThreadStub[]>;
 export type ParentTargetsResponse = MessagingResponse<ParentTargets>;
 export type ResendInviteResponse = MessagingResponse<{ linkId: string; status: InviteStatus }>;
 export type StaffTargetsResponse = MessagingResponse<StaffTargets>;
-export type EditMessageResponse = MessagingResponse<{ messageId: string; body: string; editedAt: string }>;
+export type EditMessageResponse = MessagingResponse<{ messageId: string; body: string; editedAt: string; correctionsQueued: number }>;
+export type EditContextResponse = MessagingResponse<{ emailedTo: EmailedPerson[] }>;
 export type DeleteMessageResponse = MessagingResponse<{ messageId: string; deletedAt: string }>;
 export type MarkReadResponse = MessagingResponse<{ lastReadAt: string | null }>;
 export type SetStatusResponse = MessagingResponse<{ status: ConversationStatus }>;

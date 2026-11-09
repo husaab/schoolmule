@@ -10,7 +10,7 @@ import {
   EllipsisHorizontalIcon,
 } from '@heroicons/react/24/outline'
 import GatedLink from '@/components/shared/GatedLink'
-import type { Message, SenderRole, Thread } from '@/services/types/messaging'
+import type { EditMessageInput, Message, SenderRole, Thread } from '@/services/types/messaging'
 import {
   deleteMessage,
   editMessage,
@@ -28,6 +28,7 @@ import { parentItemHref } from '@/lib/portalRoutes'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { can } from '@/lib/permissions'
 import Composer from './Composer'
 import MessageBubble from './MessageBubble'
@@ -47,7 +48,6 @@ interface ConversationThreadProps {
 }
 
 const REFRESH_MS = 15_000
-const EDIT_WINDOW_MS = 15 * 60 * 1000
 
 type Row = { kind: 'day'; label: string; key: string } | { kind: 'msg'; message: Message }
 
@@ -75,6 +75,9 @@ const toRows = (messages: Message[]): Row[] => {
 const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId, tone, role, onChanged, onBack }) => {
   const t = toneClasses(tone)
   const user = useUserStore((s) => s.user)
+  // A "View as" preview is read-only: no Edit or Remove that could only fail.
+  const previewing = useImpersonationStore((s) => s.session !== null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const showNotification = useNotificationStore((s) => s.showNotification)
   const bump = useMessagingStore((s) => s.bump)
   const media = useMediaViewer()
@@ -192,6 +195,7 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
 
   const rows = useMemo(() => (thread ? toRows(thread.messages) : []), [thread])
   const isStaff = role !== 'PARENT'
+  const editingNow = Boolean(thread?.messages.some((m) => m.messageId === editingId && !m.deletedAt))
   const others = thread ? othersLabel(thread.participants, user.id || null) : ''
   // Who the email digest reaches (a student is not promised an email: see recipientsLabel).
   const sentTo = thread ? recipientsLabel(thread.participants, user.id || null) : ''
@@ -204,11 +208,13 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
     onChangedRef.current?.()
   }
 
-  const edit = async (message: Message, body: string) => {
+  const edit = async (message: Message, input: EditMessageInput) => {
     try {
-      const res = await editMessage(conversationId, message.messageId, body)
+      const res = await editMessage(conversationId, message.messageId, input)
       if (res.status !== 'success') throw new Error(res.message)
       await load(true)
+      onChangedRef.current?.()
+      if (res.data?.correctionsQueued) showNotification('Saved. The corrected version is on its way by email.', 'success')
     } catch (err) {
       showNotification(err instanceof Error ? err.message : 'Could not edit message', 'error')
       throw err
@@ -412,11 +418,12 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
               message={row.message}
               mine={row.message.senderId === user.id}
               tone={tone}
-              canEdit={
-                row.message.senderId === user.id && Date.now() - new Date(row.message.createdAt).getTime() < EDIT_WINDOW_MS
-              }
-              canDelete={row.message.senderId === user.id || can(user, 'messages.all')}
-              onEdit={(body) => edit(row.message, body)}
+              conversationId={conversationId}
+              canEdit={!previewing && Boolean(row.message.canEdit)}
+              canDelete={!previewing && (row.message.senderId === user.id || can(user, 'messages.all'))}
+              editing={editingId === row.message.messageId}
+              onEditingChange={(on) => setEditingId(on ? row.message.messageId : null)}
+              onEdit={(input) => edit(row.message, input)}
               onDelete={() => remove(row.message)}
               onViewAttachment={(attachmentId) => media.open(threadFiles(thread.messages, (id) => freshAttachmentUrl(conversationId, id)), attachmentId)}
             />
@@ -424,8 +431,8 @@ const ConversationThread: React.FC<ConversationThreadProps> = ({ conversationId,
         )}
       </div>
 
-      {/* Composer */}
-      <div className={`border-t px-4 py-3 sm:px-5 ${t.divider}`}>
+      {/* Composer. Out of the way while a message is edited (the editor needs the room), but kept mounted so a half-written reply survives. */}
+      <div className={`border-t px-4 py-3 sm:px-5 ${t.divider} ${editingNow ? 'hidden' : ''}`}>
         {resolved && (
           <p className="mb-2 text-[11px] text-slate-500">This conversation is resolved. Sending a message reopens it.</p>
         )}
