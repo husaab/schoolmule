@@ -150,4 +150,54 @@ describe('planPages', () => {
     expect(plan.pages[0].fragments[0].marginBottom).toBe(0);
     expect(plan.pages[1].fragments[0].marginBottom).toBe(8);
   });
+
+  describe('keepWithNext (a heading never ends a page)', () => {
+    it('moves a heading to the next page when the block after it does not fit beside it', () => {
+      const items: PlanItem[] = [
+        { kind: 'atomic', height: 100 },
+        { kind: 'atomic', height: 20, marginBottom: 8, keepWithNext: true },
+        { kind: 'atomic', height: 90, marginTop: 4 },
+      ];
+      const plan = planPages(items, page(200));
+      expect(plan.pages.map((p) => p.fragments.map((f) => f.item))).toEqual([[0], [1, 2]]);
+      expect(plan.pages[1].fragments[0].marginTop).toBe(0);
+    });
+
+    it('leaves the heading where it is when the next block fits too', () => {
+      const items: PlanItem[] = [
+        { kind: 'atomic', height: 100 },
+        { kind: 'atomic', height: 20, keepWithNext: true },
+        { kind: 'atomic', height: 70 },
+      ];
+      expect(planPages(items, page(200)).pages).toHaveLength(1);
+    });
+
+    it('only needs the first rows of a table that follows, not the whole table', () => {
+      const items: PlanItem[] = [
+        { kind: 'atomic', height: 100 },
+        { kind: 'atomic', height: 20, keepWithNext: true },
+        // A group bar (kept with the row under it) plus one row: 30 of the 80 left.
+        { kind: 'table', head: 0, chrome: 0, rows: rows(12, 15, [0]) },
+      ];
+      const plan = planPages(items, page(200));
+      expect(plan.pages[0].fragments.map((f) => f.item)).toEqual([0, 1, 2]);
+    });
+
+    it('stays put when even an empty page could not hold it with what follows', () => {
+      const items: PlanItem[] = [
+        { kind: 'atomic', height: 100 },
+        { kind: 'atomic', height: 20, keepWithNext: true },
+        { kind: 'atomic', height: 190 },
+      ];
+      const plan = planPages(items, page(200));
+      expect(plan.pages[0].fragments.map((f) => f.item)).toEqual([0, 1]);
+    });
+
+    it('ignores the rule before a page break, a full page or a breakBefore block', () => {
+      for (const next of [{ kind: 'break' }, { kind: 'fullPage' }, { kind: 'atomic', height: 150, breakBefore: true }] as PlanItem[]) {
+        const plan = planPages([{ kind: 'atomic', height: 100 }, { kind: 'atomic', height: 20, keepWithNext: true }, next], page(200));
+        expect(plan.pages[0].fragments.map((f) => f.item)).toEqual([0, 1]);
+      }
+    });
+  });
 });

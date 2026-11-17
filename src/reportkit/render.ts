@@ -189,7 +189,7 @@ export async function renderReport(
     const wrap = host.querySelector<HTMLElement>(`[data-m="${i}"]`);
     const total = wrap ? wrap.getBoundingClientRect().height : 0;
     if (f.kind === 'atomic') {
-      return { kind: 'atomic', height: total, marginTop: marginTopOf(i), marginBottom: marginBottomOf(i), breakBefore: f.breakBefore };
+      return { kind: 'atomic', height: total, marginTop: marginTopOf(i), marginBottom: marginBottomOf(i), breakBefore: f.breakBefore, keepWithNext: f.keepWithNext };
     }
     const table = wrap?.querySelector('table');
     const head = table?.tHead ? table.tHead.getBoundingClientRect().height : 0;

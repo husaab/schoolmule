@@ -51,7 +51,7 @@ export interface TableRow {
 }
 
 export type Flowable =
-  | { kind: 'atomic'; block: Block; html: string; breakBefore: boolean }
+  | { kind: 'atomic'; block: Block; html: string; breakBefore: boolean; keepWithNext?: boolean }
   | {
       kind: 'table';
       block: Block;
@@ -809,7 +809,7 @@ export function blockHtml(block: Block, ctx: RenderCtx): string {
 /** A body block as the flowables the paginator places. Hidden blocks give []. */
 export function blockFlowables(block: Block, ctx: RenderCtx): Flowable[] {
   if (!evaluateCondition(block.showWhen, ctx.scope)) return [];
-  const atomic = (html: string): Flowable[] => [{ kind: 'atomic', block, html, breakBefore: !!block.breakBefore }];
+  const atomic = (html: string): Flowable[] => [{ kind: 'atomic', block, html, breakBefore: !!block.breakBefore, keepWithNext: !!block.keepWithNext }];
   const table = (f: Flowable | null): Flowable[] => (f ? [f] : []);
 
   switch (block.type) {

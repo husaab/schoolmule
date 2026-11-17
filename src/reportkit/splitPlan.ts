@@ -12,6 +12,9 @@
  *     never ends a page while more rows follow.
  *   - A split carries at least `widows` (2) rows onto the next page.
  *   - breakBefore starts a new page unless the page is still empty.
+ *   - An atomic block marked keepWithNext (a heading) never ends a page: when
+ *     the start of the next block doesn't fit after it, it moves to the next
+ *     page with it, as long as the two fit an empty page together.
  *   - A block's top margin is dropped at the top of a page, and so is a
  *     spacer row (dropAtTop) that would start one.
  *   - A full page (a free-canvas page) always sits alone.
@@ -25,7 +28,7 @@ export interface PlanRow {
 }
 
 export type PlanItem =
-  | { kind: 'atomic'; height: number; marginTop?: number; marginBottom?: number; breakBefore?: boolean }
+  | { kind: 'atomic'; height: number; marginTop?: number; marginBottom?: number; breakBefore?: boolean; keepWithNext?: boolean }
   | {
       kind: 'table';
       head: number;
@@ -83,11 +86,31 @@ export function planPages(items: PlanItem[], bodyHeight: (pageIndex: number) => 
     if (page.fullPage !== undefined) open();
   };
 
-  const placeAtomic = (index: number, height: number, marginTop: number, marginBottom: number, breakBefore: boolean) => {
+  /**
+   * The least of `next` that has to share a page with a keepWithNext block
+   * above it: an atomic block whole, a table's first row with its bars. Null
+   * when the next item starts a page anyway (so moving would strand it).
+   */
+  const leadOf = (next: PlanItem | undefined): number | null => {
+    if (!next || next.kind === 'break' || next.kind === 'fullPage' || next.breakBefore) return null;
+    const mt = next.marginTop ?? 0;
+    if (next.kind === 'atomic') return mt + next.height;
+    let lead = mt + next.chrome + next.head;
+    let k = 0;
+    do {
+      lead += next.rows[k]?.height ?? 0;
+      k++;
+    } while (k < next.rows.length && next.rows[k - 1].keepWithNext);
+    return lead;
+  };
+
+  const placeAtomic = (index: number, height: number, marginTop: number, marginBottom: number, breakBefore: boolean, lead: number | null = null) => {
     leaveFullPage();
     if (breakBefore && hasContent()) open();
     let mt = hasContent() ? marginTop : 0;
-    if (hasContent() && y + mt + height > avail()) {
+    const keptTogether = lead === null ? 0 : marginBottom + lead;
+    const fitsEmptyPage = height + keptTogether <= bodyHeight(pages.length) - slack;
+    if (hasContent() && (y + mt + height > avail() || (lead !== null && fitsEmptyPage && y + mt + height + keptTogether > avail()))) {
       open();
       mt = 0;
     }
@@ -113,7 +136,7 @@ export function planPages(items: PlanItem[], bodyHeight: (pageIndex: number) => 
     const marginBottom = item.marginBottom ?? 0;
 
     if (item.kind === 'atomic') {
-      placeAtomic(index, item.height, marginTop, marginBottom, !!item.breakBefore);
+      placeAtomic(index, item.height, marginTop, marginBottom, !!item.breakBefore, item.keepWithNext ? leadOf(items[index + 1]) : null);
       return;
     }
 

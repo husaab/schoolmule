@@ -3,7 +3,7 @@ import { DEFAULT_TEMPLATES, defaultTemplate } from './defaults';
 import { SCALES } from './defaults/scales';
 import { FONT_FAMILIES } from './fonts';
 import { PAGE_SIZES } from './types';
-import type { Block, CanvasElement, ColumnsBlock, ImageElement, SubjectCardsBlock, TemplateDoc } from './types';
+import type { Block, CanvasElement, ColumnsBlock, ImageElement, SubjectCardsBlock, TableBlock, TemplateDoc } from './types';
 
 /** The Honour Roll look on the grades 1–8 report card and progress report. */
 
@@ -76,7 +76,17 @@ describe('same content as before', () => {
     const labels = ['{{school.name}}', '{{school.address}}', '[[Phone: {{school.phone}}]][[ | Email: {{school.email}}]]', 'STUDENT PROGRESS REPORT', 'Student Name:', 'Term:', '{{meta.term}}', 'Grade:', 'Homeroom Teacher:', 'OEN:', 'Assessment Scale', 'Excellent', 'Good', 'Satisfactory', 'Needs Improvement', 'Progress by Subject', 'Core Standards Progress:', 'Teacher Comments:', 'Not Assessed', 'Principal Signature', 'Created on {{meta.generatedDate|long}}'];
     labels.forEach((t) => expect(json(PROGRESS), t).toContain(t));
     expect(json(PROGRESS)).toContain("This progress report provides an overview of the student's current academic and behavioral progress.");
-    expect(subjectCards(PROGRESS).fields.map((f) => f.label)).toEqual(['Work Habits', 'Behavior', 'Overall']);
+    // The school asked (2026-11-16) for the Overall tile to go: it only averaged the two beside it.
+    expect(subjectCards(PROGRESS).fields.map((f) => f.label)).toEqual(['Work Habits', 'Behavior']);
+  });
+
+  it('explains what Work Habits, Behavior and Learning Skills cover under the scale', () => {
+    const scale = PROGRESS.blocks.find((b) => b.name === 'Assessment Scale') as ColumnsBlock;
+    const kept = scale.columns[0].blocks;
+    expect(kept.map((b) => b.name)).toEqual(['Assessment Scale', 'Assessment scale key', 'Rating legend']);
+    const legend = kept[2] as TableBlock;
+    expect(legend.rows.map((r) => r.cells[0].text)).toEqual(['Work Habits', 'Behavior', 'Learning Skills']);
+    expect(legend.rows[0].cells[1].text).toMatch(/^Punctuality/);
   });
 
   it('keeps the sections in the same order', () => {

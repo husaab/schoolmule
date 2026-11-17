@@ -491,6 +491,9 @@ function BlockPanel({ id }: { id: string }) {
             </Row>
           </Grid>
           <Toggle checked={block.breakBefore} onChange={(v) => set({ breakBefore: v || undefined })} label="Start on a new page" testId="toggle-break-before" />
+          {!DATA_BLOCKS.has(block.type) && block.type !== 'table' && (
+            <Toggle checked={block.keepWithNext} onChange={(v) => set({ keepWithNext: v || undefined })} label="Keep with the next block" hint="A heading never sits alone at the bottom of a page." />
+          )}
           {(DATA_BLOCKS.has(block.type) || block.type === 'columns') && (
             <Toggle checked={block.keepTogether} onChange={(v) => set({ keepTogether: v || undefined })} label="Keep together on one page" hint="Tables otherwise split between rows." />
           )}

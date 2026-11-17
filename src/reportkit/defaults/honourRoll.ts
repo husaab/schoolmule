@@ -75,7 +75,8 @@ export function honourSubjectBar(fontSize: number): BarStyle {
   };
 }
 
-/** A heading and what it introduces, never split across a page. */
-export function honourKept(name: string, heading: Block, body: Block, marginBottom: number): ColumnsBlock {
-  return block<ColumnsBlock>({ type: 'columns', name, gap: 0, marginBottom, columns: [{ width: 100, blocks: [heading, body] }] });
+/** A heading and what it introduces (one block or several), never split across a page. */
+export function honourKept(name: string, heading: Block, body: Block | Block[], marginBottom: number): ColumnsBlock {
+  const blocks = [heading, ...(Array.isArray(body) ? body : [body])];
+  return block<ColumnsBlock>({ type: 'columns', name, gap: 0, marginBottom, columns: [{ width: 100, blocks }] });
 }

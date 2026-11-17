@@ -202,6 +202,8 @@ interface BlockBase {
   breakBefore?: boolean;
   /** Never split this block across pages (tables split by default). */
   keepTogether?: boolean;
+  /** Never end a page on this block (a heading): it moves to the next page with the start of the block after it. Unsplit blocks only. */
+  keepWithNext?: boolean;
   /** px; a small negative top margin joins a table to the one above (shared border). */
   marginTop?: number;
   marginBottom?: number;

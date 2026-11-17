@@ -6,8 +6,9 @@ import { block, cell, cornerLogo, rect, resetIds, template, text, zone } from '.
 /**
  * The grades 1–8 progress report in the Honour Roll look (see honourRoll.ts):
  * the logo in the page's corner, the centred school name, the title band, the student grid, the
- * E/G/S/N assessment scale, then one card per subject (work habits, behaviour
- * and overall as tiles, core standards, the teacher's comment) and a footer
+ * E/G/S/N assessment scale with a legend of what each rating covers, then one
+ * card per subject (work habits and behaviour as tiles, core standards, the
+ * teacher's comment) and a footer
  * with the principal's signature and the school stamp.
  */
 export function progressStandardTemplate(): TemplateDoc {
@@ -72,14 +73,43 @@ export function progressStandardTemplate(): TemplateDoc {
     rows: [{ cells: [...chip('E'), ...chip('G'), ...chip('S'), ...chip('N')] }],
   });
 
+  // What each rating looks at, so a family reads "G" for Work Habits as more
+  // than a letter (the school asked for it, 2026-11-16).
+  const legendRow = (term: string, covers: string) => ({
+    cells: [
+      cell(term, { style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 12.5, fontWeight: 700, color: HONOUR.NAVY } }),
+      cell(covers, { style: { fontSize: 13, color: HONOUR.INK } }),
+    ],
+  });
+  const ratingLegend = block<TableBlock>({
+    type: 'table',
+    name: 'Rating legend',
+    columns: [150, 508],
+    rules: 'rows',
+    borderWidth: 1,
+    outerBorderWidth: 1,
+    borderColor: HONOUR.GOLD_SOFT,
+    cellPadding: 6,
+    fontSize: 13,
+    lineHeight: 1.35,
+    verticalAlign: 'top',
+    marginTop: 10,
+    rows: [
+      legendRow('Work Habits', 'Punctuality, coming prepared, completing classwork and homework on time, staying organized and following instructions.'),
+      legendRow('Behavior', 'Respect for teachers and classmates, following class and school rules, listening attentively, self-control and cooperating with others.'),
+      legendRow('Learning Skills', 'Responsibility, organization, independent work, collaboration, initiative and self-regulation.'),
+    ],
+  });
+
   const rating: TextStyle = { fontFamily: HONOUR.HEADING_FONT, fontSize: 16, fontWeight: 700 };
   const cards = block<SubjectCardsBlock>({
     type: 'subjectCards',
     name: 'Subjects',
+    // No "Overall" tile: it only averaged the two ratings beside it, and the
+    // school asked for it to go (2026-11-16).
     fields: [
       { key: 'workHabits', label: 'Work Habits', width: 1, style: rating },
       { key: 'behaviour', label: 'Behavior', width: 1, style: rating },
-      { key: 'overall', label: 'Overall', width: 1, style: rating },
     ],
     rows: 'current',
     showTeacher: true,
@@ -172,8 +202,9 @@ export function progressStandardTemplate(): TemplateDoc {
     footer: zone(MARGIN, []),
     blocks: [
       studentBox,
-      honourKept('Assessment Scale', honourHeading('Assessment Scale', 170, 12.5, 8), scaleKey, 22),
-      honourHeading('Progress by Subject', 190, 15, 8),
+      honourKept('Assessment Scale', honourHeading('Assessment Scale', 170, 12.5, 8), [scaleKey, ratingLegend], 22),
+      // Kept with the first card: never left alone at the foot of page 1.
+      honourHeading('Progress by Subject', 190, 15, 8, { keepWithNext: true }),
       cards,
       footer,
     ],
