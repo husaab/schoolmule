@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TEMPLATES, defaultTemplate } from './defaults';
 import { SCALES } from './defaults/scales';
+import { HONOUR } from './defaults/honourRoll';
 import { FONT_FAMILIES } from './fonts';
 import { PAGE_SIZES } from './types';
 import type { Block, CanvasElement, ColumnsBlock, ImageElement, SubjectCardsBlock, TableBlock, TemplateDoc } from './types';
@@ -73,26 +74,41 @@ describe('same content as before', () => {
   });
 
   it('keeps every label of the progress report', () => {
-    const labels = ['{{school.name}}', '{{school.address}}', '[[Phone: {{school.phone}}]][[ | Email: {{school.email}}]]', 'STUDENT PROGRESS REPORT', 'Student Name:', 'Term:', '{{meta.term}}', 'Grade:', 'Homeroom Teacher:', 'OEN:', 'Assessment Scale', 'Excellent', 'Good', 'Satisfactory', 'Needs Improvement', 'Progress by Subject', 'Core Standards Progress:', 'Teacher Comments:', 'Not Assessed', 'Principal Signature', 'Created on {{meta.generatedDate|long}}'];
+    const labels = ['{{school.name}}', '{{school.address}}', '[[Phone: {{school.phone}}]][[ | Email: {{school.email}}]]', 'STUDENT PROGRESS REPORT', 'Student Name:', 'Term:', '{{meta.term}}', 'Grade:', 'Homeroom Teacher:', 'OEN:', 'ASSESSMENT LEGEND', 'Excellent', 'Good', 'Satisfactory', 'Needs Improvement', 'Progress by Subject', 'Core Standards Progress:', 'Teacher Comments:', 'Not Assessed', 'Principal Signature', 'Created on {{meta.generatedDate|long}}'];
     labels.forEach((t) => expect(json(PROGRESS), t).toContain(t));
     expect(json(PROGRESS)).toContain("This progress report provides an overview of the student's current academic and behavioral progress.");
     // The school asked (2026-11-16) for the Overall tile to go: it only averaged the two beside it.
     expect(subjectCards(PROGRESS).fields.map((f) => f.label)).toEqual(['Work Habits', 'Behavior']);
   });
 
-  it('explains what Work Habits, Behavior and Learning Skills cover under the scale', () => {
-    const scale = PROGRESS.blocks.find((b) => b.name === 'Assessment Scale') as ColumnsBlock;
-    const kept = scale.columns[0].blocks;
-    expect(kept.map((b) => b.name)).toEqual(['Assessment Scale', 'Assessment scale key', 'Rating legend']);
-    const legend = kept[2] as TableBlock;
-    expect(legend.rows.map((r) => r.cells[0].text)).toEqual(['Work Habits', 'Behavior', 'Learning Skills']);
-    expect(legend.rows[0].cells[1].text).toMatch(/^Punctuality/);
+  it("prints the school's assessment legend word for word (Al Haadi, 2026-11-16)", () => {
+    const table = (name: string) => allBlocks(PROGRESS.blocks).find((b) => b.name === name) as TableBlock;
+    const rows = (name: string) => table(name).rows.map((r) => r.cells.map((c) => c.text));
+    expect(rows('Assessment scale key')).toEqual([['E', 'G', 'S', 'N'], ['Excellent', 'Good', 'Satisfactory', 'Needs Improvement']]);
+    expect(rows('Learning skills table')).toEqual([
+      ['Learning Skill', 'Key Expectations'],
+      ['Responsibility', 'Completes tasks, meets deadlines, and takes responsibility for actions.'],
+      ['Independent Work', 'Works independently and follows instructions.'],
+      ['Organization', 'Manages time, materials, and priorities.'],
+      ['Collaboration', 'Respects others, cooperates, and resolves conflicts positively.'],
+      ['Initiative', 'Shows curiosity, takes initiative, and embraces challenges.'],
+      ['Self-Regulation', 'Sets goals, reflects, seeks help, and perseveres.'],
+    ]);
+    expect(rows('Behaviour table')).toEqual([
+      ['Behaviour Category', 'Key Expectations'],
+      ['Respect & Kindness', 'Speaks politely, shows kindness, and respects teachers and peers.'],
+      ['Honesty & Integrity', 'Tells the truth, acts fairly, and takes responsibility for mistakes.'],
+      ['Self-Discipline', 'Follows school rules, controls emotions, and makes positive choices.'],
+      ['Islamic Manners (Akhlaq)', 'Demonstrates humility, patience, forgiveness, and good manners.'],
+      ['Respect for Others', 'Respects personal boundaries, differences, and others\u2019 belongings.'],
+      ['Positive Conduct', 'Uses appropriate language, avoids disruptions, and promotes a peaceful environment.'],
+    ]);
   });
 
   it('keeps the sections in the same order', () => {
     const order = (d: TemplateDoc) => d.blocks.map((b) => b.name);
     for (const doc of CARDS) expect(order(doc)).toEqual(['Student information', 'WORK HABITS & BEHAVIOUR', 'ACHIEVEMENT OF THE CURRICULUM EXPECTATIONS', 'Academic Achievement', 'Subjects', 'Footer']);
-    expect(order(PROGRESS)).toEqual(['Student information', 'Assessment Scale', 'Progress by Subject', 'Subjects', 'Footer']);
+    expect(order(PROGRESS)).toEqual(['Student information', 'Assessment Legend', 'Learning Skills & Work Habits', 'Student Behaviour & Islamic Conduct', 'Progress by Subject', 'Subjects', 'Footer']);
   });
 
   it('keeps the paper size and the two subjects per page', () => {
@@ -121,19 +137,30 @@ describe('the Honour Roll look', () => {
     }
   });
 
-  it('keeps dark colour to thin rules: no filled area on the page is dark', () => {
+  // The one dark fill: the navy header row of the progress report's two
+  // legend tables, from the school's own template (Al Haadi, 2026-11-16).
+  const isNavyHeaderCell = (value: unknown) => {
+    const c = value as { background?: string; style?: { color?: string } } | null;
+    return !!c && typeof c === 'object' && c.background === HONOUR.NAVY && c.style?.color === '#ffffff';
+  };
+  const withoutNavyHeaders = (doc: TemplateDoc) => JSON.parse(JSON.stringify(doc, (_key, value) => (isNavyHeaderCell(value) ? undefined : value)));
+
+  it('keeps dark colour to thin rules: no filled area on the page is dark (bar the legend header rows)', () => {
     for (const doc of ALL) {
       for (const el of zoneElements(doc)) {
         if (el.type === 'shape' && el.fill && luminance(el.fill) < 0.5) expect(el.h, el.name).toBeLessThanOrEqual(3);
       }
-      for (const bg of valuesOf(doc, 'background')) expect(luminance(bg as string)).toBeGreaterThan(0.6);
+      for (const bg of valuesOf(withoutNavyHeaders(doc), 'background')) expect(luminance(bg as string)).toBeGreaterThan(0.6);
     }
+    const headers = valuesOf(PROGRESS.blocks, 'cells').flat().filter(isNavyHeaderCell);
+    expect(headers).toHaveLength(4);
+    expect(contrast('#ffffff', HONOUR.NAVY)).toBeGreaterThanOrEqual(7);
   });
 
-  it('gives all text at least 4.5:1 contrast on white', () => {
+  it('gives all text at least 4.5:1 contrast on white (the legend headers: white on navy)', () => {
     for (const doc of ALL) {
       // A scale's `color` is a tile fill and a rule's `color` is a line, so neither carries text.
-      const textOnly = JSON.parse(JSON.stringify({ ...doc, scales: [] }, (key, value) => (key === 'ruleTop' || key === 'ruleBottom' ? undefined : value)));
+      const textOnly = JSON.parse(JSON.stringify({ ...withoutNavyHeaders(doc), scales: [] }, (key, value) => (key === 'ruleTop' || key === 'ruleBottom' ? undefined : value)));
       const colors = [...valuesOf(textOnly, 'color'), ...valuesOf(doc, 'textColor')];
       expect(colors.length).toBeGreaterThan(10);
       for (const color of colors) expect(contrast(color as string, '#ffffff'), String(color)).toBeGreaterThanOrEqual(4.5);

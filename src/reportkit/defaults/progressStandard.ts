@@ -6,9 +6,9 @@ import { block, cell, cornerLogo, rect, resetIds, template, text, zone } from '.
 /**
  * The grades 1–8 progress report in the Honour Roll look (see honourRoll.ts):
  * the logo in the page's corner, the centred school name, the title band, the student grid, the
- * E/G/S/N assessment scale with a legend of what each rating covers, then one
- * card per subject (work habits and behaviour as tiles, core standards, the
- * teacher's comment) and a footer
+ * school's assessment legend (the E/G/S/N scale, learning skills & work habits,
+ * student behaviour & Islamic conduct), then one card per subject (work
+ * habits and behaviour as tiles, core standards, the teacher's comment) and a footer
  * with the principal's signature and the school stamp.
  */
 export function progressStandardTemplate(): TemplateDoc {
@@ -52,54 +52,69 @@ export function progressStandardTemplate(): TemplateDoc {
     ],
   });
 
-  // "Assessment Scale": each rating in the colours its subject cards use.
-  const chip = (code: 'E' | 'G' | 'S' | 'N'): TableCellDef[] => {
-    const level = scale.levels.find((l) => l.code === code)!;
-    return [
-      cell(code, { background: level.color, style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 13, fontWeight: 700, color: level.textColor, align: 'center' } }),
-      cell(level.label, { style: { fontSize: 13 } }),
-    ];
-  };
+  // The school's own legend (Al Haadi sent it, 2026-11-16): the E/G/S/N scale,
+  // what each learning skill and work habit means, and what behaviour and
+  // Islamic conduct cover. The letters wear the colours the subject cards use.
+  const levelOf = (code: string) => scale.levels.find((l) => l.code === code)!;
   const scaleKey = block<TableBlock>({
     type: 'table',
     name: 'Assessment scale key',
-    columns: [30, 118, 30, 88, 30, 124, 30, 208],
-    borderWidth: 0,
-    outerBorderWidth: 1,
-    borderColor: HONOUR.GOLD_SOFT,
-    cellPadding: 7,
-    fontSize: 13,
-    lineHeight: 1.3,
-    rows: [{ cells: [...chip('E'), ...chip('G'), ...chip('S'), ...chip('N')] }],
-  });
-
-  // What each rating looks at, so a family reads "G" for Work Habits as more
-  // than a letter (the school asked for it, 2026-11-16).
-  const legendRow = (term: string, covers: string) => ({
-    cells: [
-      cell(term, { style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 12.5, fontWeight: 700, color: HONOUR.NAVY } }),
-      cell(covers, { style: { fontSize: 13, color: HONOUR.INK } }),
-    ],
-  });
-  const ratingLegend = block<TableBlock>({
-    type: 'table',
-    name: 'Rating legend',
-    columns: [150, 508],
-    rules: 'rows',
+    columns: [1, 1, 1, 1],
     borderWidth: 1,
     outerBorderWidth: 1,
     borderColor: HONOUR.GOLD_SOFT,
-    cellPadding: 6,
+    cellPadding: 5,
     fontSize: 13,
-    lineHeight: 1.35,
-    verticalAlign: 'top',
-    marginTop: 10,
+    lineHeight: 1.3,
     rows: [
-      legendRow('Work Habits', 'Punctuality, coming prepared, completing classwork and homework on time, staying organized and following instructions.'),
-      legendRow('Behavior', 'Respect for teachers and classmates, following class and school rules, listening attentively, self-control and cooperating with others.'),
-      legendRow('Learning Skills', 'Responsibility, organization, independent work, collaboration, initiative and self-regulation.'),
+      { cells: ['E', 'G', 'S', 'N'].map((code) => cell(code, { background: levelOf(code).color, style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 13, fontWeight: 700, color: levelOf(code).textColor, align: 'center' } })) },
+      { cells: ['E', 'G', 'S', 'N'].map((code) => cell(levelOf(code).label, { background: HONOUR.GOLD_TINT, style: { fontSize: 13, align: 'center' } })) },
     ],
   });
+
+  // "Learning Skill | Key Expectations": a navy header row, then the rows on
+  // alternating white and gold tint.
+  const expectations = (name: string, head: string, rows: Array<[string, string]>) =>
+    block<TableBlock>({
+      type: 'table',
+      name,
+      columns: [196, 462],
+      borderWidth: 1,
+      outerBorderWidth: 1,
+      borderColor: HONOUR.GOLD_SOFT,
+      cellPadding: 5,
+      cellPaddingX: 10,
+      fontSize: 13,
+      lineHeight: 1.35,
+      rows: [
+        { cells: [head, 'Key Expectations'].map((t) => cell(t, { background: HONOUR.NAVY, style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 12.5, fontWeight: 700, color: '#ffffff' } })) },
+        ...rows.map(([term, expects], i) => {
+          const background = i % 2 === 1 ? HONOUR.GOLD_TINT : undefined;
+          return {
+            cells: [
+              cell(term, { background, style: { fontFamily: HONOUR.HEADING_FONT, fontSize: 12.5, fontWeight: 700, color: HONOUR.NAVY } }),
+              cell(expects, { background, style: { fontSize: 13, color: HONOUR.INK } }),
+            ],
+          };
+        }),
+      ],
+    });
+  const learningSkills = expectations('Learning skills table', 'Learning Skill', [
+    ['Responsibility', 'Completes tasks, meets deadlines, and takes responsibility for actions.'],
+    ['Independent Work', 'Works independently and follows instructions.'],
+    ['Organization', 'Manages time, materials, and priorities.'],
+    ['Collaboration', 'Respects others, cooperates, and resolves conflicts positively.'],
+    ['Initiative', 'Shows curiosity, takes initiative, and embraces challenges.'],
+    ['Self-Regulation', 'Sets goals, reflects, seeks help, and perseveres.'],
+  ]);
+  const behaviour = expectations('Behaviour table', 'Behaviour Category', [
+    ['Respect & Kindness', 'Speaks politely, shows kindness, and respects teachers and peers.'],
+    ['Honesty & Integrity', 'Tells the truth, acts fairly, and takes responsibility for mistakes.'],
+    ['Self-Discipline', 'Follows school rules, controls emotions, and makes positive choices.'],
+    ['Islamic Manners (Akhlaq)', 'Demonstrates humility, patience, forgiveness, and good manners.'],
+    ['Respect for Others', 'Respects personal boundaries, differences, and others’ belongings.'],
+    ['Positive Conduct', 'Uses appropriate language, avoids disruptions, and promotes a peaceful environment.'],
+  ]);
 
   const rating: TextStyle = { fontFamily: HONOUR.HEADING_FONT, fontSize: 16, fontWeight: 700 };
   const cards = block<SubjectCardsBlock>({
@@ -202,7 +217,9 @@ export function progressStandardTemplate(): TemplateDoc {
     footer: zone(MARGIN, []),
     blocks: [
       studentBox,
-      honourKept('Assessment Scale', honourHeading('Assessment Scale', 170, 12.5, 8), [scaleKey, ratingLegend], 22),
+      honourKept('Assessment Legend', honourHeading('ASSESSMENT LEGEND', 180, 12.5, 6), scaleKey, 16),
+      honourKept('Learning Skills & Work Habits', honourHeading('LEARNING SKILLS & WORK HABITS', 290, 12.5, 6), learningSkills, 16),
+      honourKept('Student Behaviour & Islamic Conduct', honourHeading('STUDENT BEHAVIOUR & ISLAMIC CONDUCT', 350, 12.5, 6), behaviour, 22),
       // Kept with the first card: never left alone at the foot of page 1.
       honourHeading('Progress by Subject', 190, 15, 8, { keepWithNext: true }),
       cards,
