@@ -22,6 +22,7 @@ import {
   DocumentTextIcon,
   EnvelopeIcon,
   MagnifyingGlassIcon,
+  SparklesIcon,
   TrashIcon,
   UserGroupIcon,
   XMarkIcon,
@@ -77,6 +78,9 @@ import SentEmailReportModal from '../email/SentEmailReportModal'
 import SingleEmailReportModal from '../email/SingleEmailReportModal'
 import BulkEmailReportModal from '../email/BulkEmailReportModal'
 import type { ReportDoc } from '../reportDocs'
+import SalaatModal from '../SalaatModal'
+import { getSalaat, type SalaatRoster } from '@/services/progressSalaatService'
+import { salaatProgress } from '@/lib/salaat'
 
 type Dialog =
   | { kind: 'view'; row: Row; url: string }
@@ -87,6 +91,7 @@ type Dialog =
   | { kind: 'bulkDownload'; paths: string[] }
   | { kind: 'bulkEmail'; preselect: string[] }
   | { kind: 'generateMissing' }
+  | { kind: 'salaat' }
 
 // While a run goes, the report list is read again at most this often (and once at the end).
 const REPORTS_REFRESH_MS = 10 * 1000
@@ -144,6 +149,8 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   // The date JK/SK progress reports print (other grades and documents don't print one).
   const [reportDate, setReportDate] = useState(() => localDateISO())
+  // Progress reports at a school that prints Salaat: the students the user fills it in for, this term.
+  const [salaatFor, setSalaatFor] = useState<{ term: string; roster: SalaatRoster } | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!user?.school) return
@@ -166,6 +173,19 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
     const activeTerm = terms.find((t) => t.isActive)
     if (activeTerm) setParams({ term: activeTerm.name })
   }, [terms, selectedTerm, setParams])
+
+  useEffect(() => {
+    if (!doc.salaat || !selectedTerm) return
+    let live = true
+    getSalaat(selectedTerm)
+      .then((roster) => live && setSalaatFor({ term: selectedTerm, roster }))
+      .catch(() => live && setSalaatFor(null))
+    return () => {
+      live = false
+    }
+  }, [doc.salaat, selectedTerm, selectedYearId])
+  const salaat = salaatFor && salaatFor.term === selectedTerm && salaatFor.roster.enabled && salaatFor.roster.students.length > 0 ? salaatFor.roster : null
+  const salaatCount = salaat ? salaatProgress(salaat.students) : null
 
   const generation = useReportGenerationRuns(
     selectedTerm ? { reportType: doc.type, term: selectedTerm, yearId: selectedYearId ?? null } : null,
@@ -476,6 +496,17 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
                   />
                 </label>
               )}
+              {salaat && salaatCount && (
+                <button
+                  type="button"
+                  onClick={() => setDialog({ kind: 'salaat' })}
+                  title="Your students' Salaat ratings, printed after the subjects"
+                  className={secondaryButton}
+                >
+                  <SparklesIcon className="h-4 w-4 text-slate-500" />
+                  Salaat ({salaatCount.done}/{salaatCount.total})
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setDialog({ kind: 'bulkEmail', preselect: unemailedReports.map((r) => r.student_id || r.studentId || '') })}
@@ -678,6 +709,23 @@ export default function ReportRoster({ doc }: { doc: ReportDoc }) {
           </section>
         </div>
       </main>
+
+      {dialog?.kind === 'salaat' && salaat && (
+        <SalaatModal
+          term={selectedTerm}
+          students={salaat.students}
+          canEditAll={salaat.canEditAll}
+          onSaved={(studentId, entry) =>
+            setSalaatFor((prev) =>
+              prev && {
+                ...prev,
+                roster: { ...prev.roster, students: prev.roster.students.map((s) => (s.studentId === studentId ? { ...s, ...entry } : s)) },
+              },
+            )
+          }
+          onClose={() => setDialog(null)}
+        />
+      )}
 
       {dialog?.kind === 'generateMissing' && (
         <GenerateMissingModal
