@@ -50,8 +50,6 @@ export interface ReportDoc {
   removeMany: (filePaths: string[]) => Promise<{ status: string }>
   /** Whose teacher comments are in (report cards). */
   commentsStatus?: (term: string) => Promise<CommentsStatus[]>
-  /** Progress reports: the homeroom teacher's Salaat box, for schools that print it. */
-  salaat?: boolean
 }
 
 export const PROGRESS_REPORTS: ReportDoc = {
@@ -66,7 +64,6 @@ export const PROGRESS_REPORTS: ReportDoc = {
   keeps: 'the saved feedback',
   back: { href: '/reports', label: 'Reports' },
   reportDate: true,
-  salaat: true,
   list: async (term, school) => {
     const res = await getProgressReportsByTermAndSchool(term, school)
     return res.status === 'success' ? (res.data as unknown as RawReport[]) : []
