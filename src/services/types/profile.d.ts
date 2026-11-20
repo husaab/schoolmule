@@ -43,3 +43,8 @@ export interface ProfileAvatarResult {
 export interface ProfilePhotoResult {
   photoUrl: string | null
 }
+
+/** GET/PUT/POST/DELETE /profile/signature (staff): a signed URL of the saved signature, or null. */
+export interface ProfileSignatureResult {
+  signatureUrl: string | null
+}

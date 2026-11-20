@@ -16,6 +16,7 @@ import { updatePassword, updateUser } from '@/services/userService';
 import { EyeIcon, EyeSlashIcon, UserCircleIcon, KeyIcon, TrashIcon, CheckIcon, FaceSmileIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import DeleteUserModal from '@/components/user/delete/DeleteUserModal';
 import { roleLabel } from '@/components/adminUsers/userDisplay';
+import SignatureCard from '@/components/settings/SignatureCard';
 
 // Writes the avatar or photo into the signed-in user, so the sidebar, navbar
 // and every other avatar of theirs update at once.
@@ -255,6 +256,9 @@ const Settings = () => {
               </button>
             </div>
           </div>
+
+          {/* My signature (staff): prints on the JK/SK progress reports and report cards */}
+          {(user.role === 'TEACHER' || user.role === 'ADMIN') && <SignatureCard />}
 
           {/* Password Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">

@@ -19,7 +19,6 @@ import {
   getSKSubjects,
   getSKAssessments,
   getSKSubjectComments,
-  getSKTeacherAssistant,
   getSKProgressReportComments,
 } from '@/services/skService'
 import type { ClassPayload } from '@/services/types/class'
@@ -38,6 +37,7 @@ import Spinner from '@/components/Spinner'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import SavedPill from '@/components/gradebook/SavedPill'
+import TeacherAssistantPicker from './TeacherAssistantPicker'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
 import {
   applyKindergartenChange,
@@ -71,7 +71,7 @@ const SK_REPORT_CARD_RATINGS = [
 
 type TabType = 'progress_report' | 'report_card'
 
-const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
+const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, progressComments: {} }
 const DOC_NAME: Record<TabType, string> = { progress_report: 'progress report', report_card: 'report card' }
 
 interface SKGradebookWorkspaceProps {
@@ -104,8 +104,6 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   const [subjectComments, setSubjectComments] = useState<Record<string, string>>({})
   // Progress report "Strengths / Next Steps" rows: row key -> comment
   const [progressComments, setProgressComments] = useState<Record<string, string>>({})
-  // Teacher assistant
-  const [teacherAssistant, setTeacherAssistant] = useState('')
 
   // AI generation state
   const [generatingAI, setGeneratingAI] = useState<Set<string>>(new Set())
@@ -133,7 +131,6 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     setRatings(next.ratings)
     setSubjectComments(next.comments)
     setProgressComments(next.progressComments)
-    setTeacherAssistant(next.teacherAssistant)
   }, [])
 
   // Load class and students on mount
@@ -192,12 +189,9 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           fields.ratings = map
         }
 
-        // For report card tab, also load subject comments and TA
+        // For report card tab, also load subject comments
         if (activeTab === 'report_card') {
-          const [commentsRes, taRes] = await Promise.all([
-            getSKSubjectComments(selectedStudentId, term),
-            getSKTeacherAssistant(selectedStudentId, term),
-          ])
+          const commentsRes = await getSKSubjectComments(selectedStudentId, term)
 
           if (commentsRes.status === 'success') {
             const cmap: Record<string, string> = {}
@@ -206,8 +200,6 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
             })
             fields.comments = cmap
           }
-
-          fields.teacherAssistant = taRes.status === 'success' && taRes.data ? taRes.data.teacherAssistantName || '' : ''
         }
 
         // For progress report tab, load the "Strengths / Next Steps" rows
@@ -625,21 +617,8 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                     </div>
                   </div>
 
-                  {/* Teacher Assistant (report card only) */}
-                  {activeTab === 'report_card' && (
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Teacher Assistant (optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={teacherAssistant}
-                        onChange={(e) => change({ teacherAssistant: e.target.value })}
-                        placeholder="Enter teacher assistant name"
-                        className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
+                  {/* Teacher assistant (a co-teacher of the class; one per student and term, printed on both documents) */}
+                  {selectedStudentId && term && <TeacherAssistantPicker kind="sk" studentId={selectedStudentId} term={term} />}
 
                   {/* Subject Cards */}
                   {subjects.map((subject) => (

@@ -99,7 +99,13 @@ function imageLabel(src: ImageSource | null | undefined): string {
   if (src.kind === 'url') return 'Image';
   if (src.kind === 'builtin') return builtinImageLabel(src.name);
   return (
-    { logo: 'School logo', principalSignature: "Principal's signature", stamp: 'School stamp', teacherSignature: "Teacher's signature" }[
+    {
+      logo: 'School logo',
+      principalSignature: "Principal's signature",
+      stamp: 'School stamp',
+      teacherSignature: "Teacher's signature",
+      teacherAssistantSignature: "Teacher assistant's signature",
+    }[
       src.asset
     ] ?? 'Image'
   );

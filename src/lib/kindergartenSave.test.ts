@@ -23,7 +23,6 @@ const snap = (over: Partial<KindergartenSnapshot> = {}): KindergartenSnapshot =>
   ratings: { sk1: 'D', sk2: '', sk3: 'B' },
   comments: { d1: 'Counts to 20.', d2: '   ' },
   learningSkills: { Responsibility: 'G', Organization: '' },
-  teacherAssistant: '',
   progressComments: { academic_achievement: 'Growing reader.', socio_emotional: '' },
   ...over,
 })
@@ -44,12 +43,11 @@ describe('saveJKDocument: the same calls and payloads the JK Save button sent', 
     progressComments: fn('progressComments'),
     domainComments: fn('domainComments'),
     learningSkills: fn('learningSkills'),
-    teacherAssistant: fn('teacherAssistant'),
   })
 
-  it('progress report: rated skills, the section comments (an emptied one sent blank), then the teacher assistant (always)', async () => {
+  it('progress report: rated skills, then the section comments (an emptied one sent blank)', async () => {
     const { calls, fn } = recorder()
-    await saveJKDocument(snap({ teacherAssistant: 'Rana Kareem' }), api(fn))
+    await saveJKDocument(snap(), api(fn))
     expect(calls).toEqual([
       ['assessments', [
         { studentId: 'k1', skillId: 'sk1', term: 'Term 1', rating: 'D', school: 'DEMO', assessedBy: 'u1' },
@@ -59,25 +57,21 @@ describe('saveJKDocument: the same calls and payloads the JK Save button sent', 
         { studentId: 'k1', term: 'Term 1', sectionType: 'academic_achievement', comment: 'Growing reader.', school: 'DEMO' },
         { studentId: 'k1', term: 'Term 1', sectionType: 'socio_emotional', comment: '', school: 'DEMO' },
       ], {}],
-      ['teacherAssistant', { studentId: 'k1', teacherAssistantName: 'Rana Kareem', term: 'Term 1', school: 'DEMO' }, {}],
     ])
   })
 
-  it('report card: rated skills, domain comments, learning skills, then the teacher assistant (always)', async () => {
+  it('report card: rated skills, domain comments, then learning skills', async () => {
     const { calls, fn } = recorder()
     await saveJKDocument(snap({ doc: 'report_card' }), api(fn))
-    expect(calls.map((c) => c[0])).toEqual(['assessments', 'domainComments', 'learningSkills', 'teacherAssistant'])
+    expect(calls.map((c) => c[0])).toEqual(['assessments', 'domainComments', 'learningSkills'])
     expect(calls[1][1]).toEqual([{ studentId: 'k1', domainId: 'd1', term: 'Term 1', comment: 'Counts to 20.', school: 'DEMO' }])
     expect(calls[2][1]).toEqual([{ studentId: 'k1', term: 'Term 1', skillName: 'Responsibility', rating: 'G', school: 'DEMO' }])
-    expect(calls[3][1]).toEqual({ studentId: 'k1', teacherAssistantName: null, term: 'Term 1', school: 'DEMO' })
   })
 
-  it('skips an empty list, as Save did (the teacher assistant still goes)', async () => {
+  it('skips an empty list, as Save did (the teacher assistant is saved by its own picker)', async () => {
     const { calls, fn } = recorder()
     await saveJKDocument(snap({ ratings: { sk1: '' }, progressComments: {} }), api(fn))
-    expect(calls).toEqual([
-      ['teacherAssistant', { studentId: 'k1', teacherAssistantName: null, term: 'Term 1', school: 'DEMO' }, {}],
-    ])
+    expect(calls).toEqual([])
   })
 })
 
@@ -86,7 +80,6 @@ describe('saveSKDocument: the same calls and payloads the SK Save button sent', 
     assessments: fn('assessments'),
     subjectComments: fn('subjectComments'),
     progressComments: fn('progressComments'),
-    teacherAssistant: fn('teacherAssistant'),
   })
 
   it('progress report: rated standards, subject comments, then the Strengths/Next Steps rows', async () => {
@@ -105,12 +98,10 @@ describe('saveSKDocument: the same calls and payloads the SK Save button sent', 
     ])
   })
 
-  it('report card: rated standards, subject comments, then the teacher assistant', async () => {
+  it('report card: rated standards and subject comments only (no Strengths/Next Steps rows)', async () => {
     const { calls, fn } = recorder()
-    await saveSKDocument(snap({ doc: 'report_card', ratings: {}, comments: {}, teacherAssistant: 'Rana Kareem' }), api(fn))
-    expect(calls).toEqual([
-      ['teacherAssistant', { studentId: 'k1', teacherAssistantName: 'Rana Kareem', term: 'Term 1', school: 'DEMO' }, {}],
-    ])
+    await saveSKDocument(snap({ doc: 'report_card', ratings: { st1: 'G' }, comments: {} }), api(fn))
+    expect(calls.map((c) => c[0])).toEqual(['assessments'])
   })
 })
 
@@ -121,15 +112,14 @@ describe('leaving the page', () => {
       started.push(name)
       return new Promise(() => {})
     })
-    void saveJKDocument(snap({ doc: 'report_card', teacherAssistant: 'Rana Kareem' }), {
+    void saveJKDocument(snap({ doc: 'report_card' }), {
       assessments: never('assessments'),
       progressComments: never('progressComments'),
       domainComments: never('domainComments'),
       learningSkills: never('learningSkills'),
-      teacherAssistant: never('teacherAssistant'),
     }, { keepalive: true })
     await Promise.resolve()
-    expect(started).toEqual(['assessments', 'domainComments', 'learningSkills', 'teacherAssistant'])
+    expect(started).toEqual(['assessments', 'domainComments', 'learningSkills'])
   })
 
   it('keys a document by student and document', () => {
@@ -140,7 +130,7 @@ describe('leaving the page', () => {
 describe('applyKindergartenChange: a change lands only in the document it was made for', () => {
   const open = {
     readyKey: 'k1|report_card',
-    fields: { ratings: { s1: 'BG' }, comments: { d1: 'Old.' }, learningSkills: {}, teacherAssistant: 'Sami Haddad', progressComments: {} },
+    fields: { ratings: { s1: 'BG' }, comments: { d1: 'Old.' }, learningSkills: {}, progressComments: {} },
   }
 
   it('merges a change made for the open, loaded document', () => {
@@ -153,8 +143,8 @@ describe('applyKindergartenChange: a change lands only in the document it was ma
   })
 
   it('drops a change while the document is still loading (nothing is ready yet)', () => {
-    expect(applyKindergartenChange({ ...open, readyKey: null }, 'k1|report_card', { teacherAssistant: '' })).toBeNull()
-    expect(applyKindergartenChange(open, null, { teacherAssistant: '' })).toBeNull()
+    expect(applyKindergartenChange({ ...open, readyKey: null }, 'k1|report_card', { comments: {} })).toBeNull()
+    expect(applyKindergartenChange(open, null, { comments: {} })).toBeNull()
   })
 })
 
@@ -175,7 +165,7 @@ describe('loadAfterPendingSaves: a document is read only after earlier edits hav
 })
 
 describe('openSKDocument: SK subject comments are shared by both documents', () => {
-  const EMPTY: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
+  const EMPTY: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, progressComments: {} }
 
   // One SK class on a fake server: subject comments by student and subject,
   // written and read by both documents. The autosaver saves each document with
@@ -192,7 +182,6 @@ describe('openSKDocument: SK subject comments are shared by both documents', () 
         for (const e of entries) server.comments[e.studentId][e.subjectId] = e.comment ?? ''
       },
       progressComments: async () => reachable(),
-      teacherAssistant: async () => reachable(),
     }
     const autosaver = createAutosaver<KindergartenSnapshot, void>({
       save: async (batch, opts) => {
@@ -255,10 +244,10 @@ describe('openSKDocument: SK subject comments are shared by both documents', () 
   it("the document whose save failed opens on the teacher's unsaved version", async () => {
     const { server, autosaver, open, edit } = setup()
     server.down = true
-    edit('k1', 'report_card', { ...EMPTY, comments: { sub1: 'New.' }, teacherAssistant: 'Rana Kareem' })
+    edit('k1', 'report_card', { ...EMPTY, comments: { sub1: 'New.' }, ratings: { st1: 'E' } })
     await autosaver.flush()
 
-    expect(fieldsOf(await open('k1', 'report_card'))).toEqual({ ...EMPTY, comments: { sub1: 'New.' }, teacherAssistant: 'Rana Kareem' })
+    expect(fieldsOf(await open('k1', 'report_card'))).toEqual({ ...EMPTY, comments: { sub1: 'New.' }, ratings: { st1: 'E' } })
   })
 
   it('a Retry pressed while the document is being read still opens on the retried version', async () => {

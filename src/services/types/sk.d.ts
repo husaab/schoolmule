@@ -77,24 +77,7 @@ export interface SKSubjectCommentEntry {
   school: string
 }
 
-export interface SKTeacherAssistant {
-  id: string
-  studentId: string
-  teacherAssistantName: string | null
-  term: string
-}
-
-export interface SKTeacherAssistantResponse {
-  status: string
-  data: SKTeacherAssistant | null
-}
-
-export interface SKTeacherAssistantPayload {
-  studentId: string
-  teacherAssistantName: string | null
-  term: string
-  school: string
-}
+// The teacher assistant: services/types/kindergartenStaff.d.ts
 
 // -- Progress Report Comments ("Strengths/Next Steps" rows, lib/skProgressComments.ts) --
 

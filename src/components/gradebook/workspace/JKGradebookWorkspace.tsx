@@ -20,7 +20,6 @@ import {
   getJKAssessments,
   getJKLearningSkills,
   getJKDomainComments,
-  getJKTeacherAssistant,
   getJKProgressReportComments,
 } from '@/services/jkService'
 import type { ClassPayload } from '@/services/types/class'
@@ -39,6 +38,7 @@ import Spinner from '@/components/Spinner'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import SavedPill from '@/components/gradebook/SavedPill'
+import TeacherAssistantPicker from './TeacherAssistantPicker'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
 import {
   applyKindergartenChange,
@@ -87,12 +87,11 @@ const SOCIO_EMOTIONAL_DOMAIN_NAMES = ['Social Skills', 'Emotional Development']
 
 type TabType = 'progress_report' | 'report_card'
 
-const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, teacherAssistant: '', progressComments: {} }
+const EMPTY_FIELDS: KindergartenFields = { ratings: {}, comments: {}, learningSkills: {}, progressComments: {} }
 const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
   ratings: s.ratings,
   comments: s.comments,
   learningSkills: s.learningSkills,
-  teacherAssistant: s.teacherAssistant,
   progressComments: s.progressComments,
 })
 
@@ -126,8 +125,6 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
   const [domainComments, setDomainComments] = useState<Record<string, string>>({})
   // Learning skills: skillName -> rating
   const [learningSkills, setLearningSkills] = useState<Record<string, string>>({})
-  // Teacher assistant
-  const [teacherAssistant, setTeacherAssistant] = useState('')
   // Progress report comments: sectionType -> comment
   const [progressComments, setProgressComments] = useState<Record<string, string>>({})
 
@@ -139,9 +136,9 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
 
   // Autosave. The open document's fields are mirrored in a ref, so a change
   // (even several AI comments landing at once) queues the newest whole
-  // document. Changes queue only once this document has loaded (the teacher
-  // assistant is always sent, so a half-loaded report card must never save),
-  // and a late answer for another student or document is dropped.
+  // document. Changes queue only once this document has loaded, and a late
+  // answer for another student or document is dropped. (The teacher
+  // assistant is not part of the document: TeacherAssistantPicker saves it.)
   const autosave = useKindergartenAutosave({ classId, kind: 'jk' })
   const docKey = selectedStudentId ? kindergartenKey(selectedStudentId, activeTab) : null
   const docRef = useRef<KindergartenFields>(EMPTY_FIELDS)
@@ -158,7 +155,6 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     setRatings(next.ratings)
     setDomainComments(next.comments)
     setLearningSkills(next.learningSkills)
-    setTeacherAssistant(next.teacherAssistant)
     setProgressComments(next.progressComments)
   }, [])
 
@@ -215,12 +211,6 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
           })
           fields.ratings = map
         }
-
-        // Both documents print (and always save) the teacher assistant, so
-        // neither opens without it: a blank one would be saved over it.
-        const taRes = await getJKTeacherAssistant(selectedStudentId, term)
-        if (taRes.status !== 'success') throw new Error('Could not load the teacher assistant')
-        fields.teacherAssistant = taRes.data?.teacherAssistantName || ''
 
         // For report card tab, also load comments and learning skills
         if (activeTab === 'report_card') {
@@ -645,21 +635,8 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                     </div>
                   </div>
 
-                  {/* Teacher Assistant (one per student and term, printed on both documents) */}
-                  <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
-                    <label htmlFor="jk-teacher-assistant" className="block text-sm font-medium text-slate-700 mb-1">
-                      Teacher Assistant (optional)
-                    </label>
-                    <input
-                      id="jk-teacher-assistant"
-                      type="text"
-                      value={teacherAssistant}
-                      onChange={(e) => change({ teacherAssistant: e.target.value })}
-                      placeholder="Enter teacher assistant name"
-                      className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                    <p className="mt-1 text-xs text-slate-500">Printed on both the progress report and the report card.</p>
-                  </div>
+                  {/* Teacher assistant (a co-teacher of the class; one per student and term, printed on both documents) */}
+                  {selectedStudentId && term && <TeacherAssistantPicker kind="jk" studentId={selectedStudentId} term={term} />}
 
                   {/* Domain Cards */}
                   {domains.map((domain) => (

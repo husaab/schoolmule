@@ -135,7 +135,7 @@ export interface ExtraFieldDef {
 // ──────────────────────────────────────────────────── canvas elements ──
 
 export type ImageSource =
-  | { kind: 'asset'; asset: 'logo' | 'principalSignature' | 'stamp' | 'teacherSignature' }
+  | { kind: 'asset'; asset: 'logo' | 'principalSignature' | 'stamp' | 'teacherSignature' | 'teacherAssistantSignature' }
   | { kind: 'url'; url: string } // an uploaded template image
   /** An image shipped with the engine (BUILTIN_IMAGES in images.ts), by file name. */
   | { kind: 'builtin'; name: string };
@@ -701,7 +701,10 @@ export interface ReportData {
     logo: string | null;
     principalSignature: string | null;
     stamp: string | null;
+    /** JK/SK: the named teacher's saved signature (Settings → My signature); null when none. */
     teacherSignature: string | null;
+    /** JK/SK: the teacher assistant's saved signature; null when none (or no assistant). */
+    teacherAssistantSignature: string | null;
   };
   student: {
     id: string;
@@ -712,8 +715,9 @@ export interface ReportData {
     grade: string; // 'JK' | 'SK' | '1'..'8'
     gradeLabel: string; // "Senior Kindergarten", "Grade 4"
     gradeNumber: number; // JK = -1, SK = 0
-    /** JK/SK progress reports: the homeroom teacher, else the grade's Kindergarten class teacher ('' if none). */
+    /** JK/SK: the homeroom teacher, else the grade's Kindergarten class teacher ('' if none; 'N/A' on a JK/SK report card). Grades 1-8: the homeroom teacher, else 'N/A'. */
     homeroomTeacher: string;
+    /** JK/SK: a co-teacher of the Kindergarten class (the class's only one by default, or the one picked for the term); '' if none. */
     teacherAssistant: string;
     /** JK/SK progress reports: absences in the report date's school year up to that date; otherwise all-time. */
     daysAbsent: number;

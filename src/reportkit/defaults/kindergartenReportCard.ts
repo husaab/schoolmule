@@ -190,20 +190,27 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
       ]
     : [];
 
-  const signatures = block<SignaturesBlock>({
-    type: 'signatures',
-    name: 'Signatures',
-    marginTop: 40,
-    keepTogether: true,
-    slots: [
-      { label: "Teacher's Signature:", image: { kind: 'asset', asset: 'teacherSignature' } },
-      { label: "Principal's Signature:", image: { kind: 'asset', asset: 'principalSignature' } },
-      { label: '**Date: {{meta.reportDate}}**', showLine: false },
-    ],
-    imageHeight: 45,
-    lineWidth: 140,
-    style: { fontSize: 11.33, color: '#666666', lineHeight: 1.35 },
-  });
+  // The teacher's (and, when there is one, the teacher assistant's) saved
+  // signature prints on its line; one of the two blocks prints.
+  const signatureBlock = (assistant: boolean) =>
+    block<SignaturesBlock>({
+      type: 'signatures',
+      name: assistant ? 'Signatures (with teacher assistant)' : 'Signatures',
+      showWhen: { field: 'student.teacherAssistant', op: assistant ? 'notEmpty' : 'empty' },
+      marginTop: 40,
+      keepTogether: true,
+      slots: [
+        { label: "Teacher's Signature:", image: { kind: 'asset', asset: 'teacherSignature' } },
+        ...(assistant ? [{ label: "Teacher Assistant's Signature:", image: { kind: 'asset' as const, asset: 'teacherAssistantSignature' as const } }] : []),
+        { label: "Principal's Signature:", image: { kind: 'asset', asset: 'principalSignature' } },
+        { label: '**Date: {{meta.reportDate}}**', showLine: false },
+      ],
+      imageHeight: 45,
+      lineWidth: assistant ? 120 : 140,
+      style: { fontSize: 11.33, color: '#666666', lineHeight: 1.35 },
+    });
+  const signatures = signatureBlock(false);
+  const signaturesWithAssistant = signatureBlock(true);
 
   return template({
     docType: 'report_card',
@@ -214,6 +221,6 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
     firstHeader,
     header: zone(MARGIN, []),
     footer: pageFooter,
-    blocks: [studentTable, schoolTable, ...(jk ? [] : [skScale]), groups, ...learningSkills, signatures],
+    blocks: [studentTable, schoolTable, ...(jk ? [] : [skScale]), groups, ...learningSkills, signatures, signaturesWithAssistant],
   });
 }

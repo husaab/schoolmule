@@ -1,6 +1,7 @@
 // src/services/jkService.ts
 // API client for JK competency-based grading system
 
+import type { TeacherAssistantPayload, TeacherAssistantResponse } from './types/kindergartenStaff';
 import apiClient from "./apiClient";
 import type {
   JKDomainsResponse,
@@ -11,8 +12,6 @@ import type {
   JKLearningSkillEntry,
   JKDomainCommentsResponse,
   JKDomainCommentEntry,
-  JKTeacherAssistantResponse,
-  JKTeacherAssistantPayload,
   JKProgressReportCommentsResponse,
   JKProgressReportCommentEntry,
   JKCreateDomainPayload,
@@ -157,23 +156,23 @@ export const bulkUpsertJKDomainComments = async (
 
 // -- Teacher Assistant --
 
+/** Who prints as the teacher assistant for (student, term), and the choices. */
 export const getJKTeacherAssistant = async (
   studentId: string,
   term: string
-): Promise<JKTeacherAssistantResponse> => {
-  return apiClient<JKTeacherAssistantResponse>(
+): Promise<TeacherAssistantResponse> => {
+  return apiClient<TeacherAssistantResponse>(
     `/jk/teacher-assistant/${studentId}?term=${encodeURIComponent(term)}`
   );
 };
 
-export const upsertJKTeacherAssistant = async (
-  payload: JKTeacherAssistantPayload,
-  opts: { keepalive?: boolean } = {}
-): Promise<JKTeacherAssistantResponse> => {
-  return apiClient<JKTeacherAssistantResponse>('/jk/teacher-assistant', {
+/** Saves the choice (the class default, no assistant, or a co-teacher) and answers with the new state. */
+export const saveJKTeacherAssistant = async (
+  payload: TeacherAssistantPayload
+): Promise<TeacherAssistantResponse> => {
+  return apiClient<TeacherAssistantResponse>('/jk/teacher-assistant', {
     method: 'POST',
     body: payload,
-    keepalive: opts.keepalive,
   });
 };
 

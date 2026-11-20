@@ -239,3 +239,70 @@ describe('JK and SK progress defaults', () => {
     expect(sampleReportData('JK', 'progress_report').skills.map((g) => g.name)).toContain('Gross Motor Skills');
   });
 });
+
+describe('JK/SK teacher, teacher assistant and their signatures', () => {
+  const build = (key: string) => DEFAULT_TEMPLATES.find((d) => d.key === key)!.build();
+  /** The HTML every block of a built-in prints for this data (blocks hidden by showWhen print nothing). */
+  const printed = (doc: TemplateDoc, data: ReportData) => {
+    const ctx = ctxFor(data, doc);
+    return doc.blocks
+      .flatMap((b) => blockFlowables(b, ctx))
+      .map((f) => (f.kind === 'table' ? f.open + f.rows.map((r) => r.html).join('') + f.close : f.kind === 'atomic' ? f.html : ''))
+      .join('');
+  };
+  const withPeople = (key: 'JK' | 'SK', docType: 'progress_report' | 'report_card', assistant: string): ReportData => {
+    const data = sampleReportData(key, docType);
+    return {
+      ...data,
+      student: { ...data.student, homeroomTeacher: 'Sample Teacher', teacherAssistant: assistant },
+      assets: { ...data.assets, teacherSignature: 'sig-teacher', teacherAssistantSignature: assistant ? 'sig-assistant' : null },
+    };
+  };
+
+  it('SK progress: the assistant under the teacher, and three signature boxes', () => {
+    const html = printed(build('progress-sk'), withPeople('SK', 'progress_report', 'Sample Assistant'));
+    expect(html).toContain('Teacher Assistant:  Sample Assistant');
+    expect(html).toContain('Teacher Assistant&#39;s Signature:');
+    expect(html).toContain('asset:teacherSignature');
+    expect(html).toContain('asset:teacherAssistantSignature');
+    expect(html).toContain('asset:principalSignature');
+    // One comments table prints, not both.
+    expect(html.match(/Strengths\/Next Steps for Improvement/g)).toHaveLength(1);
+  });
+
+  it('SK progress without an assistant prints the paper row: teacher and principal', () => {
+    const html = printed(build('progress-sk'), withPeople('SK', 'progress_report', ''));
+    expect(html).not.toContain('Teacher Assistant');
+    expect(html).toContain('asset:teacherSignature');
+    expect(html).not.toContain('asset:teacherAssistantSignature');
+    expect(html.match(/Strengths\/Next Steps for Improvement/g)).toHaveLength(1);
+  });
+
+  it('JK progress: both signature boxes take the saved signatures', () => {
+    const html = printed(build('progress-jk'), withPeople('JK', 'progress_report', 'Sample Assistant'));
+    expect(html).toContain('Teacher Assistant: Sample Assistant');
+    expect(html).toContain('asset:teacherSignature');
+    expect(html).toContain('asset:teacherAssistantSignature');
+    const alone = printed(build('progress-jk'), withPeople('JK', 'progress_report', ''));
+    expect(alone).toContain('asset:teacherSignature');
+    expect(alone).not.toContain('Teacher Assistant');
+  });
+
+  it.each(['report-card-jk', 'report-card-sk'])('%s: a teacher assistant slot only when there is one', (key) => {
+    const grade = key.endsWith('jk') ? 'JK' : 'SK';
+    const html = printed(build(key), withPeople(grade, 'report_card', 'Sample Assistant'));
+    expect(html).toContain('Teacher Assistant&#39;s Signature:');
+    expect(html).toContain('asset:teacherAssistantSignature');
+    expect(html.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
+    const alone = printed(build(key), withPeople(grade, 'report_card', ''));
+    expect(alone).not.toContain('Teacher Assistant&#39;s Signature:');
+    expect(alone).toContain('asset:teacherSignature');
+    expect(alone.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
+  });
+
+  it('the built-ins still validate', () => {
+    for (const key of ['progress-jk', 'progress-sk', 'report-card-jk', 'report-card-sk']) {
+      expect(validateTemplate(build(key)).errors).toEqual([]);
+    }
+  });
+});

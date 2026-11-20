@@ -2,24 +2,23 @@
 // JK/SK competency grading autosaves (D17, controller ruling for T9). Each
 // student's progress report or report card is saved as a whole document,
 // exactly as the JK/SK Save button did: the same service calls, in the same
-// order, with the same payloads (empty ratings and blank comments skipped,
-// the teacher assistant always sent: by both JK documents, by the SK report
-// card). Only the timing changed. One exception: a progress report section
-// the teacher emptied is sent blank, so it is cleared (it used to come back). When the page is going away (keepalive) every call is sent at
-// once, so none is left waiting behind another.
+// order, with the same payloads (empty ratings and blank comments skipped).
+// Only the timing changed. One exception: a progress report section the
+// teacher emptied is sent blank, so it is cleared (it used to come back).
+// When the page is going away (keepalive) every call is sent at once, so none
+// is left waiting behind another. The teacher assistant is not part of the
+// document: its picker saves on its own (lib/teacherAssistant.ts).
 
 import type {
   JKAssessmentEntry,
   JKDomainCommentEntry,
   JKLearningSkillEntry,
   JKProgressReportCommentEntry,
-  JKTeacherAssistantPayload,
 } from '@/services/types/jk'
 import type {
   SKAssessmentEntry,
   SKProgressReportCommentEntry,
   SKSubjectCommentEntry,
-  SKTeacherAssistantPayload,
 } from '@/services/types/sk'
 import type { QueueState } from './scoreAutosaveQueue'
 
@@ -38,7 +37,6 @@ export interface KindergartenSnapshot {
   comments: Record<string, string>
   /** JK report card only: skill name → rating. */
   learningSkills: Record<string, string>
-  teacherAssistant: string
   /** Progress report comments by section: JK academic_achievement /
    *  socio_emotional, SK the rows of lib/skProgressComments.ts. */
   progressComments: Record<string, string>
@@ -47,7 +45,7 @@ export interface KindergartenSnapshot {
 /** The open document's editable fields (the rest of a snapshot is who and which). */
 export type KindergartenFields = Pick<
   KindergartenSnapshot,
-  'ratings' | 'comments' | 'learningSkills' | 'teacherAssistant' | 'progressComments'
+  'ratings' | 'comments' | 'learningSkills' | 'progressComments'
 >
 
 /**
@@ -85,7 +83,6 @@ export const kindergartenFieldsOf = (s: KindergartenSnapshot): KindergartenField
   ratings: s.ratings,
   comments: s.comments,
   learningSkills: s.learningSkills,
-  teacherAssistant: s.teacherAssistant,
   progressComments: s.progressComments,
 })
 
@@ -172,7 +169,6 @@ export interface JKSaveApi {
   progressComments: (entries: JKProgressReportCommentEntry[], opts: SaveOpts) => Promise<unknown>
   domainComments: (entries: JKDomainCommentEntry[], opts: SaveOpts) => Promise<unknown>
   learningSkills: (entries: JKLearningSkillEntry[], opts: SaveOpts) => Promise<unknown>
-  teacherAssistant: (payload: JKTeacherAssistantPayload, opts: SaveOpts) => Promise<unknown>
 }
 
 export function saveJKDocument(s: KindergartenSnapshot, api: JKSaveApi, opts: SaveOpts = {}): Promise<void> {
@@ -200,11 +196,6 @@ export function saveJKDocument(s: KindergartenSnapshot, api: JKSaveApi, opts: Sa
       .map(([skillName, rating]) => ({ studentId: s.studentId, term: s.term, skillName, rating, school: s.school }))
     if (learningSkills.length > 0) calls.push(() => api.learningSkills(learningSkills, opts))
   }
-
-  // Both JK documents print the teacher assistant (one per student and term),
-  // and both always send it, so each must load it before it can save.
-  const ta = { studentId: s.studentId, teacherAssistantName: s.teacherAssistant || null, term: s.term, school: s.school }
-  calls.push(() => api.teacherAssistant(ta, opts))
   return run(calls, opts)
 }
 
@@ -212,7 +203,6 @@ export interface SKSaveApi {
   assessments: (entries: SKAssessmentEntry[], opts: SaveOpts) => Promise<unknown>
   subjectComments: (entries: SKSubjectCommentEntry[], opts: SaveOpts) => Promise<unknown>
   progressComments: (entries: SKProgressReportCommentEntry[], opts: SaveOpts) => Promise<unknown>
-  teacherAssistant: (payload: SKTeacherAssistantPayload, opts: SaveOpts) => Promise<unknown>
 }
 
 export function saveSKDocument(s: KindergartenSnapshot, api: SKSaveApi, opts: SaveOpts = {}): Promise<void> {
@@ -234,11 +224,6 @@ export function saveSKDocument(s: KindergartenSnapshot, api: SKSaveApi, opts: Sa
       studentId: s.studentId, term: s.term, sectionType, comment, school: s.school,
     }))
     if (prComments.length > 0) calls.push(() => api.progressComments(prComments, opts))
-  }
-
-  if (s.doc === 'report_card') {
-    const ta = { studentId: s.studentId, teacherAssistantName: s.teacherAssistant || null, term: s.term, school: s.school }
-    calls.push(() => api.teacherAssistant(ta, opts))
   }
   return run(calls, opts)
 }

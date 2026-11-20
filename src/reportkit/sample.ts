@@ -200,7 +200,7 @@ export function sampleReportData(key: SampleKey, docType: DocType = 'progress_re
       principal: 'Ms. Amal Haddad',
       board: 'Private',
     },
-    assets: { logo: null, principalSignature: null, stamp: null, teacherSignature: null },
+    assets: { logo: null, principalSignature: null, stamp: null, teacherSignature: null, teacherAssistantSignature: null },
     student: {
       id: `sample-${key}`,
       name: `${first} ${last}`,

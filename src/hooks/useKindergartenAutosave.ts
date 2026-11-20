@@ -17,13 +17,11 @@ import {
   bulkUpsertJKDomainComments,
   bulkUpsertJKLearningSkills,
   bulkUpsertJKProgressReportComments,
-  upsertJKTeacherAssistant,
 } from '@/services/jkService'
 import {
   bulkUpsertSKAssessments,
   bulkUpsertSKProgressReportComments,
   bulkUpsertSKSubjectComments,
-  upsertSKTeacherAssistant,
 } from '@/services/skService'
 import { useUserStore } from '@/store/useUserStore'
 import { autosaverFor, useBoundAutosaver } from './autosaverBinding'
@@ -42,7 +40,6 @@ const SAVE_ONE: Record<KindergartenKind, (s: KindergartenSnapshot, opts: SaveOpt
         progressComments: bulkUpsertJKProgressReportComments,
         domainComments: bulkUpsertJKDomainComments,
         learningSkills: bulkUpsertJKLearningSkills,
-        teacherAssistant: upsertJKTeacherAssistant,
       },
       opts,
     ),
@@ -53,7 +50,6 @@ const SAVE_ONE: Record<KindergartenKind, (s: KindergartenSnapshot, opts: SaveOpt
         assessments: bulkUpsertSKAssessments,
         subjectComments: bulkUpsertSKSubjectComments,
         progressComments: bulkUpsertSKProgressReportComments,
-        teacherAssistant: upsertSKTeacherAssistant,
       },
       opts,
     ),

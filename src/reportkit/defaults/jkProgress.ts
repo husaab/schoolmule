@@ -1,4 +1,4 @@
-import type { CanvasBlock, SkillGroupStyle, SkillsTableBlock, TableBlock, TemplateDoc } from '../types';
+import type { CanvasBlock, SkillGroupStyle, SkillsTableBlock, TableBlock, TableCellDef, TemplateDoc } from '../types';
 import { SCALES } from './scales';
 import { block, cell, cornerLogo, id, resetIds, template, text, zone } from './kit';
 
@@ -181,13 +181,21 @@ export function jkProgressTemplate(): TemplateDoc {
   });
 
   // Two rows of "label + signature" pairs, then the stamp. Legacy cells are
-  // flex rows: a 120 × 45px signature box 16px after its label.
-  const label = (value: string) => cell(value, { style: { fontWeight: 700, fontSize: 14 }, padding: { top: 0, right: 0, bottom: 0, left: 0 } });
-  const blank = () => label('');
+  // flex rows: a 120 × 45px signature box 16px after its label. The teacher's
+  // and the teacher assistant's saved signatures print in their boxes.
+  const nopad = { top: 0, right: 0, bottom: 0, left: 0 };
+  const label = (value: string, extra: Partial<TableCellDef> = {}) => cell(value, { style: { fontWeight: 700, fontSize: 14 }, padding: nopad, ...extra });
+  const blank = (extra: Partial<TableCellDef> = {}) => label('', extra);
+  const signature = (asset: 'teacherSignature' | 'teacherAssistantSignature' | 'principalSignature'): TableCellDef => ({
+    image: { kind: 'asset', asset },
+    imageHeight: 45.33,
+    style: { align: 'center' },
+    padding: nopad,
+  });
   const signoff = block<TableBlock>({
     type: 'table',
     name: 'Signatures and stamp',
-    columns: [22.45, 17.19, 10.36, 50],
+    columns: [22.45, 17.19, 10.36, 36, 14],
     borderWidth: 0,
     outerBorderWidth: 0,
     cellPadding: 0,
@@ -196,25 +204,25 @@ export function jkProgressTemplate(): TemplateDoc {
       {
         height: 53.33,
         showWhen: { field: 'student.teacherAssistant', op: 'notEmpty' },
-        cells: [label("Teacher's Signature:"), blank(), blank(), label("Teacher Assistant's Signature:")],
+        cells: [label("Teacher's Signature:"), signature('teacherSignature'), blank(), label("Teacher Assistant's Signature:"), signature('teacherAssistantSignature')],
       },
       {
         height: 53.33,
         showWhen: { field: 'student.teacherAssistant', op: 'empty' },
-        cells: [label("Teacher's Signature:"), blank(), blank(), blank()],
+        cells: [label("Teacher's Signature:"), signature('teacherSignature'), blank(), blank({ colSpan: 2 })],
       },
       {
         height: 53.33,
         cells: [
           label("Principal's Signature:"),
-          { image: { kind: 'asset', asset: 'principalSignature' }, imageHeight: 45.33, style: { align: 'center' }, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
+          signature('principalSignature'),
           blank(),
-          label('Date: {{meta.reportDate|long|upper}}'),
+          label('Date: {{meta.reportDate|long|upper}}', { colSpan: 2 }),
         ],
       },
       {
         showWhen: { field: 'assets.stamp', op: 'notEmpty' },
-        cells: [{ image: { kind: 'asset', asset: 'stamp' }, imageHeight: 128, colSpan: 4, style: { align: 'center' }, padding: { top: 10.67, right: 0, bottom: 0, left: 0 } }],
+        cells: [{ image: { kind: 'asset', asset: 'stamp' }, imageHeight: 128, colSpan: 5, style: { align: 'center' }, padding: { top: 10.67, right: 0, bottom: 0, left: 0 } }],
       },
     ],
   });

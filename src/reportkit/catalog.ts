@@ -39,6 +39,8 @@ export const FIELD_CATALOG: CatalogField[] = [
   { path: 'assets.logo', label: 'School logo (uploaded)', group: 'School', kind: 'text', printable: false, testable: true },
   { path: 'assets.principalSignature', label: "Principal's signature (uploaded)", group: 'School', kind: 'text', printable: false, testable: true },
   { path: 'assets.stamp', label: 'School stamp (uploaded)', group: 'School', kind: 'text', printable: false, testable: true },
+  { path: 'assets.teacherSignature', label: "Teacher's signature (saved)", group: 'Student', kind: 'text', printable: false, testable: true },
+  { path: 'assets.teacherAssistantSignature', label: "Teacher assistant's signature (saved)", group: 'Student', kind: 'text', printable: false, testable: true },
   { path: 'meta.term', label: 'Term', group: 'Report', kind: 'text', printable: true, testable: true },
   { path: 'meta.termNumber', label: 'Term number', group: 'Report', kind: 'number', printable: true, testable: true },
   { path: 'meta.termLabel', label: 'Term in words (FIRST TERM)', group: 'Report', kind: 'text', printable: true, testable: false },

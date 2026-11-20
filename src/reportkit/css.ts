@@ -37,7 +37,7 @@ export const REPORTKIT_CSS = `
 .rk-chips{display:flex;flex-wrap:wrap;gap:6px 14px}
 .rk-chip{display:inline-flex;align-items:center;gap:6px}
 .rk-chip b{display:inline-flex;min-width:22px;justify-content:center;padding:1px 5px;border-radius:3px}
-.rk-sigs{display:flex;gap:24px;align-items:flex-end}
+.rk-sigs{display:flex;gap:24px;align-items:flex-start}
 .rk-sig{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center}
 .rk-sig-img{display:flex;align-items:flex-end;justify-content:center;width:100%}
 .rk-sig-img img{max-height:100%;max-width:100%;object-fit:contain}

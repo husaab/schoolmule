@@ -621,6 +621,7 @@ const ASSET_OPTIONS = [
   { value: 'logo', label: 'School logo' },
   { value: 'principalSignature', label: "Principal's signature" },
   { value: 'teacherSignature', label: "Teacher's signature" },
+  { value: 'teacherAssistantSignature', label: "Teacher assistant's signature" },
   { value: 'stamp', label: 'School stamp' },
   { value: 'upload', label: 'Uploaded image…' },
 ];

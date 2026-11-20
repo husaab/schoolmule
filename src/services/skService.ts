@@ -1,6 +1,7 @@
 // src/services/skService.ts
 // API client for SK subject-based grading system
 
+import type { TeacherAssistantPayload, TeacherAssistantResponse } from './types/kindergartenStaff';
 import apiClient from "./apiClient";
 import type {
   SKSubjectsResponse,
@@ -9,8 +10,6 @@ import type {
   SKBulkResponse,
   SKSubjectCommentsResponse,
   SKSubjectCommentEntry,
-  SKTeacherAssistantResponse,
-  SKTeacherAssistantPayload,
   SKProgressReportCommentsResponse,
   SKProgressReportCommentEntry,
   SKCreateSubjectPayload,
@@ -133,23 +132,23 @@ export const bulkUpsertSKSubjectComments = async (
 
 // -- Teacher Assistant --
 
+/** Who prints as the teacher assistant for (student, term), and the choices. */
 export const getSKTeacherAssistant = async (
   studentId: string,
   term: string
-): Promise<SKTeacherAssistantResponse> => {
-  return apiClient<SKTeacherAssistantResponse>(
+): Promise<TeacherAssistantResponse> => {
+  return apiClient<TeacherAssistantResponse>(
     `/sk/teacher-assistant/${studentId}?term=${encodeURIComponent(term)}`
   );
 };
 
-export const upsertSKTeacherAssistant = async (
-  payload: SKTeacherAssistantPayload,
-  opts: { keepalive?: boolean } = {}
-): Promise<SKTeacherAssistantResponse> => {
-  return apiClient<SKTeacherAssistantResponse>('/sk/teacher-assistant', {
+/** Saves the choice (the class default, no assistant, or a co-teacher) and answers with the new state. */
+export const saveSKTeacherAssistant = async (
+  payload: TeacherAssistantPayload
+): Promise<TeacherAssistantResponse> => {
+  return apiClient<TeacherAssistantResponse>('/sk/teacher-assistant', {
     method: 'POST',
     body: payload,
-    keepalive: opts.keepalive,
   });
 };
 

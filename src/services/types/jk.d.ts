@@ -99,24 +99,7 @@ export interface JKDomainCommentEntry {
   school: string
 }
 
-export interface JKTeacherAssistant {
-  id: string
-  studentId: string
-  teacherAssistantName: string | null
-  term: string
-}
-
-export interface JKTeacherAssistantResponse {
-  status: string
-  data: JKTeacherAssistant | null
-}
-
-export interface JKTeacherAssistantPayload {
-  studentId: string
-  teacherAssistantName: string | null
-  term: string
-  school: string
-}
+// The teacher assistant: services/types/kindergartenStaff.d.ts
 
 // -- Progress Report Comments (Academic Achievement / Socio-Emotional) --
 
