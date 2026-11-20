@@ -37,6 +37,10 @@ export interface ClassOptions {
   acceptLate: boolean
   emailNewPosts: boolean
   showClassAverage: boolean
+  /** false: progress reports only; report cards leave the class out (e.g. Salaat). */
+  onReportCard: boolean
+  /** Printed after the subject on progress reports instead of the teacher ("Salaat – Supervisor"); null = the teacher. */
+  reportTeacherName: string | null
 }
 
 export interface ClassroomEnvelope<T> {
