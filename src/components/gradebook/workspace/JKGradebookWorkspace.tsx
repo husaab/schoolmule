@@ -39,6 +39,7 @@ import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref } from '@/lib/classroomRoutes'
 import SavedPill from '@/components/gradebook/SavedPill'
 import TeacherAssistantPicker from './TeacherAssistantPicker'
+import ClassTermNotice from './ClassTermNotice'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
 import {
   applyKindergartenChange,
@@ -540,6 +541,8 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
               This class has no term yet, so ratings and comments can&apos;t be saved. Set its term in the class&apos;s Settings.
             </div>
           )}
+
+          {term && <ClassTermNotice termId={classData?.termId} school={user?.school} />}
 
           {docState === 'error' && selectedStudentId && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
