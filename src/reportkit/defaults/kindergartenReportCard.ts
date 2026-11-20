@@ -71,14 +71,26 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
         field: 'student.oen',
         op: 'empty',
       }),
-      infoRow([cell('Grade: {{student.gradeLabel}}', { style: bold }), cell('Teacher: {{student.homeroomTeacher}} & {{student.teacherAssistant}}', { colSpan: 2 })], {
-        field: 'student.teacherAssistant',
-        op: 'notEmpty',
-      }),
-      infoRow([cell('Grade: {{student.gradeLabel}}', { style: bold }), cell('Teacher: {{student.homeroomTeacher}}', { colSpan: 2 })], {
-        field: 'student.teacherAssistant',
-        op: 'empty',
-      }),
+      // SK: the teacher assistant has a box of its own, printed empty when the
+      // student has none. JK: "Teacher: <teacher> & <assistant>".
+      ...(jk
+        ? [
+            infoRow([cell('Grade: {{student.gradeLabel}}', { style: bold }), cell('Teacher: {{student.homeroomTeacher}} & {{student.teacherAssistant}}', { colSpan: 2 })], {
+              field: 'student.teacherAssistant',
+              op: 'notEmpty',
+            }),
+            infoRow([cell('Grade: {{student.gradeLabel}}', { style: bold }), cell('Teacher: {{student.homeroomTeacher}}', { colSpan: 2 })], {
+              field: 'student.teacherAssistant',
+              op: 'empty',
+            }),
+          ]
+        : [
+            infoRow([
+              cell('Grade: {{student.gradeLabel}}', { style: bold }),
+              cell('Teacher: {{student.homeroomTeacher}}'),
+              cell('Teacher Assistant: {{student.teacherAssistant}}'),
+            ]),
+          ]),
       infoRow([cell('[[Board: {{school.board}}]]', { style: bold }), cell('School: {{school.name}}', { colSpan: 2 })]),
     ],
   });
@@ -190,13 +202,14 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
       ]
     : [];
 
-  // The teacher's (and, when there is one, the teacher assistant's) saved
-  // signature prints on its line; one of the two blocks prints.
-  const signatureBlock = (assistant: boolean) =>
+  // The teacher's and the teacher assistant's saved signatures print on their
+  // lines. SK always has the assistant's line (blank to sign by hand when
+  // there is none); JK only when there is an assistant (one of two blocks).
+  const signatureBlock = (assistant: boolean, showWhen?: SignaturesBlock['showWhen']) =>
     block<SignaturesBlock>({
       type: 'signatures',
       name: assistant ? 'Signatures (with teacher assistant)' : 'Signatures',
-      showWhen: { field: 'student.teacherAssistant', op: assistant ? 'notEmpty' : 'empty' },
+      showWhen,
       marginTop: 40,
       keepTogether: true,
       slots: [
@@ -209,8 +222,12 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
       lineWidth: assistant ? 120 : 140,
       style: { fontSize: 11.33, color: '#666666', lineHeight: 1.35 },
     });
-  const signatures = signatureBlock(false);
-  const signaturesWithAssistant = signatureBlock(true);
+  const signatures: Block[] = jk
+    ? [
+        signatureBlock(false, { field: 'student.teacherAssistant', op: 'empty' }),
+        signatureBlock(true, { field: 'student.teacherAssistant', op: 'notEmpty' }),
+      ]
+    : [signatureBlock(true)];
 
   return template({
     docType: 'report_card',
@@ -221,6 +238,6 @@ export function kindergartenReportCardTemplate(grade: 'JK' | 'SK'): TemplateDoc 
     firstHeader,
     header: zone(MARGIN, []),
     footer: pageFooter,
-    blocks: [studentTable, schoolTable, ...(jk ? [] : [skScale]), groups, ...learningSkills, signatures, signaturesWithAssistant],
+    blocks: [studentTable, schoolTable, ...(jk ? [] : [skScale]), groups, ...learningSkills, ...signatures],
   });
 }

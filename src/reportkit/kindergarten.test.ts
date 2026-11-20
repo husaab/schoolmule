@@ -261,20 +261,20 @@ describe('JK/SK teacher, teacher assistant and their signatures', () => {
 
   it('SK progress: the assistant under the teacher, and three signature boxes', () => {
     const html = printed(build('progress-sk'), withPeople('SK', 'progress_report', 'Sample Assistant'));
-    expect(html).toContain('Teacher Assistant:  Sample Assistant');
+    expect(html).toMatch(/Teacher Assistant:<\/td><td[^>]*colspan="3"[^>]*>Sample Assistant</);
     expect(html).toContain('Teacher Assistant&#39;s Signature:');
     expect(html).toContain('asset:teacherSignature');
     expect(html).toContain('asset:teacherAssistantSignature');
     expect(html).toContain('asset:principalSignature');
-    // One comments table prints, not both.
     expect(html.match(/Strengths\/Next Steps for Improvement/g)).toHaveLength(1);
   });
 
-  it('SK progress without an assistant prints the paper row: teacher and principal', () => {
+  it('SK progress without an assistant still prints the assistant box and signature box, empty', () => {
     const html = printed(build('progress-sk'), withPeople('SK', 'progress_report', ''));
-    expect(html).not.toContain('Teacher Assistant');
+    expect(html).toMatch(/Teacher Assistant:<\/td><td[^>]*colspan="3"[^>]*><\/td>/);
+    expect(html).toContain('Teacher Assistant&#39;s Signature:');
     expect(html).toContain('asset:teacherSignature');
-    expect(html).not.toContain('asset:teacherAssistantSignature');
+    expect(html).toContain('asset:principalSignature');
     expect(html.match(/Strengths\/Next Steps for Improvement/g)).toHaveLength(1);
   });
 
@@ -288,15 +288,29 @@ describe('JK/SK teacher, teacher assistant and their signatures', () => {
     expect(alone).not.toContain('Teacher Assistant');
   });
 
-  it.each(['report-card-jk', 'report-card-sk'])('%s: a teacher assistant slot only when there is one', (key) => {
-    const grade = key.endsWith('jk') ? 'JK' : 'SK';
-    const html = printed(build(key), withPeople(grade, 'report_card', 'Sample Assistant'));
+  it('JK report card: a teacher assistant slot only when there is one', () => {
+    const html = printed(build('report-card-jk'), withPeople('JK', 'report_card', 'Sample Assistant'));
+    expect(html).toContain('Teacher: Sample Teacher &amp; Sample Assistant');
     expect(html).toContain('Teacher Assistant&#39;s Signature:');
     expect(html).toContain('asset:teacherAssistantSignature');
     expect(html.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
-    const alone = printed(build(key), withPeople(grade, 'report_card', ''));
-    expect(alone).not.toContain('Teacher Assistant&#39;s Signature:');
+    const alone = printed(build('report-card-jk'), withPeople('JK', 'report_card', ''));
+    expect(alone).not.toContain('Teacher Assistant');
     expect(alone).toContain('asset:teacherSignature');
+    expect(alone.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
+  });
+
+  it('SK report card: the assistant has its own box and signature line, even when there is none', () => {
+    const html = printed(build('report-card-sk'), withPeople('SK', 'report_card', 'Sample Assistant'));
+    expect(html).toContain('Teacher: Sample Teacher<');
+    expect(html).toContain('Teacher Assistant: Sample Assistant<');
+    expect(html).toContain('Teacher Assistant&#39;s Signature:');
+    expect(html).toContain('asset:teacherAssistantSignature');
+    expect(html.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
+    const alone = printed(build('report-card-sk'), withPeople('SK', 'report_card', ''));
+    expect(alone).toContain('Teacher Assistant: <');
+    expect(alone).toContain('Teacher Assistant&#39;s Signature:');
+    expect(alone.match(/Teacher&#39;s Signature:/g)).toHaveLength(1);
     expect(alone.match(/Principal&#39;s Signature:/g)).toHaveLength(1);
   });
 
