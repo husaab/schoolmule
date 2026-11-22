@@ -95,7 +95,7 @@ const KNOWN_APP_ROUTES = [
   'gradebook', 'attendance', 'reports', 'report-cards',
   'admin-panel', 'settings', 'support',
   'contact-us', 'verify-email', 'verify-email-token', 'school-approval',
-  'staff-attendance', 'my-attendance', 'my-schedule', 'school-schedule', 'whats-new', 'parent',
+  'staff-attendance', 'my-attendance', 'my-schedule', 'my-meetings', 'school-schedule', 'whats-new', 'parent',
   'finance', 'messages', 'observe', 'student-views', 'analytics',
   'student', 'qr', 'student-invite', 'email-login',
   'forbidden', 'api', '_next',

@@ -25,6 +25,9 @@ export const DEFAULT_TRANSIENT_KEYS: readonly string[] = [
   'token',
   'invite',
   'reset',
+  // Meetings: the invitation's "Plan my visit for me", and the teacher list's "Print my day"
+  'plan',
+  'print',
   // OAuth round-trip outcomes (see useOAuthOutcome)
   'qbo',
   'google',

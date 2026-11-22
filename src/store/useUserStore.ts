@@ -74,6 +74,8 @@ export const useUserStore = create<UserStore>(
             clearUser: () => {
                 // Badges belong to the session that just ended.
                 import('@/store/useMessagingStore').then((m) => m.useMessagingStore.getState().clear()).catch(() => {})
+                // And the family's or teacher's parent–teacher meetings.
+                import('@/store/useMeetingsStore').then((m) => m.useMeetingsStore.getState().clear()).catch(() => {})
                 // So do the remembered page filters (every sign-out path ends here).
                 clearFilterMemory(getFilterMemoryStorage())
                 // And a student's typed words an assignment refused to save (kept in this tab for them to copy).

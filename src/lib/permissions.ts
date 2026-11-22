@@ -181,6 +181,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { path: '/my-attendance', rule: OPEN },
   { path: '/my-schedule', rule: OPEN },
   { path: '/school-schedule', rule: OPEN },
+  { path: '/my-meetings', rule: OPEN },
 
   // Sign-in, onboarding and the other portals: authRouting's own rules
   { path: '/login', rule: PORTAL },
@@ -212,6 +213,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { path: '/admin-panel/report-templates', rule: NEEDS('school_setup') },
   { path: '/admin-panel/schedule-planner', rule: NEEDS('scheduling') },
   { path: '/admin-panel/agendas', rule: NEEDS('scheduling') },
+  { path: '/admin-panel/parent-teacher-meetings', rule: NEEDS('scheduling') },
   { path: '/admin-panel/school-schedule', rule: OPEN }, // old bookmark, redirects to /school-schedule
   { path: '/admin-panel/roles', rule: FULL_ADMIN },
   { path: '/admin-panel/patch-notes', rule: FULL_ADMIN },

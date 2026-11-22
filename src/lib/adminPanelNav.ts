@@ -10,6 +10,7 @@ import type React from 'react'
 import {
   BookOpenIcon,
   CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
   ChatBubbleOvalLeftEllipsisIcon,
   CogIcon,
   DocumentTextIcon,
@@ -63,6 +64,7 @@ export const ADMIN_PANEL_GROUPS: readonly PanelGroup[] = [
       { href: '/admin-panel/schedule-planner', label: 'Schedule Planner', icon: TableCellsIcon },
       { href: '/school-schedule', label: 'School Schedule', icon: CalendarDaysIcon, exact: true, everyone: true },
       { href: '/admin-panel/agendas', label: 'Agenda Editor', icon: BookOpenIcon },
+      { href: '/admin-panel/parent-teacher-meetings', label: 'Parent–Teacher Meetings', icon: ChatBubbleLeftRightIcon },
     ],
   },
 ]
