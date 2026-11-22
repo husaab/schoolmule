@@ -4,6 +4,7 @@
 // class and term), as the staff and parent sidebars do (final review M4).
 'use client'
 
+import { navTourTarget } from '@/components/tours/navTargets'
 import { usePathname } from 'next/navigation'
 import BackLink from '@/components/shared/BackLink'
 import { STUDENT_NAV, isStudentNavActive } from './studentNav'
@@ -27,6 +28,7 @@ export default function StudentBottomNav() {
           <BackLink
             key={item.href}
             to={item.href}
+            data-tour={navTourTarget(item.href)}
             aria-current={active ? 'page' : undefined}
             className={`flex h-16 flex-col items-center justify-center gap-1 text-xs ${
               active ? 'font-semibold text-indigo-700' : 'text-slate-500'

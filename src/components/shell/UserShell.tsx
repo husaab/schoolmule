@@ -6,6 +6,7 @@ import ImpersonationBar from '@/components/impersonation/ImpersonationBar';
 import { Analytics } from "@vercel/analytics/next"
 import ClientErrorReporter from '@/components/observe/ClientErrorReporter';
 import StudentProfileHost from '@/components/student/profile/StudentProfileHost';
+import TourHost from '@/components/tours/TourHost';
 
 // Everything inside the app (signed-in pages, sign-in and sign-up): the auth
 // guard and the app-wide overlays. app/(user)/layout.tsx wraps it so the
@@ -26,6 +27,8 @@ export default function UserShell({
         <Suspense fallback={null}>
           <StudentProfileHost />
         </Suspense>
+        {/* Guided tours: the New card, spotlight steps and the paused pill. */}
+        <TourHost />
       </AuthGuard>
       <ImpersonationBar />
     </>

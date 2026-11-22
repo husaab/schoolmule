@@ -3,11 +3,14 @@ import { create } from 'zustand'
 interface SidebarState {
   isOpen: boolean
   toggleSidebar: () => void
+  /** Guided tours open it to point at a nav item on a phone. */
+  openSidebar: () => void
   closeSidebar: () => void
 }
 
 export const useSidebarStore = create<SidebarState>((set) => ({
   isOpen: false,
   toggleSidebar: () => set((state) => ({ isOpen: !state.isOpen })),
+  openSidebar: () => set({ isOpen: true }),
   closeSidebar: () => set({ isOpen: false }),
 }))

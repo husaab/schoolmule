@@ -13,6 +13,7 @@ import ScheduleMenu from '@/components/schedulePlanner/ScheduleMenu';
 import InboxBell from '@/components/messaging/InboxBell';
 import ViewSwitcher from './ViewSwitcher';
 import Avatar from '@/components/avatar/Avatar';
+import HelpMenu from '@/components/tours/HelpMenu';
 
 const NavBar: FC = () => {
   const [scrolled, setScrolled] = useState<boolean>(false);
@@ -66,6 +67,9 @@ const NavBar: FC = () => {
           <div className="flex items-center gap-3">
             {/* Past-year indicator (inline so it never overlaps page content) */}
             <PastYearBanner />
+
+            {/* Tours, Help & Support and Contact */}
+            <HelpMenu />
 
             {/* Messages — reachable from every page, for every role */}
             <InboxBell />

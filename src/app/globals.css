@@ -969,3 +969,24 @@ body {
   from { transform: translateY(0); }
   to { transform: translateY(var(--frozen-travel, 0px)); }
 }
+
+/* ── Guided tours (components/tours) ─────────────────────────────── */
+@keyframes tour-fade { from { opacity: 0 } }
+@keyframes tour-pop { from { opacity: 0; transform: translate(-50%, -46%) scale(0.97) } }
+@keyframes tour-pill { from { opacity: 0; transform: translateY(8px) } }
+@keyframes tour-ring { 0% { opacity: 0.95; transform: scale(1) } 100% { opacity: 0; transform: scale(1.12) } }
+@keyframes tour-ring-soft { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.04) } }
+@keyframes tour-nudge { 20% { translate: -6px 0 } 40% { translate: 6px 0 } 60% { translate: -3px 0 } 80% { translate: 3px 0 } }
+@keyframes tour-check { from { opacity: 0; transform: scale(0.4) } }
+.tour-fade { animation: tour-fade 0.25s ease-out }
+.tour-pop.fixed.left-1\/2 { animation: tour-pop 0.38s cubic-bezier(0.16, 1, 0.3, 1) }
+.tour-pop:not(.left-1\/2) { animation: tour-pill 0.3s cubic-bezier(0.16, 1, 0.3, 1) }
+.tour-ring { animation: tour-ring 1.7s ease-out infinite }
+.tour-ring-soft { animation: tour-ring-soft 2.2s ease-in-out infinite }
+.tour-nudge { animation: tour-nudge 0.42s }
+.tour-check { animation: tour-check 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both }
+.tour-glide { transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), top 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.4s cubic-bezier(0.16, 1, 0.3, 1), height 0.4s cubic-bezier(0.16, 1, 0.3, 1) }
+@media (prefers-reduced-motion: reduce) {
+  .tour-fade, .tour-pop, .tour-ring, .tour-ring-soft, .tour-nudge, .tour-check { animation: none !important }
+  .tour-glide { transition: none !important }
+}

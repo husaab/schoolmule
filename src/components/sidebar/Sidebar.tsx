@@ -38,6 +38,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useState, useEffect, Fragment } from 'react';
 import { useUserStore } from '@/store/useUserStore'
+import { navTourTarget } from '@/components/tours/navTargets';
 import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
@@ -171,6 +172,8 @@ const Sidebar = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.getElementById('mobile-sidebar');
+      // A guided tour opened it to point at a link: its own buttons don't count as outside.
+      if ((event.target as Element | null)?.closest?.('[data-tour-layer]')) return;
       if (sidebarOpen && sidebar && !sidebar.contains(event.target as Node)) {
         closeSidebar();
       }
@@ -192,6 +195,7 @@ const Sidebar = () => {
   const NavItem = ({ href, label, icon: Icon, isActive, badge, badgeTitle, pill }: { href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; isActive: boolean; badge?: number; badgeTitle?: string; pill?: string }) => (
     <Link
       href={useRememberedHref(href)}
+      data-tour={navTourTarget(href)}
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
         isActive
           ? 'bg-gradient-to-r from-cyan-50 to-teal-50 text-cyan-700 font-medium border border-cyan-100'

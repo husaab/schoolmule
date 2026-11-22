@@ -1,0 +1,45 @@
+// src/components/tours/useTourCtx.ts
+// Everything the shared tour rules need to know about the person and page.
+'use client'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import type { TourCtx } from '@/lib/tours'
+import { useImpersonationStore } from '@/store/useImpersonationStore'
+import { usePatchNotesStore } from '@/store/usePatchNotesStore'
+import { useTourStore } from '@/store/useTourStore'
+import { useUserStore } from '@/store/useUserStore'
+import { routeAt } from './tourRoutes'
+
+/** The time, refreshed each minute (offer windows and Later are measured in days). */
+function useNow(intervalMs = 60_000) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(t)
+  }, [intervalMs])
+  return now
+}
+
+export function useTourCtx(): TourCtx {
+  const clock = useNow()
+  const user = useUserStore((s) => s.user)
+  const impersonating = useImpersonationStore((s) => Boolean(s.session))
+  const checked = usePatchNotesStore((s) => s.checked)
+  const whatsNewOpen = usePatchNotesStore((s) => s.modalOpen)
+  const createdAt = useTourStore((s) => s.createdAt)
+  const skewMs = useTourStore((s) => s.skewMs)
+  const pathname = usePathname()
+  return useMemo(
+    () => ({
+      now: new Date(clock + skewMs),
+      platform: 'web',
+      user,
+      userCreatedAt: createdAt,
+      impersonating,
+      // Students have no What's New: AuthGuard marks the check done for them.
+      blocked: !checked || whatsNewOpen,
+      here: routeAt(pathname, user.role),
+    }),
+    [clock, user, createdAt, skewMs, impersonating, checked, whatsNewOpen, pathname]
+  )
+}

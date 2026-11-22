@@ -10,6 +10,10 @@ import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useUserStore } from '@/store/useUserStore'
 import type { PatchNote } from '@/services/types/patchNote'
 import DOMPurify from 'dompurify'
+import { getTour, isAudience } from '@/lib/tours'
+import { useTourCtx } from '@/components/tours/useTourCtx'
+import { tourTone } from '@/components/tours/tourTone'
+import { useTourStore } from '@/store/useTourStore'
 
 interface PatchNotesModalProps {
   isOpen: boolean
@@ -20,10 +24,19 @@ interface PatchNotesModalProps {
 export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesModalProps) {
   const router = useRouter()
   const clearUnread = usePatchNotesStore((s) => s.clearUnread)
-  const isParent = useUserStore((s) => s.user.role === 'PARENT')
+  const role = useUserStore((s) => s.user.role)
+  const isParent = role === 'PARENT'
   const media = useMediaViewer()
+  const tourCtx = useTourCtx()
+  const startTour = useTourStore((s) => s.dispatch)
 
   if (notes.length === 0) return null
+
+  // A note's tour, when it exists and is for this person.
+  const tourFor = (note: PatchNote) => {
+    const def = note.tourId ? getTour(note.tourId) : undefined
+    return def && !tourCtx.impersonating && isAudience(def, tourCtx) ? def : null
+  }
 
   const latestVersion = notes[0].version
   const latestDate = new Date(notes[0].publishedAt).toLocaleDateString('en-US', {
@@ -39,6 +52,11 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
     } catch {
       onClose()
     }
+  }
+
+  const handleTour = async (tourId: string) => {
+    await handleDismiss()
+    startTour({ t: 'START', tourId })
   }
 
   const handleViewAll = () => {
@@ -76,6 +94,14 @@ export default function PatchNotesModal({ isOpen, onClose, notes }: PatchNotesMo
                   className="patch-note-body text-sm text-slate-600 mt-1.5 max-w-none leading-relaxed break-words overflow-wrap-anywhere"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.body) }}
                 />
+                {tourFor(note) && (
+                  <button
+                    onClick={() => handleTour(note.tourId as string)}
+                    className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${tourTone(role).primary}`}
+                  >
+                    Take the tour
+                  </button>
+                )}
                 {note.imageUrl && (
                   <button
                     onClick={() => media.open(patchNoteFiles(notes), note.patchNoteId)}

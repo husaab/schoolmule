@@ -19,7 +19,10 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   const user        = useUserStore(s => s.user)
   const hasHydrated = useUserStore(s => s.hasHydrated)
   const clearUser = useUserStore(s => s.clearUser)
-  const [showPatchNotes, setShowPatchNotes] = useState(false)
+  // In the store, not local state: guided tours wait until What's New is checked and closed.
+  const showPatchNotes = usePatchNotesStore((s) => s.modalOpen)
+  const setShowPatchNotes = usePatchNotesStore((s) => s.setModalOpen)
+  const setPatchNotesChecked = usePatchNotesStore((s) => s.setChecked)
   const patchNotesChecked = useRef(false)
   // One background refresh per mount: a persisted user is otherwise never
   // re-read, so flags changed elsewhere (verified on another device, approved,
@@ -67,6 +70,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
             }
           } catch {
             // Silently fail — patch notes are non-critical
+          } finally {
+            setPatchNotesChecked()
           }
         })
         .catch(() => {
@@ -89,7 +94,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
           }
         })
     }
-  }, [hasHydrated, user.id, clearUser, setUnread, previewing])
+  }, [hasHydrated, user.id, clearUser, setUnread, setShowPatchNotes, setPatchNotesChecked, previewing])
 
   // Access can change mid-session (an admin edits a role or someone's access):
   // re-read it when the tab comes back into view, at most once a minute and
@@ -118,7 +123,11 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasHydrated || !getToken() || !user.id || !user.isVerifiedEmail || !user.isVerifiedSchool) return
     // "What's new" is for staff and parents; the API answers a student 403.
-    if (patchNotesChecked.current || previewing || user.role === 'STUDENT') return
+    if (patchNotesChecked.current) return
+    if (previewing || user.role === 'STUDENT') {
+      setPatchNotesChecked()
+      return
+    }
     patchNotesChecked.current = true
     getUnreadPatchNotes()
       .then((patchRes) => {
@@ -128,7 +137,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {})
-  }, [hasHydrated, user.id, user.role, user.isVerifiedEmail, user.isVerifiedSchool, previewing, setUnread])
+      .finally(setPatchNotesChecked)
+  }, [hasHydrated, user.id, user.role, user.isVerifiedEmail, user.isVerifiedSchool, previewing, setUnread, setShowPatchNotes, setPatchNotesChecked])
 
   // Routing: every rule lives in lib/authRouting, which is tested so that no
   // redirect can lead to another. The loop detector is the backstop for a

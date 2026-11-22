@@ -7,6 +7,7 @@
 import { useState, type ReactNode } from 'react'
 import LogoutModal from '@/components/logout/logoutModal'
 import DeleteUserModal from '@/components/user/delete/DeleteUserModal'
+import HelpMenu from '@/components/tours/HelpMenu'
 
 export default function StudentTopBar({ title, actions }: { title?: string; actions?: ReactNode }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -15,6 +16,8 @@ export default function StudentTopBar({ title, actions }: { title?: string; acti
       <h1 className="min-w-0 truncate text-lg font-semibold text-slate-900">{title}</h1>
       <div className="flex shrink-0 items-center gap-4">
         {actions}
+        {/* Tours only: students have no Help & Support page. */}
+        <HelpMenu supportLinks={false} />
         <p className="text-sm text-slate-500">
           Not you?{' '}
           <LogoutModal

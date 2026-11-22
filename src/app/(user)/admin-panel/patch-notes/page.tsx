@@ -16,6 +16,7 @@ import {
   uploadPatchNoteImage,
 } from '@/services/patchNoteService';
 import type { PatchNote, PatchNoteCategory, CreatePatchNotePayload } from '@/services/types/patchNote';
+import { allTours } from '@/lib/tours';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -44,6 +45,8 @@ type FormState = {
   targetRoles: string[];
   publishedAt: string;
   imageFile: File | null;
+  /** A guided tour the note offers ("Take the tour"), or ''. */
+  tourId: string;
 };
 
 const toLocalDatetimeString = (date: Date) => {
@@ -60,6 +63,7 @@ const emptyForm: FormState = {
   targetRoles: ['teacher', 'admin', 'parent'],
   publishedAt: toLocalDatetimeString(new Date()),
   imageFile: null,
+  tourId: '',
 };
 
 export default function AdminPatchNotesPage() {
@@ -119,6 +123,7 @@ export default function AdminPatchNotesPage() {
       targetRoles: note.targetRoles,
       publishedAt: toLocalDatetimeString(new Date(note.publishedAt)),
       imageFile: null,
+      tourId: note.tourId ?? '',
     });
     setFormOpen(true);
   };
@@ -137,6 +142,7 @@ export default function AdminPatchNotesPage() {
         category: form.category,
         targetRoles: form.targetRoles,
         publishedAt: new Date(form.publishedAt).toISOString(),
+        tourId: form.tourId || null,
       };
 
       let savedNote: PatchNote;
@@ -326,6 +332,24 @@ export default function AdminPatchNotesPage() {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="patch-note-tour" className="block text-sm font-medium text-slate-700 mb-1">Guided tour (optional)</label>
+            <select
+              id="patch-note-tour"
+              value={form.tourId}
+              onChange={(e) => setForm((p) => ({ ...p, tourId: e.target.value }))}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            >
+              <option value="">No tour</option>
+              {allTours().map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.offer.title} ({t.audience.roles.map((r) => r.toLowerCase()).join(', ')})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">Adds a “Take the tour” button to the note for everyone the tour is for.</p>
           </div>
 
           <div>

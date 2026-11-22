@@ -62,13 +62,7 @@ const NavLinks: FC<NavLinksProps> = ({ vertical = false }) => {
           <span className="hidden xl:inline">Observe</span>
         </Link>
       )}
-      <Link
-        href="/support"
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-      >
-        <QuestionMarkCircleIcon className="w-4 h-4" />
-        <span className="hidden xl:inline">Help</span>
-      </Link>
+      {/* Help & Support lives in the ? menu beside the messages bell (components/tours/HelpMenu). */}
       <Link
         href="/contact-us"
         className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"

@@ -10,6 +10,8 @@ export interface PatchNote {
   category: PatchNoteCategory
   targetRoles: string[]
   imageUrl: string | null
+  /** A guided tour the note offers ("Take the tour"); lib/tours catalog id. */
+  tourId?: string | null
   publishedAt: string
   autoDismissAt: string
   createdBy?: string
@@ -55,4 +57,6 @@ export interface CreatePatchNotePayload {
   targetRoles: string[]
   publishedAt?: string
   imageUrl?: string
+  /** null clears it. */
+  tourId?: string | null
 }

@@ -4,6 +4,7 @@
 // shell shows StudentBottomNav instead.
 'use client'
 
+import { navTourTarget } from '@/components/tours/navTargets'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -46,6 +47,7 @@ export default function StudentSidebar() {
               <BackLink
                 key={item.href}
                 to={item.href}
+                data-tour={navTourTarget(item.href)}
                 aria-current={active ? 'page' : undefined}
                 className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 text-[15px] transition-colors ${
                   active ? `${studentTone.navActive} font-medium` : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
