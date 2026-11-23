@@ -37,6 +37,8 @@ interface ApprovalReviewModalProps {
   onClose: () => void
   user: ApprovalUser
   onApproved: (result: ApproveSignupResult) => void
+  /** Offers Decline in the footer (the admin panel's review queue); the page declines from its list instead. */
+  onDecline?: () => void
 }
 
 // Only signups reach this modal, so the role is TEACHER or PARENT; anything else falls back to TEACHER.
@@ -47,6 +49,7 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
   onClose,
   user,
   onApproved,
+  onDecline,
 }) => {
   const notify = useNotificationStore((s) => s.showNotification)
   const [role, setRole] = useState<SignupRole>(asSignupRole(user.role))
@@ -240,6 +243,11 @@ const ApprovalReviewModal: React.FC<ApprovalReviewModalProps> = ({
       </ModalBody>
 
       <ModalFooter>
+        {onDecline && (
+          <Button variant="secondary" onClick={onDecline} disabled={approving} className="mr-auto !text-rose-700 hover:!bg-rose-50">
+            Decline
+          </Button>
+        )}
         <Button variant="secondary" onClick={onClose} disabled={approving}>
           Cancel
         </Button>

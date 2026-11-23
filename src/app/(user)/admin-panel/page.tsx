@@ -1,255 +1,217 @@
-'use client';
+'use client'
 
-import Navbar from '@/components/navbar/Navbar';
-import Sidebar from '@/components/sidebar/Sidebar';
-import Link from 'next/link';
-import { ShieldCheckIcon, UserGroupIcon, CogIcon, PhotoIcon, ArrowRightIcon, WrenchScrewdriverIcon, SparklesIcon, ClipboardDocumentListIcon, CalendarDaysIcon, BookOpenIcon, TableCellsIcon, UsersIcon, CurrencyDollarIcon, KeyIcon, LockClosedIcon, ChatBubbleOvalLeftEllipsisIcon, ChatBubbleLeftRightIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { useAccess } from '@/hooks/useAccess';
+// The admin panel: what needs someone now, then every admin tool the user
+// can open, in the sidebar's groups, each with one live line from the
+// overview (GET /admin/overview, lib/adminOverview). Search narrows the tools,
+// pins put the favourites first, and signups can be reviewed (or QuickBooks
+// synced) without leaving the page. Every tool is filtered by the route rules
+// (lib/adminTools), so a row never leads to a page that bounces.
 
-// Every card is filtered by the route rules (lib/permissions), the same
-// ones the sidebar and the router read, so a card never leads to a bounce.
-const adminLinks = [
-  {
-    href: '/admin-panel/users',
-    label: 'Users',
-    description: 'See everyone at your school, their roles and details. Add, edit or remove accounts.',
-    icon: UsersIcon,
-    color: 'bg-cyan-500',
-    bgColor: 'from-cyan-50 to-sky-50',
-    borderColor: 'border-cyan-100',
-  },
-  {
-    href: '/admin-panel/roles',
-    label: 'Roles & Permissions',
-    description: 'Create custom roles and choose what each member of staff can see and do.',
-    icon: LockClosedIcon,
-    color: 'bg-violet-500',
-    bgColor: 'from-violet-50 to-purple-50',
-    borderColor: 'border-violet-100',
-  },
-  {
-    href: '/admin-panel/student-accounts',
-    label: 'Student accounts',
-    description: 'Invite students, record parental consent, print QR sign-in cards and set classroom options.',
-    icon: KeyIcon,
-    color: 'bg-indigo-500',
-    bgColor: 'from-indigo-50 to-violet-50',
-    borderColor: 'border-indigo-100',
-  },
-  {
-    href: '/admin-panel/approvals',
-    label: 'Manage User Approvals',
-    description: 'Review and approve newly registered users for your school.',
-    icon: ShieldCheckIcon,
-    color: 'bg-emerald-500',
-    bgColor: 'from-emerald-50 to-teal-50',
-    borderColor: 'border-emerald-100',
-  },
-  {
-    href: '/admin-panel/relations',
-    label: 'Parent-Student Relations',
-    description: 'View and manage parent-student mappings.',
-    icon: UserGroupIcon,
-    color: 'bg-blue-500',
-    bgColor: 'from-blue-50 to-indigo-50',
-    borderColor: 'border-blue-100',
-  },
-  {
-    href: '/admin-panel/messages',
-    label: 'All Messages',
-    description: 'Every conversation between parents and staff at your school, to read and reply to.',
-    icon: ChatBubbleOvalLeftEllipsisIcon,
-    color: 'bg-sky-500',
-    bgColor: 'from-sky-50 to-blue-50',
-    borderColor: 'border-sky-100',
-  },
-  {
-    href: '/admin-panel/school-settings',
-    label: 'School Settings',
-    description: 'Manage school terms and academic year settings.',
-    icon: CogIcon,
-    color: 'bg-violet-500',
-    bgColor: 'from-violet-50 to-purple-50',
-    borderColor: 'border-violet-100',
-  },
-  {
-    href: '/admin-panel/school-assets',
-    label: 'School Assets',
-    description: 'Upload and manage school logo, principal signature, and stamp.',
-    icon: PhotoIcon,
-    color: 'bg-amber-500',
-    bgColor: 'from-amber-50 to-orange-50',
-    borderColor: 'border-amber-100',
-  },
-  {
-    href: '/admin-panel/report-templates',
-    label: 'Report Templates',
-    description: 'Design report cards and progress reports, and choose which prints for each grade.',
-    icon: DocumentTextIcon,
-    color: 'bg-indigo-500',
-    bgColor: 'from-indigo-50 to-violet-50',
-    borderColor: 'border-indigo-100',
-  },
-  {
-    href: '/admin-panel/forms',
-    label: 'Forms',
-    description: 'Create and manage custom forms for parents and students.',
-    icon: ClipboardDocumentListIcon,
-    color: 'bg-rose-500',
-    bgColor: 'from-rose-50 to-pink-50',
-    borderColor: 'border-rose-100',
-  },
-  {
-    href: '/admin-panel/school-calendar',
-    label: 'School Calendar',
-    description: 'Manage holidays, PA days and school events for each year.',
-    icon: CalendarDaysIcon,
-    color: 'bg-teal-500',
-    bgColor: 'from-teal-50 to-emerald-50',
-    borderColor: 'border-teal-100',
-  },
-  {
-    href: '/admin-panel/schedule-planner',
-    label: 'Schedule Planner',
-    description: 'Generate and publish weekly timetables from teacher availability.',
-    icon: TableCellsIcon,
-    color: 'bg-emerald-500',
-    bgColor: 'from-emerald-50 to-teal-50',
-    borderColor: 'border-emerald-100',
-  },
-  {
-    href: '/school-schedule',
-    label: 'School Schedule',
-    description: 'The published whole-school timetable, filterable by day, teacher, class or course.',
-    icon: CalendarDaysIcon,
-    color: 'bg-sky-500',
-    bgColor: 'from-sky-50 to-cyan-50',
-    borderColor: 'border-sky-100',
-  },
-  {
-    href: '/admin-panel/agendas',
-    label: 'Agenda Editor',
-    description: 'Compose and print the yearly student agenda book.',
-    icon: BookOpenIcon,
-    color: 'bg-indigo-500',
-    bgColor: 'from-indigo-50 to-blue-50',
-    borderColor: 'border-indigo-100',
-  },
-  {
-    href: '/admin-panel/parent-teacher-meetings',
-    label: 'Parent–Teacher Meetings',
-    description: 'Set the days and hours, open booking, and see every teacher\'s day as families book.',
-    icon: ChatBubbleLeftRightIcon,
-    color: 'bg-amber-500',
-    bgColor: 'from-amber-50 to-orange-50',
-    borderColor: 'border-amber-100',
-  },
-  {
-    href: '/finance/tuition',
-    label: 'Finance · Tuition',
-    description: 'Every family’s tuition by month from QuickBooks: paid, partial, overdue and subsidy.',
-    icon: CurrencyDollarIcon,
-    color: 'bg-teal-600',
-    bgColor: 'from-teal-50 to-cyan-50',
-    borderColor: 'border-teal-100',
-  },
-  {
-    href: '/admin-panel/patch-notes',
-    label: 'Patch Notes',
-    description: 'Create and manage product updates shown to users.',
-    icon: SparklesIcon,
-    color: 'bg-cyan-500',
-    bgColor: 'from-cyan-50 to-teal-50',
-    borderColor: 'border-cyan-100',
-  },
-];
+import React, { useCallback, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import Navbar from '@/components/navbar/Navbar'
+import Sidebar from '@/components/sidebar/Sidebar'
+import EmptyState from '@/components/ui/EmptyState'
+import AttentionCard from '@/components/adminPanel/AttentionCard'
+import ReviewQueue, { type ReviewQueueKind } from '@/components/adminPanel/ReviewQueue'
+import ToolRow, { CountPill, ToolChip } from '@/components/adminPanel/ToolRow'
+import ToolSearch from '@/components/adminPanel/ToolSearch'
+import { useAccess } from '@/hooks/useAccess'
+import { useAdminOverview } from '@/hooks/useAdminOverview'
+import { useAdminPins } from '@/hooks/useAdminPins'
+import { adminToolsFor, groupOf, searchTools, type AdminTool } from '@/lib/adminTools'
+import { attentionCountFor, attentionItems, attentionState, overviewHealth, plural, toolStatus, type AttentionItem } from '@/lib/adminOverview'
+import { pinnedTools } from '@/lib/adminPins'
+import { getSchoolName } from '@/lib/schoolUtils'
+import { syncNow } from '@/services/financeService'
+import { useNotificationStore } from '@/store/useNotificationStore'
+import { useUserStore } from '@/store/useUserStore'
+
+const cardClass = 'rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
 
 const AdminPanelPage = () => {
-  const { fullAdmin, canOpen } = useAccess();
-  const visibleLinks = adminLinks.filter((link) => canOpen(link.href));
+  const router = useRouter()
+  const user = useUserStore((s) => s.user)
+  const { canOpen } = useAccess()
+  const notify = useNotificationStore((s) => s.showNotification)
+
+  const groups = useMemo(() => adminToolsFor(user), [user])
+  const overview = useAdminOverview()
+  // While another school year loads, keep the last year's answer on screen.
+  const data = overview.data ?? overview.previous
+  const now = useMemo(() => new Date(), [data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const items = useMemo(() => attentionItems(data, canOpen, now), [data, canOpen, now])
+  const firstLoad = overview.loading && !data
+  const cardState = attentionState({ overview: data, items, loading: firstLoad, requestFailed: !data && Boolean(overview.error) })
+
+  const pins = useAdminPins(user.id, user.school)
+  const pinned = pinnedTools(pins.pins, groups)
+
+  const [query, setQuery] = useState('')
+  const searching = query.trim().length > 0
+  const results = useMemo(() => searchTools(groups, query), [groups, query])
+
+  const [reviewing, setReviewing] = useState<ReviewQueueKind | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const closeReview = useCallback(() => setReviewing(null), [])
+
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const toolLinks = () => Array.from(listRef.current?.querySelectorAll<HTMLAnchorElement>('a[data-tool-link]') ?? [])
+
+  const runAction = async (item: AttentionItem) => {
+    if (!item.action) return
+    if (item.action.kind === 'review') {
+      setReviewing(item.action.queue)
+      return
+    }
+    setBusyId(item.id)
+    try {
+      const res = await syncNow()
+      notify(res.data.alreadyQueued ? 'A sync is already queued' : 'Sync queued', 'success')
+      overview.reload()
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Couldn’t queue a sync', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // ↑/↓ walk the visible rows; ↑ from the first goes back to the search.
+  const onListKeyDown = (e: React.KeyboardEvent) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+    const links = toolLinks()
+    const i = links.indexOf(document.activeElement as HTMLAnchorElement)
+    if (i === -1) return
+    e.preventDefault()
+    if (e.key === 'ArrowDown') links[Math.min(i + 1, links.length - 1)].focus()
+    else if (e.key === 'ArrowUp') (i === 0 ? inputRef.current : links[i - 1])?.focus()
+    else if (e.key === 'Home') links[0].focus()
+    else links[links.length - 1].focus()
+  }
+
+  const row = (tool: AdminTool, groupLabel?: string) => {
+    const group = groupOf(groups, tool)
+    return (
+      <ToolRow
+        key={tool.href}
+        tool={tool}
+        tone={group?.tone ?? 'slate'}
+        status={toolStatus(tool.href, data, now)}
+        loading={firstLoad}
+        count={attentionCountFor(items, tool.href)}
+        pinned={pins.isPinned(tool.href)}
+        onTogglePin={(t) => pins.toggle(t.href)}
+        groupLabel={groupLabel}
+      />
+    )
+  }
+
+  const school = user.school ? getSchoolName(user.school) : null
+  const yearLabel = data?.schoolYear?.label
 
   return (
     <>
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Admin Panel</h1>
-                <p className="text-slate-500 mt-1">Manage school settings, users, and configurations</p>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl border border-rose-100">
-                <WrenchScrewdriverIcon className="w-5 h-5 text-rose-600" />
-                <span className="text-sm font-medium text-rose-700">Admin Tools</span>
-              </div>
+        <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
+            <div>
+              <h1 className="font-display text-2xl lg:text-3xl font-semibold text-slate-900 tracking-tight">Admin Panel</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                {[school, yearLabel && `${yearLabel} school year`].filter(Boolean).join(', ') || 'Your school’s settings, people and planning'}
+              </p>
             </div>
+            <ToolSearch
+              value={query}
+              onChange={setQuery}
+              inputRef={inputRef}
+              onSubmit={() => results[0] && router.push(results[0].href)}
+              onArrowDown={() => toolLinks()[0]?.focus()}
+            />
           </div>
 
-          {/* Admin Links Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {visibleLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`group relative bg-gradient-to-br ${link.bgColor} rounded-2xl border ${link.borderColor} shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden`}
-              >
-                <div className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className={`${link.color} p-3 rounded-xl text-white group-hover:scale-110 transition-transform duration-200 shadow-lg`}>
-                      <link.icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-slate-900 group-hover:text-cyan-600 transition-colors duration-200">
-                        {link.label}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-600 leading-relaxed">
-                        {link.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Arrow indicator */}
-                  <div className="absolute top-6 right-6 text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all duration-200">
-                    <ArrowRightIcon className="w-5 h-5" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Info Card: only true for full admins; everyone else sees what their role opens above */}
-          {fullAdmin && (
-            <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Admin Access</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                  </div>
-                  <span className="text-slate-600">Full user management control</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                  </div>
-                  <span className="text-slate-600">Configure school settings</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 bg-violet-500 rounded-full" />
-                  </div>
-                  <span className="text-slate-600">Manage academic terms</span>
-                </div>
-              </div>
-            </div>
+          {pinned.length > 0 && !searching && (
+            <nav aria-label="Pinned tools" className="mb-6 flex flex-wrap gap-2">
+              {pinned.map((tool) => {
+                const count = attentionCountFor(items, tool.href)
+                return (
+                  <Link
+                    key={tool.href}
+                    href={tool.href}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-1.5 pl-2 pr-3.5 text-sm font-medium text-slate-800 transition-colors hover:border-cyan-300 hover:bg-cyan-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  >
+                    <ToolChip tool={tool} tone={groupOf(groups, tool)?.tone ?? 'slate'} size="sm" />
+                    {tool.label}
+                    {count > 0 && <CountPill count={count} />}
+                  </Link>
+                )
+              })}
+            </nav>
           )}
+
+          {!searching && (
+            <AttentionCard
+              state={cardState}
+              items={items}
+              partial={overviewHealth(data).failed > 0}
+              busyId={busyId}
+              onAction={runAction}
+              onRetry={overview.reload}
+            />
+          )}
+
+          <p className="sr-only" aria-live="polite">
+            {searching ? (results.length ? plural(results.length, 'tool') : 'No tools match') : ''}
+          </p>
+
+          <div id="admin-tools" ref={listRef} onKeyDown={onListKeyDown}>
+            {searching ? (
+              <section className={`${cardClass} p-2`} aria-label="Search results">
+                {results.length > 0 ? (
+                  <ul>{results.map((tool) => row(tool, groupOf(groups, tool)?.label))}</ul>
+                ) : (
+                  <EmptyState
+                    icon={MagnifyingGlassIcon}
+                    title={`No tool matches “${query.trim()}”`}
+                    description="Try another word, like approvals, terms or timetable."
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery('')
+                          inputRef.current?.focus()
+                        }}
+                        className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-cyan-300"
+                      >
+                        Clear search
+                      </button>
+                    }
+                  />
+                )}
+              </section>
+            ) : (
+              <div className="columns-1 xl:columns-2 gap-4">
+                {groups.map((group) => (
+                  <section key={group.key} aria-labelledby={`group-${group.key}`} className={`${cardClass} mb-4 break-inside-avoid p-2`}>
+                    <h2 id={`group-${group.key}`} className="px-3 pb-1 pt-2 font-display text-[15px] font-semibold text-slate-900">
+                      {group.label}
+                    </h2>
+                    <ul>{group.tools.map((tool) => row(tool))}</ul>
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
-    </>
-  );
-};
 
-export default AdminPanelPage;
+      {reviewing && <ReviewQueue queue={reviewing} onClose={closeReview} onChanged={overview.reload} />}
+    </>
+  )
+}
+
+export default AdminPanelPage

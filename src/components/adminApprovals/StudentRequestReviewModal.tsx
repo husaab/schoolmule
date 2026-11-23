@@ -25,11 +25,13 @@ interface Props {
   onApproved: (requestId: string) => void
   /** The request changed elsewhere (approved or declined meanwhile): reload. */
   onStale: () => void
+  /** Offers Decline in the footer (the admin panel's review queue); the page declines from its list instead. */
+  onDecline?: () => void
 }
 
 const SEARCH_RESULTS = 8
 
-const StudentRequestReviewModal: FC<Props> = ({ request, onClose, onApproved, onStale }) => {
+const StudentRequestReviewModal: FC<Props> = ({ request, onClose, onApproved, onStale, onDecline }) => {
   const notify = useNotificationStore((s) => s.showNotification)
   const [data, setData] = useState<RequestCandidates | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -269,8 +271,13 @@ const StudentRequestReviewModal: FC<Props> = ({ request, onClose, onApproved, on
         )}
       </ModalBody>
       <ModalFooter>
+        {onDecline && (
+          <Button variant="secondary" onClick={onDecline} disabled={saving} className="mr-auto !text-rose-700 hover:!bg-rose-50">
+            Decline
+          </Button>
+        )}
         {data && blocker && !blockingProblems(problems).length && (
-          <span className="mr-auto text-xs text-slate-500">{blocker}</span>
+          <span className={`${onDecline ? '' : 'mr-auto '}text-xs text-slate-500`}>{blocker}</span>
         )}
         <Button variant="secondary" onClick={onClose} disabled={saving}>
           Cancel
