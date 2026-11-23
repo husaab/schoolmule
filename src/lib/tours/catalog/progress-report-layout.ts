@@ -11,6 +11,11 @@
 // school with no headings yet; the goals step skips itself while the class
 // isn't set to goals and comment. Opening a class is the person's to do
 // (realAction hides "Do it for me": only they know which class it is).
+//
+// The class steps are web only: the app's tour presses the one thing it
+// highlights, so it can't open the class someone picks. The app ends on its
+// Classes screen instead, saying where the setting is (a card's ⋮ menu →
+// Class settings → On reports).
 import { defineTour } from '../defineTour'
 
 export default defineTour({
@@ -65,6 +70,7 @@ export default defineTour({
     },
     {
       id: 'open-class',
+      platforms: ['web'],
       kind: 'click',
       target: 'classes.grid',
       where: { route: 'classes' },
@@ -74,6 +80,7 @@ export default defineTour({
     },
     {
       id: 'settings-tab',
+      platforms: ['web'],
       kind: 'click',
       target: 'class.settingsTab',
       title: 'Settings',
@@ -81,6 +88,7 @@ export default defineTour({
     },
     {
       id: 'comments-only',
+      platforms: ['web'],
       kind: 'look',
       target: 'classOptions.commentsOnly',
       title: 'Goals and comment only',
@@ -88,6 +96,7 @@ export default defineTour({
     },
     {
       id: 'goals',
+      platforms: ['web'],
       kind: 'look',
       target: 'classOptions.goals',
       optional: true,
@@ -96,10 +105,20 @@ export default defineTour({
     },
     {
       id: 'teachers',
+      platforms: ['web'],
       kind: 'look',
       target: null,
       title: 'What teachers do',
       body: 'In the class’s Grades → Progress comments, teachers pick Excellent, Good, Satisfactory or Needs Improvement, and that rating’s comment fills in, ready to edit. Standard comments there holds the comment for each rating.',
+    },
+    {
+      id: 'class-settings',
+      platforms: ['app'],
+      kind: 'look',
+      target: 'classes.grid',
+      where: { route: 'classes' },
+      title: 'A class with no marks',
+      body: 'For a class like Salaat, tap its ⋮ menu → Class settings → On reports. Turn on Goals and comment only and write the goals paragraph. Teachers then pick a rating in Progress comments, and the comment fills in.',
     },
   ],
 })

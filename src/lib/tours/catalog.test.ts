@@ -3,7 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { allTours, getTour, isAudience, pickOffer, tourProblems, type TourCtx } from './index'
+import { allTours, getTour, isAudience, pickOffer, stepsFor, tourProblems, type TourCtx } from './index'
 import { CATALOG as CATALOG_FOR_TEST } from './catalog'
 
 const dir = join(__dirname, 'catalog')
@@ -63,6 +63,13 @@ describe('progress-report-layout', () => {
     expect(isAudience(def, at({ role: 'TEACHER', permissions: ['school_setup'], isFullAdmin: false }))).toBe(true)
     expect(isAudience(def, at({ role: 'TEACHER', permissions: ['students'], isFullAdmin: false }))).toBe(false)
     expect(isAudience(def, at({ role: 'PARENT' }))).toBe(false)
+  })
+
+  it('walks the web through a class; the app ends on Classes, saying where the setting is', () => {
+    const def = getTour('progress-report-layout')!
+    const headings = ['headings-tab', 'heading', 'subjects', 'classes', 'save']
+    expect(stepsFor(def, 'web').map((s) => s.id)).toEqual([...headings, 'open-class', 'settings-tab', 'comments-only', 'goals', 'teachers'])
+    expect(stepsFor(def, 'app').map((s) => s.id)).toEqual([...headings, 'class-settings'])
   })
 
   it('greets the office on the home page once meetings setup has had its turn', () => {
