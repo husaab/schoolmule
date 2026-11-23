@@ -42,6 +42,7 @@ export default function TourHost() {
   const previewing = useImpersonationStore((s) => Boolean(s.session))
   const state = useTourStore((s) => s.state)
   const loaded = useTourStore((s) => s.loaded)
+  const offeredThisVisit = useTourStore((s) => s.offeredThisVisit)
   const progress = useTourStore((s) => s.progress)
   const dispatch = useTourStore((s) => s.dispatch)
   const ctx = useTourCtx()
@@ -173,10 +174,11 @@ export default function TourHost() {
     }
   }, [pathname, dispatch])
 
-  // Offer at most one tour, a moment after the page settles.
+  // Offer at most one tour per visit, a moment after the page settles; any
+  // other waiting tour gets its turn next time.
   const { here, blocked, conditions } = ctx
   useEffect(() => {
-    if (!active || !loaded || state.phase !== 'idle') return
+    if (!active || !loaded || offeredThisVisit || state.phase !== 'idle') return
     const def = pickOffer(ctx, progress, allTours(), false)
     if (!def) return
     const timer = window.setTimeout(() => {
@@ -185,7 +187,7 @@ export default function TourHost() {
     return () => window.clearTimeout(timer)
     // ctx is rebuilt each render; these are the parts that matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, loaded, state.phase, here, blocked, conditions, progress, user.role, ctx.userCreatedAt, dispatch])
+  }, [active, loaded, offeredThisVisit, state.phase, here, blocked, conditions, progress, user.role, ctx.userCreatedAt, dispatch])
 
   // A preview or sign-out mid-tour: drop it.
   useEffect(() => {

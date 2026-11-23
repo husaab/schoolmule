@@ -15,6 +15,7 @@ export function tourProblems(def: TourDefinition): string[] {
   if (!Number.isInteger(def.version) || def.version < 1) problems.push('version must be a whole number from 1')
   if (!def.audience.roles.length) problems.push('audience.roles is empty')
   if (!def.offer.title.trim() || !def.offer.blurb.trim()) problems.push('the offer needs a title and a blurb')
+  if (def.offer.kind === 'feature' && !def.offer.from) problems.push('a feature tour needs offer.from, the day the feature launched')
   if (def.offer.from && Number.isNaN(Date.parse(def.offer.from))) problems.push('offer.from is not a date')
   if (def.offer.until && Number.isNaN(Date.parse(def.offer.until))) problems.push('offer.until is not a date')
   if (!def.steps.length) problems.push('a tour needs at least one step')

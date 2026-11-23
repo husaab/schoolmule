@@ -23,6 +23,8 @@ type TourStore = {
   /** serverNow − Date.now(), so a wrong device clock can't break Later or a tour's dates. */
   skewMs: number
   state: TourState
+  /** A New card has been shown since sign-in (or since the page loaded): no second one this visit. */
+  offeredThisVisit: boolean
   now: () => number
   load: () => Promise<void>
   dispatch: (action: TourAction) => void
@@ -66,7 +68,7 @@ export const useTourStore = create<TourStore>((set, get) => {
   const handle = (action: TourAction) => {
     const { state } = get()
     const result = reduce(state, action, { now: get().now(), tour: (id) => runnable(id, TOUR_PLATFORM) })
-    if (result.state !== state) set({ state: result.state })
+    if (result.state !== state) set({ state: result.state, ...(result.state.phase === 'offer' ? { offeredThisVisit: true } : {}) })
     for (const effect of result.effects) {
       if (effect.e === 'record') save(effect)
       else runner?.(effect)
@@ -79,6 +81,7 @@ export const useTourStore = create<TourStore>((set, get) => {
     createdAt: null,
     skewMs: 0,
     state: IDLE,
+    offeredThisVisit: false,
     now: () => Date.now() + get().skewMs,
 
     load: async () => {
@@ -118,7 +121,7 @@ export const useTourStore = create<TourStore>((set, get) => {
     reset: () => {
       epoch += 1
       pending.length = 0
-      set({ loaded: false, progress: {}, createdAt: null, skewMs: 0, state: IDLE })
+      set({ loaded: false, progress: {}, createdAt: null, skewMs: 0, state: IDLE, offeredThisVisit: false })
     },
   }
 })

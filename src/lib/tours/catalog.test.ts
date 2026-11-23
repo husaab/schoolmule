@@ -41,5 +41,6 @@ describe('tourProblems', () => {
     expect(problems.join('\n')).toMatch(/needs a target/)
     expect(problems.join('\n')).toMatch(/unique/)
     expect(problems.join('\n')).toMatch(/surface "nope"/)
+    expect(problems.join('\n')).toMatch(/feature tour needs offer.from/)
   })
 })

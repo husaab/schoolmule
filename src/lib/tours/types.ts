@@ -49,9 +49,14 @@ export interface Audience {
 }
 
 export interface Offer {
-  /** Welcome tours are offered before any feature tour. */
+  /**
+   * 'welcome': greets new accounts (with newAccountsOnly), before anything else.
+   * 'feature': greets everyone who already had an account when the feature
+   * launched (`from`). Accounts made after that get only the welcome tour and
+   * find this one under ?.
+   */
   kind: 'welcome' | 'feature'
-  /** ISO date the tour starts being offered (feature tours). */
+  /** ISO date the feature launched: offered from then on. Required for feature tours. */
   from?: string
   /** ISO date after which it is no longer offered (still listed in the ? menu). */
   until?: string
@@ -62,7 +67,10 @@ export interface Offer {
   blurb: string
   /** Higher wins among feature tours offered at the same time. */
   priority?: number
-  /** Offer it only on this page. Anywhere when absent. */
+  /**
+   * The page where the New card appears. The home page when absent, so it
+   * greets people as they sign in; starting it takes them where the steps are.
+   */
   on?: RouteName
 }
 

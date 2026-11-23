@@ -36,6 +36,11 @@ export function isOfferable(def: TourDefinition, ctx: TourCtx, progress: TourPro
   if (def.offer.newAccountsOnly) {
     if (!ctx.userCreatedAt || Date.parse(ctx.userCreatedAt) < Date.parse(TOURS_LAUNCH_AT)) return false
   }
+  // A feature tour is news only to people who had an account when it launched;
+  // a newer account gets the welcome tour, and finds this one under ?.
+  if (def.offer.kind === 'feature' && def.offer.from && ctx.userCreatedAt) {
+    if (Date.parse(ctx.userCreatedAt) >= Date.parse(def.offer.from)) return false
+  }
   const row = current(def, progress)
   if (!row) return true
   if (row.status !== 'offered') return false // in progress, finished or dismissed: the ? menu has it

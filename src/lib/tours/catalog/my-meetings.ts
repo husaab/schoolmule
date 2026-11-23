@@ -1,6 +1,6 @@
 // Teachers: My Meetings, their day of parent–teacher meetings. Offered on the
-// page, and listed under ? only while they take part in meetings still to
-// come (audience.when). Everything here is a look: closing a time or printing
+// home page after sign-in, and listed under ?, only while they take part in
+// meetings still to come (audience.when). Everything here is a look: closing a time or printing
 // is theirs to do. The summary and close steps skip themselves on a day with
 // nothing booked, or nothing open.
 import { defineTour } from '../defineTour'
@@ -12,7 +12,6 @@ export default defineTour({
   offer: {
     kind: 'feature',
     from: '2026-11-22T05:00:00.000Z',
-    on: 'my-meetings',
     title: 'Your parent–teacher meetings',
     blurb: 'Where your day of meetings lives, how to open a family’s Student summary, and Print my day.',
   },

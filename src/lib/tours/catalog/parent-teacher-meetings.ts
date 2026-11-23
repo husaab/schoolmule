@@ -1,6 +1,7 @@
-// Parents: book parent–teacher meetings. Offered on the Meetings page, and
-// listed under ? only while booking is open for them (audience.when), so a
-// school with no meetings never shows it.
+// Parents: book parent–teacher meetings. Offered on the home page after
+// sign-in, and listed under ?, only while booking is open for them
+// (audience.when), so a school with no meetings never shows it. Starting it
+// takes them to Meetings.
 //
 // The web walks the real booking: choose a teacher, tap a time, then Book,
 // which only the parent can press (realAction; × stops the tour first and
@@ -18,7 +19,6 @@ export default defineTour({
   offer: {
     kind: 'feature',
     from: '2026-11-22T05:00:00.000Z',
-    on: 'meetings',
     title: 'Book your parent–teacher meetings',
     blurb: 'A quick look at booking a time with each teacher. Nothing is booked unless you book it.',
   },

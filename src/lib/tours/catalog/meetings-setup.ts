@@ -1,8 +1,8 @@
 // The office: set up parent–teacher meetings, from New meetings to opening
 // booking. Web only: in the app, Setup and the Board open on the website.
-// Offered on the meetings list; anyone with the scheduling permission finds
-// it under ?, even before their school has any meetings (that's when they
-// need it). Create is theirs to press (realAction): the tour never makes a
+// Offered on the home page after sign-in to anyone with the scheduling
+// permission, and listed under ?, even before their school has any meetings
+// (that's when they need it); starting it opens the meetings list. Create is theirs to press (realAction): the tour never makes a
 // draft. Show me how on an event's page starts at 'setup-days' (fromStep).
 import { defineTour } from '../defineTour'
 
@@ -13,7 +13,6 @@ export default defineTour({
   offer: {
     kind: 'feature',
     from: '2026-11-22T05:00:00.000Z',
-    on: 'meetings-office',
     title: 'Set up parent–teacher meetings',
     blurb: 'From the days and hours to opening booking. Families hear nothing until you open it.',
   },

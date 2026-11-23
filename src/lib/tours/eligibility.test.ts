@@ -53,7 +53,16 @@ describe('isOfferable', () => {
   it('respects the offer window', () => {
     expect(isOfferable(tour({ id: 'x', offer: { kind: 'feature', title: 'N', blurb: 'N', from: '2026-12-02' } }), ctx(), undefined)).toBe(false)
     expect(isOfferable(tour({ id: 'x', offer: { kind: 'feature', title: 'N', blurb: 'N', until: '2026-11-30' } }), ctx(), undefined)).toBe(false)
-    expect(isOfferable(tour({ id: 'x', offer: { kind: 'feature', title: 'N', blurb: 'N', from: '2026-11-30', until: '2026-12-30' } }), ctx(), undefined)).toBe(true)
+    expect(isOfferable(tour({ id: 'x', offer: { kind: 'feature', title: 'N', blurb: 'N', from: '2026-11-30', until: '2026-12-30' } }), ctx({ userCreatedAt: '2026-09-01T00:00:00Z' }), undefined)).toBe(true)
+  })
+  it('offers a feature tour to accounts that existed when it launched, not newer ones', () => {
+    const feature = tour({ id: 'f', offer: { kind: 'feature', title: 'F', blurb: 'F', from: '2026-11-22T05:00:00Z' } })
+    expect(isOfferable(feature, ctx({ userCreatedAt: '2025-09-01T00:00:00Z' }), undefined)).toBe(true)
+    expect(isOfferable(feature, ctx({ userCreatedAt: '2026-11-22T04:59:59Z' }), undefined)).toBe(true)
+    // Made on launch day or later: the welcome tour is theirs; this one waits under ?.
+    expect(isOfferable(feature, ctx({ userCreatedAt: '2026-11-22T05:00:00Z' }), undefined)).toBe(false)
+    expect(isOfferable(feature, ctx(), undefined)).toBe(false)
+    expect(listForMenu(ctx(), {}, [feature]).map((e) => e.def.id)).toEqual(['f'])
   })
   it('offers welcome tours to new accounts only', () => {
     const welcome = tour({ id: 'w', offer: { kind: 'welcome', title: 'W', blurb: 'W', newAccountsOnly: true } })
@@ -80,23 +89,30 @@ describe('isOfferable', () => {
 })
 
 describe('pickOffer', () => {
-  const a = tour({ id: 'a', offer: { kind: 'feature', title: 'A', blurb: 'A', from: '2026-11-01' } })
-  const b = tour({ id: 'b', offer: { kind: 'feature', title: 'B', blurb: 'B', from: '2026-11-20' } })
-  const p = tour({ id: 'p', offer: { kind: 'feature', title: 'P', blurb: 'P', priority: 5 } })
+  // A person whose account is newer than the welcome tours but older than these features.
+  const person = (over: Partial<TourCtx> = {}) => ctx({ userCreatedAt: '2026-11-23T12:00:00Z', ...over })
+  const a = tour({ id: 'a', offer: { kind: 'feature', title: 'A', blurb: 'A', from: '2026-11-26' } })
+  const b = tour({ id: 'b', offer: { kind: 'feature', title: 'B', blurb: 'B', from: '2026-11-28' } })
+  const p = tour({ id: 'p', offer: { kind: 'feature', title: 'P', blurb: 'P', from: '2026-11-24', priority: 5 } })
   const w = tour({ id: 'w', offer: { kind: 'welcome', title: 'W', blurb: 'W', newAccountsOnly: true, on: 'home' } })
 
   it('offers welcome first, then priority, then the newest', () => {
-    expect(pickOffer(ctx(), {}, [a, b, p, w], false)?.id).toBe('w')
-    expect(pickOffer(ctx(), {}, [a, b, p], false)?.id).toBe('p')
-    expect(pickOffer(ctx(), {}, [a, b], false)?.id).toBe('b')
+    expect(pickOffer(person(), {}, [a, b, p, w], false)?.id).toBe('w')
+    expect(pickOffer(person(), {}, [a, b, p], false)?.id).toBe('p')
+    expect(pickOffer(person(), {}, [a, b], false)?.id).toBe('b')
   })
   it('waits while something else has the screen', () => {
-    expect(pickOffer(ctx({ blocked: true }), {}, [a], false)).toBeNull()
-    expect(pickOffer(ctx(), {}, [a], true)).toBeNull()
-    expect(pickOffer(ctx({ impersonating: true }), {}, [a], false)).toBeNull()
+    expect(pickOffer(person({ blocked: true }), {}, [a], false)).toBeNull()
+    expect(pickOffer(person(), {}, [a], true)).toBeNull()
+    expect(pickOffer(person({ impersonating: true }), {}, [a], false)).toBeNull()
   })
-  it('only on the page the tour asks for', () => {
-    expect(pickOffer(ctx({ here: null }), {}, [w], false)).toBeNull()
+  it('on the home page, after sign-in, unless the tour names another page', () => {
+    expect(pickOffer(person({ here: null }), {}, [w], false)).toBeNull()
+    expect(pickOffer(person(), {}, [a], false)?.id).toBe('a')
+    expect(pickOffer(person({ here: 'meetings' }), {}, [a], false)).toBeNull()
+    const onMeetings = tour({ id: 'm', offer: { kind: 'feature', title: 'M', blurb: 'M', from: '2026-11-26', on: 'meetings' } })
+    expect(pickOffer(person({ here: 'meetings' }), {}, [onMeetings], false)?.id).toBe('m')
+    expect(pickOffer(person(), {}, [onMeetings], false)).toBeNull()
   })
 })
 
