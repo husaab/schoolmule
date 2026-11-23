@@ -1,19 +1,21 @@
 'use client'
 
 // The office's Board: every teacher's day as a grid, booked, open and closed.
-// Click a booked time to move or cancel it (the family is emailed), click an
-// open one to book a family there, or use Book for a family from the top.
+// Click a booked time to move, switch (in person ↔ phone call) or cancel it
+// (the family is emailed), click an open one to book a family there, or use
+// Book for a family from the top.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowPathIcon, EnvelopeIcon, MagnifyingGlassIcon, PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, EnvelopeIcon, MagnifyingGlassIcon, PhoneIcon, PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import Spinner from '@/components/Spinner'
 import { Button, Field, FormSection, ModalBody, ModalFooter, ModalHeader, RecordFacts, inputClass, selectClass } from '@/components/shared/modalKit'
 import type { BoardCell, BoardColumn, MeetingBoard, MeetingFamily } from '@/services/types/meetings'
 import {
-  getMeetingBoard, officeBookMeeting, officeCancelMeeting, officeMoveMeeting, searchMeetingFamilies, sendMeetingsLastCall,
+  getMeetingBoard, officeBookMeeting, officeCancelMeeting, officeChangeMeeting, searchMeetingFamilies, sendMeetingsLastCall,
 } from '@/services/meetingsService'
-import { dayShort, joinNames, timeLabel } from '@/lib/meetings'
+import { dayShort, howBody, howChanged, howReady, joinNames, placeLabel, timeLabel, type HowChoice } from '@/lib/meetings'
+import HowPicker from '../HowPicker'
 
 interface Props {
   eventId: string
@@ -138,7 +140,10 @@ const BoardTab: React.FC<Props> = ({ eventId, dayId, setDayId, notify }) => {
                       return (
                         <button key={c.teacherId} type="button" onClick={() => setManaging({ column: c, cell })}
                           className="h-11 overflow-hidden rounded-lg border border-cyan-100 bg-cyan-50 px-2 text-left hover:border-cyan-400">
-                          <span className="block truncate text-xs font-semibold text-cyan-900">{cell.booking!.family}</span>
+                          <span className="flex items-center gap-1 truncate text-xs font-semibold text-cyan-900">
+                            {cell.booking!.mode === 'phone' && <PhoneIcon className="h-3 w-3 shrink-0" aria-label="Phone call" />}
+                            {cell.booking!.family}
+                          </span>
                           <span className="block truncate text-[11px] text-cyan-700">{cell.booking!.kids}</span>
                         </button>
                       )
@@ -159,7 +164,7 @@ const BoardTab: React.FC<Props> = ({ eventId, dayId, setDayId, notify }) => {
           </div>
         </div>
       )}
-      <p className="text-xs text-slate-500">Booked · Open · Closed by the teacher. Click a booked time to move or cancel it; click an open time to book a family there. The family gets an email either way.</p>
+      <p className="text-xs text-slate-500">Booked · Open · Closed by the teacher{board.allowPhone ? ' · the phone icon is a phone call' : ''}. Click a booked time to move, change or cancel it; click an open time to book a family there. The family gets an email either way.</p>
 
       <ManageModal
         eventId={eventId}
@@ -167,6 +172,7 @@ const BoardTab: React.FC<Props> = ({ eventId, dayId, setDayId, notify }) => {
         day={board.day}
         dayLabel={(id) => dayShort(first.days.find((d) => d.dayId === id)!.date)}
         openTimes={managing ? openTimesOf(managing.column.teacherId) : []}
+        allowPhone={board.allowPhone}
         onClose={() => setManaging(null)}
         onDone={async (m) => { setManaging(null); notify(m, 'success'); await load() }}
         onError={(m) => notify(m, 'error')}
@@ -178,6 +184,7 @@ const BoardTab: React.FC<Props> = ({ eventId, dayId, setDayId, notify }) => {
         allColumns={Object.values(boards).flatMap((b) => b.columns)}
         openTimesOf={openTimesOf}
         dayLabel={(id) => dayShort(first.days.find((d) => d.dayId === id)!.date)}
+        allowPhone={board.allowPhone}
         onClose={() => setBooking(null)}
         onDone={async (m) => { setBooking(null); notify(m, 'success'); await load() }}
         onError={(m) => notify(m, 'error')}
@@ -201,22 +208,31 @@ const ManageModal: React.FC<{
   day: NonNullable<MeetingBoard['day']>
   dayLabel: (dayId: string) => string
   openTimes: OpenTime[]
+  allowPhone: boolean
   onClose: () => void
   onDone: (message: string) => void
   onError: (message: string) => void
-}> = ({ eventId, managing, day, dayLabel, openTimes, onClose, onDone, onError }) => {
+}> = ({ eventId, managing, day, dayLabel, openTimes, allowPhone, onClose, onDone, onError }) => {
   const [to, setTo] = useState('')
+  const [how, setHow] = useState<HowChoice>({ mode: 'in_person', phone: '' })
   const [saving, setSaving] = useState<string | null>(null)
-  useEffect(() => setTo(''), [managing])
   const b = managing?.cell.booking
-  const run = async (kind: 'move' | 'cancel') => {
+  useEffect(() => {
+    setTo('')
+    setHow({ mode: b?.mode ?? 'in_person', phone: b?.phone ?? '' })
+  }, [managing, b])
+  const switched = b ? howChanged(b, how) : false
+  const run = async (kind: 'save' | 'cancel') => {
     if (!b) return
     setSaving(kind)
     try {
-      if (kind === 'move') {
+      if (kind === 'save') {
         const [dayId, start] = to.split('|')
-        await officeMoveMeeting(eventId, b.bookingId, dayId, Number(start))
-        onDone('Moved. The family is getting an email.')
+        await officeChangeMeeting(eventId, b.bookingId, {
+          ...(to ? { dayId, startMin: Number(start) } : {}),
+          ...(switched ? howBody(how) : {}),
+        })
+        onDone(to ? 'Moved. The family is getting an email.' : 'Changed. The family is getting an email.')
       } else {
         await officeCancelMeeting(eventId, b.bookingId)
         onDone('Cancelled. The family is getting an email.')
@@ -235,12 +251,15 @@ const ManageModal: React.FC<{
           <ModalBody>
             <RecordFacts facts={[
               { label: 'Children', value: b.kids },
-              { label: 'Room', value: b.room || '–' },
+              { label: b.mode === 'phone' ? 'How' : 'Room', value: placeLabel(b) || '–' },
               { label: 'Booked by', value: b.byOffice ? 'The office' : 'The family' },
             ]} />
+            {(allowPhone || b.mode === 'phone') && (
+              <HowPicker value={how} onChange={setHow} teacherName={managing.column.name} room={b.room} tone="cyan" forOffice />
+            )}
             <Field label="Move to" htmlFor="move-to" hint="Another of this teacher's open times.">
               <select id="move-to" className={selectClass} value={to} onChange={(e) => setTo(e.target.value)}>
-                <option value="">Choose a time…</option>
+                <option value="">{switched ? 'Keep this time' : 'Choose a time…'}</option>
                 {openTimes.map((t) => <option key={timeKey(t)} value={timeKey(t)}>{dayLabel(t.dayId)}, {timeLabel(t.start)}</option>)}
               </select>
             </Field>
@@ -248,7 +267,7 @@ const ManageModal: React.FC<{
           <ModalFooter>
             <Button variant="secondary" className="mr-auto !border-rose-200 !text-rose-700" loading={saving === 'cancel'} onClick={() => void run('cancel')}>Cancel meeting</Button>
             <Button variant="secondary" onClick={onClose}>Close</Button>
-            <Button disabled={!to} loading={saving === 'move'} onClick={() => void run('move')}>Move</Button>
+            <Button disabled={(!to && !switched) || !howReady(how)} loading={saving === 'save'} onClick={() => void run('save')}>{to || !switched ? 'Move' : 'Save'}</Button>
           </ModalFooter>
         </>
       )}
@@ -263,21 +282,23 @@ const BookModal: React.FC<{
   allColumns: BoardColumn[]
   openTimesOf: (teacherId: string) => OpenTime[]
   dayLabel: (dayId: string) => string
+  allowPhone: boolean
   onClose: () => void
   onDone: (message: string) => void
   onError: (message: string) => void
-}> = ({ eventId, preset, allColumns, openTimesOf, dayLabel, onClose, onDone, onError }) => {
+}> = ({ eventId, preset, allColumns, openTimesOf, dayLabel, allowPhone, onClose, onDone, onError }) => {
   const [q, setQ] = useState('')
   const [families, setFamilies] = useState<MeetingFamily[]>([])
   const [family, setFamily] = useState<MeetingFamily | null>(null)
   const [teacherId, setTeacherId] = useState('')
   const [kids, setKids] = useState<Set<string>>(new Set())
   const [time, setTime] = useState('')
+  const [how, setHow] = useState<HowChoice>({ mode: 'in_person', phone: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!preset) return
-    setQ(''); setFamily(null); setKids(new Set())
+    setQ(''); setFamily(null); setKids(new Set()); setHow({ mode: 'in_person', phone: '' })
     setTeacherId(preset.teacherId || '')
     setTime(preset.time ? timeKey(preset.time) : '')
   }, [preset])
@@ -302,7 +323,7 @@ const BookModal: React.FC<{
     const [dayId, start] = time.split('|')
     setSaving(true)
     try {
-      await officeBookMeeting(eventId, { teacherId, dayId, startMin: Number(start), studentIds: [...kids] })
+      await officeBookMeeting(eventId, { teacherId, dayId, startMin: Number(start), studentIds: [...kids], ...howBody(how) })
       onDone(`Booked for the ${family.label}. They're getting an email.`)
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Could not book')
@@ -330,7 +351,7 @@ const BookModal: React.FC<{
               <ul className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
                 {families.filter((f) => !preset?.teacherId || f.teachers.some((t) => t.teacherId === preset.teacherId)).map((f) => (
                   <li key={f.familyKey}>
-                    <button type="button" onClick={() => { setFamily(f); if (!preset?.teacherId) setTeacherId('') }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50">
+                    <button type="button" onClick={() => { setFamily(f); setHow((h) => ({ ...h, phone: f.phone ?? '' })); if (!preset?.teacherId) setTeacherId('') }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50">
                       <span className="block text-sm font-medium text-slate-900">{f.label}</span>
                       <span className="block text-xs text-slate-500">{joinNames(f.children.map((c) => `${c.firstName} (${c.gradeLabel})`))} · {f.bookings} booked</span>
                     </button>
@@ -372,12 +393,15 @@ const BookModal: React.FC<{
                 </select>
               </Field>
             )}
+            {teacherId && allowPhone && (
+              <HowPicker value={how} onChange={setHow} teacherName={name(teacherId)} tone="cyan" forOffice />
+            )}
           </FormSection>
         )}
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button disabled={!family || !teacherId || !time || kids.size === 0} loading={saving} onClick={() => void save()}>Book</Button>
+        <Button disabled={!family || !teacherId || !time || kids.size === 0 || !howReady(how)} loading={saving} onClick={() => void save()}>Book</Button>
       </ModalFooter>
     </Modal>
   )

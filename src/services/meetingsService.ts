@@ -5,6 +5,7 @@
 
 import apiClient from './apiClient'
 import type {
+  BookingChange,
   BookingItem,
   MeetingBoard,
   MeetingEventSummary,
@@ -32,10 +33,11 @@ export const bookMeetings = (eventId: string, items: BookingItem[]) =>
     { method: 'POST', body: { items } },
   )
 
-export const moveMyMeeting = (eventId: string, bookingId: string, dayId: string, startMin: number) =>
+/** Change a meeting: a new time and/or in person ↔ phone call (or a new number). */
+export const changeMyMeeting = (eventId: string, bookingId: string, change: BookingChange) =>
   apiClient<MeetingsEnvelope<{ event: ParentMeetingEvent }>>(
     `/parent-portal/meetings/${encodeURIComponent(eventId)}/bookings/${encodeURIComponent(bookingId)}`,
-    { method: 'PATCH', body: { dayId, startMin } },
+    { method: 'PATCH', body: change },
   )
 
 export const cancelMyMeeting = (eventId: string, bookingId: string) =>
@@ -131,10 +133,10 @@ export const searchMeetingFamilies = (eventId: string, q: string) =>
 export const officeBookMeeting = (eventId: string, item: BookingItem) =>
   apiClient<MeetingsEnvelope<{ bookingIds: string[] }>>(`${ev(eventId)}/bookings`, { method: 'POST', body: item })
 
-export const officeMoveMeeting = (eventId: string, bookingId: string, dayId: string, startMin: number) =>
+export const officeChangeMeeting = (eventId: string, bookingId: string, change: BookingChange) =>
   apiClient<MeetingsEnvelope<{ bookingId: string }>>(`${ev(eventId)}/bookings/${encodeURIComponent(bookingId)}`, {
     method: 'PATCH',
-    body: { dayId, startMin },
+    body: change,
   })
 
 export const officeCancelMeeting = (eventId: string, bookingId: string) =>

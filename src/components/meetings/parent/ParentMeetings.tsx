@@ -3,7 +3,9 @@
 // The parent's Meetings page: when and where (the banner), the visit so far,
 // then each child with their teachers. A teacher row books, changes or says
 // the teacher is full (with a way to message them instead). Siblings who share
-// a teacher get one meeting unless the parent ticks for separate ones.
+// a teacher get one meeting unless the parent ticks for separate ones. Each
+// meeting is in person or, when the school allows it, a phone call to the
+// number the parent gives (HowPicker).
 
 import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -12,17 +14,22 @@ import {
   CheckCircleIcon,
   ClockIcon,
   MapPinIcon,
+  PhoneIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader, RecordFacts } from '@/components/shared/modalKit'
 import ChildAvatar from '@/components/parent/ChildAvatar'
 import type { ParentBooking, ParentMeetingEvent, ParentMeetingTeacher } from '@/services/types/meetings'
-import { bookMeetings, cancelMyMeeting, moveMyMeeting } from '@/services/meetingsService'
-import { cutoffText, dayLong, dayShort, freeTimes, joinNames, rangeLabel, timeLabel, unbookedWith } from '@/lib/meetings'
+import { bookMeetings, cancelMyMeeting, changeMyMeeting } from '@/services/meetingsService'
+import {
+  cutoffText, dayLong, dayShort, defaultHow, freeTimes, howBody, howChanged, howReady, joinNames, placeLabel, rangeLabel, timeLabel, unbookedWith,
+  type HowChoice,
+} from '@/lib/meetings'
 import { ASK_LINK_PARAMS } from '@/lib/askLink'
 import SlotPicker, { type PickedTime } from './SlotPicker'
 import PlanVisitModal from './PlanVisitModal'
+import HowPicker from '../HowPicker'
 
 interface Props {
   event: ParentMeetingEvent
@@ -33,6 +40,19 @@ interface Props {
 }
 
 const card = 'rounded-2xl border border-stone-200/70 bg-white shadow-sm'
+
+/** Where a booked meeting happens, with its icon: the room, or the phone call. */
+export const Place: React.FC<{ booking: ParentBooking }> = ({ booking }) => {
+  const label = placeLabel(booking)
+  if (!label) return null
+  const Icon = booking.mode === 'phone' ? PhoneIcon : MapPinIcon
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      <span className="inline-flex items-center gap-1 whitespace-nowrap"><Icon className="h-3.5 w-3.5" aria-hidden="true" />{label}</span>
+    </>
+  )
+}
 
 function messageHref(teacher: ParentMeetingTeacher, studentId: string) {
   const classId = teacher.classIds?.[studentId]
@@ -89,7 +109,7 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
             ))}
             <p className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-amber-600" />
-              {event.slotMinutes} minutes each, in person · book, change or cancel {cutoffText(event.cutoffMin)}
+              {event.slotMinutes} minutes each, {event.allowPhone ? 'in person or by phone' : 'in person'} · book, change or cancel {cutoffText(event.cutoffMin)}
             </p>
           </div>
           {open && stillToBook > 0 && (
@@ -112,20 +132,20 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
                   {bookings.map((b) => (
                     <li key={b.bookingId} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5">
                       <span className="w-20 text-sm font-semibold text-slate-900">{timeLabel(b.start)}</span>
-                      <span className="min-w-0 flex-1">
+                      <span className="min-w-[10rem] flex-1">
                         <span className="block text-sm text-slate-900">{b.teacherName}</span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="flex flex-wrap items-center gap-x-1 text-xs text-slate-500">
                           {joinNames(b.studentIds.map(childName).filter(Boolean))}
-                          {b.room && <><span aria-hidden="true">·</span><MapPinIcon className="h-3.5 w-3.5" />{b.room}</>}
+                          <Place booking={b} />
                         </span>
                       </span>
                       {b.canChange && open ? (
-                        <span className="flex gap-1">
+                        <span className="ml-auto flex gap-1">
                           <button type="button" onClick={() => setMoving(b)} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-50">Change</button>
                           <button type="button" onClick={() => setCancelling(b)} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 hover:bg-stone-100">Cancel</button>
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-400">To change it, contact the school</span>
+                        <span className="ml-auto text-xs text-slate-400">To change it, contact the school</span>
                       )}
                     </li>
                   ))}
@@ -171,7 +191,7 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
         booking={moving}
         teacher={moving ? teacherOf(moving.teacherId) : undefined}
         onClose={() => setMoving(null)}
-        onMoved={(e) => { onChange(e); setMoving(null); notify('Changed. We emailed you the new time.', 'success') }}
+        onMoved={(e) => { onChange(e); setMoving(null); notify('Changed. We emailed you the details.', 'success') }}
         onError={(m) => notify(m, 'error')}
       />
       <CancelModal
@@ -210,6 +230,7 @@ interface RowProps {
 const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, setSeparate, onBooked, onError, onChangeBooking, childName, open }) => {
   const [picking, setPicking] = useState(false)
   const [picked, setPicked] = useState<PickedTime | null>(null)
+  const [how, setHow] = useState<HowChoice>(() => defaultHow(event))
   const [saving, setSaving] = useState(false)
   const subject = teacher.subjects[childId]
   const booking = event.bookings.find((b) => b.teacherId === teacher.teacherId && b.studentIds.includes(childId))
@@ -223,7 +244,9 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
     if (!picked) return
     setSaving(true)
     try {
-      const res = await bookMeetings(event.eventId, [{ teacherId: teacher.teacherId, dayId: picked.dayId, startMin: picked.start, studentIds: shareWith.includes(childId) ? shareWith : [childId] }])
+      const res = await bookMeetings(event.eventId, [{
+        teacherId: teacher.teacherId, dayId: picked.dayId, startMin: picked.start, studentIds: shareWith.includes(childId) ? shareWith : [childId], ...howBody(how),
+      }])
       setPicking(false)
       setPicked(null)
       onBooked(res.data.event)
@@ -241,7 +264,7 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
     status = (
       <span className="flex items-center gap-2 text-sm text-emerald-700">
         <CheckCircleIcon className="h-5 w-5" />
-        {dayShort(day.date)}, {timeLabel(booking.start)}{others.length ? ` · with ${joinNames(others)}` : ''}
+        {dayShort(day.date)}, {timeLabel(booking.start)}{booking.mode === 'phone' ? ' · phone call' : ''}{others.length ? ` · with ${joinNames(others)}` : ''}
         {booking.canChange && open && booking.studentIds[0] === childId && (
           <button type="button" onClick={() => onChangeBooking(booking)} className="ml-1 rounded-lg px-2 py-1 font-medium text-amber-800 hover:bg-amber-50">Change</button>
         )}
@@ -262,7 +285,7 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
     )
   } else if (!picking) {
     status = (
-      <Button variant="secondary" data-tour="meetings.choose" onClick={() => setPicking(true)} className="!py-1.5">Choose a time</Button>
+      <Button variant="secondary" data-tour="meetings.choose" onClick={() => { setHow(defaultHow(event)); setPicking(true) }} className="!py-1.5">Choose a time</Button>
     )
   }
 
@@ -284,9 +307,14 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
               <span>One meeting covers {joinNames([childId, ...siblings].map(childName))}. Tick for separate meetings.</span>
             </label>
           )}
+          {event.allowPhone && (
+            <div className="mb-4">
+              <HowPicker value={how} onChange={setHow} teacherName={teacher.name} room={teacher.room || event.children.find((c) => c.studentId === shareWith[0])?.room} />
+            </div>
+          )}
           <SlotPicker event={event} teacher={teacher} value={picked} onChange={setPicked} />
           <div className="mt-4 flex gap-2">
-            <Button variant="warning" data-tour="meetings.book" disabled={!picked} loading={saving} onClick={book}>
+            <Button variant="warning" data-tour="meetings.book" disabled={!picked || !howReady(how)} loading={saving} onClick={book}>
               {picked ? `Book ${dayShort(event.days.find((d) => d.dayId === picked.dayId)!.date).split(',')[0]} ${timeLabel(picked.start)}` : 'Pick a time'}
             </Button>
             <Button variant="secondary" onClick={() => { setPicking(false); setPicked(null) }}>Close</Button>
@@ -306,32 +334,56 @@ const MoveModal: React.FC<{
   onError: (message: string) => void
 }> = ({ event, booking, teacher, onClose, onMoved, onError }) => {
   const [picked, setPicked] = useState<PickedTime | null>(null)
+  const [how, setHow] = useState<HowChoice>({ mode: 'in_person', phone: '' })
   const [saving, setSaving] = useState(false)
+  // Each time it opens: how the meeting is booked now.
+  const [openFor, setOpenFor] = useState<string | null>(null)
+  if (booking && openFor !== booking.bookingId) {
+    setOpenFor(booking.bookingId)
+    setPicked(null)
+    setHow({ mode: booking.mode, phone: booking.phone ?? event.phone ?? '' })
+  }
+  const showHow = Boolean(booking) && (event.allowPhone || booking?.mode === 'phone')
+  const switched = booking ? howChanged(booking, how) : false
+  const close = () => { setPicked(null); setOpenFor(null); onClose() }
   const save = async () => {
-    if (!booking || !picked) return
+    if (!booking || (!picked && !switched)) return
     setSaving(true)
     try {
-      const res = await moveMyMeeting(event.eventId, booking.bookingId, picked.dayId, picked.start)
+      const res = await changeMyMeeting(event.eventId, booking.bookingId, {
+        ...(picked ? { dayId: picked.dayId, startMin: picked.start } : {}),
+        ...(switched ? howBody(how) : {}),
+      })
       setPicked(null)
+      setOpenFor(null)
       onMoved(res.data.event)
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Could not change the time')
+      onError(err instanceof Error ? err.message : 'Could not change the meeting')
     } finally {
       setSaving(false)
     }
   }
+  const now = booking ? `${dayShort(event.days.find((d) => d.dayId === booking.dayId)!.date)}, ${timeLabel(booking.start)}${booking.mode === 'phone' ? ', a phone call' : ''}` : ''
   return (
-    <Modal isOpen={Boolean(booking && teacher)} onClose={() => { setPicked(null); onClose() }} size="lg" ariaLabel="Change the time">
+    <Modal isOpen={Boolean(booking && teacher)} onClose={close} size="lg" ariaLabel="Change this meeting">
       {booking && teacher && (
         <>
-          <ModalHeader title={`Change your time with ${teacher.name}`} subtitle={`Now ${dayShort(event.days.find((d) => d.dayId === booking.dayId)!.date)}, ${timeLabel(booking.start)}. Pick a new time.`} icon={ClockIcon} tone="warning" />
+          <ModalHeader
+            title={`Change your meeting with ${teacher.name}`}
+            subtitle={showHow ? `Now ${now}. Pick a new time, or change how you meet.` : `Now ${now}. Pick a new time.`}
+            icon={ClockIcon}
+            tone="warning"
+          />
           <ModalBody>
+            {showHow && (
+              <HowPicker value={how} onChange={setHow} teacherName={teacher.name} room={booking.room || teacher.room} />
+            )}
             <SlotPicker event={event} teacher={teacher} value={picked} onChange={setPicked} exceptBookingId={booking.bookingId} />
           </ModalBody>
           <ModalFooter>
-            <Button variant="secondary" onClick={() => { setPicked(null); onClose() }}>Keep my time</Button>
-            <Button variant="warning" disabled={!picked} loading={saving} onClick={save}>
-              {picked ? `Change to ${timeLabel(picked.start)}` : 'Change'}
+            <Button variant="secondary" onClick={close}>Keep it as it is</Button>
+            <Button variant="warning" disabled={(!picked && !switched) || !howReady(how)} loading={saving} onClick={save}>
+              {picked ? `Change to ${timeLabel(picked.start)}` : 'Save'}
             </Button>
           </ModalFooter>
         </>
@@ -371,6 +423,7 @@ const CancelModal: React.FC<{
             <RecordFacts facts={[
               { label: 'Teacher', value: booking.teacherName },
               { label: 'When', value: `${dayLabel}, ${timeLabel(booking.start)}` },
+              ...(booking.mode === 'phone' ? [{ label: 'How', value: placeLabel(booking) }] : []),
               { label: 'For', value: joinNames(booking.studentIds.map(childName).filter(Boolean)) },
             ]} />
             <ConfirmBody tone="warning">The time goes back to the other families. You can book another time while booking is open.</ConfirmBody>

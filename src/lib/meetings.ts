@@ -4,7 +4,7 @@
 // Times are minutes from midnight (930 = 3:30 PM); the server computes every
 // teacher's open times, so this only ever picks among them.
 
-import type { ParentMeetingEvent, ParentMeetingTeacher, TimeRange } from '@/services/types/meetings'
+import type { MeetingHow, MeetingMode, ParentMeetingEvent, ParentMeetingTeacher, TimeRange } from '@/services/types/meetings'
 
 /** '3:30 PM' */
 export function timeLabel(min: number): string {
@@ -53,6 +53,52 @@ export const joinNames = (names: string[]): string =>
   names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`
 
 export const overlaps = (a: TimeRange, b: TimeRange) => a.start < b.end && b.start < a.end
+
+// ── In person or a phone call ──────────────────────────────
+
+const PHONE_RE = /^\+?[0-9().\-\s]+(?:\s*(?:x|ext\.?)\s*[0-9]+)?$/i
+
+/** A phone number as typed, tidied, or null if it isn't one (as the server checks it). */
+export function cleanPhone(raw: string | null | undefined): string | null {
+  const text = String(raw ?? '').replace(/\s+/g, ' ').trim()
+  const digits = text.replace(/\D/g, '').length
+  if (text.length > 40 || digits < 7 || digits > 20 || !PHONE_RE.test(text)) return null
+  return text
+}
+
+/** A meeting's how, chosen on a form: the mode, and the number as typed. */
+export interface HowChoice {
+  mode: MeetingMode
+  phone: string
+}
+
+/**
+ * Where a new booking's choice starts: a phone call when every meeting the
+ * family has booked is one (and the school allows it), else in person; the
+ * number is the one the server suggests.
+ */
+export const defaultHow = (event: Pick<ParentMeetingEvent, 'allowPhone' | 'phone' | 'bookings'>): HowChoice => ({
+  mode: event.allowPhone && event.bookings.length > 0 && event.bookings.every((b) => b.mode === 'phone') ? 'phone' : 'in_person',
+  phone: event.phone ?? '',
+})
+
+/** The choice is complete: in person, or a phone call with a real number. */
+export const howReady = (how: HowChoice): boolean => how.mode === 'in_person' || cleanPhone(how.phone) !== null
+
+/** What a booking request sends for a choice. */
+export const howBody = (how: HowChoice): { mode: MeetingMode; phone: string | null } =>
+  how.mode === 'phone' ? { mode: 'phone', phone: cleanPhone(how.phone) } : { mode: 'in_person', phone: null }
+
+/** Did the choice change from how the meeting is booked? */
+export const howChanged = (booked: MeetingHow, how: HowChoice): boolean =>
+  booked.mode !== how.mode || (how.mode === 'phone' && cleanPhone(how.phone) !== booked.phone)
+
+/** Where a meeting happens, in one line: 'Grade 5 room', 'Phone call · 416-555-0100', or null. */
+export const placeLabel = (b: MeetingHow): string | null =>
+  b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}`.trim() : b.room
+
+/** A tel: link for a number as typed. */
+export const telHref = (phone: string): string => `tel:${phone.replace(/(?:x|ext\.?).*$/i, '').replace(/[^0-9+]/g, '')}`
 
 /** "Until 8:00 PM the evening before" */
 export const cutoffText = (cutoffMin: number | null): string =>

@@ -5,6 +5,17 @@
 
 export type MeetingPhase = 'draft' | 'scheduled' | 'open' | 'closed' | 'finished'
 export type MeetingStatus = 'draft' | 'scheduled' | 'open'
+/** How a meeting happens: at the school, or the teacher phones the family. */
+export type MeetingMode = 'in_person' | 'phone'
+
+/** How a booked meeting happens: in person in `room`, or a phone call to `phone`. */
+export interface MeetingHow {
+  mode: MeetingMode
+  /** The number the teacher calls (phone calls only). */
+  phone: string | null
+  /** Where an in-person meeting is (null for a phone call). */
+  room: string | null
+}
 
 export interface TimeRange {
   start: number
@@ -30,6 +41,8 @@ export interface MeetingEventBase {
   emailReminder: boolean
   reminderMin: number
   emailTeacherList: boolean
+  /** Families may choose a phone call instead of coming in. */
+  allowPhone: boolean
 }
 
 export interface MeetingDayBase {
@@ -76,7 +89,7 @@ export interface ParentMeetingTeacher {
   days: { dayId: string; works: boolean; total: number; open: TimeRange[] }[]
 }
 
-export interface ParentBooking {
+export interface ParentBooking extends MeetingHow {
   bookingId: string
   teacherId: string
   teacherName: string
@@ -84,12 +97,13 @@ export interface ParentBooking {
   start: number
   end: number
   studentIds: string[]
-  room: string | null
   canChange: boolean
   byOffice: boolean
 }
 
 export interface ParentMeetingEvent extends MeetingEventBase {
+  /** The number a phone call suggests: the one they gave last, else theirs on file. */
+  phone: string | null
   days: ParentMeetingDay[]
   children: ParentMeetingChild[]
   teachers: ParentMeetingTeacher[]
@@ -101,6 +115,16 @@ export interface BookingItem {
   dayId: string
   startMin: number
   studentIds: string[]
+  mode?: MeetingMode
+  phone?: string | null
+}
+
+/** A change to a booked meeting: a new time and/or how it happens. Left out = unchanged. */
+export interface BookingChange {
+  dayId?: string
+  startMin?: number
+  mode?: MeetingMode
+  phone?: string | null
 }
 
 // ── Teacher ────────────────────────────────────────────────
@@ -116,9 +140,8 @@ export interface TeacherBookingStudent {
   classes: { classId: string; subject: string | null }[]
 }
 
-export interface TeacherBooking {
+export interface TeacherBooking extends MeetingHow {
   bookingId: string
-  room: string | null
   byOffice: boolean
   students: TeacherBookingStudent[]
   guardians: string[]
@@ -212,13 +235,12 @@ export interface MeetingSetup extends MeetingEventBase {
 
 export interface BoardCell extends TimeRange {
   kind: 'booked' | 'open' | 'closed'
-  booking?: {
+  booking?: MeetingHow & {
     bookingId: string
     byOffice: boolean
     studentIds: string[]
     family: string
     kids: string
-    room: string | null
   }
 }
 
@@ -249,6 +271,8 @@ export interface MeetingFamily {
   children: { studentId: string; name: string; firstName: string; grade: string | null; gradeLabel: string }[]
   teachers: { teacherId: string; name: string; studentIds: string[]; bookedStudentIds: string[] }[]
   bookings: number
+  /** A number for a phone call: the family's last, else one on file. */
+  phone: string | null
 }
 
 /** A teacher's own settings, as the hours window sends them. */
@@ -278,6 +302,7 @@ export interface MeetingSettingsChange {
   emailReminder?: boolean
   reminderMin?: number
   emailTeacherList?: boolean
+  allowPhone?: boolean
   opensAt?: string | null
 }
 

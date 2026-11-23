@@ -4,7 +4,8 @@
 // every meeting is lined up back to back (lib/meetings planVisit). Already
 // booked meetings stay where they are; a teacher with nothing that day is
 // offered their first time on another day. "Book these" books them all at
-// once, or none if a time went in the meantime.
+// once, or none if a time went in the meantime. When the school allows phone
+// calls, the new meetings are all in person or all phone calls.
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { SparklesIcon } from '@heroicons/react/24/outline'
@@ -12,7 +13,10 @@ import Modal from '@/components/shared/modal'
 import { Button, Field, FormSection, ModalBody, ModalFooter, ModalHeader, selectClass } from '@/components/shared/modalKit'
 import type { ParentMeetingEvent } from '@/services/types/meetings'
 import { bookMeetings } from '@/services/meetingsService'
-import { dayShort, joinNames, planVisit, timeLabel, wantsFor, weekdayLong, type PlanWant } from '@/lib/meetings'
+import {
+  dayShort, defaultHow, howBody, howReady, joinNames, placeLabel, planVisit, timeLabel, wantsFor, weekdayLong, type HowChoice, type PlanWant,
+} from '@/lib/meetings'
+import HowPicker from '../HowPicker'
 
 interface Props {
   event: ParentMeetingEvent
@@ -31,6 +35,7 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
   const [dayId, setDayId] = useState<string>('')
   const [arrive, setArrive] = useState<number>(0)
   const [takeAlternatives, setTakeAlternatives] = useState<Set<string>>(new Set())
+  const [how, setHow] = useState<HowChoice>({ mode: 'in_person', phone: '' })
   const [saving, setSaving] = useState(false)
 
   // Reset each time it opens: every teacher still to book ticked, the first bookable day, its first time.
@@ -41,6 +46,7 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
     setDayId(first?.dayId ?? '')
     setArrive(first?.window?.start ?? first?.start ?? 0)
     setTakeAlternatives(new Set())
+    setHow(defaultHow(event))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
@@ -64,7 +70,7 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
     if (!toBook.length) return
     setSaving(true)
     try {
-      const res = await bookMeetings(event.eventId, toBook.map((m) => ({ teacherId: m.teacherId, dayId: m.dayId, startMin: m.start, studentIds: m.studentIds })))
+      const res = await bookMeetings(event.eventId, toBook.map((m) => ({ teacherId: m.teacherId, dayId: m.dayId, startMin: m.start, studentIds: m.studentIds, ...howBody(how) })))
       onBooked(res.data.event, toBook.length)
       onClose()
     } catch (err) {
@@ -83,7 +89,12 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" ariaLabel="Plan my visit">
-      <ModalHeader title="Plan my visit" subtitle="Your meetings back to back, around the time you arrive." icon={SparklesIcon} tone="warning" />
+      <ModalHeader
+        title="Plan my visit"
+        subtitle={how.mode === 'phone' ? 'Your calls back to back, from the time you pick.' : 'Your meetings back to back, around the time you arrive.'}
+        icon={SparklesIcon}
+        tone="warning"
+      />
       <ModalBody>
         {allWants.length === 0 ? (
           <p className="text-sm text-slate-600">You’ve booked every teacher already.</p>
@@ -129,12 +140,15 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
                     ))}
                   </div>
                 </Field>
-                <Field label="I'll arrive around" htmlFor="plan-arrive">
+                <Field label={how.mode === 'phone' ? 'Start around' : "I'll arrive around"} htmlFor="plan-arrive">
                   <select id="plan-arrive" className={selectClass} value={arrive} onChange={(e) => setArrive(Number(e.target.value))}>
                     {arrivalOptions.map((t) => <option key={t} value={t}>{timeLabel(t)}</option>)}
                   </select>
                 </Field>
               </div>
+              {event.allowPhone && (
+                <HowPicker value={how} onChange={setHow} plural />
+              )}
             </FormSection>
 
             {plan && day && (
@@ -146,8 +160,11 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
                     {plan.meetings.map((m, i) => {
                       const prev = plan.meetings[i - 1]
                       const gap = prev && m.start > prev.end
-                      const room = event.teachers.find((t) => t.teacherId === m.teacherId)?.room
-                        || event.children.find((c) => c.studentId === m.studentIds[0])?.room
+                      const booked = m.bookingId ? event.bookings.find((b) => b.bookingId === m.bookingId) : null
+                      const room = booked ? placeLabel(booked)
+                        : how.mode === 'phone' ? 'Phone call'
+                          : event.teachers.find((t) => t.teacherId === m.teacherId)?.room
+                            || event.children.find((c) => c.studentId === m.studentIds[0])?.room
                       return (
                         <React.Fragment key={`${m.teacherId}:${m.start}`}>
                           {gap && <li className="bg-stone-50 px-4 py-2 text-sm text-slate-500">Free until {timeLabel(m.start)}</li>}
@@ -184,7 +201,7 @@ const PlanVisitModal: React.FC<Props> = ({ event, isOpen, onClose, onBooked, onE
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>Not now</Button>
-        <Button variant="warning" loading={saving} disabled={!toBook.length} onClick={book}>
+        <Button variant="warning" loading={saving} disabled={!toBook.length || !howReady(how)} onClick={book}>
           {toBook.length ? `Book ${toBook.length === 1 ? 'this meeting' : `these ${toBook.length}`}` : 'Book'}
         </Button>
       </ModalFooter>

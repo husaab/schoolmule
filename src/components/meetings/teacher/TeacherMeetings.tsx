@@ -13,6 +13,7 @@ import {
   DocumentTextIcon,
   LockClosedIcon,
   MapPinIcon,
+  PhoneIcon,
   PrinterIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
@@ -23,7 +24,7 @@ import TeacherHoursModal from '@/components/meetings/TeacherHoursModal'
 import type { TeacherBookingStudent, TeacherMeetingDay, TeacherMeetingEvent, TeacherSlot } from '@/services/types/meetings'
 import { closeMyTimes, printMeetingDay, reopenMyTimes, setMyHours, getMyMeetings } from '@/services/meetingsService'
 import { generateStudentSummaryReport, generateStudentTermSummaryReport } from '@/services/reportService'
-import { dayShort, dayLong, joinNames, rangeLabel, timeLabel } from '@/lib/meetings'
+import { dayShort, dayLong, joinNames, rangeLabel, telHref, timeLabel } from '@/lib/meetings'
 
 interface Props {
   event: TeacherMeetingEvent
@@ -185,7 +186,15 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
                         <span className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
                           {b.students.map((s) => [s.gradeLabel, [s.homeroom ? 'Homeroom' : null, ...s.subjects].filter(Boolean).join(', ')].filter(Boolean).join(' ')).join(' · ')}
                           {b.guardians.length > 0 && <><span aria-hidden="true">·</span>{joinNames(b.guardians)}</>}
-                          {b.room && <><span aria-hidden="true">·</span><MapPinIcon className="h-3.5 w-3.5" />{b.room}</>}
+                          {b.mode === 'phone' && b.phone ? (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                                <PhoneIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                                Phone call: <a href={telHref(b.phone)} className="underline decoration-amber-300 underline-offset-2 hover:text-amber-900">{b.phone}</a>
+                              </span>
+                            </>
+                          ) : b.room && <><span aria-hidden="true">·</span><MapPinIcon className="h-3.5 w-3.5" />{b.room}</>}
                         </span>
                       </span>
                       <span className="flex flex-wrap gap-2">

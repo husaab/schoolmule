@@ -32,7 +32,7 @@ export default defineTour({
       target: 'meetings.banner',
       where: { route: 'meetings' },
       title: 'Parent–teacher meetings',
-      body: 'Meet each of your children’s teachers in person. Times are first come, first served. You can book, change or cancel until the time shown here.',
+      body: 'Meet each of your children’s teachers. Times are first come, first served. You can book, change or cancel until the time shown here.',
     },
     {
       id: 'nav',
@@ -81,7 +81,7 @@ export default defineTour({
       optional: true,
       platforms: ['web'],
       title: 'Pick a time',
-      body: 'Only times you’re free are shown. Picking one doesn’t hold it yet.',
+      body: 'Only times you’re free are shown, and picking one doesn’t hold it yet. If there’s a choice above the times, pick In person or Phone call too.',
     },
     {
       id: 'book',
@@ -101,7 +101,7 @@ export default defineTour({
       optional: true,
       platforms: ['app'],
       title: 'Pick a time, then Book',
-      body: 'Only times you’re free are shown. The time is yours once you tap Book, and a confirmation email follows. Picking alone doesn’t hold it.',
+      body: 'Only times you’re free are shown. If there’s a choice at the top, pick In person or Phone call. The time is yours once you tap Book, and a confirmation email follows.',
     },
   ],
 })

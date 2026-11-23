@@ -45,7 +45,7 @@ const MeetingsContent: React.FC = () => {
     <ParentPageShell
       title="Parent–Teacher Meetings"
       subtitle={subtitle}
-      badge={{ icon: ChatBubbleLeftRightIcon, label: 'In person' }}
+      badge={{ icon: ChatBubbleLeftRightIcon, label: event?.allowPhone ? 'In person or by phone' : 'In person' }}
       actions={<ShowMeHow tour="parent-teacher-meetings" className="!text-amber-800 hover:!text-amber-900" />}
     >
       {loading && !loaded ? (

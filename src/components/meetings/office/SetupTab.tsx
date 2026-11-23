@@ -127,6 +127,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
           </div>
           <div className="mt-4 space-y-1 border-t border-slate-100 pt-3">
             <Check checked={setup.useGradeRoom} onChange={(v) => void settings({ useGradeRoom: v })} label="Meetings are in the child's grade room" hint="A teacher can have a fixed room instead (Teachers, below)." />
+            <Check checked={setup.allowPhone} onChange={(v) => void settings({ allowPhone: v })} label="Families can choose a phone call instead" hint="When booking, a family picks In person or Phone call and gives the number to call. The teacher calls them at the meeting time. Meetings already booked stay as they are." />
             <Check checked={setup.siblingsShare} onChange={(v) => void settings({ siblingsShare: v })} label="Siblings who share a teacher get one meeting" hint="Parents can tick for separate meetings." />
             <Check checked={setup.teachersEditHours} onChange={(v) => void settings({ teachersEditHours: v })} label="Teachers can change their own days and hours" hint="From My Meetings, any time. They can add times, take breaks and close open times. Booked times stay put." />
           </div>
