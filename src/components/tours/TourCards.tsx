@@ -6,9 +6,10 @@ import { useEffect, useRef } from 'react'
 import { CheckIcon, PlayIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/solid'
 import type { TourDefinition } from '@/lib/tours'
 import type { TourTone } from './tourTone'
+import { TOUR_SCRIM } from './Spotlight'
 
 function Scrim() {
-  return <div className="tour-fade fixed inset-0 z-[95] bg-slate-900/55" aria-hidden="true" />
+  return <div className="tour-fade fixed inset-0 z-[95]" style={{ background: TOUR_SCRIM }} aria-hidden="true" />
 }
 
 function useFocusFirst<T extends HTMLElement>() {

@@ -7,6 +7,9 @@
 
 const PAD = 6
 
+/** The dim over the page: light enough that the page stays readable around the highlight. */
+export const TOUR_SCRIM = 'rgba(15,23,42,0.3)'
+
 export interface SpotRect {
   left: number
   top: number
@@ -41,7 +44,7 @@ export default function Spotlight({
   onStray: () => void
 }) {
   if (!rect) {
-    return <div className="tour-fade fixed inset-0 z-[95] bg-slate-900/55" onClick={onStray} aria-hidden="true" />
+    return <div className="tour-fade fixed inset-0 z-[95]" style={{ background: TOUR_SCRIM }} onClick={onStray} aria-hidden="true" />
   }
   const { left, top, width, height } = rect
   const radius = Math.min(14, height / 2)
@@ -57,7 +60,7 @@ export default function Spotlight({
           width,
           height,
           borderRadius: radius,
-          boxShadow: '0 0 0 2px rgba(255,255,255,0.92), 0 0 0 9999px rgba(15,23,42,0.55)',
+          boxShadow: `0 0 0 2px rgba(255,255,255,0.92), 0 0 0 9999px ${TOUR_SCRIM}`,
         }}
       >
         {open && <span className="tour-ring absolute -inset-[3px] border-2" style={{ borderColor: ring, borderRadius: radius + 3 }} />}
