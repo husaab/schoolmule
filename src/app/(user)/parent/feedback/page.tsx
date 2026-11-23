@@ -155,7 +155,7 @@ const ChildFeedbackSection: React.FC<ChildFeedbackSectionProps> = ({
         message={
           filtered
             ? `No feedback for ${child.name.split(' ')[0]} matches the selected filters.`
-            : "Teachers haven't added feedback yet. It will appear here as progress reports and report cards are prepared."
+            : "Comments and reports appear here once the school sends you a progress report or report card."
         }
       />
     )
@@ -341,7 +341,7 @@ const ParentFeedbackContent: React.FC = () => {
 const ParentFeedbackPage: React.FC = () => (
   <ParentPageShell
     title="Teacher Feedback"
-    subtitle="Work habits, behavior and comments from your children's teachers."
+    subtitle="Work habits, behavior and comments from the reports the school has sent you."
     badge={{ icon: ChatBubbleLeftRightIcon, label: 'Feedback' }}
   >
     <Suspense fallback={<div className="h-[520px] rounded-2xl border border-stone-200/70 bg-white" />}>
