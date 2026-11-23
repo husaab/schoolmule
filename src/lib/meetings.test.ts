@@ -142,3 +142,17 @@ describe('in person or a phone call', () => {
     expect(telHref('+1 (416) 555-0100 ext. 12')).toBe('tel:+14165550100')
   })
 })
+
+describe('the office sidebar link', () => {
+  const summary = (eventId: string, lastDay: string | null, status: 'draft' | 'open' = 'draft') =>
+    ({ eventId, lastDay, firstDay: lastDay, status }) as unknown as import('@/services/types/meetings').MeetingEventSummary
+  it('shows while an event has days ahead (or none yet), and goes straight to a single event', async () => {
+    const { currentOfficeEvents, officeMeetingsHref, torontoToday } = await import('@/store/useMeetingsStore')
+    expect(torontoToday(new Date('2026-11-23T03:00:00Z'))).toBe('2026-11-22')
+    const events = [summary('a', '2026-12-01'), summary('b', '2026-06-01'), summary('c', null)]
+    expect(currentOfficeEvents(events, '2026-11-23').map((e) => e.eventId)).toEqual(['a', 'c'])
+    expect(currentOfficeEvents(events, '2026-12-02').map((e) => e.eventId)).toEqual(['c'])
+    expect(officeMeetingsHref([summary('a', '2026-12-01')])).toBe('/admin-panel/parent-teacher-meetings/a')
+    expect(officeMeetingsHref(events)).toBe('/admin-panel/parent-teacher-meetings')
+  })
+})

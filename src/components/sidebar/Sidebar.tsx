@@ -43,7 +43,7 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useRegistrationStore } from '@/store/useRegistrationStore'
 import { useMessagingStore } from '@/store/useMessagingStore'
-import { useMeetingsStore, upcomingMeetingCount } from '@/store/useMeetingsStore'
+import { currentOfficeEvents, officeMeetingsHref, useMeetingsStore, upcomingMeetingCount } from '@/store/useMeetingsStore'
 import { inboxBadgeCount, inboxBadgeLabel } from '@/components/messaging/formatters'
 import { getNewSubmissionCount } from '@/services/registrationService'
 import SchoolYearSelector from '@/components/navbar/SchoolYearSelector'
@@ -127,18 +127,28 @@ const Sidebar = () => {
   const hasToolsBlock = canGeneralAttendance || canClassAttendance || canReports || canStudentViews || canReportCards;
   const adminPanel = adminPanelNavFor(user);
   const showAdminPanel = adminPanel.show;
-  // Parent–teacher meetings: Meetings (parents) and My Meetings (teachers)
-  // appear only while there is something to book or meet.
+  // Parent–teacher meetings: Meetings (parents), My Meetings (teachers) and
+  // the office's Meetings (setup and the Board) appear only while there is
+  // something to book, meet or set up.
   const meetingParentEvents = useMeetingsStore((s) => s.parentEvents);
   const meetingTeacherEvents = useMeetingsStore((s) => s.teacherEvents);
   const loadMeetings = useMeetingsStore((s) => s.load);
   const meetingsOpen = meetingParentEvents.some((e) => e.phase === 'open');
   const myMeetingCount = upcomingMeetingCount(meetingTeacherEvents);
+  const canMeetingsOffice = user?.role !== 'PARENT' && allowed('/admin-panel/parent-teacher-meetings');
+  const loadOfficeMeetings = useMeetingsStore((s) => s.loadOffice);
+  const officeMeetings = currentOfficeEvents(useMeetingsStore((s) => s.officeEvents));
+  const officeHref = officeMeetingsHref(officeMeetings);
+  const officeOpen = officeMeetings.some((e) => e.status === 'open');
+  const meetingLinks: NavLink[] = [
+    ...(meetingTeacherEvents.some((e) => e.takingPart) ? [{ href: '/my-meetings', label: 'My Meetings', icon: ChatBubbleLeftRightIcon }] : []),
+    ...(canMeetingsOffice && officeMeetings.length ? [{ href: officeHref, label: 'Meetings', icon: ChatBubbleLeftRightIcon }] : []),
+  ];
   const parentMain: NavLink[] = meetingParentEvents.length
     ? [parentLinks[0], { href: '/parent/meetings', label: 'Meetings', icon: ChatBubbleLeftRightIcon }, ...parentLinks.slice(1)]
     : parentLinks;
-  const staffMain: NavLink[] = meetingTeacherEvents.some((e) => e.takingPart)
-    ? [...teacherLinks.slice(0, 4), { href: '/my-meetings', label: 'My Meetings', icon: ChatBubbleLeftRightIcon }, ...teacherLinks.slice(4)]
+  const staffMain: NavLink[] = meetingLinks.length
+    ? [...teacherLinks.slice(0, 4), ...meetingLinks, ...teacherLinks.slice(4)]
     : teacherLinks;
   const mainLinks = user?.role === 'PARENT' ? parentMain : staffMain.filter((l) => allowed(l.href));
   // School Schedule sits in the Admin Panel dropdown when there is one; otherwise it is a top-level link.
@@ -153,6 +163,10 @@ const Sidebar = () => {
   useEffect(() => {
     if (user?.id && user.role !== 'STUDENT') void loadMeetings();
   }, [user?.id, user?.role, loadMeetings]);
+
+  useEffect(() => {
+    if (user?.id && canMeetingsOffice) void loadOfficeMeetings();
+  }, [user?.id, canMeetingsOffice, loadOfficeMeetings]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -332,11 +346,13 @@ const Sidebar = () => {
             isActive={
               user?.role === 'PARENT' || link.href === '/classes'
                 ? pathname === link.href || pathname.startsWith(link.href + '/')
-                : pathname === link.href
+                : pathname === link.href || (link.label === 'Meetings' && pathname.startsWith('/admin-panel/parent-teacher-meetings'))
             }
             badge={link.href === '/messages' || link.href === '/parent/messages' ? inboxCount : link.href === '/my-meetings' ? myMeetingCount : undefined}
             badgeTitle={link.href === '/messages' || link.href === '/parent/messages' ? inboxLabel : link.href === '/my-meetings' ? 'Meetings ahead' : undefined}
-            pill={link.href === '/parent/classes' && !parentClassesSeen ? 'New' : link.href === '/parent/meetings' && meetingsOpen ? 'Open' : undefined}
+            pill={link.href === '/parent/classes' && !parentClassesSeen ? 'New'
+              : link.href === '/parent/meetings' && meetingsOpen ? 'Open'
+                : link.href === officeHref && link.label === 'Meetings' && officeOpen ? 'Open' : undefined}
           />
         ))}
 

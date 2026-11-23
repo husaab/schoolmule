@@ -20,6 +20,7 @@ import type { MeetingEventSummary } from '@/services/types/meetings'
 import { dayShort, instantLabel, joinNames, parseTime } from '@/lib/meetings'
 import MeetingPhasePill from '@/components/meetings/office/MeetingPhasePill'
 import ShowMeHow from '@/components/tours/ShowMeHow'
+import { useMeetingsStore } from '@/store/useMeetingsStore'
 
 const ListContent: React.FC = () => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -104,7 +105,7 @@ const ListContent: React.FC = () => {
         isOpen={creating}
         onClose={() => setCreating(false)}
         suggestions={suggestions}
-        onCreated={(id) => router.push(`/admin-panel/parent-teacher-meetings/${id}`)}
+        onCreated={(id) => { void useMeetingsStore.getState().loadOffice(true); router.push(`/admin-panel/parent-teacher-meetings/${id}`) }}
         onError={(m) => showNotification(m, 'error')}
       />
     </>

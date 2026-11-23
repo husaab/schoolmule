@@ -18,6 +18,7 @@ import {
   sendMeetingsLastCall, setMeetingTeacher, unscheduleMeetingEvent, updateMeetingDay, updateMeetingSettings,
 } from '@/services/meetingsService'
 import { bookedTimesFrom, dayLong, instantLabel, parseTime, rangeLabel, timeLabel, toTimeInput } from '@/lib/meetings'
+import { useMeetingsStore } from '@/store/useMeetingsStore'
 
 interface Props {
   setup: MeetingSetup
@@ -74,6 +75,8 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
     try {
       await work()
       await reload()
+      // The sidebar's Meetings link follows the event's days and status.
+      void useMeetingsStore.getState().loadOffice(true)
       if (done) notify(done, 'success')
     } catch (err) {
       fail(err, 'Could not save')
@@ -288,6 +291,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
             setBusy('delete')
             try {
               await deleteMeetingEvent(setup.eventId)
+              void useMeetingsStore.getState().loadOffice(true)
               notify('Deleted.', 'success')
               router.push('/admin-panel/parent-teacher-meetings')
             } catch (err) {
