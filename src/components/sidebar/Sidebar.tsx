@@ -30,6 +30,7 @@ import {
   CalendarDaysIcon,
   Squares2X2Icon,
   ChatBubbleLeftRightIcon,
+  ClockIcon,
   InboxIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
@@ -141,11 +142,11 @@ const Sidebar = () => {
   const officeHref = officeMeetingsHref(officeMeetings);
   const officeOpen = officeMeetings.some((e) => e.status === 'open');
   const meetingLinks: NavLink[] = [
-    ...(meetingTeacherEvents.some((e) => e.takingPart) ? [{ href: '/my-meetings', label: 'My Meetings', icon: ChatBubbleLeftRightIcon }] : []),
-    ...(canMeetingsOffice && officeMeetings.length ? [{ href: officeHref, label: 'Meetings', icon: ChatBubbleLeftRightIcon }] : []),
+    ...(meetingTeacherEvents.some((e) => e.takingPart) ? [{ href: '/my-meetings', label: 'My Meetings', icon: ClockIcon }] : []),
+    ...(canMeetingsOffice && officeMeetings.length ? [{ href: officeHref, label: 'Meetings', icon: ClockIcon }] : []),
   ];
   const parentMain: NavLink[] = meetingParentEvents.length
-    ? [parentLinks[0], { href: '/parent/meetings', label: 'Meetings', icon: ChatBubbleLeftRightIcon }, ...parentLinks.slice(1)]
+    ? [parentLinks[0], { href: '/parent/meetings', label: 'Meetings', icon: ClockIcon }, ...parentLinks.slice(1)]
     : parentLinks;
   const staffMain: NavLink[] = meetingLinks.length
     ? [...teacherLinks.slice(0, 4), ...meetingLinks, ...teacherLinks.slice(4)]
