@@ -29,9 +29,10 @@ interface Props {
 
 const card = 'rounded-2xl border border-slate-200 bg-white shadow-sm'
 const CUTOFFS: { value: string; label: string }[] = [
-  { value: '1200', label: '8:00 PM the evening before each day' },
   { value: '1080', label: '6:00 PM the evening before each day' },
+  { value: '1200', label: '8:00 PM the evening before each day' },
   { value: '1260', label: '9:00 PM the evening before each day' },
+  { value: '1320', label: '10:00 PM the evening before each day' },
   { value: '1439', label: 'Midnight the night before each day' },
   { value: 'none', label: 'Until each meeting starts' },
 ]
