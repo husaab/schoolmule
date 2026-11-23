@@ -156,3 +156,14 @@ describe('the office sidebar link', () => {
     expect(officeMeetingsHref(events)).toBe('/admin-panel/parent-teacher-meetings')
   })
 })
+
+describe('the next round from the school calendar', () => {
+  it('takes the first dates close together, not every round of the year', async () => {
+    const { nextRound } = await import('./meetings')
+    const s = (date: string) => ({ date, title: 'Parent Teacher Meeting' })
+    const year = [s('2027-03-23'), s('2026-11-30'), s('2026-12-01'), s('2027-03-24'), s('2027-06-21')]
+    expect(nextRound(year).map((x) => x.date)).toEqual(['2026-11-30', '2026-12-01'])
+    expect(nextRound([s('2026-11-27'), s('2026-11-30')]).map((x) => x.date)).toEqual(['2026-11-27', '2026-11-30'])
+    expect(nextRound([])).toEqual([])
+  })
+})

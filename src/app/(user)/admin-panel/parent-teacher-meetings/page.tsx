@@ -17,7 +17,7 @@ import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { createMeetingEvent, listMeetingEvents } from '@/services/meetingsService'
 import type { MeetingEventSummary } from '@/services/types/meetings'
-import { dayShort, instantLabel, joinNames, parseTime } from '@/lib/meetings'
+import { dayShort, instantLabel, joinNames, parseTime, nextRound } from '@/lib/meetings'
 import MeetingPhasePill from '@/components/meetings/office/MeetingPhasePill'
 import ShowMeHow from '@/components/tours/ShowMeHow'
 import { useMeetingsStore } from '@/store/useMeetingsStore'
@@ -38,7 +38,8 @@ const ListContent: React.FC = () => {
       .then((res) => {
         if (!alive) return
         setEvents(res.data.events)
-        setSuggestions(res.data.suggestions)
+        // Only the next round: the calendar may list every round of the year.
+        setSuggestions(nextRound(res.data.suggestions))
       })
       .catch((err) => { if (alive) setError(err instanceof Error ? err.message : 'Could not load the meetings') })
     return () => { alive = false }

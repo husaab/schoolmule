@@ -94,6 +94,22 @@ export const placeLabel = (b: MeetingHow & { callFrom?: string | null }): string
   b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}${b.callFrom ? ` · calls from ${b.callFrom}` : ''}` : b.room
 
 
+const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000)
+
+/**
+ * The school calendar's next round of meetings: the first suggested date and
+ * the ones right after it (no more than `gapDays` apart, so a weekend between
+ * them is fine), not every round of the year.
+ */
+export function nextRound<T extends { date: string }>(suggestions: T[], gapDays = 3): T[] {
+  const out: T[] = []
+  for (const s of [...suggestions].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (out.length && daysBetween(out[out.length - 1].date, s.date) > gapDays) break
+    out.push(s)
+  }
+  return out
+}
+
 /** "Until 8:00 PM the evening before" */
 export const cutoffText = (cutoffMin: number | null): string =>
   cutoffMin == null ? 'until the meeting starts' : `until ${timeLabel(cutoffMin)} the evening before`
