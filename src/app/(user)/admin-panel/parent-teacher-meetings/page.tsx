@@ -19,6 +19,7 @@ import { createMeetingEvent, listMeetingEvents } from '@/services/meetingsServic
 import type { MeetingEventSummary } from '@/services/types/meetings'
 import { dayShort, instantLabel, joinNames, parseTime } from '@/lib/meetings'
 import MeetingPhasePill from '@/components/meetings/office/MeetingPhasePill'
+import ShowMeHow from '@/components/tours/ShowMeHow'
 
 const ListContent: React.FC = () => {
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -56,7 +57,10 @@ const ListContent: React.FC = () => {
               <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl">Parent–Teacher Meetings</h1>
               <p className="mt-1 text-slate-500">Set the days and hours, then open booking. Every family gets the invitation at the same moment.</p>
             </div>
-            <Button onClick={() => setCreating(true)}><PlusIcon className="h-4 w-4" /> New meetings</Button>
+            <div className="flex items-center gap-4">
+              <ShowMeHow tour="meetings-setup" />
+              <Button data-tour="meetings.new" onClick={() => setCreating(true)}><PlusIcon className="h-4 w-4" /> New meetings</Button>
+            </div>
           </div>
 
           {error ? (
@@ -163,7 +167,7 @@ const NewMeetingsModal: React.FC<{
           </Field>
         </FieldRow>
         <FormSection label={suggestions.length ? 'Days (from your school calendar)' : 'Days'}>
-          <div className="space-y-2">
+          <div data-tour="meetings.newDays" className="space-y-2">
             {days.map((d, i) => (
               <div key={i} className="flex flex-wrap items-end gap-2">
                 <label className="flex flex-col text-xs text-slate-600">Date<input type="date" className={`${inputClass} mt-1 !w-44`} value={d.date} onChange={(e) => update(i, { date: e.target.value })} /></label>
@@ -181,7 +185,7 @@ const NewMeetingsModal: React.FC<{
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button loading={saving} disabled={!days.some((d) => d.date)} onClick={save}>Create</Button>
+        <Button data-tour="meetings.create" loading={saving} disabled={!days.some((d) => d.date)} onClick={save}>Create</Button>
       </ModalFooter>
     </Modal>
   )

@@ -75,7 +75,7 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
   return (
     <div className="space-y-6">
       {/* When, where, how */}
-      <section className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
+      <section data-tour="meetings.banner" className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5 text-sm text-amber-950">
             <p className="text-base font-semibold">
@@ -93,7 +93,7 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
             </p>
           </div>
           {open && stillToBook > 0 && (
-            <Button variant="warning" onClick={() => setPlanOpen(true)} className="shrink-0">
+            <Button variant="warning" data-tour="meetings.plan" onClick={() => setPlanOpen(true)} className="shrink-0">
               <SparklesIcon className="h-4 w-4" /> Plan my visit
             </Button>
           )}
@@ -138,7 +138,7 @@ const ParentMeetings: React.FC<Props> = ({ event, onChange, notify, planOpen, se
 
       {/* Each child and their teachers */}
       {event.children.map((child) => (
-        <section key={child.studentId} className={card}>
+        <section key={child.studentId} data-tour="meetings.teachers" className={card}>
           <header className="flex items-center gap-3 border-b border-stone-100 px-5 py-4">
             <ChildAvatar studentId={child.studentId} name={child.name} size={40} />
             <div>
@@ -262,7 +262,7 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
     )
   } else if (!picking) {
     status = (
-      <Button variant="secondary" onClick={() => setPicking(true)} className="!py-1.5">Choose a time</Button>
+      <Button variant="secondary" data-tour="meetings.choose" onClick={() => setPicking(true)} className="!py-1.5">Choose a time</Button>
     )
   }
 
@@ -286,7 +286,7 @@ const TeacherRow: React.FC<RowProps> = ({ event, teacher, childId, separate, set
           )}
           <SlotPicker event={event} teacher={teacher} value={picked} onChange={setPicked} />
           <div className="mt-4 flex gap-2">
-            <Button variant="warning" disabled={!picked} loading={saving} onClick={book}>
+            <Button variant="warning" data-tour="meetings.book" disabled={!picked} loading={saving} onClick={book}>
               {picked ? `Book ${dayShort(event.days.find((d) => d.dayId === picked.dayId)!.date).split(',')[0]} ${timeLabel(picked.start)}` : 'Pick a time'}
             </Button>
             <Button variant="secondary" onClick={() => { setPicking(false); setPicked(null) }}>Close</Button>

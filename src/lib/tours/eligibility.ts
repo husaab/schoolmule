@@ -21,6 +21,7 @@ export function isAudience(def: TourDefinition, ctx: TourCtx): boolean {
   if (!def.audience.roles.some((r) => r.toUpperCase() === role)) return false
   if (def.audience.anyPermission?.length && !canAny(ctx.user, def.audience.anyPermission)) return false
   if (def.audience.schools?.length && !def.audience.schools.includes(ctx.user.school ?? '')) return false
+  if (def.audience.when?.some((c) => !ctx.conditions?.includes(c))) return false
   return stepsFor(def, ctx.platform).length > 0
 }
 

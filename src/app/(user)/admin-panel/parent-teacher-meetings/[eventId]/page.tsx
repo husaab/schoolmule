@@ -14,6 +14,7 @@ import BackLink from '@/components/shared/BackLink'
 import SetupTab from '@/components/meetings/office/SetupTab'
 import BoardTab from '@/components/meetings/office/BoardTab'
 import MeetingPhasePill from '@/components/meetings/office/MeetingPhasePill'
+import ShowMeHow from '@/components/tours/ShowMeHow'
 import { inputClass } from '@/components/shared/modalKit'
 import { getMeetingSetup, updateMeetingSettings } from '@/services/meetingsService'
 import type { MeetingSetup } from '@/services/types/meetings'
@@ -87,9 +88,12 @@ const EventContent: React.FC = () => {
                   )}
                   <p className="mt-1 text-slate-500">{setup.days.length ? joinNames(setup.days.map((d) => dayShort(d.date))) : 'No days yet'} · {setup.slotMinutes} minutes each</p>
                 </div>
-                <MeetingPhasePill phase={setup.phase} />
+                <div className="flex items-center gap-4">
+                  <ShowMeHow tour="meetings-setup" fromStep="setup-days" />
+                  <MeetingPhasePill phase={setup.phase} />
+                </div>
               </div>
-              <div className="mb-6 mt-5 flex gap-1 border-b border-slate-200" role="tablist">
+              <div data-tour="meetings.tabs" className="mb-6 mt-5 flex gap-1 border-b border-slate-200" role="tablist">
                 {(['setup', 'board'] as const).map((t) => (
                   <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setParams({ tab: t === 'setup' ? null : t })}
                     className={`-mb-px border-b-2 px-4 py-2.5 text-sm ${tab === t ? 'border-cyan-600 font-medium text-cyan-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>

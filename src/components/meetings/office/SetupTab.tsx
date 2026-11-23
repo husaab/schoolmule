@@ -94,7 +94,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <div className="min-w-0 flex-1 space-y-5">
         {/* Days and school hours */}
-        <section className={`${card} p-5`}>
+        <section data-tour="meetings.setupDays" className={`${card} p-5`}>
           <h2 className="text-base font-semibold text-slate-900">Days and school hours</h2>
           <p className="mt-1 text-sm text-slate-500">Every teacher uses these unless you give them their own days and hours in Teachers, below.</p>
           <div className="mt-4 space-y-3">
@@ -153,7 +153,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
         </section>
 
         {/* Teachers */}
-        <section className={`${card} p-5`}>
+        <section data-tour="meetings.setupTeachers" className={`${card} p-5`}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-base font-semibold text-slate-900">Teachers taking part · {taking.length} of {setup.teachers.length}</h2>
             <span className="text-sm text-slate-500">Click a teacher’s days to give them their own hours, breaks or meeting length.</span>
@@ -201,7 +201,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
 
       {/* Side */}
       <aside className="flex w-full flex-col gap-4 lg:w-80">
-        <section className={`${card} p-5`}>
+        <section data-tour="meetings.openBooking" className={`${card} p-5`}>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{isOpen ? 'Booking is open' : 'When booking opens'}</p>
           <p className="mb-4 mt-1 text-xl font-bold text-slate-900">
             {isOpen ? (setup.openedAt ? `Since ${instantLabel(setup.openedAt)}` : 'Open') : setup.status === 'scheduled' && setup.opensAt ? instantLabel(setup.opensAt) : 'Not scheduled'}

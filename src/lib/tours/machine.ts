@@ -108,7 +108,9 @@ function open(rt: RunnableTour, base: Running, step: Step, effects: TourEffect[]
 function enter(rt: RunnableTour, i: number, now: number, lead: TourEffect[]): Result {
   const at = Math.max(0, Math.min(i, rt.steps.length - 1))
   const step = rt.steps[at]
-  const base: Running = { phase: 'running', tourId: rt.def.id, i: at, sub: 'waiting', since: now, typed: false }
+  // A type step that needs nothing typed (typeMin 0) starts unlocked.
+  const typed = step.kind === 'type' && step.typeMin === 0
+  const base: Running = { phase: 'running', tourId: rt.def.id, i: at, sub: 'waiting', since: now, typed }
   const effects = [...lead]
   if (!step.where?.nav) effects.push({ e: 'closeNav' })
   if (step.where?.route) {

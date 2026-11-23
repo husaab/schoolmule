@@ -14,7 +14,25 @@ export type TourPlatform = 'web' | 'app'
  * A page, by name rather than by URL: the web and the app route differently,
  * so each host maps a name to its own path (components/tours/tourRoutes).
  */
-export type RouteName = 'home'
+export type RouteName =
+  | 'home'
+  /** A parent's Parent–teacher meetings page. */
+  | 'meetings'
+  /** A teacher's My Meetings page. */
+  | 'my-meetings'
+  /** The office's list of meetings events (Admin Panel → Planning). */
+  | 'meetings-office'
+
+/**
+ * Something that is true for this person right now, which a tour can wait
+ * for (Audience.when). Tours stay plain data: they only name it, and each
+ * host works it out (components/tours/tourConditions).
+ *
+ * - 'meetings-booking': a parent can book parent–teacher meetings right now.
+ * - 'meetings-teaching': a staff member takes part in parent–teacher
+ *   meetings that are still to come.
+ */
+export type TourCondition = 'meetings-booking' | 'meetings-teaching'
 
 export interface Audience {
   /** Active views that see the tour (uppercase, as the session spells them). */
@@ -23,6 +41,11 @@ export interface Audience {
   anyPermission?: Permission[]
   /** Limit to these schools (the school enum value). */
   schools?: string[]
+  /**
+   * Only while all of these hold (TourCtx.conditions): until then the tour
+   * isn't offered, listed in the ? menu or startable from Show me how.
+   */
+  when?: TourCondition[]
 }
 
 export interface Offer {
@@ -65,7 +88,11 @@ export interface Step {
   where?: Where
   /** Sends, publishes or books something for real: hides "Do it for me". */
   realAction?: boolean
-  /** Type steps: characters needed before Next unlocks. Default 3. */
+  /**
+   * Type steps: characters needed before Next unlocks. Default 3. 0 opens the
+   * box for changes with Next unlocked at once (a form that may already be
+   * right, like days filled in from the calendar).
+   */
   typeMin?: number
   placement?: 'auto' | 'top' | 'bottom' | 'left' | 'right'
   /** Only on these platforms (welcome tours point at different nav on each). */
@@ -103,6 +130,8 @@ export interface TourCtx {
   blocked: boolean
   /** The page the person is on, when it has a tour route name. */
   here: RouteName | null
+  /** What holds for them right now (Audience.when). None when absent. */
+  conditions?: readonly TourCondition[]
 }
 
 export type TourStatus = 'offered' | 'in_progress' | 'completed' | 'dismissed'

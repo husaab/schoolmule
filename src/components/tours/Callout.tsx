@@ -70,9 +70,11 @@ export default function Callout({ step, index, count, sub, typed, rect, tone, nu
     step.kind === 'click'
       ? `${verb} the highlighted spot to go on.`
       : step.kind === 'type'
-        ? typed
-          ? 'Looks good. Choose Next when you’re ready.'
-          : 'Type in the highlighted box.'
+        ? step.typeMin === 0
+          ? 'Change anything you need here, then choose Next.'
+          : typed
+            ? 'Looks good. Choose Next when you’re ready.'
+            : 'Type in the highlighted box.'
         : null
 
   const arrowStyle: React.CSSProperties | undefined =

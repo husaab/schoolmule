@@ -4,10 +4,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import type { TourCtx } from '@/lib/tours'
+import { useAnyModalOpen } from '@/components/shared/modal'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { usePatchNotesStore } from '@/store/usePatchNotesStore'
 import { useTourStore } from '@/store/useTourStore'
 import { useUserStore } from '@/store/useUserStore'
+import { useTourConditions } from './tourConditions'
 import { routeAt } from './tourRoutes'
 
 /** The time, refreshed each minute (offer windows and Later are measured in days). */
@@ -29,6 +31,8 @@ export function useTourCtx(): TourCtx {
   const createdAt = useTourStore((s) => s.createdAt)
   const skewMs = useTourStore((s) => s.skewMs)
   const pathname = usePathname()
+  const conditions = useTourConditions()
+  const dialogOpen = useAnyModalOpen()
   return useMemo(
     () => ({
       now: new Date(clock + skewMs),
@@ -37,9 +41,12 @@ export function useTourCtx(): TourCtx {
       userCreatedAt: createdAt,
       impersonating,
       // Students have no What's New: AuthGuard marks the check done for them.
-      blocked: !checked || whatsNewOpen,
+      // Never offer over an open dialog either (a link can open one, like the
+      // meetings invitation's Plan my visit).
+      blocked: !checked || whatsNewOpen || dialogOpen,
       here: routeAt(pathname, user.role),
+      conditions,
     }),
-    [clock, user, createdAt, skewMs, impersonating, checked, whatsNewOpen, pathname]
+    [clock, user, createdAt, skewMs, impersonating, checked, whatsNewOpen, dialogOpen, pathname, conditions]
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useEffect, useId, useRef, useState } from 'react'
+import { ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { createPortal } from 'react-dom'
 
@@ -31,6 +31,19 @@ interface ModalProps {
 // scroll-locked until the last of them closes.
 const openModals: string[] = []
 let scrollLocks = 0
+const openListeners = new Set<() => void>()
+const openChanged = () => openListeners.forEach((listener) => listener())
+
+/** Whether any of these modals is open. Guided tours hold their New card until it closes. */
+export const useAnyModalOpen = (): boolean =>
+  useSyncExternalStore(
+    (listener) => {
+      openListeners.add(listener)
+      return () => openListeners.delete(listener)
+    },
+    () => openModals.length > 0,
+    () => false
+  )
 let overflowBeforeLock = ''
 
 const lockBodyScroll = () => {
@@ -98,6 +111,7 @@ const Modal = ({
   useEffect(() => {
     if (!isOpen) return
     openModals.push(id)
+    openChanged()
     lockBodyScroll()
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || openModals[openModals.length - 1] !== id) return
@@ -113,6 +127,7 @@ const Modal = ({
       document.removeEventListener('keydown', handleKeyDown)
       const at = openModals.lastIndexOf(id)
       if (at !== -1) openModals.splice(at, 1)
+      openChanged()
       unlockBodyScroll()
     }
   }, [isOpen, id])

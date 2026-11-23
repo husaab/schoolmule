@@ -88,6 +88,17 @@ describe('tour machine', () => {
     expect(reduce(typed.state, { t: 'NEXT' }, env()).state).toMatchObject({ i: 5 })
   })
 
+  it('a type step that needs nothing typed (typeMin 0) starts unlocked', () => {
+    const form: RunnableTour = {
+      def: { ...def, id: 'form', steps: [{ id: 'days', kind: 'type', target: 'f.days', typeMin: 0, title: 'Days', body: 'Check them.' }, def.steps[0]] },
+      steps: [{ id: 'days', kind: 'type', target: 'f.days', typeMin: 0, title: 'Days', body: 'Check them.' }, def.steps[0]],
+    }
+    const started = reduce(IDLE, { t: 'START', tourId: 'form' }, { now: 0, tour: () => form })
+    expect(started.state).toMatchObject({ i: 0, typed: true })
+    const ready = reduce(started.state, { t: 'PLACED', ok: true }, { now: 0, tour: () => form })
+    expect(reduce(ready.state, { t: 'NEXT' }, { now: 0, tour: () => form }).state).toMatchObject({ i: 1 })
+  })
+
   it('Do it for me clicks and moves on, focuses a type field, and never runs a real action', () => {
     const click = reduce(at(1), { t: 'DO_IT' }, env())
     expect(click.effects[0]).toEqual({ e: 'doIt', target: 'nav.classes', kind: 'click' })

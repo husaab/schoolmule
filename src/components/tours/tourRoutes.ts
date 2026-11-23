@@ -16,13 +16,20 @@ export function tourPath(route: RouteName, role: string | null): string {
   switch (route) {
     case 'home':
       return HOME[role ?? ''] ?? '/dashboard'
+    case 'meetings':
+      return '/parent/meetings'
+    case 'my-meetings':
+      return '/my-meetings'
+    case 'meetings-office':
+      return '/admin-panel/parent-teacher-meetings'
   }
 }
 
+const NAMED: RouteName[] = ['home', 'meetings', 'my-meetings', 'meetings-office']
+
 /** The route name of the page at `pathname`, if it has one. */
 export function routeAt(pathname: string, role: string | null): RouteName | null {
-  const clean = pathname.replace(/\/+$/, '') || '/'
-  return clean === tourPath('home', role) ? 'home' : null
+  return NAMED.find((name) => samePath(pathname, tourPath(name, role))) ?? null
 }
 
 export const samePath = (a: string, b: string) => (a.replace(/\/+$/, '') || '/') === (b.replace(/\/+$/, '') || '/')

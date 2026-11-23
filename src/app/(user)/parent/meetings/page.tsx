@@ -10,6 +10,7 @@ import ParentPageShell from '@/components/parent/ParentPageShell'
 import ParentEmptyState from '@/components/parent/ParentEmptyState'
 import Spinner from '@/components/Spinner'
 import ParentMeetings from '@/components/meetings/parent/ParentMeetings'
+import ShowMeHow from '@/components/tours/ShowMeHow'
 import { useMeetingsStore } from '@/store/useMeetingsStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -41,7 +42,12 @@ const MeetingsContent: React.FC = () => {
   const subtitle = event ? joinNames(event.days.map((d) => dayShort(d.date))) : 'Book a time with each of your children\'s teachers'
 
   return (
-    <ParentPageShell title="Parent–Teacher Meetings" subtitle={subtitle} badge={{ icon: ChatBubbleLeftRightIcon, label: 'In person' }}>
+    <ParentPageShell
+      title="Parent–Teacher Meetings"
+      subtitle={subtitle}
+      badge={{ icon: ChatBubbleLeftRightIcon, label: 'In person' }}
+      actions={<ShowMeHow tour="parent-teacher-meetings" className="!text-amber-800 hover:!text-amber-900" />}
+    >
       {loading && !loaded ? (
         <div className="flex justify-center py-24"><Spinner size="lg" /></div>
       ) : error ? (

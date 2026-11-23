@@ -76,7 +76,7 @@ const SlotPicker: React.FC<Props> = ({ event, teacher, value, onChange, exceptBo
       {times.length === 0 ? (
         <p className="text-sm text-slate-500">No times left on {dayId ? weekdayShort(event.days.find((d) => d.dayId === dayId)!.date) : 'these days'}.</p>
       ) : (
-        <div className="space-y-3">
+        <div data-tour="meetings.times" data-tour-choices="" className="space-y-3">
           {morning.length > 0 && <div className="flex flex-wrap gap-2">{morning.map(chip)}</div>}
           {afternoon.length > 0 && <div className="flex flex-wrap gap-2">{afternoon.map(chip)}</div>}
         </div>

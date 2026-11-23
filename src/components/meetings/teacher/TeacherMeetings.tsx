@@ -140,7 +140,7 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-      <section className={`${card} min-w-0 flex-1`}>
+      <section data-tour="meetings.schedule" className={`${card} min-w-0 flex-1`}>
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1" role="tablist">
             {event.days.map((d) => (
@@ -196,7 +196,7 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
                             heading={s.firstName.toUpperCase()}
                             items={menuFor(s)}
                             trigger={
-                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                              <span data-tour="meetings.summary" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
                                 <DocumentTextIcon className="h-4 w-4" />
                                 {busy === `summary:${s.studentId}` ? 'Opening…' : b.students.length > 1 ? `${s.firstName}'s summary` : 'Summary'}
                               </span>
@@ -216,7 +216,7 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
                     <>
                       <span className="flex-1 text-sm text-slate-400">Open</span>
                       {!slot.past && (
-                        <button type="button" disabled={busy === `slot:${slot.start}`} onClick={() => void close(slot)} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Close</button>
+                        <button type="button" data-tour="meetings.close" disabled={busy === `slot:${slot.start}`} onClick={() => void close(slot)} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100">Close</button>
                       )}
                     </>
                   )}
@@ -228,7 +228,7 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
       </section>
 
       <aside className="flex w-full flex-col gap-4 lg:w-80">
-        <section className={`${card} p-5`}>
+        <section data-tour="meetings.print" className={`${card} p-5`}>
           <h2 className="mb-1 text-base font-semibold text-slate-900">Print my day</h2>
           <p className="mb-4 text-sm text-slate-500">One PDF: this schedule, then each family’s Student summary in meeting order.</p>
           <Button className="w-full" loading={busy === 'print'} disabled={day.booked === 0} onClick={() => void print()}>
@@ -236,7 +236,7 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
           </Button>
           {event.emailTeacherList && <p className="mt-3 text-xs text-slate-500">You’ll also get each day’s list by email the evening before, once booking closes.</p>}
         </section>
-        <section className={`${card} p-5`}>
+        <section data-tour="meetings.hours" className={`${card} p-5`}>
           <h2 className="mb-1 text-base font-semibold text-slate-900">My hours</h2>
           <p className="mb-3 text-sm text-slate-500">{event.canEditHours ? 'You and the office can both change these.' : 'The office sets the hours for these meetings.'}</p>
           <dl className="divide-y divide-slate-100 text-sm">

@@ -9,6 +9,7 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import Spinner from '@/components/Spinner'
 import TeacherMeetings from '@/components/meetings/teacher/TeacherMeetings'
+import ShowMeHow from '@/components/tours/ShowMeHow'
 import { useMeetingsStore } from '@/store/useMeetingsStore'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { useUserStore } from '@/store/useUserStore'
@@ -46,6 +47,7 @@ const MyMeetingsContent: React.FC = () => {
                 {event ? `${event.title} · ${joinNames(event.days.map((d) => dayShort(d.date)))}` : 'Parent–teacher meetings'}
               </p>
             </div>
+            <ShowMeHow tour="my-meetings" />
             {events.length > 1 && (
               <div className="flex gap-2">
                 {events.map((e) => (

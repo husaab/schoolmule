@@ -36,6 +36,14 @@ describe('isAudience', () => {
     expect(isAudience(tour({ id: 'x', audience: { roles: ['TEACHER'], anyPermission: ['students'] } }), ctx())).toBe(true)
     expect(isAudience(tour({ id: 'x', audience: { roles: ['TEACHER'], schools: ['OTHER'] } }), ctx())).toBe(false)
   })
+  it('waits for everything in audience.when (offer, menu and Show me how)', () => {
+    const meetings = tour({ id: 'x', audience: { roles: ['TEACHER'], when: ['meetings-teaching'] } })
+    expect(isAudience(meetings, ctx())).toBe(false)
+    expect(isAudience(meetings, ctx({ conditions: ['meetings-booking'] }))).toBe(false)
+    expect(isAudience(meetings, ctx({ conditions: ['meetings-teaching'] }))).toBe(true)
+    expect(listForMenu(ctx(), {}, [meetings])).toEqual([])
+    expect(listForMenu(ctx({ conditions: ['meetings-teaching'] }), {}, [meetings]).map((m) => m.def.id)).toEqual(['x'])
+  })
   it('needs at least one step on this platform', () => {
     expect(isAudience(tour({ id: 'x', steps: [step('a', ['app'])] }), ctx())).toBe(false)
   })

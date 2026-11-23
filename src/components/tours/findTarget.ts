@@ -22,11 +22,32 @@ export function findTarget(name: string | null | undefined): HTMLElement | null 
   return null
 }
 
+/**
+ * What "Do it for me" presses: the target itself, or, for a group of choices
+ * marked data-tour-choices (a row of times), its first choice. A click on the
+ * group's box would choose nothing.
+ */
+export function pressable(el: HTMLElement): HTMLElement {
+  if (!el.hasAttribute('data-tour-choices')) return el
+  return el.querySelector<HTMLElement>('button:not([disabled]), a[href], [role="button"]:not([aria-disabled="true"])') ?? el
+}
+
 /** Scroll the target into view once, clear of the fixed top bar. */
 export function ensureVisible(el: HTMLElement): void {
   const r = el.getBoundingClientRect()
   const inView = r.top >= NAVBAR_PX && r.bottom <= window.innerHeight - 16
-  if (!inView) el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  if (inView) return
+  const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth'
+  // Taller than the window (a whole day's schedule): show its top, under the
+  // top bar, rather than the middle of it.
+  if (r.height > window.innerHeight - NAVBAR_PX - 16) {
+    const before = el.style.scrollMarginTop
+    el.style.scrollMarginTop = `${NAVBAR_PX}px`
+    el.scrollIntoView({ block: 'start', inline: 'nearest', behavior })
+    el.style.scrollMarginTop = before
+    return
+  }
+  el.scrollIntoView({ block: 'center', inline: 'nearest', behavior })
 }
 
 /** Focus the field a type step points at (the element itself, or the first field inside it). */

@@ -16,7 +16,7 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { TOUR_PLATFORM, useTourStore } from '@/store/useTourStore'
 import { useUserStore } from '@/store/useUserStore'
 import Callout from './Callout'
-import { ensureVisible, findTarget, focusField, isTypingIn, typedLength } from './findTarget'
+import { ensureVisible, findTarget, focusField, isTypingIn, pressable, typedLength } from './findTarget'
 import Spotlight, { spotRect, type SpotRect } from './Spotlight'
 import { DoneCard, OfferCard, PausedPill } from './TourCards'
 import { samePath, tourPath } from './tourRoutes'
@@ -153,8 +153,9 @@ export default function TourHost() {
           const el = findTarget(effect.target)
           if (!el) break
           if (effect.kind === 'click') {
-            noteLink(el)
-            el.click()
+            const press = pressable(el)
+            noteLink(press)
+            press.click()
           } else focusField(el)
           break
         }
@@ -173,7 +174,7 @@ export default function TourHost() {
   }, [pathname, dispatch])
 
   // Offer at most one tour, a moment after the page settles.
-  const { here, blocked } = ctx
+  const { here, blocked, conditions } = ctx
   useEffect(() => {
     if (!active || !loaded || state.phase !== 'idle') return
     const def = pickOffer(ctx, progress, allTours(), false)
@@ -184,7 +185,7 @@ export default function TourHost() {
     return () => window.clearTimeout(timer)
     // ctx is rebuilt each render; these are the parts that matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, loaded, state.phase, here, blocked, progress, user.role, ctx.userCreatedAt, dispatch])
+  }, [active, loaded, state.phase, here, blocked, conditions, progress, user.role, ctx.userCreatedAt, dispatch])
 
   // A preview or sign-out mid-tour: drop it.
   useEffect(() => {
