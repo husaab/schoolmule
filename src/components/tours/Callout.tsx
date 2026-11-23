@@ -4,7 +4,7 @@
 // away from the target, so it never covers the thing to tap. Where exactly:
 // placeCallout.
 'use client'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CursorArrowRaysIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import type { RunSub, Step } from '@/lib/tours'
 import { MARGIN, placeCallout, type Placement } from './placeCallout'
@@ -38,20 +38,31 @@ export default function Callout({ step, index, count, sub, typed, rect, tone, nu
   const touch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
   const verb = touch ? 'Tap' : 'Click'
 
-  useLayoutEffect(() => {
+  // Place the bubble now, and again whenever its own size changes (its step,
+  // the missing note, the typed hint, fonts arriving). One observer for the
+  // bubble's life; the latest rect and placement are read from a ref, so a
+  // target moving every frame (the page scrolling) doesn't rebuild it.
+  const latest = useRef({ rect, placement: step.placement })
+  const place = useCallback(() => {
     const el = ref.current
     if (!el) return
-    const update = () => {
-      const next = placeCallout(rect, el.offsetWidth, el.offsetHeight, step.placement, window.innerWidth, window.innerHeight)
-      setPos((p) => (p && p.x === next.x && p.y === next.y && p.side === next.side && p.arrow === next.arrow && p.sheet === next.sheet ? p : next))
-    }
-    update()
-    // The bubble's size changes with its step, the missing note, the typed
-    // hint, and anything else that reflows it (fonts arriving): place it again.
-    const resized = new ResizeObserver(update)
+    const { rect: r, placement } = latest.current
+    const next = placeCallout(r, el.offsetWidth, el.offsetHeight, placement, window.innerWidth, window.innerHeight)
+    setPos((p) => (p && p.x === next.x && p.y === next.y && p.side === next.side && p.arrow === next.arrow && p.sheet === next.sheet ? p : next))
+  }, [])
+
+  useLayoutEffect(() => {
+    latest.current = { rect, placement: step.placement }
+    place()
+  }, [rect, step.id, step.placement, sub, typed, place])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const resized = new ResizeObserver(place)
     resized.observe(el)
     return () => resized.disconnect()
-  }, [rect, step.id, step.placement, sub, typed])
+  }, [place])
 
   useEffect(() => {
     const el = ref.current

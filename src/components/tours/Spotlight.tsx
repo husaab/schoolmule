@@ -6,6 +6,7 @@
 'use client'
 
 const PAD = 6
+const RING_GROW_PX = 10
 
 /** The dim over the page: light enough that the page stays readable around the highlight. */
 export const TOUR_SCRIM = 'rgba(15,23,42,0.3)'
@@ -17,7 +18,7 @@ export interface SpotRect {
   height: number
 }
 
-export function spotRect(r: DOMRect | null): SpotRect | null {
+export function spotRect(r: { left: number; top: number; right: number; bottom: number } | null): SpotRect | null {
   if (!r) return null
   const vw = window.innerWidth
   const vh = window.innerHeight
@@ -63,7 +64,21 @@ export default function Spotlight({
           boxShadow: `0 0 0 2px rgba(255,255,255,0.92), 0 0 0 9999px ${TOUR_SCRIM}`,
         }}
       >
-        {open && <span className="tour-ring absolute -inset-[3px] border-2" style={{ borderColor: ring, borderRadius: radius + 3 }} />}
+        {open && (
+          <span
+            className="tour-ring absolute -inset-[3px] border-2"
+            style={
+              {
+                borderColor: ring,
+                borderRadius: radius + 3,
+                // Grows about RING_GROW_PX each way, whatever the size: a percentage
+                // flashes a big frame across the screen around a tall list.
+                '--tour-ring-x': 1 + (2 * RING_GROW_PX) / Math.max(1, width + 6),
+                '--tour-ring-y': 1 + (2 * RING_GROW_PX) / Math.max(1, height + 6),
+              } as React.CSSProperties
+            }
+          />
+        )}
       </div>
       <div className={catcher} style={{ left: 0, top: 0, right: 0, height: top }} onClick={onStray} />
       <div className={catcher} style={{ left: 0, top: top + height, right: 0, bottom: 0 }} onClick={onStray} />

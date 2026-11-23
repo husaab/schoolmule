@@ -22,6 +22,56 @@ export function findTarget(name: string | null | undefined): HTMLElement | null 
   return null
 }
 
+export interface Box {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+/**
+ * The boxes that cut off what the target shows: every ancestor that clips its
+ * overflow, such as a dialog's scrolling body. The page itself (body, html) is
+ * the window, which visiblePart always applies.
+ */
+export function clippersOf(el: HTMLElement): HTMLElement[] {
+  const out: HTMLElement[] = []
+  for (let at = el.parentElement; at && at !== document.body && at !== document.documentElement; at = at.parentElement) {
+    const style = getComputedStyle(at)
+    if (style.overflowX !== 'visible' || style.overflowY !== 'visible') out.push(at)
+  }
+  return out
+}
+
+/**
+ * The part of the target someone can actually see: inside the window and
+ * inside every clipping box (inside their scrollbars). A list taller than a
+ * dialog's body is highlighted where it shows, not down past the dialog's
+ * buttons, and the highlight stays put while the list scrolls under it. Once
+ * the target has scrolled out of a box, a sliver at that box's edge.
+ */
+export function visiblePart(el: HTMLElement, clippers: readonly HTMLElement[]): Box {
+  // What can show at all: the window, cut down by each clipping box.
+  const clip: Box = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }
+  for (const box of clippers) {
+    const b = box.getBoundingClientRect()
+    const x = b.left + box.clientLeft
+    const y = b.top + box.clientTop
+    clip.left = Math.max(clip.left, x)
+    clip.top = Math.max(clip.top, y)
+    clip.right = Math.min(clip.right, x + box.clientWidth)
+    clip.bottom = Math.min(clip.bottom, y + box.clientHeight)
+  }
+  return cut(el.getBoundingClientRect(), clip)
+}
+
+/** `r` inside `clip`; when none of it is inside, a zero-width or zero-height edge on the side it went. */
+export function cut(r: Box, clip: Box): Box {
+  const [left, right] = r.right <= clip.left ? [clip.left, clip.left] : r.left >= clip.right ? [clip.right, clip.right] : [Math.max(r.left, clip.left), Math.min(r.right, clip.right)]
+  const [top, bottom] = r.bottom <= clip.top ? [clip.top, clip.top] : r.top >= clip.bottom ? [clip.bottom, clip.bottom] : [Math.max(r.top, clip.top), Math.min(r.bottom, clip.bottom)]
+  return { left, top, right, bottom }
+}
+
 /**
  * What "Do it for me" presses: the target itself, or, for a group of choices
  * marked data-tour-choices (a row of times), its first choice. A click on the

@@ -16,7 +16,7 @@ import { useSidebarStore } from '@/store/useSidebarStore'
 import { TOUR_PLATFORM, useTourStore } from '@/store/useTourStore'
 import { useUserStore } from '@/store/useUserStore'
 import Callout from './Callout'
-import { ensureVisible, findTarget, focusField, isTypingIn, pressable, typedLength } from './findTarget'
+import { clippersOf, ensureVisible, findTarget, focusField, isTypingIn, pressable, typedLength, visiblePart } from './findTarget'
 import Spotlight, { spotRect, type SpotRect } from './Spotlight'
 import { DoneCard, OfferCard, PausedPill } from './TourCards'
 import { samePath, tourPath } from './tourRoutes'
@@ -218,6 +218,9 @@ export default function TourHost() {
     let frame = 0
     let lastKey = ''
     let scrolledFor = ''
+    // The target's clipping boxes, worked out again only when the target changes.
+    let clipFor: HTMLElement | null = null
+    let clippers: HTMLElement[] = []
     const tick = () => {
       const s = useTourStore.getState().state
       if (s.phase !== 'running') return
@@ -236,8 +239,14 @@ export default function TourHost() {
             ensureVisible(el)
           }
           if (s.sub !== 'ready') useTourStore.getState().dispatch({ t: 'PLACED', ok: true })
-          const r = el.getBoundingClientRect()
-          const k = [key, ...[r.left, r.top, r.width, r.height, window.innerWidth, window.innerHeight].map(Math.round)].join(',')
+          if (el !== clipFor) {
+            clipFor = el
+            clippers = clippersOf(el)
+          }
+          // Only the part that shows: a list taller than its dialog is lit
+          // inside the dialog, and stays still while it scrolls under it.
+          const r = visiblePart(el, clippers)
+          const k = [key, ...[r.left, r.top, r.right, r.bottom, window.innerWidth, window.innerHeight].map(Math.round)].join(',')
           if (k !== lastKey) {
             lastKey = k
             setSpot({ key, rect: spotRect(r) })

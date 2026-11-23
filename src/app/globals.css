@@ -974,7 +974,8 @@ body {
 @keyframes tour-fade { from { opacity: 0 } }
 @keyframes tour-pop { from { opacity: 0; transform: translate(-50%, -46%) scale(0.97) } }
 @keyframes tour-pill { from { opacity: 0; transform: translateY(8px) } }
-@keyframes tour-ring { 0% { opacity: 0.95; transform: scale(1) } 100% { opacity: 0; transform: scale(1.12) } }
+/* The ring grows by the same few pixels on a button or a whole list (Spotlight sets the scales from its size). */
+@keyframes tour-ring { 0% { opacity: 0.95; transform: scale(1) } 100% { opacity: 0; transform: scale(var(--tour-ring-x, 1.12), var(--tour-ring-y, 1.12)) } }
 @keyframes tour-ring-soft { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.04) } }
 @keyframes tour-nudge { 20% { translate: -6px 0 } 40% { translate: 6px 0 } 60% { translate: -3px 0 } 80% { translate: 3px 0 } }
 @keyframes tour-check { from { opacity: 0; transform: scale(0.4) } }
