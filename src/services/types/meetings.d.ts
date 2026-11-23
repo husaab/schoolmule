@@ -234,8 +234,12 @@ export interface MeetingSetup extends MeetingEventBase {
   teachers: SetupTeacher[]
   stats: {
     families: number
+    /** Families with a parent whose account works: they book with one tap. */
     oneTap: number
+    /** Families whose parents have an address but no working account: they create one first. */
     createAccount: number
+    /** Families with no address on file: no invitation; the office books for them. */
+    noEmail?: number
     times: number
     bookings: number
     familiesBooked: number

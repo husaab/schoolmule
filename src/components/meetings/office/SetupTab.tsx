@@ -221,6 +221,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
             <Stat label={isOpen ? 'Families booked' : 'Families invited'} value={isOpen ? `${setup.stats.familiesBooked} of ${setup.stats.families}` : setup.stats.families} />
             {!isOpen && <Stat label="Book with one tap" value={setup.stats.oneTap} />}
             {!isOpen && <Stat label="Create an account first" value={setup.stats.createAccount} />}
+            {!isOpen && (setup.stats.noEmail ?? 0) > 0 && <Stat label="No email on file" value={setup.stats.noEmail} />}
             <Stat label="Times available" value={setup.stats.times} />
             {isOpen && <Stat label="Meetings booked" value={setup.stats.bookings} />}
           </dl>
