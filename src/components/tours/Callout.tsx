@@ -1,74 +1,15 @@
 // src/components/tours/Callout.tsx
 // The step's bubble: where you are, what this is, what to do. Beside the
 // target on a wide screen; a sheet docked to the top or bottom on a phone,
-// away from the target, so it never covers the thing to tap.
+// away from the target, so it never covers the thing to tap. Where exactly:
+// placeCallout.
 'use client'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CursorArrowRaysIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import type { RunSub, Step } from '@/lib/tours'
+import { MARGIN, placeCallout, type Placement } from './placeCallout'
 import type { SpotRect } from './Spotlight'
 import type { TourTone } from './tourTone'
-
-const GAP = 14
-const MARGIN = 12
-const PHONE_PX = 640
-
-type Side = 'top' | 'bottom' | 'left' | 'right' | 'none'
-interface Placement {
-  x: number
-  y: number
-  side: Side
-  arrow: number
-  sheet: boolean
-}
-
-function place(rect: SpotRect | null, w: number, h: number, pref: Step['placement']): Placement {
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  if (vw < PHONE_PX) {
-    const below = !rect || rect.top + rect.height / 2 < vh / 2
-    return { x: MARGIN, y: below ? vh - h - MARGIN : MARGIN + 8, side: 'none', arrow: 0, sheet: true }
-  }
-  if (!rect) return { x: (vw - w) / 2, y: (vh - h) / 2, side: 'none', arrow: 0, sheet: false }
-  const cx = rect.left + rect.width / 2
-  const cy = rect.top + rect.height / 2
-  const fits: Record<Exclude<Side, 'none'>, boolean> = {
-    right: rect.left + rect.width + GAP + w <= vw - MARGIN,
-    bottom: rect.top + rect.height + GAP + h <= vh - MARGIN,
-    top: rect.top - GAP - h >= MARGIN,
-    left: rect.left - GAP - w >= MARGIN,
-  }
-  const order: Array<Exclude<Side, 'none'>> = [
-    ...(pref && pref !== 'auto' ? [pref] : []),
-    'right',
-    'bottom',
-    'top',
-    'left',
-  ]
-  const side = order.find((s) => fits[s])
-  const clampX = (x: number) => Math.max(MARGIN, Math.min(vw - w - MARGIN, x))
-  const clampY = (y: number) => Math.max(MARGIN, Math.min(vh - h - MARGIN, y))
-  switch (side) {
-    case 'right': {
-      const y = clampY(cy - h / 2)
-      return { x: rect.left + rect.width + GAP, y, side, arrow: Math.max(18, Math.min(h - 18, cy - y)), sheet: false }
-    }
-    case 'left': {
-      const y = clampY(cy - h / 2)
-      return { x: rect.left - GAP - w, y, side, arrow: Math.max(18, Math.min(h - 18, cy - y)), sheet: false }
-    }
-    case 'bottom': {
-      const x = clampX(cx - w / 2)
-      return { x, y: rect.top + rect.height + GAP, side, arrow: Math.max(18, Math.min(w - 18, cx - x)), sheet: false }
-    }
-    case 'top': {
-      const x = clampX(cx - w / 2)
-      return { x, y: rect.top - GAP - h, side, arrow: Math.max(18, Math.min(w - 18, cx - x)), sheet: false }
-    }
-    default:
-      return { x: clampX(cx - w / 2), y: vh - h - MARGIN, side: 'none', arrow: 0, sheet: false }
-  }
-}
 
 export interface CalloutProps {
   step: Step
@@ -100,9 +41,16 @@ export default function Callout({ step, index, count, sub, typed, rect, tone, nu
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const next = place(rect, el.offsetWidth, el.offsetHeight, step.placement)
-    setPos((p) => (p && p.x === next.x && p.y === next.y && p.side === next.side && p.arrow === next.arrow && p.sheet === next.sheet ? p : next))
-    // The bubble's size changes with its step, the missing note and the typed hint.
+    const update = () => {
+      const next = placeCallout(rect, el.offsetWidth, el.offsetHeight, step.placement, window.innerWidth, window.innerHeight)
+      setPos((p) => (p && p.x === next.x && p.y === next.y && p.side === next.side && p.arrow === next.arrow && p.sheet === next.sheet ? p : next))
+    }
+    update()
+    // The bubble's size changes with its step, the missing note, the typed
+    // hint, and anything else that reflows it (fonts arriving): place it again.
+    const resized = new ResizeObserver(update)
+    resized.observe(el)
+    return () => resized.disconnect()
   }, [rect, step.id, step.placement, sub, typed])
 
   useEffect(() => {
