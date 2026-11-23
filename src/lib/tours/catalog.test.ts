@@ -3,7 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { allTours, tourProblems } from './index'
+import { allTours, getTour, isAudience, pickOffer, tourProblems, type TourCtx } from './index'
 import { CATALOG as CATALOG_FOR_TEST } from './catalog'
 
 const dir = join(__dirname, 'catalog')
@@ -42,5 +42,34 @@ describe('tourProblems', () => {
     expect(problems.join('\n')).toMatch(/unique/)
     expect(problems.join('\n')).toMatch(/surface "nope"/)
     expect(problems.join('\n')).toMatch(/feature tour needs offer.from/)
+  })
+})
+
+describe('progress-report-layout', () => {
+  const at = (user: TourCtx['user'], userCreatedAt = '2026-09-01T12:00:00Z'): TourCtx => ({
+    now: new Date('2026-11-23T15:00:00Z'),
+    platform: 'web',
+    user,
+    userCreatedAt,
+    impersonating: false,
+    blocked: false,
+    here: 'home',
+  })
+  const office = { role: 'ADMIN', isFullAdmin: true, school: 'ALHAADIACADEMY' }
+
+  it('is for staff who can set up the school', () => {
+    const def = getTour('progress-report-layout')!
+    expect(isAudience(def, at(office))).toBe(true)
+    expect(isAudience(def, at({ role: 'TEACHER', permissions: ['school_setup'], isFullAdmin: false }))).toBe(true)
+    expect(isAudience(def, at({ role: 'TEACHER', permissions: ['students'], isFullAdmin: false }))).toBe(false)
+    expect(isAudience(def, at({ role: 'PARENT' }))).toBe(false)
+  })
+
+  it('greets the office on the home page once meetings setup has had its turn', () => {
+    expect(pickOffer(at(office), {}, allTours(), false)?.id).toBe('meetings-setup')
+    const seen = { tourId: 'meetings-setup', version: 1, status: 'dismissed' as const, stepIndex: 0, snoozedUntil: null, completedAt: null }
+    expect(pickOffer(at(office), { 'meetings-setup': seen }, allTours(), false)?.id).toBe('progress-report-layout')
+    // An account made since the feature launched gets the welcome tour, and finds this one under ?.
+    expect(pickOffer(at(office, '2026-11-23T12:00:00Z'), { 'meetings-setup': seen }, allTours(), false)?.id).toBe('welcome-staff')
   })
 })

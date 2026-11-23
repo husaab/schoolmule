@@ -1,5 +1,6 @@
 // Every tour step points at something a web screen really has. A target is
-// either a literal data-tour="name" in the source, or a main-nav name from
+// either a literal data-tour="name" in the source (or data-tour={… ? 'name' : undefined}
+// on one item of a list), or a main-nav name from
 // navTargets.ts (the sidebars and the student tab bar tag their links with it).
 // Renaming a button's data-tour, or dropping it, fails here instead of
 // breaking someone's walkthrough.
@@ -20,7 +21,11 @@ function sourceFiles(dir: string): string[] {
 }
 
 const files = sourceFiles(SRC).map((path) => ({ path, text: readFileSync(path, 'utf8') }))
-const literal = new Set(files.flatMap(({ text }) => [...text.matchAll(/data-tour=(?:"([^"]+)"|\{'([^']+)'\})/g)].map((m) => m[1] ?? m[2])))
+const literal = new Set(
+  files.flatMap(({ text }) =>
+    [...text.matchAll(/data-tour=(?:"([^"]+)"|\{'([^']+)'\}|\{[^{}]*\?\s*'([^']+)'\s*:\s*undefined\})/g)].map((m) => m[1] ?? m[2] ?? m[3]),
+  ),
+)
 const navUsers = files.filter(({ text, path }) => /data-tour=\{navTourTarget\(/.test(text) && !path.endsWith('navTargets.ts'))
 const navNames = new Set(Object.values(NAV_TOUR_TARGETS))
 const onScreen = new Set([...literal, ...(navUsers.length ? navNames : [])])

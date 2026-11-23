@@ -39,7 +39,7 @@ export default function ClassCardGrid({ layout, labels, collapsed, onToggle, ...
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div data-tour="classes.grid" className="flex flex-col gap-5">
       {layout.sectioned ? layout.sections.map((s) => section(s)) : layout.flat.length > 0 && grid(layout.flat)}
       {layout.archived && section(layout.archived, true)}
     </div>

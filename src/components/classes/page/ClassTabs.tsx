@@ -53,6 +53,7 @@ export default function ClassTabs({
             href={hrefFor(tab.id)}
             scroll={false}
             aria-current={on ? 'page' : undefined}
+            data-tour={tab.id === 'settings' ? 'class.settingsTab' : undefined}
             onClick={(e) => {
               if (!isPlainClick(e)) return
               e.preventDefault()

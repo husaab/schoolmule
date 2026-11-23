@@ -25,6 +25,7 @@ import {
   type DraftSubject,
   type LayoutSection,
 } from '@/lib/subjectHeadings';
+import ShowMeHow from '@/components/tours/ShowMeHow';
 import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog';
 
 const iconButton =
@@ -119,6 +120,7 @@ export default function SubjectHeadingsTab() {
           its own name when that&apos;s empty). Classes no heading covers print last, under &ldquo;{OTHER_HEADING}&rdquo;.
         </p>
         <p className="mt-2 text-slate-500">Report cards are not affected. Reports already generated keep their old layout until you generate them again.</p>
+        <ShowMeHow tour="progress-report-layout" fromStep="heading" className="mt-3" />
       </div>
 
       {draft.length === 0 && (
@@ -129,7 +131,7 @@ export default function SubjectHeadingsTab() {
 
       {draft.map((section, i) => (
         <section key={section.key} className="rounded-2xl border border-slate-200 bg-white p-4" aria-label={section.heading || `Heading ${i + 1}`}>
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2" data-tour={i === 0 ? 'subjectHeadings.heading' : undefined}>
             <label className="flex-1 text-xs font-medium text-slate-600">
               Heading
               <input
@@ -151,7 +153,7 @@ export default function SubjectHeadingsTab() {
             </button>
           </div>
 
-          <div className="mt-3 space-y-2 border-l-2 border-slate-100 pl-3 sm:pl-4">
+          <div className="mt-3 space-y-2 border-l-2 border-slate-100 pl-3 sm:pl-4" data-tour={i === 0 ? 'subjectHeadings.subjects' : undefined}>
             <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2 text-xs font-medium text-slate-500 sm:grid">
               <span>Printed as</span>
               <span>Class names (comma-separated)</span>
@@ -199,7 +201,7 @@ export default function SubjectHeadingsTab() {
       </Button>
 
       {classSubjects.length > 0 && current.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+        <div data-tour="subjectHeadings.classes" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">
           <h3 className="font-semibold text-slate-800">This year&apos;s classes</h3>
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {classSubjects.map((c) => {
@@ -227,7 +229,7 @@ export default function SubjectHeadingsTab() {
 
       {problem && <p className="text-sm text-rose-600">{problem}</p>}
 
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+      <div data-tour="subjectHeadings.save" className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4">
         {saved.length > 0 && (
           <Button variant="secondary" className="text-rose-600" onClick={removeAll}>
             Remove all headings

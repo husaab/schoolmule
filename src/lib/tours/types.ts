@@ -22,6 +22,10 @@ export type RouteName =
   | 'my-meetings'
   /** The office's list of meetings events (Admin Panel → Planning). */
   | 'meetings-office'
+  /** Admin Panel → School setup → Report Templates. */
+  | 'report-templates'
+  /** Classes: every class the person can see. */
+  | 'classes'
 
 /**
  * Something that is true for this person right now, which a tour can wait

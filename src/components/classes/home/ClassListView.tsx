@@ -159,7 +159,7 @@ export default function ClassListView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-tour="classes.grid" className="flex flex-col gap-4">
       {layout.sectioned ? layout.sections.map((s) => section(s)) : layout.flat.length > 0 && rows(layout.flat, true)}
       {layout.archived && section(layout.archived, true)}
     </div>

@@ -70,7 +70,7 @@ function ReportTemplatesContent() {
             <h1 className="text-2xl font-semibold text-slate-900">Report templates</h1>
             <p className="mt-1 text-sm text-slate-500">Design how report cards and progress reports look, choose which one prints for each grade and term, fill in extra fields, and group progress report subjects under headings.</p>
           </div>
-          <div className="mb-6 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:inline-flex">
+          <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:inline-flex">
             {(
               [
                 ['templates', 'Templates', DocumentTextIcon],
@@ -85,6 +85,7 @@ function ReportTemplatesContent() {
                 onClick={() => setTab(key)}
                 className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium ${tab === key ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
                 data-testid={`tab-${key}`}
+                data-tour={key === 'headings' ? 'reportTemplates.headingsTab' : undefined}
               >
                 <Icon className="h-4 w-4" /> {label}
               </button>

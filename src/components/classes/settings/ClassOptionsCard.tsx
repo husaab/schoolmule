@@ -12,6 +12,7 @@ import { updateClassOptions } from '@/services/classroomService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { PROGRESS_GOALS_MAX, REPORT_TEACHER_NAME_MAX, progressGoalsChange, reportTeacherNameChange } from '@/lib/classReportOptions'
 import type { ClassOptions } from '@/services/types/classroom'
+import ShowMeHow from '@/components/tours/ShowMeHow'
 import ClassStatsRow from './ClassStatsRow'
 
 type Switch = 'acceptLate' | 'emailNewPosts' | 'showClassAverage' | 'onReportCard' | 'progressCommentsOnly'
@@ -121,7 +122,11 @@ export default function ClassOptionsCard({
     const saving = key in pending
     const checked = saving ? !!pending[key] : options[key]
     return (
-      <label key={key} className="flex items-center justify-between gap-4 text-sm text-slate-800">
+      <label
+        key={key}
+        className="flex items-center justify-between gap-4 text-sm text-slate-800"
+        data-tour={key === 'progressCommentsOnly' ? 'classOptions.commentsOnly' : undefined}
+      >
         {label}
         <input
           type="checkbox"
@@ -148,7 +153,10 @@ export default function ClassOptionsCard({
 
       {showReportOptions && (
         <div className="mt-1 flex flex-col gap-3.5 border-t border-slate-100 pt-4">
-          <h4 className="text-sm font-semibold text-slate-900">On reports</h4>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold text-slate-900">On reports</h4>
+            <ShowMeHow tour="progress-report-layout" fromStep="comments-only" />
+          </div>
           {switchRow(
             'onReportCard',
             <span>
@@ -189,7 +197,7 @@ export default function ClassOptionsCard({
             </span>,
           )}
           {commentsOnly && (
-            <label className="flex flex-col gap-1.5 text-sm text-slate-800">
+            <label data-tour="classOptions.goals" className="flex flex-col gap-1.5 text-sm text-slate-800">
               Goals paragraph
               <span className="text-xs text-slate-500">Printed above every student&apos;s comment, the same for everyone.</span>
               <textarea

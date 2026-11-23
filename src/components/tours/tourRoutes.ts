@@ -22,10 +22,14 @@ export function tourPath(route: RouteName, role: string | null): string {
       return '/my-meetings'
     case 'meetings-office':
       return '/admin-panel/parent-teacher-meetings'
+    case 'report-templates':
+      return '/admin-panel/report-templates'
+    case 'classes':
+      return '/classes'
   }
 }
 
-const NAMED: RouteName[] = ['home', 'meetings', 'my-meetings', 'meetings-office']
+const NAMED: RouteName[] = ['home', 'meetings', 'my-meetings', 'meetings-office', 'report-templates', 'classes']
 
 /** The route name of the page at `pathname`, if it has one. */
 export function routeAt(pathname: string, role: string | null): RouteName | null {

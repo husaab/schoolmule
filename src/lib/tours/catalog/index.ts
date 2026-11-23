@@ -14,8 +14,9 @@
 import meetingsSetup from './meetings-setup'
 import myMeetings from './my-meetings'
 import parentTeacherMeetings from './parent-teacher-meetings'
+import progressReportLayout from './progress-report-layout'
 import welcomeParent from './welcome-parent'
 import welcomeStaff from './welcome-staff'
 import welcomeStudent from './welcome-student'
 
-export const CATALOG = [welcomeStaff, welcomeParent, welcomeStudent, parentTeacherMeetings, myMeetings, meetingsSetup] as const
+export const CATALOG = [welcomeStaff, welcomeParent, welcomeStudent, parentTeacherMeetings, myMeetings, meetingsSetup, progressReportLayout] as const
