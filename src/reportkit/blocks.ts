@@ -4,6 +4,7 @@ import { builtinImageLabel } from './images';
 import { mergeHtml, type MergeScope } from './merge';
 import { alignClass, barCss, boxCss, colgroup, num, panelCss, px, safeColor, tableCss, textCss } from './style';
 import type {
+  BarStyle,
   Block,
   Box4,
   CanvasElement,
@@ -664,17 +665,34 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
     tiles
       ? `${first ? '' : `margin-top:${pad}px;`}padding:${pad}px 0 0${rule ? `;border-top:1px solid ${rule}` : ''}`
       : [cs.bodyPadding !== undefined ? `padding:${pad}px` : '', rule ? `border-top:1px solid ${rule}` : ''].filter(Boolean).join(';');
-  const section = (label: string, inner: string, first: boolean) => {
+  // `lead`: the first thing in a tiles card's body (no marks above it), so no rule or space above.
+  const section = (label: string, inner: string, first: boolean, lead = false) => {
     const head = cs.labelBar
       ? `<div style="${barCss(cs.labelBar, '', theme)}">${escapeHtml(label)}</div>`
       : `<div class="rk-card-label"${cs.label ? ` style="${textCss(cs.label)}"` : ''}>${escapeHtml(label)}</div>`;
-    const css = sectionCss(first);
+    const css = lead && tiles ? 'padding:0' : sectionCss(first);
     return `<div class="rk-card-body"${css ? ` style="${css}"` : ''}>${head}${inner}</div>`;
   };
   const boxed = (html: string, text?: TextStyle, panel = cs.panel) => {
     const css = [panelCss(panel), text ? textCss(text) : ''].filter(Boolean).join(';');
     return css ? `<div style="${css}">${html}</div>` : html;
   };
+
+  const cardCss = cs.radius ? `${look};border-radius:${px(cs.radius, 0, 0, 60)};overflow:hidden` : look;
+  const card = (body: string) => `<div class="rk-card" style="${cardCss}"><div class="rk-card-head" style="${headBar}">${title}</div>${body}</div>`;
+
+  // Goals and comment only (Salaat): the class's goals paragraph, then the
+  // teacher's comment. No marks, ratings or core standards.
+  if (subject.commentsOnly) {
+    const goals = subject.goals ? section(block.goalsLabel ?? 'Expectations/Goals', boxed(dataHtml(subject.goals)), true, true) : '';
+    const said = subject.comment
+      ? boxed(dataHtml(subject.comment), cs.commentText, cs.commentPanel ?? cs.panel)
+      : block.hideEmptyComment
+        ? ''
+        : boxed(`<em>${escapeHtml(block.emptyCommentText ?? '')}</em>`, cs.commentText, cs.commentPanel ?? cs.panel);
+    const comment = said ? section(block.commentLabel ?? 'Teacher Comments', said, !goals, !goals) : '';
+    return card(tiles ? `<div style="padding:${pad}px">${goals}${comment}</div>` : `${goals}${comment}`);
+  }
 
   const core =
     block.showCoreStandards && subject.coreStandards
@@ -696,14 +714,20 @@ function subjectCard(block: SubjectCardsBlock, subject: SubjectRow, ctx: RenderC
           !core,
         )
       : '';
-  const cardCss = cs.radius ? `${look};border-radius:${px(cs.radius, 0, 0, 60)};overflow:hidden` : look;
   const modifiedLabels = block.rows === 'terms'
     ? [...(subject.terms.t1?.modifiedLabels ?? []), ...(subject.terms.t2?.modifiedLabels ?? [])]
     : subject.modifiedLabels ?? [];
   const noteCss = `padding:7px ${tiles ? 0 : num(cs.labelBar?.paddingX, 15, 0, 60)}px;${rule ? `border-top:1px solid ${rule};` : ''}font-size:12.5px;line-height:1.4;font-style:italic;color:#515b69`;
   const note = hasModified ? `<div class="rk-card-note" style="${noteCss}">${escapeHtml(modifiedNoteText(modifiedLabels))}</div>` : '';
-  const bodyHtml = tiles ? `<div style="padding:${pad}px">${table}${note}${core}${comment}</div>` : `${table}${note}${core}${comment}`;
-  return `<div class="rk-card" style="${cardCss}"><div class="rk-card-head" style="${headBar}">${title}</div>${bodyHtml}</div>`;
+  return card(tiles ? `<div style="padding:${pad}px">${table}${note}${core}${comment}</div>` : `${table}${note}${core}${comment}`);
+}
+
+/** The heading over a run of subjects: the block's section bar, else the theme's accent with a rule under it. */
+function sectionHeading(block: SubjectCardsBlock, heading: string, ctx: RenderCtx): string {
+  const theme = ctx.doc.theme;
+  const accent = theme.accent || '#2c5aa0';
+  const bar: BarStyle = block.sectionBar ?? { color: accent, fontSize: 15, fontWeight: 700, padding: 4, paddingX: 0, ruleBottom: { color: accent, width: 2 } };
+  return `<div class="rk-section-head" style="padding-bottom:10px"><div style="${barCss(bar, '', theme)}">${escapeHtml(heading)}</div></div>`;
 }
 
 function signatures(block: SignaturesBlock, ctx: RenderCtx): string {
@@ -848,12 +872,17 @@ export function blockFlowables(block: Block, ctx: RenderCtx): Flowable[] {
         const last = i === subjects.length - 1 || (per > 0 && (i + 1) % per === 0);
         return `${first ? `padding-top:${groupPad}px;` : ''}margin-bottom:${last ? 0 : gap}px`;
       };
-      return subjects.map((s, i) => ({
-        kind: 'atomic' as const,
-        block,
-        html: `<div style="${wrapCss(i)}">${subjectCard(block, s, ctx)}</div>`,
-        breakBefore: i === 0 ? !!block.breakBefore : per > 0 && i % per === 0,
-      }));
+      // A heading prints where a subject's section changes and stays with the
+      // card under it; a page break due before that card moves to the heading.
+      return subjects.flatMap((s, i) => {
+        const breakBefore = i === 0 ? !!block.breakBefore : per > 0 && i % per === 0;
+        const cardFlow = { kind: 'atomic' as const, block, html: `<div style="${wrapCss(i)}">${subjectCard(block, s, ctx)}</div>` };
+        if (!s.section || s.section === subjects[i - 1]?.section) return [{ ...cardFlow, breakBefore }];
+        return [
+          { kind: 'atomic' as const, block, html: sectionHeading(block, s.section, ctx), breakBefore, keepWithNext: true },
+          { ...cardFlow, breakBefore: false },
+        ];
+      });
     }
     case 'signatures':
       return atomic(signatures(block, ctx));

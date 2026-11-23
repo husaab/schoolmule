@@ -2,18 +2,19 @@
 // Settings → Class options: switches that save the moment they change, who
 // counts in the class average, the school's private-comments rule shown
 // read-only, and (grades 1-8) how the class prints on reports: on report
-// cards or progress reports only, and the name printed after the subject on
-// progress reports ("Salaat – Supervisor").
+// cards or progress reports only, the name printed after the subject on
+// progress reports ("Salaat – Supervisor"), and goals and comment only (a
+// goals paragraph above every comment, no ratings).
 'use client'
 
 import { useEffect, useState } from 'react'
 import { updateClassOptions } from '@/services/classroomService'
 import { useNotificationStore } from '@/store/useNotificationStore'
-import { REPORT_TEACHER_NAME_MAX, reportTeacherNameChange } from '@/lib/classReportOptions'
+import { PROGRESS_GOALS_MAX, REPORT_TEACHER_NAME_MAX, progressGoalsChange, reportTeacherNameChange } from '@/lib/classReportOptions'
 import type { ClassOptions } from '@/services/types/classroom'
 import ClassStatsRow from './ClassStatsRow'
 
-type Switch = 'acceptLate' | 'emailNewPosts' | 'showClassAverage' | 'onReportCard'
+type Switch = 'acceptLate' | 'emailNewPosts' | 'showClassAverage' | 'onReportCard' | 'progressCommentsOnly'
 
 interface ClassOptionsCardProps {
   classId: string
@@ -53,6 +54,10 @@ export default function ClassOptionsCard({
   const [name, setName] = useState(options.reportTeacherName ?? '')
   const [savingName, setSavingName] = useState(false)
   useEffect(() => setName(options.reportTeacherName ?? ''), [options.reportTeacherName])
+  // The goals paragraph as typed; saved when the box is left.
+  const [goals, setGoals] = useState(options.progressGoals ?? '')
+  const [savingGoals, setSavingGoals] = useState(false)
+  useEffect(() => setGoals(options.progressGoals ?? ''), [options.progressGoals])
 
   const fail = (err: unknown, what: string) =>
     showNotification(err instanceof Error && err.message ? err.message : `The ${what} couldn't be saved. Try again.`, 'error')
@@ -91,6 +96,26 @@ export default function ClassOptionsCard({
       setSavingName(false)
     }
   }
+
+  const saveGoals = async () => {
+    const change = progressGoalsChange(goals, options.progressGoals)
+    if (change === undefined) {
+      setGoals(options.progressGoals ?? '')
+      return
+    }
+    setSavingGoals(true)
+    try {
+      const res = await updateClassOptions(classId, { progressGoals: change })
+      onChanged(res.data.options)
+      showNotification(change ? 'Goals paragraph saved' : 'Goals paragraph removed', 'success')
+    } catch (err) {
+      setGoals(options.progressGoals ?? '')
+      fail(err, 'goals paragraph')
+    } finally {
+      setSavingGoals(false)
+    }
+  }
+  const commentsOnly = 'progressCommentsOnly' in pending ? !!pending.progressCommentsOnly : options.progressCommentsOnly
 
   const switchRow = (key: Switch, label: React.ReactNode) => {
     const saving = key in pending
@@ -154,6 +179,37 @@ export default function ClassOptionsCard({
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:cursor-not-allowed disabled:bg-slate-50 sm:max-w-sm"
             />
           </label>
+          {switchRow(
+            'progressCommentsOnly',
+            <span>
+              Goals and comment only on progress reports
+              <span className="block text-xs text-slate-500">
+                No ratings print. Teachers pick Excellent, Good, Satisfactory or Needs Improvement to fill in the comment, for a class such as Salaat.
+              </span>
+            </span>,
+          )}
+          {commentsOnly && (
+            <label className="flex flex-col gap-1.5 text-sm text-slate-800">
+              Goals paragraph
+              <span className="text-xs text-slate-500">Printed above every student&apos;s comment, the same for everyone.</span>
+              <textarea
+                value={goals}
+                rows={4}
+                maxLength={PROGRESS_GOALS_MAX}
+                disabled={!canEdit || savingGoals}
+                placeholder="What this class aims for this year"
+                onChange={(e) => setGoals(e.target.value)}
+                onBlur={() => void saveGoals()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setGoals(options.progressGoals ?? '')
+                    e.currentTarget.blur()
+                  }
+                }}
+                className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </label>
+          )}
         </div>
       )}
     </div>

@@ -41,6 +41,10 @@ export interface ClassOptions {
   onReportCard: boolean
   /** Printed after the subject on progress reports instead of the teacher ("Salaat – Supervisor"); null = the teacher. */
   reportTeacherName: string | null
+  /** Progress reports print `progressGoals` and the comment, no ratings (Salaat). The rating only fills in the comment. */
+  progressCommentsOnly: boolean
+  /** The paragraph printed above every student's comment when progressCommentsOnly; null = none. */
+  progressGoals: string | null
 }
 
 export interface ClassroomEnvelope<T> {

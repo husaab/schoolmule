@@ -182,7 +182,7 @@ function checkBlock(b: unknown, where: string, ids: Set<string>, errors: string[
     case 'subjectCards':
       if (!Array.isArray(block.fields)) errors.push(`${label}: no columns.`);
       checkLook(block, label, errors);
-      [block.headerBar, block.cardStyle?.markHead, block.cardStyle?.termCell, block.cardStyle?.labelBar].forEach((bar) => checkBar(bar, label, errors));
+      [block.headerBar, block.sectionBar, block.cardStyle?.markHead, block.cardStyle?.termCell, block.cardStyle?.labelBar].forEach((bar) => checkBar(bar, label, errors));
       checkRange(block.cardStyle?.tile?.padding, 'the tile padding', 0, 60, label, errors);
       checkRange(block.cardStyle?.tile?.paddingX, 'the tile side padding', 0, 60, label, errors);
       checkRange(block.cardStyle?.tile?.borderRadius, 'the tile corners', 0, 60, label, errors);

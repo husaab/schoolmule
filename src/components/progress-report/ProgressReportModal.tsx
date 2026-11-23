@@ -27,10 +27,12 @@ import {
 import { aiFetch } from '@/services/aiClient';
 import { RatingButtons, type RatingOption } from '@/components/gradebook/workspace/RatingButtons';
 import {
+  COMMENT_RATINGS,
   CORE_STANDARDS_LEVELS,
   buildStandardComment,
   isStandardComment,
   standardCommentAction,
+  standardCommentUsesPronouns,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -45,6 +47,8 @@ const RATING_OPTIONS: RatingOption[] = [
   { value: 'S', label: 'S', title: 'S - Satisfactory' },
   { value: 'N', label: 'N', title: 'N - Needs Improvement' },
 ];
+// A goals-and-comment class's one rating, in words (stored as work habits).
+const COMMENT_RATING_OPTIONS: RatingOption[] = COMMENT_RATINGS.map((r) => ({ value: r.key, label: r.label, title: r.label }));
 
 interface ProgressReportModalProps {
   isOpen: boolean;
@@ -61,6 +65,8 @@ interface ProgressReportModalProps {
   initialTerm?: string;
   /** The class's standard comments; null while they haven't loaded (nothing builds itself). */
   commentBank?: CommentBank | null;
+  /** Goals and comment only (Salaat): one rating that fills the comment; no core standards, behavior or AI. */
+  commentsOnly?: boolean;
 }
 
 const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
@@ -75,6 +81,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   coverage,
   initialTerm,
   commentBank,
+  commentsOnly = false,
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
   const user = useUserStore(state => state.user);
@@ -252,7 +259,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   // Standard comments: Core Standards and Work Habits rebuild a comment that is
   // empty or still SchoolMule's text; one the teacher wrote is kept.
   const commentContext: StandardCommentContext | null = commentBank
-    ? { bank: commentBank, student: { name: studentName, gender: studentGender ?? null }, subject: subjectName || '' }
+    ? { bank: commentBank, student: { name: studentName, gender: studentGender ?? null }, subject: subjectName || '', commentsOnly }
     : null;
   const suggestion = commentBank ? suggestCoreStandards(studentGrade, commentBank.cutoffs) : null;
   const picks = { coreStandards, workHabit };
@@ -326,6 +333,13 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
               )}
             </div>
 
+            {commentsOnly ? (
+            <Field label="Rating">
+              <RatingButtons label="Rating" options={COMMENT_RATING_OPTIONS} value={workHabit} onChange={(v) => pickRating('workHabit', v)} />
+              <p className="mt-1 text-xs text-slate-500">Fills in the comment. The report prints the class&apos;s goals and the comment, not the rating.</p>
+            </Field>
+            ) : (
+            <>
             <Field label="Core standards">
               <RatingButtons
                 label="Core standards"
@@ -348,6 +362,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
             </Field>
 
             {/* AI feature info card */}
+            {!commentsOnly && (
             <div className="relative overflow-hidden rounded-xl border border-purple-100/60 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 p-4">
               <div className="absolute right-0 top-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-purple-200/30 to-transparent blur-2xl" />
               <div className="relative flex gap-3">
@@ -367,12 +382,16 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 </div>
               </div>
             </div>
+            )}
+            </>
+            )}
 
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label htmlFor="pr-comment" className="block text-sm font-medium text-slate-700">
                   Comments
                 </label>
+                {!commentsOnly && (
                 <div className="group relative">
                   <Button
                     type="button"
@@ -395,6 +414,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                     </div>
                   )}
                 </div>
+                )}
               </div>
               <textarea
                 id="pr-comment"
@@ -402,9 +422,9 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 onChange={(e) => setComment(e.target.value)}
                 className={textareaClass}
                 rows={4}
-                placeholder="Generate with AI, or write your own comment…"
+                placeholder={commentsOnly ? 'Pick a rating, or write your own comment…' : 'Generate with AI, or write your own comment…'}
               />
-              {isStandard && !studentGender && (
+              {isStandard && !studentGender && commentContext && standardCommentUsesPronouns(picks, commentContext) && (
                 <p className="mt-1 text-xs text-amber-700">No gender on file for {firstNameOf(studentName)}: check the pronouns.</p>
               )}
               {action === 'fill' && (

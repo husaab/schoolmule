@@ -130,6 +130,17 @@ export function progressStandardTemplate(): TemplateDoc {
     showTeacher: true,
     showCoreStandards: true,
     coreStandardsLabel: 'Core Standards Progress:',
+    goalsLabel: 'Expectations/Goals:',
+    // The school's subject headings (Report templates → Subject headings).
+    sectionBar: {
+      color: HONOUR.NAVY,
+      fontFamily: HONOUR.HEADING_FONT,
+      fontSize: 16,
+      fontWeight: 700,
+      padding: 5,
+      paddingX: 0,
+      ruleBottom: { color: HONOUR.GOLD, width: 2 },
+    },
     showComment: true,
     commentLabel: 'Teacher Comments:',
     hideEmptyComment: true,

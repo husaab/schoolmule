@@ -1082,6 +1082,9 @@ function SubjectCardsEditor({ block, set }: { block: SubjectCardsBlock; set: Set
         )}
         <Toggle checked={block.showTeacher} onChange={(v) => set({ showTeacher: v || undefined } as Partial<Block>)} label="Show the teacher's name" />
         <Toggle checked={block.showCoreStandards} onChange={(v) => set({ showCoreStandards: v || undefined } as Partial<Block>)} label="Show core standards progress" />
+        <Row label="Goals heading" hint="Printed over the goals paragraph of a goals-and-comment class, such as Salaat.">
+          <TextInput value={block.goalsLabel} onChange={(v) => set({ goalsLabel: v || undefined } as Partial<Block>, 'gl')} />
+        </Row>
         <Toggle checked={block.showComment} onChange={(v) => set({ showComment: v || undefined } as Partial<Block>)} label="Show teacher comments" />
         {block.showComment && (
           <Grid>

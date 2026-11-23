@@ -1,7 +1,8 @@
 // The class's standard comments: one sentence per Core Standards level and per
 // Work Habits rating, and the mark cut-offs that suggest a level. Opened from
 // the Progress Comments tab. Saving changes what the next rating pick builds;
-// comments already built are left as they are.
+// comments already built are left as they are. A goals-and-comment class
+// (Salaat) shows only its four rating comments, which are the whole comment.
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -9,6 +10,7 @@ import { ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
 import Modal from '@/components/shared/modal'
 import { Button, Field, FieldRow, FormSection, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit'
 import {
+  COMMENT_RATINGS,
   CORE_STANDARDS_LEVELS,
   STARTER_COMMENT_BANK,
   buildStandardComment,
@@ -50,9 +52,21 @@ interface StandardCommentsModalProps {
   /** Whose name the preview uses (the class's first student). */
   previewStudent: CommentStudent | null
   onSaved: (bank: CommentBank, saved: boolean) => void
+  /** Goals and comment only: one comment per rating, nothing else. */
+  commentsOnly?: boolean
 }
 
-export default function StandardCommentsModal({ isOpen, onClose, classId, bank, bankSaved, subject, previewStudent, onSaved }: StandardCommentsModalProps) {
+export default function StandardCommentsModal({
+  isOpen,
+  onClose,
+  classId,
+  bank,
+  bankSaved,
+  subject,
+  previewStudent,
+  onSaved,
+  commentsOnly = false,
+}: StandardCommentsModalProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const [form, setForm] = useState<CommentBank>(bank)
   const [problem, setProblem] = useState<string | null>(null)
@@ -60,6 +74,7 @@ export default function StandardCommentsModal({ isOpen, onClose, classId, bank, 
   const [sources, setSources] = useState<CommentBankSource[]>([])
   const [copying, setCopying] = useState(false)
   const [previewLevel, setPreviewLevel] = useState(CORE_STANDARDS_LEVELS[1].value)
+  const [previewRating, setPreviewRating] = useState<WorkHabitKey>('G')
 
   // Each opening starts from what the class has now.
   useEffect(() => {
@@ -122,15 +137,21 @@ export default function StandardCommentsModal({ isOpen, onClose, classId, bank, 
     }
   }
 
-  const preview = previewStudent
-    ? buildStandardComment({ coreStandards: previewLevel, workHabit: 'G' }, { bank: form, student: previewStudent, subject })
-    : ''
+  const preview = !previewStudent
+    ? ''
+    : commentsOnly
+      ? buildStandardComment({ workHabit: previewRating }, { bank: form, student: previewStudent, subject, commentsOnly })
+      : buildStandardComment({ coreStandards: previewLevel, workHabit: 'G' }, { bank: form, student: previewStudent, subject })
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} style="w-full max-w-2xl">
       <ModalHeader
         title="Standard comments"
-        subtitle="Picking a Core Standards level and Work Habits builds a student's comment from these sentences."
+        subtitle={
+          commentsOnly
+            ? "Picking a student's rating fills in their comment with the one for it."
+            : "Picking a Core Standards level and Work Habits builds a student's comment from these sentences."
+        }
         icon={ChatBubbleBottomCenterTextIcon}
       />
       <ModalBody>
@@ -159,6 +180,24 @@ export default function StandardCommentsModal({ isOpen, onClose, classId, bank, 
           </Field>
         )}
 
+        {commentsOnly && (
+          <FormSection label="Comment for each rating">
+            {COMMENT_RATINGS.map((r) => (
+              <Field key={r.key} label={r.label} htmlFor={`bank-wh-${r.key}`}>
+                <textarea
+                  id={`bank-wh-${r.key}`}
+                  rows={4}
+                  className={textareaClass}
+                  value={form.workHabits[r.key]}
+                  onChange={(e) => setSentence('workHabits', r.key, e.target.value)}
+                />
+              </Field>
+            ))}
+          </FormSection>
+        )}
+
+        {!commentsOnly && (
+        <>
         <FormSection label="Core Standards">
           {CORE_STANDARDS_LEVELS.map((l) => (
             <Field key={l.key} label={l.label} htmlFor={`bank-cs-${l.key}`}>
@@ -204,8 +243,28 @@ export default function StandardCommentsModal({ isOpen, onClose, classId, bank, 
             ))}
           </FieldRow>
         </FormSection>
+        </>
+        )}
 
-        {previewStudent && (
+        {previewStudent && commentsOnly && (
+          <FormSection label="Preview">
+            <select
+              aria-label="Preview rating"
+              className={selectClass}
+              value={previewRating}
+              onChange={(e) => setPreviewRating(e.target.value as WorkHabitKey)}
+            >
+              {COMMENT_RATINGS.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">{preview}</p>
+          </FormSection>
+        )}
+
+        {previewStudent && !commentsOnly && (
           <FormSection label="Preview">
             <select
               aria-label="Preview level"

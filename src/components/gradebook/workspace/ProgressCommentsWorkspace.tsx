@@ -8,7 +8,9 @@
 // with the same bulk payloads Save All sends (Save All is now a manual flush).
 // Picking a Core Standards level and Work Habits builds the comment from the
 // class's standard comments (src/lib/commentBank.ts); a comment the teacher
-// typed or edited is never replaced.
+// typed or edited is never replaced. A goals-and-comment class (Salaat) asks
+// for one rating (Excellent … Needs Improvement, saved as work habits) that
+// fills in the comment; the report prints the class's goals and the comment.
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -21,11 +23,13 @@ import type { ClassProgressReportFeedbackEntry } from '@/services/progressReport
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { commentChange, feedbackEntry, PROGRESS_FIELDS, type FeedbackEntry } from '@/lib/commentAutosave'
 import {
+  COMMENT_RATINGS,
   CORE_STANDARDS_LEVELS,
   STARTER_COMMENT_BANK,
   buildStandardComment,
   isStandardComment,
   standardCommentAction,
+  standardCommentUsesPronouns,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -69,15 +73,20 @@ const RATING_OPTIONS: RatingOption[] = [
   { value: 'N', label: 'N', title: 'N - Needs Improvement' },
 ]
 
+// A goals-and-comment class's one rating, in words (stored as E/G/S/N).
+const COMMENT_RATING_OPTIONS: RatingOption[] = COMMENT_RATINGS.map((r) => ({ value: r.key, label: r.label, title: r.label }))
+
 type ProgressField = 'coreStandards' | 'workHabit' | 'behavior' | 'comment'
 
 
 interface ProgressCommentsWorkspaceProps {
   classId: string
   classData: ClassPayload
+  /** Goals and comment only (Settings → On reports): one rating that fills the comment, no others. */
+  commentsOnly?: boolean
 }
 
-export default function ProgressCommentsWorkspace({ classId, classData }: ProgressCommentsWorkspaceProps) {
+export default function ProgressCommentsWorkspace({ classId, classData, commentsOnly = false }: ProgressCommentsWorkspaceProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
@@ -154,7 +163,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
       const behavior = edited?.behavior ?? existing?.behavior
       const comment = edited?.comment ?? existing?.comment
 
-      if (coreStandards && workHabit && behavior && comment) {
+      if (commentsOnly ? workHabit && comment : coreStandards && workHabit && behavior && comment) {
         completed++
       }
     })
@@ -231,7 +240,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
 
   const commentContext = (studentId: string): StandardCommentContext => {
     const stu = students.find((s) => s.studentId === studentId)
-    return { bank, student: { name: stu?.name ?? '', gender: stu?.gender ?? null }, subject: classData.subject }
+    return { bank, student: { name: stu?.name ?? '', gender: stu?.gender ?? null }, subject: classData.subject, commentsOnly }
   }
 
   // The student's entry as saved (what Save All sent for an untouched field).
@@ -501,7 +510,16 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
             </div>
           </div>
 
+          {commentsOnly && (
+            <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900">
+              This class prints its goals paragraph and each student&apos;s comment, with no ratings. Pick a rating to fill in
+              the comment from <span className="font-medium">Standard comments</span>, then edit it. The goals paragraph is in
+              Settings → On reports.
+            </div>
+          )}
+
           {/* AI Feature Info Banner */}
+          {!commentsOnly && (
           <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-purple-200/40 p-5">
             <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-purple-300/20 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-fuchsia-300/20 to-transparent rounded-full blur-3xl translate-x-1/3 translate-y-1/3" />
@@ -535,6 +553,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
               </div>
             </div>
           </div>
+          )}
 
           {!selectedTerm && (
 
@@ -592,19 +611,27 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                       <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[180px]">
                         Student Name
                       </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[260px]">
-                        Core Standards
-                      </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
-                        Work Habits
-                      </th>
-                      <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
-                        Behavior
-                      </th>
+                      {commentsOnly ? (
+                        <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[420px]">
+                          Rating
+                        </th>
+                      ) : (
+                        <>
+                          <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[260px]">
+                            Core Standards
+                          </th>
+                          <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
+                            Work Habits
+                          </th>
+                          <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[196px]">
+                            Behavior
+                          </th>
+                        </>
+                      )}
                       <th className="px-3 py-3 text-left text-sm font-semibold text-slate-700 min-w-[380px]">
                         <div className="flex items-center gap-2">
                           <span>Comment</span>
-                          <span className="text-xs text-slate-400 font-normal">(AI-assisted)</span>
+                          {!commentsOnly && <span className="text-xs text-slate-400 font-normal">(AI-assisted)</span>}
                         </div>
                       </th>
                     </tr>
@@ -613,7 +640,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                   <tbody className="divide-y divide-slate-100">
                     {students.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center">
+                        <td colSpan={commentsOnly ? 3 : 5} className="px-4 py-12 text-center">
                           <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
                             <UserGroupIcon className="h-8 w-8 text-slate-400" />
                           </div>
@@ -691,6 +718,17 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                                 </div>
                               </td>
 
+                              {commentsOnly ? (
+                              <td className="px-3 py-2">
+                                <RatingButtons
+                                  label={`Rating for ${stu.name}`}
+                                  options={COMMENT_RATING_OPTIONS}
+                                  value={workHabitValue}
+                                  onChange={(v) => handleRatingChange(stu.studentId, 'workHabit', v)}
+                                />
+                              </td>
+                              ) : (
+                              <>
                               {/* Core Standards */}
                               <td className="px-3 py-2">
                                 <RatingButtons
@@ -724,6 +762,8 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                                   onChange={(v) => handleRatingChange(stu.studentId, 'behavior', v)}
                                 />
                               </td>
+                              </>
+                              )}
 
                               {/* Comment with AI Generate Button */}
                               <td className="px-3 py-2">
@@ -733,7 +773,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                                     aria-label={`Comment for ${stu.name}`}
                                     onChange={(e) => handleFieldChange(stu.studentId, 'comment', e.target.value)}
                                     onBlur={() => void comments.flush()}
-                                    placeholder="Enter comment or use AI to generate..."
+                                    placeholder={commentsOnly ? 'Pick a rating, or write a comment...' : 'Enter comment or use AI to generate...'}
                                     rows={4}
                                     className={`flex-1 px-3 py-2 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all ${
                                       isFieldEdited(stu.studentId, 'comment')
@@ -742,6 +782,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                                     }`}
                                   />
                                   {/* AI Generate Button with Tooltip */}
+                                  {!commentsOnly && (
                                   <div className="relative group/ai flex-shrink-0">
                                     <button
                                       onClick={() => handleGenerateAIComment(stu.studentId, stu.name)}
@@ -771,8 +812,9 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
                                       </div>
                                     )}
                                   </div>
+                                  )}
                                 </div>
-                                {isStandard && !ctx.student.gender && (
+                                {isStandard && !ctx.student.gender && standardCommentUsesPronouns(picks, ctx) && (
                                   <p className="mt-1 text-xs text-amber-700">
                                     No gender on file for {firstNameOf(stu.name)}: check the pronouns.
                                   </p>
@@ -847,6 +889,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
           coverage={studentGrades[modalStudent.id]?.coverage ?? undefined}
           initialTerm={selectedTerm}
           commentBank={bankState === 'ready' ? bank : null}
+          commentsOnly={commentsOnly}
         />
       )}
 
@@ -857,6 +900,7 @@ export default function ProgressCommentsWorkspace({ classId, classData }: Progre
         bank={bank}
         bankSaved={bankSaved}
         subject={classData.subject}
+        commentsOnly={commentsOnly}
         previewStudent={students[0] ? { name: students[0].name, gender: students[0].gender ?? null } : null}
         onSaved={(next, saved) => {
           setBank(next)

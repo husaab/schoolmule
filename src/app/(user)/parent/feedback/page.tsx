@@ -208,8 +208,8 @@ const ChildFeedbackSection: React.FC<ChildFeedbackSectionProps> = ({
                 subject={item.subject}
                 teacherName={item.teacherName}
                 term={item.term}
-                workHabit={item.workHabit}
-                behavior={item.behavior}
+                workHabit={item.commentsOnly ? null : item.workHabit}
+                behavior={item.commentsOnly ? null : item.behavior}
                 comment={item.comment}
               />
             ))}

@@ -424,6 +424,10 @@ export interface SubjectCardsBlock extends BlockBase, TableLook {
   hideEmptyComment?: boolean;
   /** Label of the core standards section (default "Core Standards Progress"). */
   coreStandardsLabel?: string;
+  /** Label of a goals-and-comment subject's goals paragraph (default "Expectations/Goals"). */
+  goalsLabel?: string;
+  /** The school's subject headings, printed above the first card of each (Report templates → Subject headings). */
+  sectionBar?: BarStyle;
   /** Space (px) above each group of `perPage` cards; cards in a group sit `cardGap` apart. */
   groupPadding?: number;
   /** Finer styling of each card; everything optional. */
@@ -641,6 +645,11 @@ export interface SubjectRow {
   comment: string;
   /** For multi-term layouts (First / Second / Final). */
   terms: { t1?: TermResult; t2?: TermResult; final?: TermResult };
+  /** The school's heading this subject prints under; a heading prints where it changes. */
+  section?: string;
+  /** Goals and comment only (Salaat): the card prints `goals` and the comment, no ratings or marks. */
+  commentsOnly?: boolean;
+  goals?: string;
 }
 
 export interface SkillItem {

@@ -28,6 +28,8 @@ export interface ProgressFeedbackItem {
   workHabit: string | null;
   behavior: string | null;
   comment: string | null;
+  /** Goals-and-comment class (Salaat): its rating only picked the comment, so it isn't shown. */
+  commentsOnly?: boolean;
   createdAt: string | null;
 }
 

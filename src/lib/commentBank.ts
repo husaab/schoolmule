@@ -55,7 +55,20 @@ export interface StandardCommentContext {
   bank: CommentBank
   student: CommentStudent
   subject: string
+  /**
+   * A goals-and-comment class (Salaat): one rating (E/G/S/N, saved as work
+   * habits) picks the whole comment, its Work Habits sentence alone.
+   */
+  commentsOnly?: boolean
 }
+
+/** A goals-and-comment class's ratings, as teachers pick them. */
+export const COMMENT_RATINGS: readonly { key: 'E' | 'G' | 'S' | 'N'; label: string }[] = [
+  { key: 'E', label: 'Excellent' },
+  { key: 'G', label: 'Good' },
+  { key: 'S', label: 'Satisfactory' },
+  { key: 'N', label: 'Needs Improvement' },
+]
 
 const PLACEHOLDER = /\{(First|subject|he|He|him|Him|his|His)\}/g
 
@@ -88,8 +101,27 @@ export function suggestCoreStandards(pct: number | null | undefined, cutoffs: Co
 const isWorkHabit = (value: string | null | undefined): value is keyof CommentBank['workHabits'] =>
   value === 'E' || value === 'G' || value === 'S' || value === 'N'
 
-/** The level's sentence, then the work habits sentence when rated; '' without a level. */
+/** The sentences the picks build from, before the placeholders are filled. */
+function standardTemplates(picks: StandardPicks, ctx: StandardCommentContext): string[] {
+  if (ctx.commentsOnly) return isWorkHabit(picks.workHabit) ? [ctx.bank.workHabits[picks.workHabit]] : []
+  const level = CORE_STANDARDS_LEVELS.find((l) => l.value === picks.coreStandards)
+  if (!level) return []
+  const parts = [ctx.bank.coreStandards[level.key]]
+  if (isWorkHabit(picks.workHabit)) parts.push(ctx.bank.workHabits[picks.workHabit])
+  return parts
+}
+
+/** True when the sentences the picks use say he/him/his (so a missing gender shows). */
+export function standardCommentUsesPronouns(picks: StandardPicks, ctx: StandardCommentContext): boolean {
+  return standardTemplates(picks, ctx).some((t) => /\{(he|He|him|Him|his|His)\}/.test(t))
+}
+
+/**
+ * The level's sentence, then the work habits sentence when rated; '' without a
+ * level. A goals-and-comment class: the rating's sentence; '' without one.
+ */
 export function buildStandardComment(picks: StandardPicks, ctx: StandardCommentContext): string {
+  if (ctx.commentsOnly) return standardTemplates(picks, ctx).map((t) => fillPlaceholders(t, ctx.student, ctx.subject)).join(' ')
   const level = CORE_STANDARDS_LEVELS.find((l) => l.value === picks.coreStandards)
   if (!level) return ''
   const parts = [ctx.bank.coreStandards[level.key]]

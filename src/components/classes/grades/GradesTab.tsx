@@ -243,7 +243,7 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
           <ReportCardCommentsWorkspace classId={classId} classData={classData} />
         )}
         {sub === 'progress-comments' && (
-          <ProgressCommentsWorkspace classId={classId} classData={classData} />
+          <ProgressCommentsWorkspace classId={classId} classData={classData} commentsOnly={data.class.options?.progressCommentsOnly ?? false} />
         )}
       </div>
 

@@ -54,11 +54,14 @@ const ReportsTab: React.FC<{ overview: StudentOverview }> = ({ overview }) => {
           source: 'Progress report',
           subject: c.subject,
           teacherName: c.teacherName,
-          ratings: [
-            ['Core standards', c.coreStandards],
-            ['Work habits', c.workHabit],
-            ['Behavior', c.behavior],
-          ] as [string, string | null][],
+          // A goals-and-comment class (Salaat) shows its comment only.
+          ratings: (c.commentsOnly
+            ? []
+            : [
+                ['Core standards', c.coreStandards],
+                ['Work habits', c.workHabit],
+                ['Behavior', c.behavior],
+              ]) as [string, string | null][],
           comment: c.comment,
         })),
       ]),

@@ -12,6 +12,7 @@ import {
   TrashIcon,
   TableCellsIcon,
   ListBulletIcon,
+  Bars3BottomLeftIcon,
 } from '@heroicons/react/24/outline';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -46,12 +47,13 @@ import { defaultTemplate } from '@/reportkit/defaults';
 import { GRADES } from '@/reportkit/format';
 import type { DocType } from '@/reportkit/types';
 import TemplateThumb from '@/components/report-designer/TemplateThumb';
+import SubjectHeadingsTab from '@/components/report-designer/SubjectHeadingsTab';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/report-designer/ConfirmDialog';
 
 const DOC_LABEL: Record<DocType, string> = { progress_report: 'Progress report', report_card: 'Report card' };
 const gradeName = (g: string, short = false) => (g === 'JK' || g === 'SK' ? g : short ? `Gr ${g}` : `Grade ${g}`);
 const isDocType = (v: string): v is DocType => v === 'progress_report' || v === 'report_card';
-type Tab = 'templates' | 'printing' | 'fields';
+type Tab = 'templates' | 'printing' | 'fields' | 'headings';
 
 function ReportTemplatesContent() {
   const { get, setParams } = useFilterParams();
@@ -66,7 +68,7 @@ function ReportTemplatesContent() {
         <div className="mx-auto max-w-6xl p-6 lg:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-slate-900">Report templates</h1>
-            <p className="mt-1 text-sm text-slate-500">Design how report cards and progress reports look, choose which one prints for each grade and term, and fill in extra fields.</p>
+            <p className="mt-1 text-sm text-slate-500">Design how report cards and progress reports look, choose which one prints for each grade and term, fill in extra fields, and group progress report subjects under headings.</p>
           </div>
           <div className="mb-6 flex gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:inline-flex">
             {(
@@ -74,6 +76,7 @@ function ReportTemplatesContent() {
                 ['templates', 'Templates', DocumentTextIcon],
                 ['printing', 'Which template prints', TableCellsIcon],
                 ['fields', 'Report fields', ListBulletIcon],
+                ['headings', 'Subject headings', Bars3BottomLeftIcon],
               ] as const
             ).map(([key, label, Icon]) => (
               <button
@@ -90,6 +93,7 @@ function ReportTemplatesContent() {
           {tab === 'templates' && <TemplatesTab />}
           {tab === 'printing' && <PrintingTab />}
           {tab === 'fields' && <FieldsTab />}
+          {tab === 'headings' && <SubjectHeadingsTab />}
         </div>
       </main>
     </>

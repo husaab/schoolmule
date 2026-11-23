@@ -6,6 +6,7 @@ import {
   fillPlaceholders,
   isStandardComment,
   standardCommentAction,
+  standardCommentUsesPronouns,
   suggestCoreStandards,
   withStandardComment,
   type StandardCommentContext,
@@ -83,6 +84,42 @@ describe('buildStandardComment', () => {
 
   it('builds nothing from an unknown level', () => {
     expect(built('Something else')).toBe('')
+  })
+})
+
+describe('a goals-and-comment class (Salaat)', () => {
+  const salaatBank = {
+    ...STARTER_COMMENT_BANK,
+    workHabits: {
+      E: 'Demonstrates excellent respect and attentiveness during Salah.',
+      G: 'Is making very good progress in learning Salah.',
+      S: 'Is learning the steps of Salah and making progress.',
+      N: '{First} needs to understand that Salah is a special conversation with Allah.',
+    },
+  }
+  const salaat: StandardCommentContext = { bank: salaatBank, student: adam, subject: 'Salaat', commentsOnly: true }
+
+  it("builds the whole comment from the rating's sentence alone", () => {
+    expect(buildStandardComment({ workHabit: 'G' }, salaat)).toBe('Is making very good progress in learning Salah.')
+    expect(buildStandardComment({ workHabit: 'N', coreStandards: MEETING }, salaat)).toBe(
+      'Adam needs to understand that Salah is a special conversation with Allah.',
+    )
+    expect(buildStandardComment({ coreStandards: MEETING }, salaat)).toBe('')
+  })
+
+  it('fills, rebuilds and keeps comments as other classes do', () => {
+    const filled = withStandardComment({ comment: '' }, { workHabit: 'E', comment: '' }, salaat)
+    expect(filled.comment).toBe(salaatBank.workHabits.E)
+    const rebuilt = withStandardComment({ workHabit: 'E', comment: salaatBank.workHabits.E }, { workHabit: 'S', comment: salaatBank.workHabits.E }, salaat)
+    expect(rebuilt.comment).toBe(salaatBank.workHabits.S)
+    const kept = withStandardComment({ workHabit: 'E', comment: 'My words.' }, { workHabit: 'S', comment: 'My words.' }, salaat)
+    expect(kept.comment).toBe('My words.')
+    expect(standardCommentAction('', { workHabit: 'G' }, salaat)).toBe('fill')
+  })
+
+  it('knows when the sentence uses pronouns', () => {
+    expect(standardCommentUsesPronouns({ workHabit: 'G' }, salaat)).toBe(false)
+    expect(standardCommentUsesPronouns({ coreStandards: MEETING, workHabit: 'G' }, ctx)).toBe(true)
   })
 })
 

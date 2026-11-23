@@ -1,8 +1,10 @@
 // src/lib/classReportOptions.ts
 // A class's report options (Settings → Class options → On reports): the name
 // progress reports print after the subject instead of the teacher's
-// ("Salaat – Supervisor"). Same rules as the API: spaces tidied, at most 80
-// characters, empty = the teacher's own name (null).
+// ("Salaat – Supervisor"), and the goals paragraph a goals-and-comment class
+// prints above every comment. Same rules as the API: the name's spaces tidied,
+// at most 80 characters; the paragraph keeps its line breaks, at most 1000;
+// empty = none (null).
 
 export const REPORT_TEACHER_NAME_MAX = 80
 
@@ -15,5 +17,16 @@ export const tidyReportTeacherName = (typed: string): string | null => typed.rep
  */
 export function reportTeacherNameChange(typed: string, saved: string | null): string | null | undefined {
   const next = tidyReportTeacherName(typed)
+  return next === (saved ?? null) ? undefined : next
+}
+
+export const PROGRESS_GOALS_MAX = 1000
+
+/** The goals paragraph as the API stores it: line breaks kept, ends trimmed, '' → null. */
+export const tidyProgressGoals = (typed: string): string | null => typed.replace(/\r\n?/g, '\n').trim() || null
+
+/** What to send when the goals box is left: the new paragraph, null to remove it, or undefined when nothing changed. */
+export function progressGoalsChange(typed: string, saved: string | null): string | null | undefined {
+  const next = tidyProgressGoals(typed)
   return next === (saved ?? null) ? undefined : next
 }

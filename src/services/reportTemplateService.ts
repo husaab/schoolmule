@@ -17,6 +17,7 @@ import type {
   TemplateAssignment,
 } from './types/reportTemplate';
 import type { DocType, ReportData, TemplateDoc } from '@/reportkit/types';
+import type { LayoutSection, SubjectLayoutResponse } from '@/lib/subjectHeadings';
 
 const BASE = '/report-templates';
 const id = (v: string) => encodeURIComponent(v);
@@ -126,6 +127,15 @@ export const getFieldValues = (docType: DocType, term: string, grade: string) =>
 
 export const saveFieldValues = (payload: { docType: DocType; term: string; studentId: string; values: Record<string, string | null> }) =>
   apiClient<{ values: Record<string, string> }, typeof payload>(`${BASE}/field-values`, { method: 'PUT', body: payload });
+
+/** The school's subject headings on progress reports (Report templates → Subject headings). */
+export const getSubjectLayout = () => apiClient<SubjectLayoutResponse>(`${BASE}/subject-layout`);
+
+export const saveSubjectLayout = (sections: LayoutSection[]) =>
+  apiClient<SubjectLayoutResponse, { sections: LayoutSection[] }>(`${BASE}/subject-layout`, { method: 'PUT', body: { sections } });
+
+/** Back to A to Z with no headings. */
+export const deleteSubjectLayout = () => apiClient<SubjectLayoutResponse>(`${BASE}/subject-layout`, { method: 'DELETE' });
 
 /** Synthetic students with the school's own name and logo, for previews. */
 export const getSampleData = (key: string, docType: DocType) =>
