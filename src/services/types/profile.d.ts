@@ -32,6 +32,13 @@ export interface ProfileData {
   /** A signed URL, good for about six hours. */
   photoUrl: string | null
   photosAllowed: boolean
+  /** Their own number, optional (PUT /profile/phone). */
+  phone: string | null
+}
+
+/** PUT /profile/phone */
+export interface ProfilePhoneResult {
+  phone: string | null
 }
 
 /** PUT /profile/avatar */

@@ -13,6 +13,7 @@ import Modal from '@/components/shared/modal'
 import { Button, Field, FieldRow, FormSection, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass } from '@/components/shared/modalKit'
 import type { MeetingBreak, TeacherHoursChange } from '@/services/types/meetings'
 import { bookedTimesFrom, dayLong, parseTime, rangeLabel, slotsFor, toTimeInput } from '@/lib/meetings'
+import { badPhone, cleanPhone } from '@/lib/phone'
 
 export interface HoursDay {
   dayId: string
@@ -29,6 +30,9 @@ export interface HoursTeacher {
   subtitle?: string
   slotMinutes: number | null
   room: string | null
+  /** The office: "Number they'll call from", and the number on their account. */
+  callFrom?: string | null
+  phone?: string | null
   takingPart: boolean
   families?: number
   days: { dayId: string; works: boolean; ownHours: boolean; start: number; end: number; breaks: MeetingBreak[] }[]
@@ -62,6 +66,7 @@ const TeacherHoursModal: React.FC<Props> = ({ isOpen, onClose, teacher, days, de
   const [draft, setDraft] = useState<DraftDay[]>([])
   const [length, setLength] = useState<string>('')
   const [room, setRoom] = useState('')
+  const [callFrom, setCallFrom] = useState('')
   const [takingPart, setTakingPart] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +87,7 @@ const TeacherHoursModal: React.FC<Props> = ({ isOpen, onClose, teacher, days, de
     }))
     setLength(teacher.slotMinutes ? String(teacher.slotMinutes) : '')
     setRoom(teacher.room || '')
+    setCallFrom(teacher.callFrom || '')
     setTakingPart(teacher.takingPart)
     setError(null)
     setInTheWay([])
@@ -128,7 +134,12 @@ const TeacherHoursModal: React.FC<Props> = ({ isOpen, onClose, teacher, days, de
       change.days!.push({ dayId: d.dayId, works: d.works, start: d.works && d.own ? start : null, end: d.works && d.own ? end : null, breaks })
     }
     if (office) {
+      if (badPhone(callFrom)) {
+        setError('The number they’ll call from doesn’t look like a full phone number.')
+        return
+      }
       change.room = room.trim() || null
+      change.callFrom = cleanPhone(callFrom)
       change.takingPart = takingPart
     }
     setSaving(true)
@@ -239,6 +250,17 @@ const TeacherHoursModal: React.FC<Props> = ({ isOpen, onClose, teacher, days, de
                 </Field>
               )}
             </FieldRow>
+            {office && (
+              <Field
+                label="Number they’ll call from"
+                htmlFor="hours-call-from"
+                hint={badPhone(callFrom) ? 'That doesn’t look like a full phone number.'
+                  : teacher?.phone ? `For phone call meetings. Blank uses the number on their account (${teacher.phone}).`
+                    : 'For phone call meetings: families who booked one see it. Optional.'}
+              >
+                <input id="hours-call-from" type="tel" className={inputClass} value={callFrom} placeholder={teacher?.phone || '416-555-0100'} onChange={(e) => setCallFrom(e.target.value)} />
+              </Field>
+            )}
             <div className="rounded-xl bg-cyan-50/70 px-4 py-3 text-sm text-slate-700">
               {office ? 'They can change these themselves in My Meetings, if the school allows it. ' : ''}
               Booked times stay put: if new hours would leave out a family who already booked, {office ? 'move them on the Board first' : 'ask the office to move them first'}.

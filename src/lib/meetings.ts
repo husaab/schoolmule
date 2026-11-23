@@ -5,6 +5,9 @@
 // teacher's open times, so this only ever picks among them.
 
 import type { MeetingHow, MeetingMode, ParentMeetingEvent, ParentMeetingTeacher, TimeRange } from '@/services/types/meetings'
+import { cleanPhone } from './phone'
+
+export { cleanPhone, telHref } from './phone'
 
 /** '3:30 PM' */
 export function timeLabel(min: number): string {
@@ -56,16 +59,6 @@ export const overlaps = (a: TimeRange, b: TimeRange) => a.start < b.end && b.sta
 
 // ── In person or a phone call ──────────────────────────────
 
-const PHONE_RE = /^\+?[0-9().\-\s]+(?:\s*(?:x|ext\.?)\s*[0-9]+)?$/i
-
-/** A phone number as typed, tidied, or null if it isn't one (as the server checks it). */
-export function cleanPhone(raw: string | null | undefined): string | null {
-  const text = String(raw ?? '').replace(/\s+/g, ' ').trim()
-  const digits = text.replace(/\D/g, '').length
-  if (text.length > 40 || digits < 7 || digits > 20 || !PHONE_RE.test(text)) return null
-  return text
-}
-
 /** A meeting's how, chosen on a form: the mode, and the number as typed. */
 export interface HowChoice {
   mode: MeetingMode
@@ -93,12 +86,13 @@ export const howBody = (how: HowChoice): { mode: MeetingMode; phone: string | nu
 export const howChanged = (booked: MeetingHow, how: HowChoice): boolean =>
   booked.mode !== how.mode || (how.mode === 'phone' && cleanPhone(how.phone) !== booked.phone)
 
-/** Where a meeting happens, in one line: 'Grade 5 room', 'Phone call · 416-555-0100', or null. */
-export const placeLabel = (b: MeetingHow): string | null =>
-  b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}`.trim() : b.room
+/**
+ * Where a meeting happens, in one line: 'Grade 5 room', 'Phone call · 416-555-0100',
+ * or, when the family's own booking says the teacher's number, '… · calls from 905-555-0199'.
+ */
+export const placeLabel = (b: MeetingHow & { callFrom?: string | null }): string | null =>
+  b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}${b.callFrom ? ` · calls from ${b.callFrom}` : ''}` : b.room
 
-/** A tel: link for a number as typed. */
-export const telHref = (phone: string): string => `tel:${phone.replace(/(?:x|ext\.?).*$/i, '').replace(/[^0-9+]/g, '')}`
 
 /** "Until 8:00 PM the evening before" */
 export const cutoffText = (cutoffMin: number | null): string =>

@@ -53,6 +53,10 @@ export const getMyMeetings = () => apiClient<MeetingsEnvelope<{ events: TeacherM
 export const setMyHours = (eventId: string, change: TeacherHoursChange) =>
   apiClient<MeetingsEnvelope<TeacherMeetingEvent>>(`${ev(eventId)}/my-hours`, { method: 'PUT', body: change })
 
+/** A teacher's "Number I'll call from" for these meetings; null = the number in their Settings. */
+export const setMyCallFrom = (eventId: string, callFrom: string | null) =>
+  apiClient<MeetingsEnvelope<TeacherMeetingEvent>>(`${ev(eventId)}/my-call-from`, { method: 'PUT', body: { callFrom } })
+
 export const closeMyTimes = (eventId: string, body: { dayId: string; start: number; end: number; label?: string | null }) =>
   apiClient<MeetingsEnvelope<{ breakId: string }>>(`${ev(eventId)}/my-closed`, { method: 'POST', body })
 

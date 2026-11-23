@@ -21,8 +21,9 @@ import MenuButton, { type MenuItem } from '@/components/shared/MenuButton'
 import { Button } from '@/components/shared/modalKit'
 import PdfViewerModal from '@/components/reports/PdfViewerModal'
 import TeacherHoursModal from '@/components/meetings/TeacherHoursModal'
+import CallFromModal from './CallFromModal'
 import type { TeacherBookingStudent, TeacherMeetingDay, TeacherMeetingEvent, TeacherSlot } from '@/services/types/meetings'
-import { closeMyTimes, printMeetingDay, reopenMyTimes, setMyHours, getMyMeetings } from '@/services/meetingsService'
+import { closeMyTimes, printMeetingDay, reopenMyTimes, setMyCallFrom, setMyHours, getMyMeetings } from '@/services/meetingsService'
 import { generateStudentSummaryReport, generateStudentTermSummaryReport } from '@/services/reportService'
 import { dayShort, dayLong, joinNames, rangeLabel, telHref, timeLabel } from '@/lib/meetings'
 
@@ -55,6 +56,8 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
   const [pdf, setPdf] = useState<{ url: string; title: string; subtitle: string; filename: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [hoursOpen, setHoursOpen] = useState(false)
+  const [callFromOpen, setCallFromOpen] = useState(false)
+  const shownNumber = event.callFrom || event.myPhone || null
   const rows = useMemo(() => (day ? rowsFor(day) : []), [day])
 
   const refresh = async () => {
@@ -237,6 +240,24 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
       </section>
 
       <aside className="flex w-full flex-col gap-4 lg:w-80">
+        {event.allowPhone && event.takingPart && (
+          <section className={`${card} p-5 ${shownNumber ? '' : 'border-amber-200 bg-amber-50/60'}`}>
+            <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
+              <PhoneIcon className="h-4 w-4 text-slate-500" aria-hidden="true" /> Phone calls
+            </h2>
+            <p className="mb-3 text-sm text-slate-600">
+              Families can book a phone call instead of coming in. At the time, you call them at the number on their meeting.
+            </p>
+            {shownNumber ? (
+              <p className="mb-3 text-sm text-slate-700">They see you’ll call from <span className="font-medium text-slate-900">{shownNumber}</span>.</p>
+            ) : (
+              <p className="mb-3 text-sm font-medium text-amber-800">Add the number you’ll call from, so families know it’s you.</p>
+            )}
+            <Button variant={shownNumber ? 'secondary' : 'warning'} className="w-full" onClick={() => setCallFromOpen(true)}>
+              <PhoneIcon className="h-4 w-4" /> {shownNumber ? 'Change the number' : 'Add my number'}
+            </Button>
+          </section>
+        )}
         <section data-tour="meetings.print" className={`${card} p-5`}>
           <h2 className="mb-1 text-base font-semibold text-slate-900">Print my day</h2>
           <p className="mb-4 text-sm text-slate-500">One PDF: this schedule, then each family’s Student summary in meeting order.</p>
@@ -270,6 +291,18 @@ const TeacherMeetings: React.FC<Props> = ({ event, dayId, setDayId, autoPrint, o
           <p className="mt-3 text-xs text-slate-500">To close one time, use Close next to it. Booked times stay put; the office moves families if needed.</p>
         </section>
       </aside>
+
+      <CallFromModal
+        isOpen={callFromOpen}
+        onClose={() => setCallFromOpen(false)}
+        callFrom={event.callFrom ?? null}
+        myPhone={event.myPhone ?? null}
+        onSave={async (callFrom) => {
+          const res = await setMyCallFrom(event.eventId, callFrom)
+          onChange(res.data)
+          notify(callFrom || event.myPhone ? 'Saved. Families with a phone call see this number.' : 'Saved.', 'success')
+        }}
+      />
 
       <TeacherHoursModal
         isOpen={hoursOpen}

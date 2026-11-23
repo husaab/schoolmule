@@ -138,6 +138,7 @@ describe('in person or a phone call', () => {
   it('labels where it happens, and dials the number', () => {
     expect(placeLabel({ mode: 'in_person', phone: null, room: 'Grade 5 room' })).toBe('Grade 5 room')
     expect(placeLabel({ mode: 'phone', phone: '416-555-0100', room: null })).toBe('Phone call · 416-555-0100')
+    expect(placeLabel({ mode: 'phone', phone: '416-555-0100', room: null, callFrom: '905-555-0199' })).toBe('Phone call · 416-555-0100 · calls from 905-555-0199')
     expect(telHref('+1 (416) 555-0100 ext. 12')).toBe('tel:+14165550100')
   })
 })

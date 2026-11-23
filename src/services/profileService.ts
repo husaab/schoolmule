@@ -1,5 +1,5 @@
 // src/services/profileService.ts
-// The signed-in person's own avatar and photo (/api/profile). Every role may
+// The signed-in person's own avatar, photo and phone number (/api/profile). Every role may
 // call these, students included; the server keys them on the token's user.
 
 import apiClient from './apiClient'
@@ -9,11 +9,19 @@ import type {
   ProfileAvatarResult,
   ProfileData,
   ProfileEnvelope,
+  ProfilePhoneResult,
   ProfilePhotoResult,
 } from './types/profile'
 
 /** GET /profile: avatar, a fresh signed photo URL, and whether photos are allowed. */
 export const getProfile = () => apiClient<ProfileEnvelope<ProfileData>>('/profile')
+
+/** PUT /profile/phone: the number tidied, or null to remove it (not for student logins). */
+export const savePhone = (phone: string | null) =>
+  apiClient<ProfileEnvelope<ProfilePhoneResult>, { phone: string | null }>('/profile/phone', {
+    method: 'PUT',
+    body: { phone },
+  })
 
 /** PUT /profile/avatar: null goes back to the neutral avatar. */
 export const saveAvatar = (avatar: AvatarSpec | null) =>

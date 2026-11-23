@@ -17,6 +17,7 @@ import { EyeIcon, EyeSlashIcon, UserCircleIcon, KeyIcon, TrashIcon, CheckIcon, F
 import DeleteUserModal from '@/components/user/delete/DeleteUserModal';
 import { roleLabel } from '@/components/adminUsers/userDisplay';
 import SignatureCard from '@/components/settings/SignatureCard';
+import PhoneCard from '@/components/settings/PhoneCard';
 
 // Writes the avatar or photo into the signed-in user, so the sidebar, navbar
 // and every other avatar of theirs update at once.
@@ -36,6 +37,8 @@ const Settings = () => {
   // still decides.
   const displayName = user.fullName || user.username || 'You';
   const [photosAllowed, setPhotosAllowed] = useState(user.role !== 'STUDENT');
+  /** Their own phone number; undefined until GET /profile answers. */
+  const [phone, setPhone] = useState<string | null | undefined>(undefined);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [removePhotoOpen, setRemovePhotoOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -49,9 +52,10 @@ const Settings = () => {
       .then((res) => {
         if (!live) return;
         setPhotosAllowed(res.data.photosAllowed);
+        setPhone(res.data.phone ?? null);
         patchUser({ avatar: res.data.avatar, photoUrl: res.data.photoUrl });
       })
-      .catch(() => {});
+      .catch(() => { if (live) setPhone(null); });
     return () => {
       live = false;
     };
@@ -256,6 +260,11 @@ const Settings = () => {
               </button>
             </div>
           </div>
+
+          {/* Phone number (not student logins): meetings show it, or fill it in */}
+          {user.role !== 'STUDENT' && (
+            <PhoneCard phone={phone} staff={user.role === 'TEACHER' || user.role === 'ADMIN'} onSaved={setPhone} />
+          )}
 
           {/* My signature (staff): prints on the JK/SK progress reports and report cards */}
           {(user.role === 'TEACHER' || user.role === 'ADMIN') && <SignatureCard />}

@@ -31,6 +31,7 @@ import {
 import { RoleBadge, StatusBadge, UserAvatar, accessRoleLabel, canImpersonate, canManageUser, formatDate, statusOf } from './userDisplay'
 import { AccessRoleChip } from '@/components/adminRoles/roleDisplay'
 import { useAccess } from '@/hooks/useAccess'
+import { telHref } from '@/lib/phone'
 
 interface UserViewModalProps {
   isOpen: boolean
@@ -171,6 +172,7 @@ const UserViewModal: React.FC<UserViewModalProps> = ({
           <SectionLabel>Account</SectionLabel>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
             <Fact label="Username">{user.username}</Fact>
+            <Fact label="Phone">{user.phone ? <a href={telHref(user.phone)} className="text-cyan-700 hover:underline">{user.phone}</a> : '–'}</Fact>
             {user.role !== 'PARENT' && <Fact label="Access role">{accessRoleLabel(user)}</Fact>}
             <Fact label="Email verified">{user.isVerified ? 'Yes' : 'No'}</Fact>
             <Fact label="School access">{user.isVerifiedSchool ? 'Granted' : 'Not granted'}</Fact>

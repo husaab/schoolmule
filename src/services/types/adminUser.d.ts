@@ -18,6 +18,8 @@ export interface SchoolUser {
   staffTitle: string | null;
   /** Staff only: Mr. | Ms. | Mrs. | Dr. before the name parents see ("Ms. Doha Chahade"); null = plain name. */
   honorific?: Honorific | null;
+  /** Their own number (optional). Parent–teacher meetings show a teacher's to families with a phone call. */
+  phone?: string | null;
   /** The custom access role (RBAC); null for the built-in Admin or Teacher. Optional until the backend sends it. */
   accessRoleId?: string | null;
   accessRoleName?: string | null;
@@ -70,6 +72,7 @@ export type Honorific = 'Mr.' | 'Ms.' | 'Mrs.' | 'Dr.';
 
 export interface InviteUserRequest {
   honorific?: Honorific | null;
+  phone?: string | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -87,6 +90,8 @@ export interface UpdateSchoolUserRequest {
   staffTitle?: string;
   /** Omitted keeps the stored title; null clears it. */
   honorific?: Honorific | null;
+  /** Omitted keeps the stored number; null clears it. */
+  phone?: string | null;
   /** Full admins only. null clears it (back to the built-in); omitted leaves it unchanged. */
   accessRoleId?: string | null;
 }

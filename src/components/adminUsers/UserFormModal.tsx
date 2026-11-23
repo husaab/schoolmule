@@ -19,6 +19,7 @@ import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useAccess } from '@/hooks/useAccess'
 import { useAccessRoles } from '@/hooks/useAccessRoles'
+import { cleanPhone } from '@/lib/phone'
 import { PencilSquareIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { ROLE_OPTIONS, accessRoleLabel } from './userDisplay'
 
@@ -50,6 +51,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
   const [staffTitle, setStaffTitle] = useState('')
   /** '' = no title: parents see the plain name. */
   const [honorific, setHonorific] = useState<Honorific | ''>('')
+  const [phone, setPhone] = useState('')
   /** '' = the built-in Admin or Teacher. */
   const [accessRoleId, setAccessRoleId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -63,11 +65,13 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
     setHasAccess(user?.isVerifiedSchool ?? true)
     setStaffTitle(user?.staffTitle ?? '')
     setHonorific(user?.honorific ?? '')
+    setPhone(user?.phone ?? '')
     setAccessRoleId(user?.accessRoleId ?? '')
   }, [isOpen, user])
 
+  const phoneBad = phone.trim() !== '' && !cleanPhone(phone)
   const canSubmit =
-    firstName.trim() && lastName.trim() && (isEdit || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    firstName.trim() && lastName.trim() && (isEdit || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) && !phoneBad
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,6 +89,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           isVerifiedSchool: hasAccess,
           staffTitle: role === 'ADMIN' ? staffTitle.trim() : '',
           honorific: role === 'PARENT' ? null : honorific || null,
+          phone: cleanPhone(phone),
         }
         if (fullAdmin && !isSelf && nextAccessRoleId !== (user.accessRoleId ?? null)) payload.accessRoleId = nextAccessRoleId
         const res = await updateSchoolUser(user.userId, payload)
@@ -97,6 +102,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
           email: email.trim(),
           role,
           honorific: role === 'PARENT' ? null : honorific || null,
+          phone: cleanPhone(phone),
           ...(fullAdmin && nextAccessRoleId ? { accessRoleId: nextAccessRoleId } : {}),
         })
         notify(
@@ -170,6 +176,22 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
                 </select>
               </Field>
             )}
+            <Field
+              label="Phone number"
+              htmlFor="user-phone"
+              hint={phoneBad ? 'That doesn’t look like a full phone number.' : role === 'PARENT' ? 'Optional. Fills in phone call meetings.' : 'Optional. Families who book a phone call meeting with them see it.'}
+            >
+              <input
+                id="user-phone"
+                type="tel"
+                autoComplete="off"
+                className={inputClass}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="416-555-0100"
+                aria-invalid={phoneBad}
+              />
+            </Field>
             {!isEdit && (
               <Field label="Email" htmlFor="user-email" required hint="The invite is sent here, and it's their login.">
                 <input
