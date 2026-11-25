@@ -179,7 +179,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, user, on
             <Field
               label="Phone number"
               htmlFor="user-phone"
-              hint={phoneBad ? 'That doesn’t look like a full phone number.' : role === 'PARENT' ? 'Optional. Fills in phone call meetings.' : 'Optional. Families who book a phone call meeting with them see it.'}
+              hint={phoneBad ? 'That doesn’t look like a full phone number.' : role === 'PARENT' ? 'Optional. Fills in phone call meetings.' : 'Optional. Only the office sees it; families never do.'}
             >
               <input
                 id="user-phone"
