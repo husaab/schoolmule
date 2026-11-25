@@ -1,8 +1,8 @@
 // src/components/settings/PhoneCard.tsx
 // Settings → Phone number: the signed-in person's own number, optional.
-// Staff: families who book a phone call meeting with them see it (unless a
-// different "Number I'll call from" is set in My Meetings). Parents: it fills
-// in their phone call meetings. Not shown to student logins.
+// Staff: only the office sees it (teachers call families; families never see
+// a teacher's number). Parents: it fills in their phone call meetings. Not
+// shown to student logins.
 'use client'
 
 import { useState } from 'react'
@@ -50,7 +50,7 @@ export default function PhoneCard({ phone, staff, onSaved }: Props) {
       </div>
       <p className="text-sm text-slate-500 mb-4">
         {staff
-          ? 'Optional. Families who book a phone call parent–teacher meeting with you see this number, so they know it’s you calling. The office can see it too.'
+          ? 'Optional. Only the office sees it. Families never see your number.'
           : 'Optional. We fill it in for you when you book a phone call parent–teacher meeting.'}
       </p>
       <form

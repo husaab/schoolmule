@@ -90,8 +90,6 @@ export interface ParentMeetingTeacher {
 }
 
 export interface ParentBooking extends MeetingHow {
-  /** A phone call: the number the teacher calls from (their meetings number or account's), if they have one. */
-  callFrom?: string | null
   bookingId: string
   teacherId: string
   teacherName: string
@@ -177,10 +175,6 @@ export interface TeacherMeetingEvent extends MeetingEventBase {
   ownSlotMinutes: number | null
   teacherSlotMinutes: number
   room: string | null
-  /** "Number I'll call from" for these meetings (null = the account's number). */
-  callFrom?: string | null
-  /** The number on their account (Settings). */
-  myPhone?: string | null
   days: TeacherMeetingDay[]
 }
 
@@ -220,9 +214,6 @@ export interface SetupTeacher {
   takingPart: boolean
   slotMinutes: number | null
   room: string | null
-  /** "Number I'll call from" for these meetings, and the number on their account. */
-  callFrom?: string | null
-  phone?: string | null
   times: number
   perTime: number | null
   bookings: number
@@ -293,8 +284,6 @@ export interface TeacherHoursChange {
   takingPart?: boolean
   slotMinutes?: number | null
   room?: string | null
-  /** The office only: "Number they'll call from"; null = the account's number. */
-  callFrom?: string | null
   days?: {
     dayId: string
     works: boolean

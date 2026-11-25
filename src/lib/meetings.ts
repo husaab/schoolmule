@@ -86,12 +86,9 @@ export const howBody = (how: HowChoice): { mode: MeetingMode; phone: string | nu
 export const howChanged = (booked: MeetingHow, how: HowChoice): boolean =>
   booked.mode !== how.mode || (how.mode === 'phone' && cleanPhone(how.phone) !== booked.phone)
 
-/**
- * Where a meeting happens, in one line: 'Grade 5 room', 'Phone call · 416-555-0100',
- * or, when the family's own booking says the teacher's number, '… · calls from 905-555-0199'.
- */
-export const placeLabel = (b: MeetingHow & { callFrom?: string | null }): string | null =>
-  b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}${b.callFrom ? ` · calls from ${b.callFrom}` : ''}` : b.room
+/** Where a meeting happens, in one line: 'Grade 5 room' or 'Phone call · 416-555-0100'. */
+export const placeLabel = (b: MeetingHow): string | null =>
+  b.mode === 'phone' ? `Phone call · ${b.phone ?? ''}` : b.room
 
 
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000)

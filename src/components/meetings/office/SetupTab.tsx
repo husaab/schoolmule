@@ -90,7 +90,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
   const hoursDays = setup.days.map((d) => ({ dayId: d.dayId, date: d.date, start: d.start, end: d.end, everyone: d.everyone, breaks: d.breaks }))
   const hoursTeacher = (t: SetupTeacher): HoursTeacher => ({
     name: t.name, subtitle: `${t.teaches} · ${t.families} families`, slotMinutes: t.slotMinutes, room: t.room,
-    callFrom: t.callFrom ?? null, phone: t.phone ?? null, takingPart: t.takingPart, families: t.families, days: t.days,
+    takingPart: t.takingPart, families: t.families, days: t.days,
   })
   const taking = setup.teachers.filter((t) => t.takingPart)
 
@@ -172,7 +172,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
                   <th className="py-2.5 pr-3">Days and hours</th>
                   <th className="py-2.5 pr-3">Families</th>
                   <th className="py-2.5 pr-3">Demand</th>
-                  <th className="py-2.5">{setup.allowPhone ? 'Room · calls from' : 'Room'}</th>
+                  <th className="py-2.5">Room</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,11 +196,6 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
                     <td className="py-3 pr-3">{t.takingPart ? <Demand t={t} /> : <span className="text-slate-400">Not taking part</span>}</td>
                     <td className="whitespace-nowrap py-3 text-xs text-slate-500">
                       {t.room || (setup.useGradeRoom ? 'Grade room' : '–')}
-                      {setup.allowPhone && t.takingPart && (
-                        (t.callFrom || t.phone)
-                          ? <span className="block">{t.callFrom || t.phone}</span>
-                          : <span className="block text-amber-700">No phone number</span>
-                      )}
                     </td>
                   </tr>
                 ))}
