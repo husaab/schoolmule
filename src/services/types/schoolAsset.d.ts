@@ -39,6 +39,33 @@ export interface SchoolAssetResponse {
   data: SchoolAsset | null;
 }
 
+/**
+ * The file that was live until it was replaced, deleted or written over by a
+ * restore. School Assets lists the newest ten of each asset and can put one back.
+ */
+export interface SchoolAssetVersion {
+  versionId: string;
+  assetType: 'logo' | 'principal_signature' | 'school_stamp';
+  reason: 'replaced' | 'deleted' | 'restored_over';
+  replacedAt: string;
+  replacedByName: string | null;
+  contentType: string | null;
+  byteSize: number | null;
+  /** A link to the image that works for ten minutes; null when it couldn't be made. */
+  previewUrl: string | null;
+}
+
+export interface SchoolAssetVersionsResponse {
+  status: string;
+  data: SchoolAssetVersion[];
+}
+
+export interface SchoolAssetRestoreResponse {
+  status: string;
+  message: string;
+  data: SchoolAsset & { restoredAsset: string; filePath: string };
+}
+
 export interface SchoolAssetsListResponse {
   status: string;
   data: SchoolAsset[];

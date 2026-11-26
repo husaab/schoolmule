@@ -15,6 +15,7 @@ import {
 } from '@/services/schoolAssetService';
 import type { AssetType, SchoolAsset } from '@/services/types/schoolAsset';
 import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
+import AssetVersions from '@/components/schoolAssets/AssetVersions';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
 interface AssetUpload {
@@ -35,6 +36,8 @@ const SchoolAssetsPage = () => {
 
   const [schoolAssets, setSchoolAssets] = useState<SchoolAsset | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped after every upload, delete and restore, so each asset's earlier versions reload.
+  const [versionsKey, setVersionsKey] = useState(0);
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -252,6 +255,7 @@ const SchoolAssetsPage = () => {
       
       // Reload assets to get the new uploaded file
       await reloadAssets();
+      setVersionsKey((k) => k + 1);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -303,14 +307,24 @@ const SchoolAssetsPage = () => {
         clearSchoolUrlCache(schoolCode);
       }
       
-      showNotification(`${assetConfigs.find(c => c.key === assetType)?.title} deleted successfully!`, 'success');
+      showNotification(`${assetConfigs.find(c => c.key === assetType)?.title} deleted. You can restore it from Earlier versions.`, 'success');
       
       // Reload assets to reflect the deletion
       await reloadAssets();
+      setVersionsKey((k) => k + 1);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Delete failed';
       showNotification(`Failed to delete ${assetConfigs.find(c => c.key === assetType)?.title}: ${errorMessage}`, 'error');
     }
+  };
+
+  // An earlier version was put back: the live file changed under the same or another path.
+  const handleRestored = async (title: string) => {
+    const schoolCode = getCurrentUserSchoolCode();
+    if (schoolCode) clearSchoolUrlCache(schoolCode);
+    showNotification(`${title} restored. The file it replaced is under Earlier versions.`, 'success');
+    await reloadAssets();
+    setVersionsKey((k) => k + 1);
   };
 
   return (
@@ -456,6 +470,16 @@ const SchoolAssetsPage = () => {
                       </button>
                     )}
                   </div>
+
+                  {schoolAssets?.schoolId && (
+                    <AssetVersions
+                      schoolId={schoolAssets.schoolId}
+                      assetType={config.key as AssetType}
+                      title={config.title}
+                      refreshKey={versionsKey}
+                      onRestored={() => handleRestored(config.title)}
+                    />
+                  )}
                 </div>
               );
             })}

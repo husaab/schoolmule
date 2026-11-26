@@ -78,6 +78,21 @@ School Mule is a comprehensive school management system with separate frontend a
 - **Fields**: user_id, expires_at
 - **Purpose**: Password reset functionality
 
+### Audit, AI usage and asset history (2026-11-26)
+
+#### audit_log
+- **Purpose**: who changed what, and what it was before. Append-only; written only through `schoolmule-backend/services/audit/auditLog.js` (`record()` never throws). First writers: school asset replace, delete and restore. `changes` holds ids, labels and values only, never an education number or a contact detail.
+
+#### ai_usage_daily
+- **Primary Key**: (user_id, day, feature)
+- **Purpose**: requests and tokens per person, day (America/Toronto) and AI feature. Backs a daily limit per person (`AI_USER_DAILY_REQUESTS`, default 400) and a monthly limit per school (`AI_SCHOOL_MONTHLY_TOKENS`, default 40,000,000) in `schoolmule-backend/services/aiUsage.js`. The web AI routes report through `POST /api/ai-usage/start` and `/record` (`src/lib/server/aiUsage.ts`); everything fails open.
+
+#### school_asset_versions
+- **Purpose**: the file a school's logo, principal signature or stamp was before it was replaced, deleted or written over by a restore (newest ten each, in the private `school-assets-history` bucket). An upload or delete keeps a copy first and refuses to go ahead when it can't. School Assets lists them under each asset and restores one.
+
+### AI model
+- Every AI feature names its model in one helper per repo: `src/lib/server/openaiChat.ts` (web routes) and `schoolmule-backend/services/openaiChat.js`. Default `gpt-6-luna`; `OPENAI_MODEL` overrides it.
+
 ## Custom Types (Enums)
 
 - **school**: Enum for different schools

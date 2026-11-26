@@ -8,6 +8,8 @@ import type {
   SignedUrlResponse,
   FolderUrlResponse,
   DeleteAssetResponse,
+  SchoolAssetVersionsResponse,
+  SchoolAssetRestoreResponse,
   AssetType
 } from './types/schoolAsset';
 
@@ -114,6 +116,36 @@ export const deleteSchoolAsset = async (
     `/school-assets/${encodeURIComponent(schoolId)}/${encodeURIComponent(assetType)}`,
     {
       method: 'DELETE',
+    }
+  );
+};
+
+/**
+ * GET /school-assets/:schoolId/:assetType/versions
+ * The asset's earlier versions, newest first (School setup).
+ */
+export const getSchoolAssetVersions = async (
+  schoolId: string,
+  assetType: AssetType
+): Promise<SchoolAssetVersionsResponse> => {
+  return apiClient<SchoolAssetVersionsResponse>(
+    `/school-assets/${encodeURIComponent(schoolId)}/${encodeURIComponent(assetType)}/versions`
+  );
+};
+
+/**
+ * POST /school-assets/:schoolId/:assetType/versions/:versionId/restore
+ * Put an earlier version back. The file it replaces is kept as a version first.
+ */
+export const restoreSchoolAssetVersion = async (
+  schoolId: string,
+  assetType: AssetType,
+  versionId: string
+): Promise<SchoolAssetRestoreResponse> => {
+  return apiClient<SchoolAssetRestoreResponse>(
+    `/school-assets/${encodeURIComponent(schoolId)}/${encodeURIComponent(assetType)}/versions/${encodeURIComponent(versionId)}/restore`,
+    {
+      method: 'POST',
     }
   );
 };
