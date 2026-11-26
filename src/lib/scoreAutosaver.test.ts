@@ -383,6 +383,32 @@ describe('leaving the Grades tab never loses a JK/SK rating', () => {
     expect(autosaver.getState().inFlight).toEqual({})
   })
 
+  it('a partial save that carries the server answer reports the part that saved', async () => {
+    const { calls, autosaver } = setupDocs()
+    const saved: [unknown, string[]][] = []
+    autosaver.onSaved((res, batch) => saved.push([res, batch.map(([key]) => key)]))
+    autosaver.queue('k1|progress_report', base)
+    autosaver.queue('k2|progress_report', { ...base, studentId: 'k2' })
+    const done = autosaver.flush()
+    calls[0].reject(new PartialSaveError(['k1|progress_report'], 'Over the word limit', { res: { ok: true } }))
+    await done
+    expect(saved).toEqual([[{ ok: true }, ['k2|progress_report']]])
+    expect(Object.keys(autosaver.getState().failed)).toEqual(['k1|progress_report'])
+    expect(autosaver.getState().failed['k1|progress_report'].message).toBe('Over the word limit')
+  })
+
+  it('a partial save without the server answer reports nothing as saved', async () => {
+    const { calls, autosaver } = setupDocs()
+    const saved: unknown[] = []
+    autosaver.onSaved((res) => saved.push(res))
+    autosaver.queue('k1|progress_report', base)
+    autosaver.queue('k2|progress_report', { ...base, studentId: 'k2' })
+    const done = autosaver.flush()
+    calls[0].reject(new PartialSaveError(['k1|progress_report'], 'Failed to save'))
+    await done
+    expect(saved).toEqual([])
+  })
+
   it('a failed save keeps the document for Retry (or Discard)', async () => {
     const { calls, autosaver } = setupDocs()
     autosaver.queue('k1|report_card', { ...base, doc: 'report_card', comments: { d1: 'Shares toys.' } })

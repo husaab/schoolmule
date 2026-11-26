@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
+import { aiCommentLength } from '@/lib/aiCommentLength'
 
 // Rating labels for context
 const RATING_LABELS: Record<string, string> = {
@@ -109,6 +110,9 @@ export async function POST(request: NextRequest) {
 
     const { gradeInfo, toneGuidance: gradeGuidance } = getGradeContext(grade, coverage)
 
+    // The school's word limits for progress report comments, when the page sends them.
+    const length = aiCommentLength(body, { sentences: '2-4', maxTokens: 200 })
+
     const prompt = `You are a helpful assistant writing progress report comments for teachers. Progress reports are mid-term check-ins (not final report cards). They should convey current standing and next steps.
 
 Student Information:
@@ -125,7 +129,7 @@ ${gradeGuidance ? `\nAdditional grade context:\n${gradeGuidance}` : ''}
 Guidelines:
 - Write in third person
 ${pronounGuidance(studentName, gender)}
-- Keep the comment between 2-4 sentences
+- ${length.guideline}
 - This is a PROGRESS REPORT, so focus on current trajectory and forward-looking improvement steps
 - Be specific and encouraging while honest about areas for improvement
 - Do not include the letter ratings (E, G, S, N) or exact percentage in the comment
@@ -154,7 +158,7 @@ Generate only the comment text, no additional formatting or labels.`
             content: prompt,
           },
         ],
-        max_tokens: 200,
+        max_tokens: length.maxTokens,
         temperature: 0.7,
       }),
     })

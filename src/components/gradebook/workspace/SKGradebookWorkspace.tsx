@@ -40,6 +40,8 @@ import SavedPill from '@/components/gradebook/SavedPill'
 import TeacherAssistantPicker from './TeacherAssistantPicker'
 import ClassTermNotice from './ClassTermNotice'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
+import { isReadOnly, type ClassCommentRules } from '@/lib/commentRules'
+import { CommentRulesNotice } from './CommentRulesNotice'
 import {
   applyKindergartenChange,
   kindergartenKey,
@@ -78,9 +80,13 @@ const DOC_NAME: Record<TabType, string> = { progress_report: 'progress report', 
 interface SKGradebookWorkspaceProps {
   classId: string
   classData: ClassPayload
+  /** The school's review lock for each document's comments (lib/commentRules.ts). SK comments have no word limit. */
+  commentRules: ClassCommentRules
+  /** A save was refused: read the rules again (the comments may have been locked meanwhile). */
+  onLocked: () => void
 }
 
-export default function SKGradebookWorkspace({ classId, classData }: SKGradebookWorkspaceProps) {
+export default function SKGradebookWorkspace({ classId, classData, commentRules, onLocked }: SKGradebookWorkspaceProps) {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -122,6 +128,22 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
   // (openSKDocument).
   const autosave = useKindergartenAutosave({ classId, kind: 'sk' })
   const docKey = selectedStudentId ? kindergartenKey(selectedStudentId, activeTab) : null
+  // Comments locked for review can be read, not changed; ratings still save.
+  // Subject comments print on both documents, so either document's lock holds
+  // them; the progress report's own rows follow the progress report's lock.
+  const reportCardLocked = isReadOnly(commentRules.reportCard, commentRules.canEditLocked)
+  const progressLocked = isReadOnly(commentRules.progressReport, commentRules.canEditLocked)
+  const subjectCommentsLocked = reportCardLocked || progressLocked
+  // The lock to explain: the open document's, else the other one's (it holds the subject comments).
+  const openLocked = activeTab === 'report_card' ? commentRules.reportCard.locked : commentRules.progressReport.locked
+  const otherTab: TabType = activeTab === 'report_card' ? 'progress_report' : 'report_card'
+  const noticeKind: TabType = openLocked ? activeTab : otherTab
+  const noticeRule = noticeKind === 'report_card' ? commentRules.reportCard : commentRules.progressReport
+  // A save that failed may have been refused by a lock set while the page was open.
+  const saveFailed = autosave.status === 'error'
+  useEffect(() => {
+    if (saveFailed) onLocked()
+  }, [saveFailed, onLocked])
   const docRef = useRef<KindergartenFields>(EMPTY_FIELDS)
   const readyKeyRef = useRef<string | null>(null)
   const loadSeq = useRef(0)
@@ -257,10 +279,10 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
     change({ ratings: { ...docRef.current.ratings, [standardId]: value } })
 
   const handleSubjectCommentChange = (subjectId: string, value: string, forKey: string | null = docKey) =>
-    change({ comments: { ...docRef.current.comments, [subjectId]: value } }, forKey)
+    !subjectCommentsLocked && change({ comments: { ...docRef.current.comments, [subjectId]: value } }, forKey)
 
   const handleProgressCommentChange = (rowKey: string, value: string, forKey: string | null = docKey) =>
-    change({ progressComments: { ...docRef.current.progressComments, [rowKey]: value } }, forKey)
+    !progressLocked && change({ progressComments: { ...docRef.current.progressComments, [rowKey]: value } }, forKey)
 
   // Generate an AI comment from rated standards. `key` names the request (a
   // subjectId, or `row:<row key>` for a progress report row); `apply` puts the
@@ -427,7 +449,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                 {selectedStudentId && (
                   <button
                     onClick={handleGenerateAllComments}
-                    disabled={generatingAllAI || generatingAI.size > 0}
+                    disabled={(subjectCommentsLocked && (activeTab === 'report_card' || progressLocked)) || generatingAllAI || generatingAI.size > 0}
                     className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white rounded-xl text-sm font-medium hover:from-purple-600 hover:to-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <SparklesIcon
@@ -482,6 +504,8 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
           )}
 
           {term && <ClassTermNotice termId={classData?.termId} school={user?.school} />}
+
+          <CommentRulesNotice kind={noticeKind} rule={noticeRule} canEditLocked={commentRules.canEditLocked} className="mb-4" ratingsStayOpen />
 
           {docState === 'error' && selectedStudentId && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -720,6 +744,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                               )
                             }}
                             disabled={
+                              subjectCommentsLocked ||
                               generatingAI.has(subject.subjectId) ||
                               !subject.standards.some((s) => ratings[s.standardId])
                             }
@@ -739,8 +764,9 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                             handleSubjectCommentChange(subject.subjectId, e.target.value)
                           }
                           rows={3}
-                          placeholder="Click 'Generate with AI' or type strengths and next steps..."
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                          readOnly={subjectCommentsLocked}
+                          placeholder={subjectCommentsLocked ? 'No comment' : "Click 'Generate with AI' or type strengths and next steps..."}
+                          className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y ${subjectCommentsLocked ? 'bg-slate-50 text-slate-600' : ''}`}
                         />
                       </div>
                       )}
@@ -769,7 +795,7 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                                 <button
                                   type="button"
                                   onClick={() => void handleGenerateRowComment(row)}
-                                  disabled={busy || !canGenerate}
+                                  disabled={progressLocked || busy || !canGenerate}
                                   title={canGenerate ? undefined : 'Rate the standards this row covers first'}
                                   className="flex shrink-0 items-center gap-1.5 px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
@@ -782,8 +808,9 @@ export default function SKGradebookWorkspace({ classId, classData }: SKGradebook
                                 value={progressComments[row.key] || ''}
                                 onChange={(e) => handleProgressCommentChange(row.key, e.target.value)}
                                 rows={3}
-                                placeholder="Click 'Generate with AI' or type strengths and next steps..."
-                                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                                readOnly={progressLocked}
+                                placeholder={progressLocked ? 'No comment' : "Click 'Generate with AI' or type strengths and next steps..."}
+                                className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y ${progressLocked ? 'bg-slate-50 text-slate-600' : ''}`}
                               />
                             </div>
                           )

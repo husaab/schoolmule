@@ -9,6 +9,10 @@
 // Each student's Details (src/lib/reportCardDetails.ts) are optional picks
 // that only help the AI write the comment; nothing in them prints. An AI
 // draft asks before replacing a comment the teacher wrote or edited.
+// The school's comment rules (lib/commentRules.ts) show here: the word limit
+// above the table with a count under every comment (one over the maximum is
+// not saved until it is shortened), and the review lock, which makes the page
+// read-only for everyone but a reviewer.
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
@@ -27,6 +31,8 @@ import { formatCoverage } from '@/lib/gradeEngine'
 import type { ClassFeedbackEntry } from '@/services/types/reportCard'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
 import { commentChange, feedbackEntry, REPORT_CARD_FIELDS, type FeedbackEntry } from '@/lib/commentAutosave'
+import { aiLimitsPayload, commentFinished, heldForLength, isReadOnly, wordState, type CommentRule } from '@/lib/commentRules'
+import { CommentRulesNotice, CommentWordCount, overLimitBox } from './CommentRulesNotice'
 
 import {
   UserGroupIcon,
@@ -64,10 +70,18 @@ type FeedbackField = 'workHabits' | 'behavior' | 'comment' | 'commentDetails'
 interface ReportCardCommentsWorkspaceProps {
   classId: string
   classData: ClassPayload
+  /** The school's word limits for report card comments and whether they are locked. */
+  rule: CommentRule
+  /** The signed-in person reviews comments: a lock doesn't stop them. */
+  canEditLocked: boolean
+  /** A save was refused as locked: read the rules again. */
+  onLocked: () => void
 }
 
-export default function ReportCardCommentsWorkspace({ classId, classData }: ReportCardCommentsWorkspaceProps) {
+export default function ReportCardCommentsWorkspace({ classId, classData, rule, canEditLocked, onLocked }: ReportCardCommentsWorkspaceProps) {
   const showNotification = useNotificationStore((s) => s.showNotification)
+  // Locked for review: everything on the page can be read, nothing changed.
+  const readOnly = isReadOnly(rule, canEditLocked)
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   // A class belongs to exactly one term: comments are always entered for it.
@@ -109,6 +123,8 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
   const comments = useCommentAutosave({
     classId,
     kind: 'report',
+    maxWords: rule.maxWords,
+    onLocked,
     onSaved: (entries) =>
       setExistingFeedback((prev) => {
         const updated = new Map(prev)
@@ -143,8 +159,9 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
       const behavior = edited?.behavior ?? existing?.behavior
       const comment = edited?.comment ?? existing?.comment
 
-      // Consider complete if all fields are filled
-      if (workHabits && behavior && comment) {
+      // Complete when both ratings are picked and the comment is written
+      // within the school's word limits.
+      if (workHabits && behavior && commentFinished(comment, rule)) {
         completed++
       }
     })
@@ -230,6 +247,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
 
   // Queue the student's whole entry (the class needs a term to save anything)
   const handleFieldChange = (studentId: string, field: FeedbackField, value: string) => {
+    if (readOnly) return
     const next = commentChange(
       { term: selectedTerm, savedLoaded: feedbackLoaded, saved: savedEntry(studentId), local: comments.entryFor(studentId) },
       field,
@@ -268,6 +286,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
 
   // AI for a student: asks first when it would replace the teacher's own words
   const handleGenerateAIComment = (studentId: string, studentName: string) => {
+    if (readOnly) return
     if (shouldConfirmAiReplace(getFieldValue(studentId, 'comment'), lastAiDraft.current.get(studentId))) {
       setConfirmAi(studentId)
       return
@@ -305,6 +324,8 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
         term: selectedTerm,
         grade,
         coverage,
+        // The school's word limits, when it has any, so the draft aims inside them.
+        ...aiLimitsPayload(rule),
         ...aiDetailsPayload(detailsOf(studentId)),
       })
 
@@ -403,9 +424,9 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                 {/* Save Button */}
                 <button
                   onClick={handleSaveAll}
-                  disabled={comments.status === 'saved'}
+                  disabled={comments.status === 'saved' || readOnly}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm cursor-pointer ${
-                    comments.status === 'saved'
+                    comments.status === 'saved' || readOnly
                       ? 'bg-white/20 text-white/50 cursor-not-allowed'
                       : 'bg-white text-cyan-600 hover:bg-white/90 shadow-lg hover:shadow-xl'
                   }`}
@@ -482,7 +503,10 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
             </div>
           </div>
 
-          {/* AI Feature Info Banner */}
+          <CommentRulesNotice kind="report_card" rule={rule} canEditLocked={canEditLocked} unsavedCount={readOnly ? comments.failedKeys.size : 0} />
+
+          {/* AI Feature Info Banner (nothing to generate while the comments are locked) */}
+          {!readOnly && (
           <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-purple-200/40 p-5">
             {/* Decorative elements */}
             <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-purple-300/20 to-transparent rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -517,6 +541,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
               </div>
             </div>
           </div>
+          )}
 
           {!selectedTerm && (
 
@@ -599,7 +624,10 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                           const behaviorValue = getFieldValue(stu.studentId, 'behavior')
                           const details = detailsOf(stu.studentId)
                           const detailsOpen = openDetails === stu.studentId
-                          const editable = feedbackLoaded && Boolean(selectedTerm)
+                          const editable = feedbackLoaded && Boolean(selectedTerm) && !readOnly
+                          const commentValue = getFieldValue(stu.studentId, 'comment')
+                          const commentState = wordState(commentValue, rule)
+                          const savedComment = existingFeedback.get(stu.studentId)?.comment
 
                           return (
                             <React.Fragment key={stu.studentId}>
@@ -619,7 +647,13 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     {hasEdits && (
                                       <span
                                         className={`w-2 h-2 rounded-full ${saveFailed ? 'bg-rose-500' : 'bg-amber-400'}`}
-                                        title={saveFailed ? "Didn't save. Use Retry above." : 'Saving…'}
+                                        title={
+                                          !saveFailed
+                                            ? 'Saving…'
+                                            : heldForLength(commentValue, savedComment, rule)
+                                              ? 'Not saved: the comment is over the word limit. Shorten it to save.'
+                                              : "Didn't save. Use Retry above."
+                                        }
                                       />
                                     )}
                                   </div>
@@ -649,6 +683,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                   label={`Work Habits for ${stu.name}`}
                                   options={RATING_OPTIONS}
                                   value={workHabitsValue}
+                                  disabled={readOnly}
                                   onChange={(v) => {
                                     handleFieldChange(stu.studentId, 'workHabits', v)
                                     void comments.flush()
@@ -662,6 +697,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                   label={`Behavior for ${stu.name}`}
                                   options={RATING_OPTIONS}
                                   value={behaviorValue}
+                                  disabled={readOnly}
                                   onChange={(v) => {
                                     handleFieldChange(stu.studentId, 'behavior', v)
                                     void comments.flush()
@@ -696,26 +732,32 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                               <td className="px-3 py-2">
                                 <div className="flex gap-2">
                                   <textarea
-                                    value={getFieldValue(stu.studentId, 'comment')}
+                                    value={commentValue}
                                     onChange={(e) => handleFieldChange(stu.studentId, 'comment', e.target.value)}
                                     onBlur={() => void comments.flush()}
-                                    placeholder="Enter comment or use AI to generate..."
+                                    readOnly={readOnly}
+                                    aria-label={`Comment for ${stu.name}`}
+                                    placeholder={readOnly ? 'No comment' : 'Enter comment or use AI to generate...'}
                                     rows={4}
                                     className={`flex-1 px-3 py-2 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all ${
-                                      isFieldEdited(stu.studentId, 'comment')
-                                        ? 'border-amber-300 bg-amber-50/50'
-                                        : 'border-slate-200 hover:border-slate-300'
+                                      readOnly
+                                        ? 'border-slate-200 bg-slate-50 text-slate-600'
+                                        : overLimitBox(commentState) ||
+                                          (isFieldEdited(stu.studentId, 'comment')
+                                            ? 'border-amber-300 bg-amber-50/50'
+                                            : 'border-slate-200 hover:border-slate-300')
                                     }`}
                                   />
                                   {/* AI Generate Button with Tooltip */}
                                   <div className="relative group/ai flex-shrink-0">
                                     <button
                                       onClick={() => handleGenerateAIComment(stu.studentId, stu.name)}
-                                      disabled={isGenerating || !workHabitsValue || !behaviorValue}
+                                      disabled={isGenerating || readOnly || !workHabitsValue || !behaviorValue}
+                                      aria-label={`Write ${stu.name}'s comment with AI`}
                                       className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all cursor-pointer ${
                                         isGenerating
                                           ? 'bg-purple-100 text-purple-400'
-                                          : !workHabitsValue || !behaviorValue
+                                          : readOnly || !workHabitsValue || !behaviorValue
                                           ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                           : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                                       }`}
@@ -726,8 +768,8 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                         <SparklesIcon className="w-5 h-5" />
                                       )}
                                     </button>
-                                    {/* Tooltip - shows when button is disabled */}
-                                    {(!workHabitsValue || !behaviorValue) && (
+                                    {/* Tooltip - shows when ratings are still needed */}
+                                    {!readOnly && (!workHabitsValue || !behaviorValue) && (
                                       <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover/ai:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                                         <div className="flex items-center gap-1.5">
                                           <InformationCircleIcon className="w-4 h-4 text-amber-400 flex-shrink-0" />
@@ -739,6 +781,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     )}
                                   </div>
                                 </div>
+                                <CommentWordCount text={commentValue} limits={rule} saved={savedComment} />
                                 {confirmAi === stu.studentId && (
                                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                                     <span className="text-slate-600">Replace your comment with a new AI draft?</span>
@@ -774,7 +817,7 @@ export default function ReportCardCommentsWorkspace({ classId, classData }: Repo
                                     onChange={(next) => handleDetailsChange(stu.studentId, next)}
                                     onFlush={() => void comments.flush()}
                                     onWriteWithAi={() => handleGenerateAIComment(stu.studentId, stu.name)}
-                                    aiDisabled={!workHabitsValue || !behaviorValue}
+                                    aiDisabled={readOnly || !workHabitsValue || !behaviorValue}
                                     aiBusy={isGenerating}
                                     confirming={confirmAi === stu.studentId}
                                     onConfirmReplace={() => void requestAIComment(stu.studentId, stu.name)}

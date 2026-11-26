@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
+import { aiCommentLength } from '@/lib/aiCommentLength'
 import { cleanDetails, detailsPromptSection } from '@/lib/reportCardDetails'
 
 // Rating labels for context
@@ -124,6 +125,9 @@ export async function POST(request: NextRequest) {
 - Do not mention medical, health or family matters, even if the teacher's note does.`
       : ''
 
+    // The school's word limits for report card comments, when the page sends them.
+    const length = aiCommentLength(body, { sentences: observations ? '3-5' : '2-4', maxTokens: observations ? 300 : 200 })
+
     const prompt = `You are a helpful assistant writing report card comments for teachers. Generate a professional, warm, and constructive report card comment for a student.
 
 Student Information:
@@ -137,7 +141,7 @@ ${toneGuidance ? `Tone Guidance:\n${toneGuidance}\n` : ''}
 Guidelines:
 - Write in third person
 ${pronounGuidance(studentName, gender)}
-- Keep the comment between ${observations ? '3-5' : '2-4'} sentences${observationGuidelines}
+- ${length.guideline}${observationGuidelines}
 - Be specific and encouraging while honest about areas for improvement
 - If ratings are Excellent or Good, focus on strengths and positive contributions
 - If ratings are Satisfactory, acknowledge effort and suggest ways to improve
@@ -167,7 +171,7 @@ Generate only the comment text, no additional formatting or labels.`
             content: prompt,
           },
         ],
-        max_tokens: observations ? 300 : 200,
+        max_tokens: length.maxTokens,
         temperature: 0.7,
       }),
     })

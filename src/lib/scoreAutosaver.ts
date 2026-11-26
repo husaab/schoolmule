@@ -95,14 +95,19 @@ const LEAVE_WARNING = 'Some grades have not saved yet. Leave anyway?'
 
 /**
  * Thrown by a save that saved part of its batch: only `failedKeys` are kept
- * for Retry; the other keys count as saved (onSaved is not called for them).
+ * for Retry; the other keys count as saved. onSaved is called for them only
+ * when the error carries the server's answer (`saved`), e.g. comments held
+ * back for being over the word limit while the rest of the batch was sent.
  */
-export class PartialSaveError extends Error {
+export class PartialSaveError<R = unknown> extends Error {
   failedKeys: string[]
-  constructor(failedKeys: string[], message: string) {
+  /** The server's answer for the part that saved: onSaved is then called with it and the pairs that saved. */
+  saved?: { res: R }
+  constructor(failedKeys: string[], message: string, saved?: { res: R }) {
     super(message)
     this.name = 'PartialSaveError'
     this.failedKeys = failedKeys
+    this.saved = saved
   }
 }
 
@@ -194,6 +199,18 @@ export function createAutosaver<V, R>({
         commit(ackBatch(state))
       } catch (err) {
         const message = messageOf(err)
+        if (err instanceof PartialSaveError && err.saved) {
+          const failing = new Set(err.failedKeys)
+          const savedPart = batch.filter(([key]) => !failing.has(key))
+          const res = err.saved.res as R
+          savedHandlers.forEach((h) => {
+            try {
+              h(res, savedPart)
+            } catch (handlerErr) {
+              console.error('Applying saved scores failed:', handlerErr)
+            }
+          })
+        }
         commit(err instanceof PartialSaveError ? failKeys(state, err.failedKeys, message) : failBatch(state, message))
         failedHandlers.forEach((h) => h(message))
       }

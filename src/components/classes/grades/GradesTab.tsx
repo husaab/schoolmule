@@ -23,6 +23,7 @@ import AssessmentsSection from '@/components/assessments/section/AssessmentsSect
 import PublishHistoryModal from '@/components/gradebook/publish/PublishHistoryModal'
 import { useScoreAutosave, type AutosaveStatus } from '@/hooks/useScoreAutosave'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
+import { useCommentRules } from '@/hooks/useCommentRules'
 import { useFilterParams } from '@/hooks/useFilterParams'
 import { classHref, GRADES_SUB_IDS, newItemHref, parseGradesSub, type GradesSub } from '@/lib/classroomRoutes'
 import { isJK, isSK } from '@/lib/schoolUtils'
@@ -85,8 +86,22 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
   // use: the pill shows their state, and a sub-tab switch saves whatever is
   // still typed first.
   const autosave = useScoreAutosave({ classId })
-  const reportComments = useCommentAutosave({ classId, kind: 'report' })
-  const progressComments = useCommentAutosave({ classId, kind: 'progress' })
+  // The school's comment rules for this class (word limits, review lock). The
+  // autosavers get the maximum here, so a Retry from another sub-tab still
+  // holds back a comment that is over it.
+  const commentRules = useCommentRules(classId)
+  const reportComments = useCommentAutosave({
+    classId,
+    kind: 'report',
+    maxWords: commentRules.rules.reportCard.maxWords,
+    onLocked: commentRules.refresh,
+  })
+  const progressComments = useCommentAutosave({
+    classId,
+    kind: 'progress',
+    maxWords: commentRules.rules.progressReport.maxWords,
+    onLocked: commentRules.refresh,
+  })
   const pillStatus = combinedStatus([autosave.status, reportComments.status, progressComments.status])
   const failedCount = autosave.failedKeys.size + reportComments.failedKeys.size + progressComments.failedKeys.size
   const { flush: flushScores, retry: retryScores } = autosave
@@ -172,9 +187,9 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
 
   if (kindergarten) {
     return isJK(data.class.grade) ? (
-      <JKGradebookWorkspace classId={classId} classData={classData} />
+      <JKGradebookWorkspace classId={classId} classData={classData} commentRules={commentRules.rules} onLocked={commentRules.refresh} />
     ) : (
-      <SKGradebookWorkspace classId={classId} classData={classData} />
+      <SKGradebookWorkspace classId={classId} classData={classData} commentRules={commentRules.rules} onLocked={commentRules.refresh} />
     )
   }
 
@@ -240,10 +255,23 @@ export default function GradesTab({ classId, data }: ClassTabProps) {
         )}
         {sub === 'setup' && <AssessmentsSection classId={classId} openAdd={addRequested} onAddOpened={clearAdd} />}
         {sub === 'report-comments' && (
-          <ReportCardCommentsWorkspace classId={classId} classData={classData} />
+          <ReportCardCommentsWorkspace
+            classId={classId}
+            classData={classData}
+            rule={commentRules.rules.reportCard}
+            canEditLocked={commentRules.rules.canEditLocked}
+            onLocked={commentRules.refresh}
+          />
         )}
         {sub === 'progress-comments' && (
-          <ProgressCommentsWorkspace classId={classId} classData={classData} commentsOnly={data.class.options?.progressCommentsOnly ?? false} />
+          <ProgressCommentsWorkspace
+            classId={classId}
+            classData={classData}
+            commentsOnly={data.class.options?.progressCommentsOnly ?? false}
+            rule={commentRules.rules.progressReport}
+            canEditLocked={commentRules.rules.canEditLocked}
+            onLocked={commentRules.refresh}
+          />
         )}
       </div>
 

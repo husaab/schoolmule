@@ -41,6 +41,8 @@ import SavedPill from '@/components/gradebook/SavedPill'
 import TeacherAssistantPicker from './TeacherAssistantPicker'
 import ClassTermNotice from './ClassTermNotice'
 import { useKindergartenAutosave } from '@/hooks/useKindergartenAutosave'
+import { isReadOnly, type ClassCommentRules } from '@/lib/commentRules'
+import { CommentRulesNotice } from './CommentRulesNotice'
 import {
   applyKindergartenChange,
   kindergartenKey,
@@ -99,9 +101,13 @@ const fieldsOf = (s: KindergartenSnapshot): KindergartenFields => ({
 interface JKGradebookWorkspaceProps {
   classId: string
   classData: ClassPayload
+  /** The school's review lock for each document's comments (lib/commentRules.ts). JK comments have no word limit. */
+  commentRules: ClassCommentRules
+  /** A save was refused: read the rules again (the comments may have been locked meanwhile). */
+  onLocked: () => void
 }
 
-export default function JKGradebookWorkspace({ classId, classData }: JKGradebookWorkspaceProps) {
+export default function JKGradebookWorkspace({ classId, classData, commentRules, onLocked }: JKGradebookWorkspaceProps) {
   const user = useUserStore((s) => s.user)
   const selectedYearId = useSchoolYearStore((s) => s.selectedYearId)
   const showNotification = useNotificationStore((s) => s.showNotification)
@@ -142,6 +148,15 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
   // assistant is not part of the document: TeacherAssistantPicker saves it.)
   const autosave = useKindergartenAutosave({ classId, kind: 'jk' })
   const docKey = selectedStudentId ? kindergartenKey(selectedStudentId, activeTab) : null
+  // The open document's comments are locked for review: they can be read, not
+  // changed. Ratings are not part of the lock and still save.
+  const commentRule = activeTab === 'report_card' ? commentRules.reportCard : commentRules.progressReport
+  const commentsLocked = isReadOnly(commentRule, commentRules.canEditLocked)
+  // A save that failed may have been refused by a lock set while the page was open.
+  const saveFailed = autosave.status === 'error'
+  useEffect(() => {
+    if (saveFailed) onLocked()
+  }, [saveFailed, onLocked])
   const docRef = useRef<KindergartenFields>(EMPTY_FIELDS)
   const readyKeyRef = useRef<string | null>(null)
   const loadSeq = useRef(0)
@@ -292,13 +307,13 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     change({ ratings: { ...docRef.current.ratings, [skillId]: value } })
 
   const handleCommentChange = (domainId: string, value: string, forKey: string | null = docKey) =>
-    change({ comments: { ...docRef.current.comments, [domainId]: value } }, forKey)
+    !commentsLocked && change({ comments: { ...docRef.current.comments, [domainId]: value } }, forKey)
 
   const handleLearningSkillChange = (skillName: string, value: string) =>
     change({ learningSkills: { ...docRef.current.learningSkills, [skillName]: value } })
 
   const handleProgressCommentChange = (sectionType: string, value: string, forKey: string | null = docKey) =>
-    change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } }, forKey)
+    !commentsLocked && change({ progressComments: { ...docRef.current.progressComments, [sectionType]: value } }, forKey)
 
   // Generate AI comment for a single domain or section
   const handleGenerateAIComment = async (
@@ -306,7 +321,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
     domainName: string,
     skillsForPrompt: Array<{ name: string; rating: string; description?: string }>
   ) => {
-    if (!selectedStudent) return
+    if (!selectedStudent || commentsLocked) return
     // The document this comment is for, whatever is open when it arrives.
     const requestedKey = docKey
 
@@ -490,7 +505,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                 {selectedStudentId && (
                   <button
                     onClick={handleGenerateAllComments}
-                    disabled={generatingAllAI || generatingAI.size > 0}
+                    disabled={commentsLocked || generatingAllAI || generatingAI.size > 0}
                     className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white rounded-xl text-sm font-medium hover:from-purple-600 hover:to-fuchsia-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     <SparklesIcon className={`w-4 h-4 ${generatingAllAI ? 'animate-pulse' : ''}`} />
@@ -543,6 +558,8 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
           )}
 
           {term && <ClassTermNotice termId={classData?.termId} school={user?.school} />}
+
+          <CommentRulesNotice kind={activeTab} rule={commentRule} canEditLocked={commentRules.canEditLocked} className="mb-4" ratingsStayOpen />
 
           {docState === 'error' && selectedStudentId && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -730,6 +747,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                                 handleGenerateAIComment(domain.domainId, domain.name, skillsForPrompt)
                               }}
                               disabled={
+                                commentsLocked ||
                                 generatingAI.has(domain.domainId) ||
                                 !domain.skills.some((s) => ratings[s.skillId])
                               }
@@ -745,8 +763,9 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                             value={domainComments[domain.domainId] || ''}
                             onChange={(e) => handleCommentChange(domain.domainId, e.target.value)}
                             rows={3}
-                            placeholder="Click 'Generate with AI' or type your own comment..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                            readOnly={commentsLocked}
+                            placeholder={commentsLocked ? 'No comment' : "Click 'Generate with AI' or type your own comment..."}
+                            className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y ${commentsLocked ? 'bg-slate-50 text-slate-600' : ''}`}
                           />
                         </div>
                       )}
@@ -785,6 +804,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                                 )
                               }}
                               disabled={
+                                commentsLocked ||
                                 generatingAI.has('academic_achievement') ||
                                 !domains
                                   .filter((d) => !SOCIO_EMOTIONAL_DOMAIN_NAMES.includes(d.name))
@@ -804,8 +824,9 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                               handleProgressCommentChange('academic_achievement', e.target.value)
                             }
                             rows={3}
-                            placeholder="Click 'Generate with AI' or type your own comment..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                            readOnly={commentsLocked}
+                            placeholder={commentsLocked ? 'No comment' : "Click 'Generate with AI' or type your own comment..."}
+                            className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y ${commentsLocked ? 'bg-slate-50 text-slate-600' : ''}`}
                           />
                         </div>
                       </div>
@@ -841,6 +862,7 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                                 )
                               }}
                               disabled={
+                                commentsLocked ||
                                 generatingAI.has('socio_emotional') ||
                                 !domains
                                   .filter((d) => SOCIO_EMOTIONAL_DOMAIN_NAMES.includes(d.name))
@@ -860,8 +882,9 @@ export default function JKGradebookWorkspace({ classId, classData }: JKGradebook
                               handleProgressCommentChange('socio_emotional', e.target.value)
                             }
                             rows={3}
-                            placeholder="Click 'Generate with AI' or type your own comment..."
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y"
+                            readOnly={commentsLocked}
+                            placeholder={commentsLocked ? 'No comment' : "Click 'Generate with AI' or type your own comment..."}
+                            className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y ${commentsLocked ? 'bg-slate-50 text-slate-600' : ''}`}
                           />
                         </div>
                       </div>

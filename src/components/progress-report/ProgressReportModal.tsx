@@ -39,6 +39,9 @@ import {
 } from '@/lib/commentBank';
 import { firstNameOf } from '@/lib/classroomText';
 import type { CommentBank } from '@/services/types/commentBank';
+import { COMMENTS_LOCKED, OPEN_RULE, aiLimitsPayload, heldForLength, isReadOnly, wordState, type CommentRule } from '@/lib/commentRules';
+import { isApiError } from '@/services/apiClient';
+import { CommentRulesNotice, CommentWordCount, overLimitBox } from '@/components/gradebook/workspace/CommentRulesNotice';
 
 const CORE_STANDARDS_OPTIONS: RatingOption[] = CORE_STANDARDS_LEVELS.map((l) => ({ value: l.value, label: l.label, title: l.value }));
 const RATING_OPTIONS: RatingOption[] = [
@@ -67,6 +70,12 @@ interface ProgressReportModalProps {
   commentBank?: CommentBank | null;
   /** Goals and comment only (Salaat): one rating that fills the comment; no core standards, behavior or AI. */
   commentsOnly?: boolean;
+  /** The school's word limits for progress report comments and whether they are locked (lib/commentRules.ts). */
+  rule?: CommentRule;
+  /** The signed-in person reviews comments: a lock doesn't stop them. */
+  canEditLocked?: boolean;
+  /** A save was refused as locked: read the rules again. */
+  onLocked?: () => void;
 }
 
 const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
@@ -82,8 +91,13 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   initialTerm,
   commentBank,
   commentsOnly = false,
+  rule = OPEN_RULE,
+  canEditLocked = false,
+  onLocked,
 }) => {
   const showNotification = useNotificationStore(state => state.showNotification);
+  // Locked for review: the feedback can be read, not changed.
+  const readOnly = isReadOnly(rule, canEditLocked);
   const user = useUserStore(state => state.user);
 
   // Term state
@@ -96,6 +110,8 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const [workHabit, setWorkHabit] = useState('');
   const [behavior, setBehavior] = useState('');
   const [comment, setComment] = useState('');
+  // The comment as saved: one over the word limit that is still this text was saved before the limit.
+  const [loadedComment, setLoadedComment] = useState('');
   const [loading, setLoading] = useState(false);
   // `loading` covers both the initial feedback fetch and the save, so it can't
   // tell the footer button which one is running. `saving` is presentation only.
@@ -150,11 +166,13 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
           setWorkHabit(res.data.workHabit || '');
           setBehavior(res.data.behavior || '');
           setComment(res.data.comment || '');
+          setLoadedComment(res.data.comment || '');
         } else {
           setCoreStandards('');
           setWorkHabit('');
           setBehavior('');
           setComment('');
+          setLoadedComment('');
         }
       } catch (err) {
         console.warn('Progress report feedback not found — initializing blank form', err);
@@ -162,6 +180,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
         setWorkHabit('');
         setBehavior('');
         setComment('');
+        setLoadedComment('');
       } finally {
         setLoading(false);
       }
@@ -183,6 +202,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   }, [isOpen]);
 
   const handleGenerateAIComment = async () => {
+    if (readOnly) return;
     if (!coreStandards || !workHabit || !behavior) {
       showNotification('Please select Core Standards, Work Habits, and Behavior first', 'error');
       return;
@@ -200,6 +220,8 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
         term: term || 'Current Term',
         grade: studentGrade,
         coverage,
+        // The school's word limits, when it has any, so the draft aims inside them.
+        ...aiLimitsPayload(rule),
       });
 
       if (!response.ok) throw new Error('Failed to generate comment');
@@ -222,8 +244,13 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (readOnly) return;
     if (!term) {
       showNotification('Please select a term', 'error');
+      return;
+    }
+    if (heldForLength(comment, loadedComment, rule)) {
+      showNotification(`The comment is over the limit of ${rule.maxWords} words. Shorten it to save.`, 'error');
       return;
     }
 
@@ -247,7 +274,9 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
       }
     } catch (err) {
       console.error('Error saving progress report feedback:', err);
-      showNotification('Error saving progress report feedback', 'error');
+      // The server says why (locked for review, over the word limit): pass it on.
+      if (isApiError(err) && err.code === COMMENTS_LOCKED) onLocked?.();
+      showNotification(isApiError(err) && err.code ? err.message : 'Error saving progress report feedback', 'error');
     } finally {
       setLoading(false);
       setSaving(false);
@@ -265,10 +294,15 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
   const picks = { coreStandards, workHabit };
   const standardText = commentContext ? buildStandardComment(picks, commentContext) : '';
   const isStandard = commentContext ? isStandardComment(comment, picks, commentContext) : false;
-  const action = commentContext ? standardCommentAction(comment, picks, commentContext) : null;
+  // Nothing fills or rebuilds a locked comment.
+  const action = commentContext && !readOnly ? standardCommentAction(comment, picks, commentContext) : null;
+  const commentState = wordState(comment, rule);
+  // Over the maximum and changed from what is saved: it can't be saved until it is shortened.
+  const commentHeld = heldForLength(comment, loadedComment, rule);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
 
   const pickRating = (field: 'coreStandards' | 'workHabit', value: string) => {
+    if (readOnly) return;
     if (field === 'coreStandards') setCoreStandards(value);
     else setWorkHabit(value);
     if (!commentContext) return;
@@ -299,6 +333,8 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
       ) : (
         <form onSubmit={handleSubmit}>
           <ModalBody>
+            <CommentRulesNotice kind="progress_report" rule={rule} canEditLocked={canEditLocked} className="" />
+
             {/* Term selector — collapsed by default, since it is almost always
                 already correct and only occasionally needs changing. */}
             <div>
@@ -335,7 +371,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
             {commentsOnly ? (
             <Field label="Rating">
-              <RatingButtons label="Rating" options={COMMENT_RATING_OPTIONS} value={workHabit} onChange={(v) => pickRating('workHabit', v)} />
+              <RatingButtons label="Rating" options={COMMENT_RATING_OPTIONS} value={workHabit} disabled={readOnly} onChange={(v) => pickRating('workHabit', v)} />
               <p className="mt-1 text-xs text-slate-500">Fills in the comment. The report prints the class&apos;s goals and the comment, not the rating.</p>
             </Field>
             ) : (
@@ -345,24 +381,25 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 label="Core standards"
                 options={CORE_STANDARDS_OPTIONS}
                 value={coreStandards}
-                suggested={suggestion}
+                suggested={readOnly ? null : suggestion}
+                disabled={readOnly}
                 onChange={(v) => pickRating('coreStandards', v)}
               />
-              {!coreStandards && suggestion && typeof studentGrade === 'number' && (
+              {!readOnly && !coreStandards && suggestion && typeof studentGrade === 'number' && (
                 <p className="mt-1 text-xs text-violet-600">Suggested from {studentGrade.toFixed(1)}%. Pick it to confirm.</p>
               )}
             </Field>
 
             <Field label="Work habits">
-              <RatingButtons label="Work habits" options={RATING_OPTIONS} value={workHabit} onChange={(v) => pickRating('workHabit', v)} />
+              <RatingButtons label="Work habits" options={RATING_OPTIONS} value={workHabit} disabled={readOnly} onChange={(v) => pickRating('workHabit', v)} />
             </Field>
 
             <Field label="Behavior">
-              <RatingButtons label="Behavior" options={RATING_OPTIONS} value={behavior} onChange={setBehavior} />
+              <RatingButtons label="Behavior" options={RATING_OPTIONS} value={behavior} disabled={readOnly} onChange={setBehavior} />
             </Field>
 
             {/* AI feature info card */}
-            {!commentsOnly && (
+            {!commentsOnly && !readOnly && (
             <div className="relative overflow-hidden rounded-xl border border-purple-100/60 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 p-4">
               <div className="absolute right-0 top-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-gradient-to-br from-purple-200/30 to-transparent blur-2xl" />
               <div className="relative flex gap-3">
@@ -391,7 +428,7 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 <label htmlFor="pr-comment" className="block text-sm font-medium text-slate-700">
                   Comments
                 </label>
-                {!commentsOnly && (
+                {!commentsOnly && !readOnly && (
                 <div className="group relative">
                   <Button
                     type="button"
@@ -420,10 +457,12 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
                 id="pr-comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className={textareaClass}
+                readOnly={readOnly}
+                className={`${textareaClass} ${readOnly ? 'bg-slate-50 text-slate-600' : overLimitBox(commentState)}`}
                 rows={4}
-                placeholder={commentsOnly ? 'Pick a rating, or write your own comment…' : 'Generate with AI, or write your own comment…'}
+                placeholder={readOnly ? 'No comment' : commentsOnly ? 'Pick a rating, or write your own comment…' : 'Generate with AI, or write your own comment…'}
               />
+              <CommentWordCount text={comment} limits={rule} saved={loadedComment} />
               {isStandard && !studentGender && commentContext && standardCommentUsesPronouns(picks, commentContext) && (
                 <p className="mt-1 text-xs text-amber-700">No gender on file for {firstNameOf(studentName)}: check the pronouns.</p>
               )}
@@ -472,11 +511,13 @@ const ProgressReportModal: React.FC<ProgressReportModalProps> = ({
 
           <ModalFooter>
             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
-              Cancel
+              {readOnly ? 'Close' : 'Cancel'}
             </Button>
-            <Button type="submit" variant="primary" loading={saving} disabled={loading || loadingTerms}>
-              {saving ? 'Saving' : 'Save feedback'}
-            </Button>
+            {!readOnly && (
+              <Button type="submit" variant="primary" loading={saving} disabled={loading || loadingTerms || commentHeld}>
+                {saving ? 'Saving' : 'Save feedback'}
+              </Button>
+            )}
           </ModalFooter>
         </form>
       )}

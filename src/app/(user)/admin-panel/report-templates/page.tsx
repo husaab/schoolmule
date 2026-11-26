@@ -13,6 +13,7 @@ import {
   TableCellsIcon,
   ListBulletIcon,
   Bars3BottomLeftIcon,
+  ChatBubbleBottomCenterTextIcon,
 } from '@heroicons/react/24/outline';
 import Navbar from '@/components/navbar/Navbar';
 import Sidebar from '@/components/sidebar/Sidebar';
@@ -48,12 +49,13 @@ import { GRADES } from '@/reportkit/format';
 import type { DocType } from '@/reportkit/types';
 import TemplateThumb from '@/components/report-designer/TemplateThumb';
 import SubjectHeadingsTab from '@/components/report-designer/SubjectHeadingsTab';
+import CommentRulesTab from '@/components/report-designer/CommentRulesTab';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/report-designer/ConfirmDialog';
 
 const DOC_LABEL: Record<DocType, string> = { progress_report: 'Progress report', report_card: 'Report card' };
 const gradeName = (g: string, short = false) => (g === 'JK' || g === 'SK' ? g : short ? `Gr ${g}` : `Grade ${g}`);
 const isDocType = (v: string): v is DocType => v === 'progress_report' || v === 'report_card';
-type Tab = 'templates' | 'printing' | 'fields' | 'headings';
+type Tab = 'templates' | 'printing' | 'fields' | 'headings' | 'comments';
 
 function ReportTemplatesContent() {
   const { get, setParams } = useFilterParams();
@@ -68,7 +70,7 @@ function ReportTemplatesContent() {
         <div className="mx-auto max-w-6xl p-6 lg:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-slate-900">Report templates</h1>
-            <p className="mt-1 text-sm text-slate-500">Design how report cards and progress reports look, choose which one prints for each grade and term, fill in extra fields, and group progress report subjects under headings.</p>
+            <p className="mt-1 text-sm text-slate-500">Design how report cards and progress reports look, choose which one prints for each grade and term, fill in extra fields, group progress report subjects under headings, and set word limits and the review lock for teachers&apos; comments.</p>
           </div>
           <div className="mb-6 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:inline-flex">
             {(
@@ -77,6 +79,7 @@ function ReportTemplatesContent() {
                 ['printing', 'Which template prints', TableCellsIcon],
                 ['fields', 'Report fields', ListBulletIcon],
                 ['headings', 'Subject headings', Bars3BottomLeftIcon],
+                ['comments', 'Comments', ChatBubbleBottomCenterTextIcon],
               ] as const
             ).map(([key, label, Icon]) => (
               <button
@@ -95,6 +98,7 @@ function ReportTemplatesContent() {
           {tab === 'printing' && <PrintingTab />}
           {tab === 'fields' && <FieldsTab />}
           {tab === 'headings' && <SubjectHeadingsTab />}
+          {tab === 'comments' && <CommentRulesTab />}
         </div>
       </main>
     </>
