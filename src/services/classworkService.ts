@@ -8,6 +8,8 @@ import apiClient from './apiClient'
 import apiUpload from './apiUpload'
 import type {
   Attachment,
+  CategoryInput,
+  CategoryOption,
   ClassworkData,
   ClassworkEnvelope,
   CopyInput,
@@ -70,6 +72,12 @@ export const reorderTopics = (classId: string, topicIds: string[]) =>
     method: 'POST',
     body: { topicIds },
   })
+
+// ── Categories ─────────────────────────────────────────────────────────────
+
+/** POST a new, empty category (201): what a "Counts toward" picker's "New category…" makes. */
+export const createCategory = (classId: string, input: CategoryInput) =>
+  apiClient<ClassworkEnvelope<CategoryOption>, CategoryInput>(`${classPath(classId)}/categories`, { method: 'POST', body: input })
 
 // ── Attachments ────────────────────────────────────────────────────────────
 

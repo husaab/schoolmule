@@ -111,7 +111,6 @@ export default function AssignmentFields(props: ItemFieldsProps & { kind: Extrac
         </FormCard>
 
         <GradebookLinkField
-          classId={classId}
           values={values}
           set={set}
           errors={errors}
@@ -119,6 +118,9 @@ export default function AssignmentFields(props: ItemFieldsProps & { kind: Extrac
           columns={columns}
           standalone={standalone}
           currentCategoryId={props.currentCategoryId}
+          currentWeightPoints={props.currentWeightPoints}
+          pointsUsed={props.pointsUsed}
+          onNewCategory={props.onNewCategory}
           kindergarten={kindergarten}
         />
 

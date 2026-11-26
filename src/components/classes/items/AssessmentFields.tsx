@@ -1,64 +1,89 @@
 // src/components/classes/items/AssessmentFields.tsx
 // The assessment form (the Teacher-NewAssessment board, D11): a plain
-// gradebook column (name, category, out of, date) with an optional note and
-// attachments, then topic, audience, "show it early" and the email, and what
-// students will see. Scores are entered in Grades; nothing is turned in.
+// gradebook column (name, what it counts toward, marked out of, date) with an
+// optional note and attachments, then topic, audience, "show it early" and
+// the email, and what students will see. "Counts toward" is a category (one
+// can be made right there) or "On its own" with its own "Worth"; a few plain
+// sentences then say what the choices come to, so the share of the final
+// grade is never mistaken for the marks. A column that already counts on its
+// own stays on its own here (moving it into a category is done in Grades),
+// but its "Worth" and "Marked out of" can be changed. Scores are entered in
+// Grades; nothing is turned in.
 'use client'
 
 import AttachmentsEditor from './AttachmentsEditor'
 import AudienceField from './AudienceField'
 import EmailOptionsField from './EmailOptionsField'
-import { CategoriesLink, CategorySelect, OutOfInput } from './GradebookLinkField'
+import { CountsSummary, CountsTowardSelect, OutOfInput, WorthInput, WorthNote } from './GradebookLinkField'
 import StudentsSeePreview from './StudentsSeePreview'
 import { CheckboxRow, FIELD_INPUT, FormCard, LabeledField, TopicField, fieldId, type ItemFieldsProps } from './formParts'
+import { CATEGORIES_PLACE, ON_ITS_OWN, countsSummary } from '@/lib/countsToward'
 import { TITLE_MAX, isCalendarDate } from '@/lib/itemForm'
 
-const points = (n: number) => String(Math.round(n * 100) / 100)
+const READ_ONLY = 'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-700'
 
 export default function AssessmentFields(props: ItemFieldsProps) {
-  const { classId, subject, studentCount, values, set, errors, topics, categories, standalone, standaloneMax, kindergarten } = props
-  const category = categories.find((c) => c.assessmentId === values.categoryId)
-  const max = Number(values.maxScore)
-  const maxOk = values.maxScore.trim() !== '' && Number.isFinite(max) && max > 0
+  const { classId, subject, studentCount, values, set, errors, topics, categories, standalone, kindergarten } = props
+  // Its saved column counts on its own (it stays there), or "On its own" is the choice made here.
+  const onItsOwn = standalone || values.gradebookMode === 'standalone'
+  const category = onItsOwn ? undefined : categories.find((c) => c.assessmentId === values.categoryId)
 
-  let info: string
-  if (standalone) {
-    info = `This is the same assessment the gradebook has today: a column that counts on its own${standaloneMax != null ? `, out of ${points(standaloneMax)}` : ''}. Enter scores in Grades (they save as you type), then Publish. Nothing changes about how it counts.`
-  } else if (category && maxOk) {
-    info = `This is the same assessment the gradebook has today: a column under ${category.name}, out of ${points(max)}. Enter scores in Grades (they save as you type), then Publish. Nothing changes about how it counts.`
-  } else {
-    info =
-      'This is the same assessment the gradebook has today: a column in Grades. Enter scores in Grades (they save as you type), then Publish. Nothing changes about how it counts.'
-  }
+  const summary = !kindergarten
+    ? countsSummary({
+        mode: onItsOwn ? 'standalone' : 'category',
+        category: category ?? null,
+        maxScore: values.maxScore,
+        weightPoints: values.weightPoints,
+        current: props.currentCategoryId ? { categoryId: props.currentCategoryId, weightPoints: props.currentWeightPoints } : null,
+      })
+    : []
+
+  const where = onItsOwn ? 'a column of its own in Grades' : category ? `a column under ${category.name} in Grades` : 'a column in Grades'
+  const info = `This is ${where}. Enter scores there (they save as you type), then Publish.`
 
   let countsToward
   if (standalone) {
     countsToward = (
-      <LabeledField label="Counts toward" name="categoryId" hint="Move it in Grades → Assessments & categories.">
-        <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-700">Counts on its own</p>
+      <LabeledField label="Counts toward" name="categoryId" hint={`Move it into a category in ${CATEGORIES_PLACE}.`}>
+        <p className={READ_ONLY}>On its own</p>
       </LabeledField>
     )
-  } else if (kindergarten || categories.length === 0) {
+  } else if (kindergarten) {
     countsToward = (
       // The note is the explanation: a save stops here and focuses it.
       <LabeledField label="Counts toward" name="categoryId">
         <p id={fieldId('categoryId')} tabIndex={-1} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[13px] leading-snug text-amber-900 outline-none">
-          {kindergarten ? (
-            "JK and SK are graded on skills, so there's no gradebook column to add here."
-          ) : (
-            <>
-              No categories yet. A category is a multiple assessment that holds several. Add one in{' '}
-              <CategoriesLink classId={classId} />, or edit an assessment there and tick &ldquo;Make this a multiple
-              assessment&rdquo;.
-            </>
-          )}
+          JK and SK are graded on skills, so there&apos;s no gradebook column to add here.
         </p>
       </LabeledField>
     )
   } else {
     countsToward = (
-      <LabeledField label="Counts toward" name="categoryId" error={errors.categoryId}>
-        <CategorySelect categories={categories} value={values.categoryId} onChange={(categoryId) => set({ categoryId })} error={errors.categoryId} />
+      <LabeledField
+        label="Counts toward"
+        name="categoryId"
+        error={errors.categoryId}
+        hint={
+          // A class with no category yet: say so, and offer one without opening the list.
+          categories.length === 0 ? (
+            <>
+              No categories yet.{' '}
+              <button type="button" onClick={props.onNewCategory} className="cursor-pointer font-medium text-cyan-700 underline hover:text-cyan-800">
+                Add a category
+              </button>{' '}
+              to group assessments, like Tests or Homework.
+            </>
+          ) : undefined
+        }
+      >
+        <CountsTowardSelect
+          categories={categories}
+          value={onItsOwn ? ON_ITS_OWN : values.categoryId}
+          onChange={(categoryId) => set({ gradebookMode: 'category', categoryId })}
+          onOwn={() => set({ gradebookMode: 'standalone' })}
+          onNewCategory={props.onNewCategory}
+          error={errors.categoryId}
+        />
       </LabeledField>
     )
   }
@@ -78,26 +103,24 @@ export default function AssessmentFields(props: ItemFieldsProps) {
               className={`${FIELD_INPUT} !py-3 !text-[17px]`}
             />
           </LabeledField>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3.5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-3.5">
             {countsToward}
-            <LabeledField
-              label="Out of"
-              name="maxScore"
-              error={standalone ? undefined : errors.maxScore}
-              hint={standalone ? 'Change it in Grades.' : undefined}
-            >
-              {standalone ? (
-                <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-700">
-                  {standaloneMax != null ? points(standaloneMax) : '—'}
-                </p>
-              ) : (
-                <OutOfInput
-                  value={values.maxScore}
-                  onChange={(maxScore) => set({ maxScore })}
-                  error={errors.maxScore}
+            {onItsOwn && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor={fieldId('weightPoints')} className="text-[13px] font-medium text-slate-600">
+                  Worth <span className="font-normal text-slate-500">(% of final grade)</span>
+                </label>
+                <WorthInput
+                  value={values.weightPoints}
+                  onChange={(weightPoints) => set({ weightPoints })}
+                  error={errors.weightPoints}
                   disabled={kindergarten}
                 />
-              )}
+                <WorthNote pointsUsed={props.pointsUsed} value={values.weightPoints} error={errors.weightPoints} />
+              </div>
+            )}
+            <LabeledField label="Marked out of" name="maxScore" error={errors.maxScore}>
+              <OutOfInput value={values.maxScore} onChange={(maxScore) => set({ maxScore })} error={errors.maxScore} disabled={kindergarten} />
             </LabeledField>
             <LabeledField label="Date" name="date" error={errors.date}>
               <input
@@ -110,14 +133,7 @@ export default function AssessmentFields(props: ItemFieldsProps) {
               />
             </LabeledField>
           </div>
-          {!standalone && !kindergarten && categories.length > 0 && (
-            // What "Counts toward" lists, and how to add work under a single assessment.
-            <p className="-mt-1.5 text-xs leading-relaxed text-slate-500">
-              &ldquo;Counts toward&rdquo; lists categories: multiple assessments that hold several, like {categories[0].name}. To
-              add work under a single assessment, edit it in <CategoriesLink classId={classId} /> and tick &ldquo;Make this a
-              multiple assessment&rdquo;.
-            </p>
-          )}
+          <CountsSummary lines={summary} />
           <LabeledField label="Note for students and parents" name="instructions" optional error={errors.instructions}>
             <textarea
               id={fieldId('instructions')}

@@ -128,12 +128,16 @@ export interface ItemFieldsProps {
   columns: ColumnOption[]
   /** The item fills a column that counts on its own (no category). */
   standalone: boolean
-  /** That column's "Out of", shown read-only. */
-  standaloneMax: number | null
   /** The category the item's column is under now (an edit), else null. */
   currentCategoryId: string | null
+  /** That column's own share of the final grade (an edit), else null. */
+  currentWeightPoints: number | null
+  /** What the rest of the class (everything but this item's own column) adds up to, of its 100%. */
+  pointsUsed: number
   /** JK and SK: graded on skills, so nothing here is graded. */
   kindergarten: boolean
   attachments: AttachmentsState
   onNewTopic: () => void
+  /** "New category…" in a "Counts toward" picker: opens the window that makes one and picks it. */
+  onNewCategory: () => void
 }

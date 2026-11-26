@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   D2_MESSAGE,
   STANDALONE_MESSAGE,
+  WEIGHT_MESSAGE,
   autosaveFailure,
   categoryOptionLabel,
   draftItemInput,
   emptyItemValues,
   isoToTorontoParts,
   itemToFormValues,
+  keepsStandaloneColumn,
   keepsUnsetMax,
   sameFormValues,
   saveNewerEdits,
@@ -47,6 +49,7 @@ const values = (over: Partial<ItemFormValues> = {}): ItemFormValues => ({
   categoryId: CAT,
   columnId: '',
   maxScore: '10',
+  weightPoints: '',
   audience: 'all',
   studentIds: [],
   emailStudents: true,
@@ -159,6 +162,60 @@ describe('validateItemForm: assessments', () => {
       validateItemForm('assessment', assessment({ categoryId: '', maxScore: '' }), ctx({ categories: [], standaloneColumn: true })),
     ).toEqual({})
   })
+  it('a column that already counts on its own can change its out of and worth; untouched, it is left exactly as saved', () => {
+    const current = { categoryId: null, maxScore: 30, weightPoints: 15 }
+    const own = (over: Partial<ItemFormValues> = {}) => assessment({ gradebookMode: 'standalone', categoryId: '', maxScore: '30', weightPoints: '15', ...over })
+    const c = ctx({ categories: [], standaloneColumn: true, currentColumn: current })
+    const opts = { standaloneColumn: true, currentColumn: current }
+
+    // Untouched (however it is typed): nothing checked, nothing sent.
+    expect(validateItemForm('assessment', own(), c)).toEqual({})
+    expect(toItemInput('assessment', own(), opts)).not.toHaveProperty('gradebook')
+    expect(keepsStandaloneColumn(own({ maxScore: '30.0', weightPoints: '15.00' }), current)).toBe(true)
+
+    // A change to either sends both.
+    expect(validateItemForm('assessment', own({ maxScore: '40' }), c)).toEqual({})
+    expect(toItemInput('assessment', own({ maxScore: '40' }), opts).gradebook).toEqual({ mode: 'standalone', maxScore: 40, weightPoints: 15 })
+    expect(toItemInput('assessment', own({ weightPoints: '20' }), opts).gradebook).toEqual({ mode: 'standalone', maxScore: 30, weightPoints: 20 })
+
+    // A changed value is checked like any other.
+    expect(validateItemForm('assessment', own({ weightPoints: '0' }), c).weightPoints).toBe(WEIGHT_MESSAGE)
+    expect(validateItemForm('assessment', own({ maxScore: '' }), c).maxScore).toBe('Out of must be more than 0')
+  })
+
+  it('a column on its own saved without an out of or a worth keeps working until one is typed, then needs both', () => {
+    const current = { categoryId: null, maxScore: null, weightPoints: null }
+    const blank = assessment({ gradebookMode: 'standalone', categoryId: '', maxScore: '', weightPoints: '' })
+    const c = ctx({ standaloneColumn: true, currentColumn: current })
+    expect(validateItemForm('assessment', blank, c)).toEqual({})
+    expect(toItemInput('assessment', blank, { standaloneColumn: true, currentColumn: current })).not.toHaveProperty('gradebook')
+    expect(validateItemForm('assessment', { ...blank, maxScore: '30' }, c)).toEqual({ weightPoints: WEIGHT_MESSAGE })
+  })
+
+  it('counts on its own with a worth and an out of, in a class with no categories too', () => {
+    const own = assessment({ gradebookMode: 'standalone', categoryId: '', weightPoints: '15' })
+    expect(validateItemForm('assessment', own, ctx())).toEqual({})
+    expect(validateItemForm('assessment', own, ctx({ categories: [] }))).toEqual({})
+    expect(toItemInput('assessment', own).gradebook).toEqual({ mode: 'standalone', maxScore: 30, weightPoints: 15 })
+  })
+
+  it('on its own needs a worth between 0 and 100, and still an out of', () => {
+    const own = (weightPoints: string) => assessment({ gradebookMode: 'standalone', categoryId: '', weightPoints })
+    for (const bad of ['', '0', '-5', '100.01', 'lots']) {
+      expect(validateItemForm('assessment', own(bad), ctx()).weightPoints).toBe(WEIGHT_MESSAGE)
+    }
+    expect(validateItemForm('assessment', own('100'), ctx())).toEqual({})
+    expect(validateItemForm('assessment', { ...own('15'), maxScore: '' }, ctx()).maxScore).toBe('Out of must be more than 0')
+    // Two decimals, as the server keeps it.
+    expect(toItemInput('assessment', own('12.345')).gradebook).toMatchObject({ weightPoints: 12.35 })
+  })
+
+  it('leaving its category to count on its own is sent, even when its "Out of" was never set', () => {
+    const current = { categoryId: CAT, maxScore: null }
+    const leaving = assessment({ gradebookMode: 'standalone', maxScore: '', weightPoints: '15' })
+    expect(keepsUnsetMax('assessment', leaving, current)).toBe(false)
+    expect(validateItemForm('assessment', leaving, ctx({ currentColumn: current })).maxScore).toBe('Out of must be more than 0')
+  })
 })
 
 describe('validateItemForm: assignments and quizzes', () => {
@@ -171,6 +228,18 @@ describe('validateItemForm: assignments and quizzes', () => {
     expect(validateItemForm('assignment', values({ maxScore: '-1' }), ctx()).maxScore).toBe('Out of must be more than 0')
     // A quiz is out of its points (see "a quiz in the gradebook").
     expect(validateItemForm('quiz', values({ maxScore: '-1' }), ctx()).maxScore).toBeUndefined()
+  })
+
+  it('counts on its own with a worth; a quiz on its own is out of its points', () => {
+    const own = values({ gradebookMode: 'standalone', categoryId: '', weightPoints: '5' })
+    expect(validateItemForm('assignment', own, ctx({ categories: [] }))).toEqual({})
+    expect(toItemInput('assignment', own).gradebook).toEqual({ mode: 'standalone', maxScore: 10, weightPoints: 5 })
+    expect(validateItemForm('assignment', { ...own, weightPoints: '' }, ctx()).weightPoints).toBe(WEIGHT_MESSAGE)
+    expect(validateItemForm('assignment', { ...own, maxScore: '' }, ctx()).maxScore).toBe('Out of must be more than 0')
+    expect(validateItemForm('quiz', { ...own, maxScore: '', submissionMode: 'none' }, ctx())).toEqual({})
+    expect(toItemInput('quiz', { ...own, maxScore: '' }).gradebook).toEqual({ mode: 'standalone', maxScore: QUIZ_START_MAX, weightPoints: 5 })
+    // A half-typed worth never fails the autosave of everything else.
+    expect(draftItemInput('assignment', { ...own, weightPoints: '' }, ctx())).not.toHaveProperty('gradebook')
   })
 
   it('an existing column must be one the class offers', () => {
@@ -338,6 +407,11 @@ describe('emptyItemValues', () => {
     expect(v.emailStudents).toBe(false)
   })
 
+  it('starts an assessment on its own when the class has no category yet', () => {
+    const v = emptyItemValues('assessment', { categories: [] })
+    expect(v).toMatchObject({ gradebookMode: 'standalone', categoryId: '', weightPoints: '' })
+  })
+
   it('starts an assignment as a file turn-in, not graded when there is no category', () => {
     const v = emptyItemValues('assignment', { categories: [], topicId: TOPIC })
     expect(v.submissionMode).toBe('file')
@@ -410,16 +484,27 @@ describe('itemToFormValues', () => {
     expect(v.columnId).toBe(COL)
   })
 
+  it('an assessment with no category counts on its own', () => {
+    const own = { ...item().gradebook!, categoryId: null, categoryName: null, weightPoints: 15 }
+    expect(itemToFormValues(item({ kind: 'assessment', gradebook: own }))).toMatchObject({ gradebookMode: 'standalone', weightPoints: '15', maxScore: '10' })
+  })
+
+  it('shows what a column on its own is worth, never a share inside a category', () => {
+    const own = { ...item().gradebook!, categoryId: null, categoryName: null, weightPoints: 15 }
+    expect(itemToFormValues(item({ gradebook: own })).weightPoints).toBe('15')
+    expect(itemToFormValues(item({ gradebook: { ...item().gradebook!, weightPoints: 5 } })).weightPoints).toBe('')
+  })
+
   it('an unlinked item is not graded', () => {
     expect(itemToFormValues(item({ gradebook: null })).gradebookMode).toBe('none')
   })
 })
 
 describe('categoryOptionLabel', () => {
-  it('reads "Tests (30 of 100)"', () => {
-    expect(categoryOptionLabel({ assessmentId: CAT, name: 'Tests', weightPoints: 30, childCount: 2 })).toBe('Tests (30 of 100)')
+  it('reads "Tests · 30% of final grade"', () => {
+    expect(categoryOptionLabel({ assessmentId: CAT, name: 'Tests', weightPoints: 30, childCount: 2 })).toBe('Tests · 30% of final grade')
     expect(categoryOptionLabel({ assessmentId: CAT, name: 'Homework', weightPoints: 12.5, childCount: 0 })).toBe(
-      'Homework (12.5 of 100)',
+      'Homework · 12.5% of final grade',
     )
   })
 })

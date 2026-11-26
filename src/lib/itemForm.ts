@@ -23,6 +23,8 @@ export const TORONTO = 'America/Toronto'
 export const TITLE_MAX = 200
 export const INSTRUCTIONS_MAX = 20_000
 export const MAX_SCORE_LIMIT = 10_000
+/** The class is 100 points: nothing in it is worth more. */
+export const MAX_WEIGHT_POINTS = 100
 export const MAX_AUDIENCE = 500
 /**
  * A quiz's column is out of the quiz's points: the server sets it each time
@@ -32,11 +34,18 @@ export const MAX_AUDIENCE = 500
 export const QUIZ_START_MAX = 1
 
 /** The server's D2 refusal when a class has no category to put graded work under. */
-export const D2_MESSAGE = 'Add a category in Grades → Assessments & categories first, or fill an existing column.'
+export const D2_MESSAGE = 'This class has no categories yet. Add one, or let this count on its own.'
+/** The server's refusal of a "Worth" that isn't a share of the class's 100 points. */
+export const WEIGHT_MESSAGE = 'Worth must be more than 0 and at most 100'
 /** The server's 409 for a column that counts on its own being moved into a category. */
 export const STANDALONE_MESSAGE = 'This column counts on its own in Grades. Move it in Grades → Assessments & categories.'
 
-export type GradebookMode = 'category' | 'existing' | 'none'
+/**
+ * How the item counts: a new column under a category, a new column that
+ * counts on its own (in no category, worth its own share of the final grade),
+ * an existing column, or not at all.
+ */
+export type GradebookMode = 'category' | 'standalone' | 'existing' | 'none'
 
 /** Everything the form holds, as the inputs hold it (strings until saved). */
 export interface ItemFormValues {
@@ -57,6 +66,8 @@ export interface ItemFormValues {
   columnId: string
   /** "Out of", as typed. */
   maxScore: string
+  /** "Worth" (percent of the final grade) of a column that counts on its own, as typed. */
+  weightPoints: string
   audience: 'all' | 'some'
   studentIds: string[]
   emailStudents: boolean
@@ -79,10 +90,27 @@ export interface ItemFormContext {
   currentColumn?: CurrentColumn | null
 }
 
-/** The gradebook column an item fills as saved: its category (null = counts on its own) and "Out of". */
+/** The gradebook column an item fills as saved: its category (null = counts on its own), "Out of" and its own share. */
 export interface CurrentColumn {
   categoryId: string | null
   maxScore: number | null
+  /** Its points of the class's 100: what a column on its own is worth. */
+  weightPoints?: number | null
+}
+
+/** What is typed in a number box is what is saved (a blank box matches a value never set). */
+const sameAsSaved = (typed: string, saved: number | null | undefined): boolean =>
+  typed.trim() === '' ? saved == null : saved != null && Number(typed) === saved
+
+/**
+ * An assessment whose column counts on its own, with "Marked out of" and
+ * "Worth" as they are saved: it stays exactly as it is, so the form neither
+ * checks nor sends them (a column saved without one of them keeps working).
+ * Changing either sends both. Not knowing the saved column counts as untouched.
+ */
+export function keepsStandaloneColumn(values: ItemFormValues, current: CurrentColumn | null | undefined): boolean {
+  if (!current) return true
+  return sameAsSaved(values.maxScore, current.maxScore) && sameAsSaved(values.weightPoints, current.weightPoints)
 }
 
 /**
@@ -92,6 +120,8 @@ export interface CurrentColumn {
  */
 export function keepsUnsetMax(kind: ItemKind, values: ItemFormValues, current: CurrentColumn | null | undefined): boolean {
   if (!current || current.maxScore != null || values.maxScore.trim() !== '') return false
+  // Leaving its category to count on its own is a change: it needs an "Out of".
+  if (values.gradebookMode === 'standalone') return false
   if (kind !== 'assessment' && values.gradebookMode !== 'category') return false
   return values.categoryId === (current.categoryId ?? '')
 }
@@ -108,6 +138,7 @@ export type ItemFormField =
   | 'categoryId'
   | 'columnId'
   | 'maxScore'
+  | 'weightPoints'
   | 'studentIds'
   | 'publishAt'
 
@@ -138,6 +169,15 @@ function maxScoreError(value: string): string | null {
   return null
 }
 
+/** "Worth" as a number (two decimals, as the server keeps it), or NaN when it isn't one. */
+export const parseWeight = (value: string): number => (value.trim() === '' ? NaN : Math.round(Number(value) * 100) / 100)
+
+/** Why a "Worth" can't be saved, or null. */
+export function weightPointsError(value: string): string | null {
+  const n = parseWeight(value)
+  return !Number.isFinite(n) || n <= 0 || n > MAX_WEIGHT_POINTS ? WEIGHT_MESSAGE : null
+}
+
 /**
  * The form's problems, one message per field; {} when it can be saved.
  * Mirrors the server's validateItemInput.
@@ -161,8 +201,19 @@ export function validateItemForm(kind: ItemKind, values: ItemFormValues, ctx: It
   const unsetMaxKept = keepsUnsetMax(kind, values, ctx.currentColumn)
 
   if (kind === 'assessment') {
-    if (!ctx.standaloneColumn) {
-      if (ctx.categories.length === 0) errors.categoryId = D2_MESSAGE
+    if (ctx.standaloneColumn) {
+      // Its column already counts on its own: only "Marked out of" and "Worth" can change here.
+      if (!keepsStandaloneColumn(values, ctx.currentColumn)) {
+        const weight = weightPointsError(values.weightPoints)
+        if (weight) errors.weightPoints = weight
+        const max = maxScoreError(values.maxScore)
+        if (max) errors.maxScore = max
+      }
+    } else {
+      if (values.gradebookMode === 'standalone') {
+        const weight = weightPointsError(values.weightPoints)
+        if (weight) errors.weightPoints = weight
+      } else if (ctx.categories.length === 0) errors.categoryId = D2_MESSAGE
       else if (!values.categoryId || !inCategories(values.categoryId)) errors.categoryId = 'Choose a category'
       const max = unsetMaxKept ? null : maxScoreError(values.maxScore)
       if (max) errors.maxScore = max
@@ -180,6 +231,12 @@ export function validateItemForm(kind: ItemKind, values: ItemFormValues, ctx: It
         const max = unsetMaxKept ? null : maxScoreError(values.maxScore)
         if (max) errors.maxScore = max
       }
+    } else if (values.gradebookMode === 'standalone') {
+      const weight = weightPointsError(values.weightPoints)
+      if (weight) errors.weightPoints = weight
+      // A quiz is out of its points (QUIZ_START_MAX): nothing to check.
+      const max = kind === 'quiz' ? null : maxScoreError(values.maxScore)
+      if (max) errors.maxScore = max
     } else if (values.gradebookMode === 'existing') {
       if (!values.columnId || !ctx.linkableColumns.some((c) => c.assessmentId === values.columnId)) {
         errors.columnId = 'Choose a column'
@@ -230,17 +287,18 @@ export function isoToTorontoParts(iso: string | null | undefined): { date: strin
 export interface ToInputOptions {
   status?: ItemStatus
   publishAt?: string | null
-  /** The column counts on its own: send no gradebook, so it keeps its place. */
+  /** The column counts on its own: it keeps its place (an assessment may still change its "Marked out of" and "Worth"). */
   standaloneColumn?: boolean
   /** The column the item fills now (see keepsUnsetMax). */
   currentColumn?: CurrentColumn | null
 }
 
 function gradebookOf(kind: ItemKind, values: ItemFormValues): GradebookInput {
-  if (kind === 'assessment' || values.gradebookMode === 'category') {
+  if (kind === 'assessment' || values.gradebookMode === 'category' || values.gradebookMode === 'standalone') {
     const max = parseMax(values.maxScore)
     // A quiz keeps the "Out of" its questions gave it, or starts out of 1 (QUIZ_START_MAX).
     const maxScore = kind === 'quiz' && !(Number.isFinite(max) && max > 0) ? QUIZ_START_MAX : max
+    if (values.gradebookMode === 'standalone') return { mode: 'standalone', maxScore, weightPoints: parseWeight(values.weightPoints) }
     return { mode: 'category', categoryId: values.categoryId, maxScore }
   }
   if (values.gradebookMode === 'existing') return { mode: 'existing', assessmentId: values.columnId }
@@ -268,7 +326,12 @@ export function toItemInput(kind: ItemKind, values: ItemFormValues, opts: ToInpu
   if (kind === 'assessment') {
     input.date = values.date || null
     input.showEarly = values.showEarly
-    if (!opts.standaloneColumn && !keepColumn) input.gradebook = gradebookOf(kind, values)
+    if (opts.standaloneColumn) {
+      // A column on its own stays on its own: its "Marked out of" and "Worth" are sent only when one changed.
+      if (!keepsStandaloneColumn(values, opts.currentColumn)) {
+        input.gradebook = { mode: 'standalone', maxScore: parseMax(values.maxScore), weightPoints: parseWeight(values.weightPoints) }
+      }
+    } else if (!keepColumn) input.gradebook = gradebookOf(kind, values)
   } else if (isTurnIn(kind)) {
     input.dueAt = torontoToIso(values.dueDate, values.dueTime)
     input.remindStudents = values.remindStudents
@@ -283,7 +346,7 @@ export function toItemInput(kind: ItemKind, values: ItemFormValues, opts: ToInpu
   return input
 }
 
-const GRADEBOOK_FIELDS: ItemFormField[] = ['gradebook', 'categoryId', 'columnId', 'maxScore']
+const GRADEBOOK_FIELDS: ItemFormField[] = ['gradebook', 'categoryId', 'columnId', 'maxScore', 'weightPoints']
 
 /**
  * What an autosave of a draft sends: the form as a draft, minus anything
@@ -316,7 +379,11 @@ export function emptyItemValues(
   opts: { categories?: Pick<CategoryOption, 'assessmentId'>[]; topicId?: string | null } = {},
 ): ItemFormValues {
   const firstCategory = opts.categories?.[0]?.assessmentId ?? ''
-  const graded = kind === 'assessment' || (isTurnIn(kind) && firstCategory !== '')
+  // An assessment always counts: under the first category, or on its own when the class has none yet.
+  // An assignment or quiz starts under the first category, or ungraded.
+  let gradebookMode: GradebookMode = 'none'
+  if (firstCategory !== '' && (kind === 'assessment' || isTurnIn(kind))) gradebookMode = 'category'
+  else if (kind === 'assessment') gradebookMode = 'standalone'
   return {
     title: '',
     instructions: '',
@@ -325,10 +392,11 @@ export function emptyItemValues(
     dueDate: '',
     dueTime: '',
     submissionMode: kind === 'assignment' ? 'file' : 'none',
-    gradebookMode: graded ? 'category' : 'none',
+    gradebookMode,
     categoryId: firstCategory,
     columnId: '',
     maxScore: '',
+    weightPoints: '',
     audience: 'all',
     studentIds: [],
     emailStudents: kind !== 'assessment',
@@ -337,12 +405,13 @@ export function emptyItemValues(
   }
 }
 
-/** A saved item back in the form. A column with no category is the existing column it fills. */
+/** A saved item back in the form. A column with no category counts on its own (an assessment) or is the existing column it fills. */
 export function itemToFormValues(item: Item): ItemFormValues {
   const due = isoToTorontoParts(item.dueAt)
   const gb = item.gradebook
   let gradebookMode: GradebookMode = 'none'
-  if (gb) gradebookMode = gb.categoryId || item.kind === 'assessment' ? 'category' : 'existing'
+  // A column with no category: an assessment counts on its own; an assignment or quiz fills it as an existing column.
+  if (gb) gradebookMode = gb.categoryId ? 'category' : item.kind === 'assessment' ? 'standalone' : 'existing'
   return {
     title: item.title ?? '',
     instructions: item.instructions ?? '',
@@ -355,6 +424,8 @@ export function itemToFormValues(item: Item): ItemFormValues {
     categoryId: gb?.categoryId ?? '',
     columnId: gb && !gb.categoryId ? gb.assessmentId : '',
     maxScore: gb?.maxScore != null ? String(gb.maxScore) : '',
+    // A column that counts on its own shows what it is worth; one inside a category has only its share of it.
+    weightPoints: gb && !gb.categoryId && gb.weightPoints != null ? String(gb.weightPoints) : '',
     audience: item.audience,
     studentIds: item.audience === 'some' ? item.studentIds : [],
     emailStudents: item.emailStudents,
@@ -367,8 +438,15 @@ export function itemToFormValues(item: Item): ItemFormValues {
 export function withSavedGradebook(values: ItemFormValues, saved: Item | null): ItemFormValues {
   const from = saved
     ? itemToFormValues(saved)
-    : { gradebookMode: 'none' as GradebookMode, categoryId: values.categoryId, columnId: '', maxScore: values.maxScore }
-  return { ...values, gradebookMode: from.gradebookMode, categoryId: from.categoryId, columnId: from.columnId, maxScore: from.maxScore }
+    : { gradebookMode: 'none' as GradebookMode, categoryId: values.categoryId, columnId: '', maxScore: values.maxScore, weightPoints: values.weightPoints }
+  return {
+    ...values,
+    gradebookMode: from.gradebookMode,
+    categoryId: from.categoryId,
+    columnId: from.columnId,
+    maxScore: from.maxScore,
+    weightPoints: from.weightPoints,
+  }
 }
 
 /** Whether two form states hold the same values (an edit typed back to what was sent is no change). */
@@ -466,8 +544,8 @@ export function autosaveFailure(
 
 const points = (n: number) => String(Math.round(n * 100) / 100)
 
-/** "Tests (30 of 100)" */
-export const categoryOptionLabel = (c: CategoryOption): string => `${c.name} (${points(c.weightPoints)} of 100)`
+/** "Tests · 30% of final grade": the category's whole share, however many assessments it holds. */
+export const categoryOptionLabel = (c: CategoryOption): string => `${c.name} · ${points(c.weightPoints)}% of final grade`
 
 /** "Unit 1 test · Tests" for a column an assignment or quiz can fill. */
 export const columnOptionLabel = (c: ColumnOption): string =>

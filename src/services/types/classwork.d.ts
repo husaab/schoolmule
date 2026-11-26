@@ -15,6 +15,8 @@ export type ItemAudience = 'all' | 'some'
 /** How an item counts in the gradebook (D2). */
 export type GradebookInput =
   | { mode: 'category'; categoryId: string; maxScore: number }
+  /** A column of its own, in no category, worth `weightPoints` of the class's 100. */
+  | { mode: 'standalone'; maxScore: number; weightPoints: number }
   | { mode: 'existing'; assessmentId: string }
   | { mode: 'none' }
 
@@ -51,7 +53,7 @@ export interface Topic {
   itemCount: number
 }
 
-/** A gradebook category: "Homework (20 of 100)". */
+/** A gradebook category: "Homework · 20% of final grade" (weightPoints of the class's 100). */
 export interface CategoryOption {
   assessmentId: string
   name: string
@@ -142,6 +144,14 @@ export interface ClassworkData {
   items: ItemSummary[]
   categories: CategoryOption[]
   linkableColumns: ColumnOption[]
+  /** Of the class's 100 points: what its categories and the columns that count on their own add up to. */
+  pointsUsed: number
+}
+
+/** POST /classes/:classId/categories: a new, empty category. */
+export interface CategoryInput {
+  name: string
+  weightPoints: number
 }
 
 export interface DeleteItemResult {

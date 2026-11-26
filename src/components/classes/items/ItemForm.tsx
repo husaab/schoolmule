@@ -72,12 +72,13 @@ import { isApiError } from '@/services/apiClient'
 import { previewAudience } from '@/services/announcementService'
 import { createItem, updateItem } from '@/services/classworkService'
 import type { ClassPageData } from '@/services/types/classroom'
-import type { ClassworkData, ColumnOption, Item, ItemKind, ItemStatus, Topic } from '@/services/types/classwork'
+import type { CategoryOption, ClassworkData, ColumnOption, Item, ItemKind, ItemStatus, Topic } from '@/services/types/classwork'
 import { useNotificationStore } from '@/store/useNotificationStore'
 import { useUserStore } from '@/store/useUserStore'
 import AssessmentFields from './AssessmentFields'
 import AssignmentFields from './AssignmentFields'
 import { useAttachmentRows } from './AttachmentsEditor'
+import CategoryFormModal from './CategoryFormModal'
 import MaterialFields from './MaterialFields'
 import QuizFields from './QuizFields'
 import ScheduleMenu, { type ScheduleMenuItem } from './ScheduleMenu'
@@ -102,6 +103,7 @@ const AUTOSAVE_DELAY = 1000
 const FIELD_ORDER: ItemFormField[] = [
   'title',
   'categoryId',
+  'weightPoints',
   'maxScore',
   'gradebook',
   'columnId',
@@ -146,13 +148,23 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
       : { draft: null, edits: takeEdits<ItemFormValues>(keys.edits) },
   )
 
-  const [values, setValues] = useState<ItemFormValues>(
-    () =>
-      restored.draft ??
-      restored.edits ??
-      (item ? itemToFormValues(item) : emptyItemValues(kind, { categories: classwork.categories, topicId: defaultTopicId })),
-  )
+  const [values, setValues] = useState<ItemFormValues>(() => {
+    const kept = restored.draft ?? restored.edits
+    // Values kept by an earlier version of the form may lack a newer field: the blanks fill it.
+    if (kept) return { ...emptyItemValues(kind), ...kept }
+    if (item) return itemToFormValues(item)
+    const fresh = emptyItemValues(kind, { categories: classwork.categories, topicId: defaultTopicId })
+    // JK and SK have no gradebook column to add: the form stops at its note, not at a "Worth" it never shows.
+    return kindergarten && kind === 'assessment' ? { ...fresh, gradebookMode: 'category' } : fresh
+  })
   const [topics, setTopics] = useState<Topic[]>(classwork.topics)
+  // The class's categories, plus any made here with "New category…".
+  const [categories, setCategories] = useState<CategoryOption[]>(classwork.categories)
+  // What the rest of the class adds up to, of its 100%: everything but this item's own column on its own.
+  const [otherPoints, setOtherPoints] = useState(() => {
+    const own = item?.gradebook && item.gradebook.categoryId === null ? (item.gradebook.weightPoints ?? 0) : 0
+    return Math.round(((classwork.pointsUsed ?? 0) - own) * 100) / 100
+  })
   const [itemId, setItemId] = useState<string | null>(item?.itemId ?? null)
   const [saved, setSaved] = useState<Item | null>(item)
   const [showErrors, setShowErrors] = useState(false)
@@ -164,6 +176,7 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   // (or, for work not posted yet, which has no grading view, to its column in Grades).
   const [bannerLink, setBannerLink] = useState<{ href: string; label: string } | null>(null)
   const [topicModalOpen, setTopicModalOpen] = useState(false)
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   // Edits not saved yet on a form that saves with a button (Cancel, links and the tab ask first).
   const [edited, setEdited] = useState(restored.edits !== null)
@@ -191,27 +204,44 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
   const status: ItemStatus | null = saved ? (saved.effectiveStatus === 'posted' ? 'posted' : saved.status) : null
   const autosaves = (kind === 'assignment' || kind === 'quiz') && (status === null || status === 'draft')
 
-  // The column the item fills keeps its place when it counts on its own.
-  const standalone = Boolean(item?.gradebook && item.gradebook.categoryId === null)
+  // The column the item fills keeps its place when it counts on its own. Read from the item as saved, not as
+  // opened: a draft that autosaved onto a column of its own is on its own from then on (the server refuses
+  // moving such a column into a category), and that column is one it can go on filling.
+  const standalone = Boolean(saved?.gradebook && saved.gradebook.categoryId === null)
   const columns = useMemo<ColumnOption[]>(() => {
     const own: ColumnOption[] =
-      item?.gradebook && item.kind !== 'assessment'
-        ? [{ assessmentId: item.gradebook.assessmentId, name: item.title, categoryName: item.gradebook.categoryName, maxScore: item.gradebook.maxScore }]
+      saved?.gradebook && saved.kind !== 'assessment'
+        ? [{ assessmentId: saved.gradebook.assessmentId, name: saved.title, categoryName: saved.gradebook.categoryName, maxScore: saved.gradebook.maxScore }]
         : []
     return [...own, ...classwork.linkableColumns.filter((c) => !own.some((o) => o.assessmentId === c.assessmentId))]
-  }, [item, classwork.linkableColumns])
+  }, [saved, classwork.linkableColumns])
+
+  // The categories were counted when the form opened. A save since then (a draft's autosave) may have put this
+  // item's column into one, or taken it out: the counts follow, so "its 3rd assessment" stays true.
+  const loadedCategoryId = item?.gradebook?.categoryId ?? null
+  const savedCategoryId = saved?.gradebook?.categoryId ?? null
+  const categoriesNow = useMemo<CategoryOption[]>(() => {
+    if (loadedCategoryId === savedCategoryId) return categories
+    return categories.map((c) => {
+      const change = (c.assessmentId === savedCategoryId ? 1 : 0) - (c.assessmentId === loadedCategoryId ? 1 : 0)
+      return change === 0 ? c : { ...c, childCount: Math.max(0, c.childCount + change) }
+    })
+  }, [categories, loadedCategoryId, savedCategoryId])
 
   /** The column an item fills as saved, for a save that must tell an unchanged column from a new choice. */
   const columnOf = (it: Item | null): CurrentColumn | null =>
-    it?.gradebook ? { categoryId: it.gradebook.categoryId, maxScore: it.gradebook.maxScore } : null
+    it?.gradebook ? { categoryId: it.gradebook.categoryId, maxScore: it.gradebook.maxScore, weightPoints: it.gradebook.weightPoints } : null
   const savedGradebook = saved?.gradebook ?? null
   const currentColumn = useMemo(
-    () => (savedGradebook ? { categoryId: savedGradebook.categoryId, maxScore: savedGradebook.maxScore } : null),
+    () =>
+      savedGradebook
+        ? { categoryId: savedGradebook.categoryId, maxScore: savedGradebook.maxScore, weightPoints: savedGradebook.weightPoints }
+        : null,
     [savedGradebook],
   )
   const ctx = useMemo<ItemFormContext>(
-    () => ({ categories: classwork.categories, linkableColumns: columns, topics, standaloneColumn: standalone, currentColumn }),
-    [classwork.categories, columns, topics, standalone, currentColumn],
+    () => ({ categories, linkableColumns: columns, topics, standaloneColumn: standalone, currentColumn }),
+    [categories, columns, topics, standalone, currentColumn],
   )
   const errors = useMemo(() => validateItemForm(kind, values, ctx), [kind, values, ctx])
   const shownErrors: ItemFormErrors = showErrors ? errors : {}
@@ -730,14 +760,16 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
     set,
     errors: shownErrors,
     topics,
-    categories: classwork.categories,
+    categories: categoriesNow,
     columns,
     standalone,
-    standaloneMax: item?.gradebook?.maxScore ?? null,
     currentCategoryId: saved?.gradebook?.categoryId ?? null,
+    currentWeightPoints: saved?.gradebook?.weightPoints ?? null,
+    pointsUsed: otherPoints,
     kindergarten,
     attachments,
     onNewTopic: () => setTopicModalOpen(true),
+    onNewCategory: () => setCategoryModalOpen(true),
   }
 
   return (
@@ -832,6 +864,18 @@ export default function ItemForm({ classId, kind, page, classwork, item, default
           setTopicModalOpen(false)
           setTopics((list) => [...list, topic])
           set({ topicId: topic.topicId })
+        }}
+      />
+      <CategoryFormModal
+        isOpen={categoryModalOpen}
+        classId={classId}
+        pointsUsed={otherPoints}
+        onClose={() => setCategoryModalOpen(false)}
+        onSaved={(category) => {
+          setCategoryModalOpen(false)
+          setCategories((list) => [...list, category])
+          setOtherPoints((points) => Math.round((points + category.weightPoints) * 100) / 100)
+          set({ gradebookMode: 'category', categoryId: category.assessmentId })
         }}
       />
       <Modal

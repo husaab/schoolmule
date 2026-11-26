@@ -136,7 +136,6 @@ export default function QuizFields(props: ItemFieldsProps & { itemId: string | n
         </FormCard>
 
         <GradebookLinkField
-          classId={classId}
           values={values}
           set={set}
           errors={errors}
@@ -144,8 +143,11 @@ export default function QuizFields(props: ItemFieldsProps & { itemId: string | n
           columns={columns}
           standalone={standalone}
           currentCategoryId={props.currentCategoryId}
+          currentWeightPoints={props.currentWeightPoints}
+          pointsUsed={props.pointsUsed}
+          onNewCategory={props.onNewCategory}
           kindergarten={kindergarten}
-          outOfNote="Out of: the quiz's points. It follows the questions as you write them."
+          outOfNote="Marked out of the quiz's points: it follows the questions as you write them."
         />
 
         <EmailOptionsField variant="turnin" values={values} set={set} studentCount={studentCount} />
