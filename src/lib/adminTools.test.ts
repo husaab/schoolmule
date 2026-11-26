@@ -66,7 +66,7 @@ describe('adminToolsFor', () => {
     ])
     expect(labels(restricted(['finance']))).toEqual([
       ['Planning', ['School Schedule']],
-      ['Forms & finance', ['Tuition']],
+      ['Forms & finance', ['Tuition', 'Payments']],
     ])
   })
 
