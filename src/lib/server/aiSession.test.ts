@@ -40,7 +40,7 @@ describe('requireStaffSession', () => {
     backendFetch.mockResolvedValue(me({ userId: 'u-1', role: 'TEACHER', school: 'TEST', permissions: ['analytics'], isFullAdmin: false }))
     const check = await (await load())(request('Bearer session-token'))
     expect(backendFetch).toHaveBeenCalledWith('https://backend.test/api/auth/me', expect.objectContaining({ headers: { Authorization: 'Bearer session-token' } }))
-    expect(check).toEqual({ ok: true, session: { userId: 'u-1', role: 'TEACHER', school: 'TEST' } })
+    expect(check).toEqual({ ok: true, session: { userId: 'u-1', role: 'TEACHER', school: 'TEST', token: 'session-token' } })
   })
 
   it('refuses a dead or revoked session', async () => {

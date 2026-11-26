@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { openaiChat } from '@/lib/server/openaiChat'
+import { recordAiUsage, startAiRequest } from '@/lib/server/aiUsage'
 
 // POST /api/ai/analytics/at-risk-explain
 // Body: one student's risk profile (computed deterministically client-side).
@@ -53,6 +54,10 @@ export async function POST(request: NextRequest) {
       .filter(Boolean)
       .join('\n')
 
+    // Limits on the shared key (lib/server/aiUsage): refused here, before it is spent.
+    const limited = await startAiRequest(auth.session, 'analytics_at_risk')
+    if (limited) return limited
+
     const response = await openaiChat(apiKey, {
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -73,6 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
+    await recordAiUsage(auth.session, 'analytics_at_risk', data.usage)
     const explanation = data.choices?.[0]?.message?.content?.trim()
     if (!explanation) {
       return NextResponse.json({ error: 'No explanation generated' }, { status: 500 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { openaiChat } from '@/lib/server/openaiChat'
+import { recordAiUsage, startAiRequest } from '@/lib/server/aiUsage'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
 import { aiCommentLength } from '@/lib/aiCommentLength'
 import { cleanDetails, detailsPromptSection } from '@/lib/reportCardDetails'
@@ -154,6 +155,10 @@ ${typeof grade === 'number' ? '- Reference the student\'s academic performance n
 
 Generate only the comment text, no additional formatting or labels.`
 
+    // Limits on the shared key (lib/server/aiUsage): refused here, before it is spent.
+    const limited = await startAiRequest(auth.session, 'generate_comment')
+    if (limited) return limited
+
     const response = await openaiChat(apiKey, {
       messages: [
         {
@@ -179,6 +184,7 @@ Generate only the comment text, no additional formatting or labels.`
     }
 
     const data = await response.json()
+    await recordAiUsage(auth.session, 'generate_comment', data.usage)
     const comment = data.choices?.[0]?.message?.content?.trim()
 
     if (!comment) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { openaiChat } from '@/lib/server/openaiChat'
+import { recordAiUsage, startAiRequest } from '@/lib/server/aiUsage'
 
 // POST /api/ai/dashboard-briefing
 // Body: { context: string }
@@ -37,6 +38,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 })
     }
 
+    // Limits on the shared key (lib/server/aiUsage): refused here, before it is spent.
+    const limited = await startAiRequest(auth.session, 'dashboard_briefing')
+    if (limited) return limited
+
     const response = await openaiChat(apiKey, {
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -57,6 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
+    await recordAiUsage(auth.session, 'dashboard_briefing', data.usage)
     const briefing = data.choices?.[0]?.message?.content?.trim()
     if (!briefing) {
       return NextResponse.json({ error: 'No briefing generated' }, { status: 500 })

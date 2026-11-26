@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { openaiChat } from '@/lib/server/openaiChat'
+import { recordAiUsage, startAiRequest } from '@/lib/server/aiUsage'
 
 // POST /api/ai/analytics/insights
 // Body: { context: string, viewLevel: 'school'|'grade'|'class'|'student' }
@@ -34,6 +35,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 })
     }
 
+    // Limits on the shared key (lib/server/aiUsage): refused here, before it is spent.
+    const limited = await startAiRequest(auth.session, 'analytics_insights')
+    if (limited) return limited
+
     const response = await openaiChat(apiKey, {
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -57,6 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
+    await recordAiUsage(auth.session, 'analytics_insights', data.usage)
     const insight = data.choices?.[0]?.message?.content?.trim()
     if (!insight) {
       return NextResponse.json({ error: 'No insight generated' }, { status: 500 })

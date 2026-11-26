@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
 import { openaiChat } from '@/lib/server/openaiChat'
+import { startAiRequest } from '@/lib/server/aiUsage'
 
 // POST /api/ai/analytics/chat — the app's first streaming AI route.
 // Body: { context: string, messages: {role, content}[], newMessage: string }
@@ -45,6 +46,10 @@ Never invent data that is not in the snapshot.`
           .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
           .slice(-12) // keep the last 12 turns
       : []
+
+    // Limits on the shared key (lib/server/aiUsage): refused here, before it is spent.
+    const limited = await startAiRequest(auth.session, 'analytics_chat')
+    if (limited) return limited
 
     const openAIResponse = await openaiChat(apiKey, {
       messages: [

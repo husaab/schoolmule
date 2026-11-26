@@ -17,6 +17,8 @@ export type AiSession = {
   userId: string
   role: string
   school: string | null
+  /** The caller's own token, for the calls an AI route makes to the backend on their behalf (lib/server/aiUsage). */
+  token?: string
 }
 
 export type AiSessionCheck = { ok: true; session: AiSession } | { ok: false; response: NextResponse }
@@ -64,5 +66,5 @@ export async function requireStaffSession(
   const access = accessInfo({ role: data.role, permissions: data.permissions, isFullAdmin: data.isFullAdmin })
   if (!access.staff) return refuse(403, 'AI features are for school staff')
   if (permission && !access.permissions.has(permission)) return refuse(403, "You don't have permission to do that")
-  return { ok: true, session: { userId: data.userId, role: data.role, school: data.school ?? null } }
+  return { ok: true, session: { userId: data.userId, role: data.role, school: data.school ?? null, token } }
 }
