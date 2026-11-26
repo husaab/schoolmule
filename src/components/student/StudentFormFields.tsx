@@ -20,6 +20,9 @@ import {
  * than keeping two copies of fourteen inputs in sync by hand. The fields are
  * grouped the way an office actually works through them: who the student is,
  * who teaches them, who to call, and what to know in an emergency.
+ *
+ * The school's own fields and the student's notes follow these in both
+ * modals, as customFields/CustomFieldsSection.
  */
 
 export interface StudentFormValues {

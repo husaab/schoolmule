@@ -1,15 +1,37 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ExclamationTriangleIcon, SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  ArchiveBoxArrowDownIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 import * as importService from '@/services/registrationImportService';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import type {
-  FieldMapping,
-  MappableFormField,
-  TargetFieldDef,
-  StudentTargetField,
-} from '@/services/types/registrationImport';
+import { useAccess } from '@/hooks/useAccess';
+import { Button } from '@/components/shared/modalKit';
+import { FieldTypeTag } from '@/components/student/customFields/FieldTypeTag';
+import { CUSTOM_FIELD_LIMITS, CUSTOM_FIELD_TYPES } from '@/lib/studentCustomFields';
+import {
+  NEW_FIELD_VALUE,
+  applyKeepPlan,
+  assignmentFromValue,
+  assignmentValue,
+  assignmentsFromMappings,
+  keepPlanValueMaps,
+  newFieldProblems,
+  newFieldsIn,
+  planKeepEverythingElse,
+  seedValueMap,
+  toMappingsToSave,
+  unmappedQuestions,
+  valueChoicesFor,
+  type Assignments,
+} from '@/lib/importMapping';
+import type { CustomFieldDefinition, CustomFieldType } from '@/services/types/studentCustomField';
+import type { MappableFormField, TargetFieldDef } from '@/services/types/registrationImport';
+import KeepEverythingElseModal from './KeepEverythingElseModal';
 
 interface Props {
   formId: string;
@@ -17,38 +39,51 @@ interface Props {
   onCancel: () => void;
 }
 
-const UNMAPPED = '';
+const selectBase =
+  'w-full sm:w-64 shrink-0 cursor-pointer px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors';
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
- * Configures which form field feeds which student field, plus the per-option
- * translation choice fields need (e.g. "Grade 1" → the `1` grade token).
+ * Configures what each form question feeds: a built-in student field, one of
+ * the school's custom fields (an existing one, or a new one made from the
+ * question), or nothing. Choice questions feeding a field that only takes set
+ * values (grade, gender, a dropdown) also get a per-answer translation.
  *
  * Saved per form and reused by every import, so this is a one-time setup rather
  * than something to redo on each run.
  */
 export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
+  // Making a field for every student is part of editing students; without it
+  // a question can still be saved into the fields the school already has.
+  const canAddFields = useAccess().can('students');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSuggested, setIsSuggested] = useState(false);
   const [fields, setFields] = useState<MappableFormField[]>([]);
   const [targetFields, setTargetFields] = useState<TargetFieldDef[]>([]);
-  // fieldId → target field ('' means not imported)
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
-  // fieldId → { option text → target value }
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  // question → what it feeds
+  const [assignments, setAssignments] = useState<Assignments>({});
+  // question → { answer option → target value }
   const [valueMaps, setValueMaps] = useState<Record<string, Record<string, string>>>({});
+  const [keepOpen, setKeepOpen] = useState(false);
+  // Problems with new fields show once the admin has tried to save.
+  const [triedSaving, setTriedSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const res = await importService.getMapping(formId);
-        const { mappings, fields: formFields, targetFields: targets, isSuggested: suggested } = res.data;
+        const { mappings, fields: formFields, targetFields: targets, customFields: custom, isSuggested: suggested } = res.data;
 
         setFields(formFields);
         setTargetFields(targets);
+        setCustomFields(custom ?? []);
         setIsSuggested(suggested);
-        setAssignments(Object.fromEntries(mappings.map((m) => [m.fieldId, m.targetField])));
+        setAssignments(assignmentsFromMappings(mappings));
         setValueMaps(
           Object.fromEntries(
             mappings.filter((m) => m.valueMap).map((m) => [m.fieldId, { ...m.valueMap } as Record<string, string>]),
@@ -62,11 +97,6 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
     })();
   }, [formId, showNotification]);
 
-  const targetByKey = useMemo(
-    () => new Map(targetFields.map((t) => [t.targetField, t])),
-    [targetFields],
-  );
-
   // Group the dropdown so Mother/Father contact fields don't read as one flat list.
   const groupedTargets = useMemo(() => {
     const groups = new Map<string, TargetFieldDef[]>();
@@ -77,43 +107,45 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
     return [...groups.entries()];
   }, [targetFields]);
 
-  // A student field may only be claimed once, so offer each one only where it
-  // is still free (or already selected here).
+  // A student field, built-in or custom, is fed by one question at most, so
+  // each is offered only where it is still free (or already selected here).
   const takenBy = useMemo(() => {
     const m = new Map<string, string>();
-    for (const [fieldId, target] of Object.entries(assignments)) {
-      if (target) m.set(target, fieldId);
+    for (const [questionId, a] of Object.entries(assignments)) {
+      if (a.kind === 'builtin' || a.kind === 'custom') m.set(assignmentValue(a), questionId);
     }
     return m;
   }, [assignments]);
 
-  const setAssignment = useCallback((fieldId: string, target: string) => {
-    setAssignments((prev) => ({ ...prev, [fieldId]: target }));
+  const setAssignment = (question: MappableFormField, value: string) => {
+    const next = assignmentFromValue(value, question);
+    setAssignments((prev) => ({ ...prev, [question.fieldId]: next }));
 
-    // Seed a value map when a choice field is pointed at an enum target, so the
-    // admin starts from a proposal rather than an empty grid.
-    const def = targetByKey.get(target as StudentTargetField);
-    if (def?.dataType === 'enum') {
-      const field = fields.find((f) => f.fieldId === fieldId);
-      if (field?.options?.length) {
-        setValueMaps((prev) => {
-          if (prev[fieldId]) return prev;
-          const seeded: Record<string, string> = {};
-          for (const opt of field.options!) {
-            const guess = guessEnumValue(opt, def.enumValues || []);
-            if (guess) seeded[opt] = guess;
-          }
-          return { ...prev, [fieldId]: seeded };
-        });
-      }
-    }
-  }, [fields, targetByKey]);
+    // A choice question pointed at a field that only takes set values starts
+    // from a proposed translation, not an empty grid. The translation belongs
+    // to the target, so re-pointing the question replaces it.
+    const choices = valueChoicesFor(next, question, targetFields, customFields);
+    setValueMaps((prev) => {
+      const rest = { ...prev };
+      delete rest[question.fieldId];
+      if (choices) rest[question.fieldId] = seedValueMap(question.options ?? [], choices);
+      return rest;
+    });
+  };
 
   const setOptionValue = (fieldId: string, option: string, value: string) => {
     setValueMaps((prev) => ({
       ...prev,
       [fieldId]: { ...(prev[fieldId] || {}), [option]: value },
     }));
+  };
+
+  const setNewField = (questionId: string, change: { label?: string; type?: CustomFieldType }) => {
+    setAssignments((prev) => {
+      const current = prev[questionId];
+      if (current?.kind !== 'new') return prev;
+      return { ...prev, [questionId]: { kind: 'new', draft: { ...current.draft, ...change } } };
+    });
   };
 
   // Required student fields that nothing feeds yet — the import can't run
@@ -126,33 +158,41 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
   // Choice options with no translation, which would fail at import time.
   const untranslatedOptions = useMemo(() => {
     const out: { fieldId: string; label: string; options: string[] }[] = [];
-    for (const field of fields) {
-      const target = assignments[field.fieldId];
-      const def = target ? targetByKey.get(target as StudentTargetField) : null;
-      if (!def || def.dataType !== 'enum' || !field.options?.length) continue;
-      const map = valueMaps[field.fieldId] || {};
-      const missing = field.options.filter((o) => !map[o]);
-      if (missing.length > 0) out.push({ fieldId: field.fieldId, label: field.label, options: missing });
+    for (const question of fields) {
+      const choices = valueChoicesFor(assignments[question.fieldId], question, targetFields, customFields);
+      if (!choices) continue;
+      const map = valueMaps[question.fieldId] || {};
+      const missing = (question.options ?? []).filter((o) => !map[o]);
+      if (missing.length > 0) out.push({ fieldId: question.fieldId, label: question.label, options: missing });
     }
     return out;
-  }, [fields, assignments, valueMaps, targetByKey]);
+  }, [fields, assignments, valueMaps, targetFields, customFields]);
+
+  const notImported = useMemo(() => unmappedQuestions(fields, assignments), [fields, assignments]);
+  const keepPlan = useMemo(
+    () => (keepOpen ? planKeepEverythingElse(fields, assignments, customFields) : []),
+    [keepOpen, fields, assignments, customFields],
+  );
+  const newFields = useMemo(() => newFieldsIn(fields, assignments), [fields, assignments]);
+  const problems = useMemo(() => newFieldProblems(assignments, customFields), [assignments, customFields]);
 
   const handleSave = async () => {
+    setTriedSaving(true);
+    if (Object.keys(problems).length > 0) {
+      showNotification('Fix the new fields marked in red, then save', 'error');
+      return;
+    }
     setSaving(true);
     try {
-      const payload = Object.entries(assignments)
-        .filter(([, target]) => target)
-        .map(([fieldId, target]) => {
-          const def = targetByKey.get(target as StudentTargetField);
-          return {
-            fieldId,
-            targetField: target as StudentTargetField,
-            valueMap: def?.dataType === 'enum' ? (valueMaps[fieldId] || {}) : null,
-          };
-        });
-
-      await importService.saveMapping(formId, payload);
-      showNotification('Import mapping saved', 'success');
+      const res = await importService.saveMapping(
+        formId,
+        toMappingsToSave(fields, assignments, valueMaps, targetFields, customFields),
+      );
+      const created = res.data.createdFields?.length ?? 0;
+      showNotification(
+        created > 0 ? `Import mapping saved. ${plural(created, 'custom field', 'custom fields')} added.` : 'Import mapping saved',
+        'success',
+      );
       onSaved();
     } catch (err) {
       showNotification((err as Error).message || 'Error saving mapping', 'error');
@@ -212,11 +252,31 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
           </div>
         )}
 
+        {/* The questions that would otherwise never reach the student. */}
+        {notImported.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
+            <ArchiveBoxArrowDownIcon className="hidden h-5 w-5 shrink-0 text-slate-400 sm:block" />
+            <p className="flex-1 text-sm text-slate-700">
+              <span className="font-medium">
+                {plural(notImported.length, 'question isn’t', 'questions aren’t')} imported.
+              </span>{' '}
+              {notImported.length === 1 ? 'Its answer stays' : 'Their answers stay'} on the submission and never reach the student.
+            </p>
+            {canAddFields && (
+              <Button type="button" variant="secondary" onClick={() => setKeepOpen(true)} className="shrink-0 bg-white">
+                Keep {notImported.length === 1 ? 'it' : 'them'} as custom fields
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="divide-y divide-slate-100">
           {fields.map((field) => {
-            const target = assignments[field.fieldId] || UNMAPPED;
-            const def = target ? targetByKey.get(target as StudentTargetField) : null;
-            const needsValueMap = def?.dataType === 'enum' && !!field.options?.length;
+            const assignment = assignments[field.fieldId];
+            const value = assignmentValue(assignment);
+            const choices = valueChoicesFor(assignment, field, targetFields, customFields);
+            const existing = assignment?.kind === 'custom' ? customFields.find((f) => f.fieldId === assignment.fieldId) : null;
+            const problem = triedSaving ? problems[field.fieldId] : undefined;
 
             return (
               <div key={field.fieldId} className="py-3.5">
@@ -224,13 +284,12 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
                   <p className="flex-1 text-sm text-slate-700 min-w-0 break-words">{field.label}</p>
                   <span className="hidden sm:block text-slate-300 shrink-0">→</span>
                   <select
-                    value={target}
-                    onChange={(e) => setAssignment(field.fieldId, e.target.value)}
-                    className={`w-full sm:w-64 shrink-0 px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors ${
-                      target ? 'border-cyan-300 text-slate-900' : 'border-slate-200 text-slate-400'
-                    }`}
+                    value={value}
+                    aria-label={`What "${field.label}" is imported as`}
+                    onChange={(e) => setAssignment(field, e.target.value)}
+                    className={`${selectBase} ${value ? 'border-cyan-300 text-slate-900' : 'border-slate-200 text-slate-400'}`}
                   >
-                    <option value={UNMAPPED}>— Not imported —</option>
+                    <option value="">— Not imported —</option>
                     {groupedTargets.map(([group, defs]) => (
                       <optgroup key={group} label={group}>
                         {defs.map((t) => {
@@ -246,29 +305,90 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
                         })}
                       </optgroup>
                     ))}
+                    <optgroup label="Custom fields">
+                      {customFields.map((f) => {
+                        const key = `custom:${f.fieldId}`;
+                        const claimedBy = takenBy.get(key);
+                        const claimedElsewhere = claimedBy && claimedBy !== field.fieldId;
+                        return (
+                          <option key={f.fieldId} value={key} disabled={!!claimedElsewhere}>
+                            {f.label}
+                            {claimedElsewhere ? ' (already used)' : ''}
+                          </option>
+                        );
+                      })}
+                      <option value={NEW_FIELD_VALUE} disabled={!canAddFields}>
+                        {canAddFields ? '+ New custom field' : '+ New custom field (needs permission to edit students)'}
+                      </option>
+                    </optgroup>
                   </select>
                 </div>
 
-                {needsValueMap && (
+                {existing && (
+                  <div className="mt-2 flex justify-end">
+                    <FieldTypeTag type={existing.type} />
+                  </div>
+                )}
+
+                {assignment?.kind === 'new' && (
+                  <div className="mt-3 sm:ml-4 space-y-2 border-l-2 border-cyan-100 pl-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      New field, on every student
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        value={assignment.draft.label}
+                        maxLength={CUSTOM_FIELD_LIMITS.label}
+                        aria-label={`Name of the new field for "${field.label}"`}
+                        aria-invalid={Boolean(problem)}
+                        onChange={(e) => setNewField(field.fieldId, { label: e.target.value })}
+                        placeholder="Field name"
+                        className={`min-w-0 flex-1 px-3 py-2 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                          problem ? 'border-rose-300' : 'border-slate-300'
+                        }`}
+                      />
+                      <select
+                        value={assignment.draft.type}
+                        aria-label={`Kind of answer for "${field.label}"`}
+                        onChange={(e) => setNewField(field.fieldId, { type: e.target.value as CustomFieldType })}
+                        className="w-full sm:w-40 shrink-0 cursor-pointer px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {CUSTOM_FIELD_TYPES
+                          // A dropdown needs choices, and only a choice question has them to give.
+                          .filter(({ type }) => type !== 'select' || assignment.draft.options.length > 0)
+                          .map(({ type, label }) => (
+                            <option key={type} value={type}>{label}</option>
+                          ))}
+                      </select>
+                    </div>
+                    {assignment.draft.type === 'select' && (
+                      <p className="text-xs text-slate-500 break-words">Choices: {assignment.draft.options.join(', ')}</p>
+                    )}
+                    {problem && <p className="text-xs text-rose-600">{problem}</p>}
+                  </div>
+                )}
+
+                {choices && (
                   <div className="mt-3 ml-0 sm:ml-4 pl-4 border-l-2 border-cyan-100 space-y-1.5">
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                      Answer → {def!.label}
+                      Answer → {choices.label}
                     </p>
                     {field.options!.map((opt) => {
-                      const value = valueMaps[field.fieldId]?.[opt] || '';
+                      const mapped = valueMaps[field.fieldId]?.[opt] || '';
                       return (
                         <div key={opt} className="flex items-center gap-3">
                           <span className="flex-1 text-sm text-slate-600 truncate" title={opt}>{opt}</span>
                           <select
-                            value={value}
+                            value={mapped}
+                            aria-label={`${choices.label} for the answer "${opt}"`}
                             onChange={(e) => setOptionValue(field.fieldId, opt, e.target.value)}
-                            className={`w-32 shrink-0 px-2 py-1.5 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-                              value ? 'border-slate-300 text-slate-900' : 'border-amber-300 text-slate-400'
+                            className={`w-40 shrink-0 cursor-pointer px-2 py-1.5 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                              mapped ? 'border-slate-300 text-slate-900' : 'border-amber-300 text-slate-400'
                             }`}
                           >
                             <option value="">— None —</option>
-                            {(def!.enumValues || []).map((v) => (
-                              <option key={v} value={v}>{v}</option>
+                            {choices.values.map((v) => (
+                              <option key={v} value={v}>{choices.display(v)}</option>
                             ))}
                           </select>
                         </div>
@@ -282,7 +402,7 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-white px-6 py-3 border-t border-slate-100 flex items-center justify-between">
+      <div className="sticky bottom-0 bg-white px-6 py-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500 flex items-center gap-1.5">
           {missingRequired.length === 0 && (
             <>
@@ -290,43 +410,32 @@ export default function FieldMappingEditor({ formId, onSaved, onCancel }: Props)
               Ready to import
             </>
           )}
+          {newFields.length > 0 && (
+            <span className={missingRequired.length === 0 ? 'before:mr-1.5 before:text-slate-300 before:content-["·"]' : ''}>
+              Saving adds {plural(newFields.length, 'custom field', 'custom fields')}
+            </span>
+          )}
         </p>
         <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
-          >
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
             Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {saving ? 'Saving...' : 'Save mapping'}
-          </button>
+          </Button>
+          <Button type="button" onClick={handleSave} loading={saving}>
+            {saving ? 'Saving' : 'Save mapping'}
+          </Button>
         </div>
       </div>
+
+      <KeepEverythingElseModal
+        isOpen={keepOpen}
+        plan={keepPlan}
+        takenNames={[...customFields.map((f) => f.label), ...newFields.map((d) => d.label)]}
+        onClose={() => setKeepOpen(false)}
+        onConfirm={(plan) => {
+          setAssignments((prev) => applyKeepPlan(prev, plan));
+          setValueMaps((prev) => ({ ...prev, ...keepPlanValueMaps(plan, targetFields, customFields) }));
+        }}
+      />
     </div>
   );
-}
-
-/**
- * Proposes a target value for one answer option, so switching a field to an
- * enum target starts from something sensible.
- * "Junior Kindergarten (born in 2022)" → 'JK'; "Grade 3" → '3'.
- *
- * Deliberately mirrors suggestGradeValue() in the backend's
- * studentImportTarget.js: that one seeds the initial server-side suggestion,
- * this one re-seeds instantly when the admin re-points a field mid-edit, with
- * no round-trip. Keep the two regexes in sync.
- */
-function guessEnumValue(option: string, enumValues: string[]): string | null {
-  const l = option.toLowerCase();
-  if (/junior\s*k|\bjk\b/.test(l) && enumValues.includes('JK')) return 'JK';
-  if (/senior\s*k|\bsk\b/.test(l) && enumValues.includes('SK')) return 'SK';
-  const m = l.match(/\b(\d{1,2})\b/);
-  if (m && enumValues.includes(m[1])) return m[1];
-  return null;
 }

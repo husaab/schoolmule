@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { StudentResponse, AllStudentsResponse, StudentPayload, ArchiveStudentResponse } from './types/student';
+import { StudentResponse, AllStudentsResponse, StudentWriteBody, ArchiveStudentResponse } from './types/student';
 
 export const getAllStudents = async (
   school: string
@@ -22,7 +22,7 @@ export const getStudentById = async (
  * @param studentData Partial student fields; only name and school are required
  */
 export const createStudent = async (
-  studentData: Omit<StudentPayload, 'studentId' | 'createdAt' | 'lastModifiedAt'>
+  studentData: StudentWriteBody
 ): Promise<StudentResponse> => {
   return apiClient<StudentResponse>(`/students`, {
     method: 'POST',
@@ -38,7 +38,7 @@ export const createStudent = async (
  */
 export const updateStudent = async (
   id: string,
-  updateData: Partial<Omit<StudentPayload, 'studentId' | 'createdAt' | 'lastModifiedAt'>>
+  updateData: Partial<StudentWriteBody>
 ): Promise<StudentResponse> => {
   return apiClient<StudentResponse>(`/students/${id}`, {
     method: 'PATCH',

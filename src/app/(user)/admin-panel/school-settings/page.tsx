@@ -17,6 +17,7 @@ import TermEditModal from '@/components/terms/edit/termEditModal'
 import TermDeleteModal from '@/components/terms/delete/termDeleteModal'
 import SchoolYearsSection from '@/components/school-years/SchoolYearsSection'
 import ClassroomSettingsCard from '@/components/studentAccounts/ClassroomSettingsCard'
+import StudentCustomFieldsCard from '@/components/settings/StudentCustomFieldsCard'
 
 const SchoolSettingsPage = () => {
   const router = useRouter()
@@ -506,6 +507,9 @@ const SchoolSettingsPage = () => {
 
           {/* Classroom & parent emails: the same settings as Student accounts → Classroom settings */}
           <ClassroomSettingsCard />
+
+          {/* The school's own fields on every student */}
+          <StudentCustomFieldsCard />
 
           {/* School Years Section */}
           <SchoolYearsSection />

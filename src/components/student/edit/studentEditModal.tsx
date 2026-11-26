@@ -8,11 +8,13 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import Modal from '../../shared/modal';
 import { updateStudent } from '@/services/studentService';
 import { getTeachersBySchool } from '@/services/teacherService';
-import { StudentPayload } from '@/services/types/student';
+import { StudentPayload, StudentWriteBody } from '@/services/types/student';
 import { TeacherPayload } from '@/services/types/teacher';
 import StudentFormFields, { StudentFormValues } from '../StudentFormFields';
 import { Button, ModalBody, ModalFooter, ModalHeader } from '../../shared/modalKit';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
+import CustomFieldsSection from '../customFields/CustomFieldsSection';
+import { useCustomFieldsForm } from '../customFields/useCustomFieldsForm';
 
 interface StudentEditModalProps {
   isOpen: boolean;
@@ -51,6 +53,8 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
   // The student's sign-in email is part of their account: `users` (Student accounts).
   const canSetStudentEmail = can(user, 'users');
   const showNotification = useNotificationStore((state) => state.showNotification);
+  // The school's own fields and this student's notes (the form's last section).
+  const custom = useCustomFieldsForm({ isOpen, stored: student.customFields, idPrefix: 'student-edit' });
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -82,8 +86,13 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
       showNotification('Name and grade are required', 'error');
       return;
     }
+    const customError = custom.validate();
+    if (customError) {
+      showNotification(customError, 'error');
+      return;
+    }
 
-    const updateData: Partial<Omit<StudentPayload, 'studentId' | 'createdAt' | 'lastModifiedAt'>> = {
+    const updateData: Partial<StudentWriteBody> = {
       name: values.name.trim(),
       grade: values.grade,
       oen: values.oen || null,
@@ -112,6 +121,10 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
     if (canSetStudentEmail && nextStudentEmail !== (student.studentEmail || '').toLowerCase()) {
       updateData.studentEmail = nextStudentEmail || null;
     }
+    // Custom fields: only the ones that changed, and no key at all when none
+    // did, so a field someone else is editing is never overwritten from here.
+    const customFields = custom.body();
+    if (customFields) updateData.customFields = customFields;
 
     setSubmitting(true);
     try {
@@ -146,6 +159,7 @@ const StudentEditModal: React.FC<StudentEditModalProps> = ({ isOpen, onClose, st
             idPrefix="student-edit"
             showStudentEmail={canSetStudentEmail}
           />
+          <CustomFieldsSection {...custom.section} />
         </ModalBody>
 
         <ModalFooter>

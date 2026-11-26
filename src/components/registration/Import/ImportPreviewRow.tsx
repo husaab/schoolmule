@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   PlusCircleIcon,
   ArrowPathIcon,
@@ -38,13 +38,19 @@ export default function ImportPreviewRow({ row, onDecision, onPickMatch, pickedM
   // A row blocked only because the admin has not said which student to update
   // can't be fixed from the collapsed view, so open it for them.
   const awaitingMatchChoice = row.action === 'error' && row.matchCandidates.length > 1;
-  useEffect(() => {
+  const [wasAwaiting, setWasAwaiting] = useState(false);
+  if (awaitingMatchChoice !== wasAwaiting) {
+    setWasAwaiting(awaitingMatchChoice);
     if (awaitingMatchChoice) setExpanded(true);
-  }, [awaitingMatchChoice]);
+  }
   const style = ACTION_STYLE[row.action] || ACTION_STYLE.skip;
   const { Icon } = style;
 
-  const hasDetail = row.diff.length > 0 || row.matchCandidates.length > 1;
+  // What a new student would get beyond name and grade, and every reason a
+  // blocked row is blocked (the summary line only has room for the first).
+  const extras = row.action === 'create' ? (row.extras ?? []) : [];
+  const moreErrors = row.action === 'error' && row.errors.length > 1 ? row.errors : [];
+  const hasDetail = row.diff.length > 0 || row.matchCandidates.length > 1 || extras.length > 0 || moreErrors.length > 0;
   // 'error' and already-imported rows can't be overridden into anything useful.
   const canOverride = !row.locked;
   const needsMatchChoice = row.matchCandidates.length > 1;
@@ -66,7 +72,11 @@ export default function ImportPreviewRow({ row, onDecision, onPickMatch, pickedM
               </span>
             )}
           </p>
-          <p className="text-xs text-slate-500 truncate">{row.reason}</p>
+          <p className={`text-xs truncate ${row.action === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>
+            {row.reason}
+            {moreErrors.length > 0 && ` (and ${moreErrors.length - 1} more)`}
+            {extras.length > 0 && ` · ${extras.length} custom ${extras.length === 1 ? 'field' : 'fields'}`}
+          </p>
         </div>
 
         {hasDetail && (
@@ -121,6 +131,35 @@ export default function ImportPreviewRow({ row, onDecision, onPickMatch, pickedM
                       {c.grade === 'JK' || c.grade === 'SK' ? c.grade : `Grade ${c.grade}`}
                     </span>
                   </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {moreErrors.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+                Fix these on the submission, then import again
+              </p>
+              <ul className="space-y-0.5">
+                {moreErrors.map((message) => (
+                  <li key={message} className="text-sm text-rose-700">{message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {extras.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+                Custom fields that would be saved
+              </p>
+              <div className="space-y-0.5">
+                {extras.map((extra) => (
+                  <div key={extra.fieldId} className="flex items-baseline gap-3 text-sm">
+                    <span className="text-slate-500 w-2/5 max-w-[18rem] shrink-0 break-words">{extra.label}</span>
+                    <span className="text-slate-900 min-w-0 break-words line-clamp-2">{extra.display}</span>
+                  </div>
                 ))}
               </div>
             </div>

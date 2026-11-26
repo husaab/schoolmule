@@ -1,7 +1,8 @@
 import apiClient from './apiClient';
 import type {
   MappingResponse,
-  FieldMapping,
+  MappingToSave,
+  SaveMappingResponse,
   ImportPreviewResponse,
   ImportExecuteResponse,
   ImportRequestBody,
@@ -18,9 +19,9 @@ import type {
 export const getMapping = (formId: string) =>
   apiClient<MappingResponse>(`/registration/forms/${formId}/import/mapping`);
 
-/** Replaces the form's whole mapping. */
-export const saveMapping = (formId: string, mappings: Pick<FieldMapping, 'fieldId' | 'targetField' | 'valueMap'>[]) =>
-  apiClient<MappingResponse>(`/registration/forms/${formId}/import/mapping`, {
+/** Replaces the form's whole mapping, creating any new custom fields it describes in the same save. */
+export const saveMapping = (formId: string, mappings: MappingToSave[]) =>
+  apiClient<SaveMappingResponse>(`/registration/forms/${formId}/import/mapping`, {
     method: 'PUT',
     body: { mappings },
   });

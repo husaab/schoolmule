@@ -6,6 +6,7 @@ import { GuardianCard, SectionLabel, clean } from './contact'
 import { formatDay, formatStamp, relationLabel } from '@/lib/studentProfile'
 import type { GuardianAccount, StudentOverview } from '@/services/types/studentProfile'
 import { Card } from './ui'
+import CustomFieldsBlock from './CustomFieldsBlock'
 
 const ACCOUNT_PILL: Record<GuardianAccount['status'], [string, string]> = {
   linked: ['Portal account', 'bg-emerald-50 text-emerald-700'],
@@ -142,6 +143,8 @@ const ProfileSection: React.FC<{
             )}
           </section>
         </div>
+
+        <CustomFieldsBlock data={s.customFields} />
 
         <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-400">
           <p>

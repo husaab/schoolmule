@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
 import * as importService from '@/services/registrationImportService';
 import { useNotificationStore } from '@/store/useNotificationStore';
@@ -15,9 +15,10 @@ interface Props {
 }
 
 /**
- * Reverses an import. Always unlinks; offers to delete the created student only
- * when nothing depends on it — deleting a student cascades to attendance,
- * assessments and report card feedback, so that has to be an informed choice.
+ * Reverses an import. Always unlinks; offers to delete the student only when
+ * the import created them (never a student it merely filled in) and nothing
+ * depends on them — deleting a student cascades to attendance, assessments and
+ * report card feedback, so that has to be an informed choice.
  */
 export default function UndoImportModal({ submissionId, isOpen, onClose, onUndone }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
@@ -27,6 +28,8 @@ export default function UndoImportModal({ submissionId, isOpen, onClose, onUndon
   const [studentName, setStudentName] = useState<string | null>(null);
   const [blockedBy, setBlockedBy] = useState<UndoBlocker[]>([]);
   const [canDelete, setCanDelete] = useState(false);
+  // False when the import only filled in a student who was already in the school.
+  const [createdByImport, setCreatedByImport] = useState(true);
   const [deleteStudent, setDeleteStudent] = useState(false);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export default function UndoImportModal({ submissionId, isOpen, onClose, onUndon
         setStudentName(res.data.studentName);
         setBlockedBy(res.data.blockedBy);
         setCanDelete(res.data.canDelete);
+        setCreatedByImport(res.data.createdByImport !== false);
         // Deleting is the usual intent when the student is untouched, so make
         // it the default — but only when it's actually safe.
         setDeleteStudent(res.data.canDelete);
@@ -110,6 +114,17 @@ export default function UndoImportModal({ submissionId, isOpen, onClose, onUndon
                     </span>
                   </span>
                 </label>
+              </div>
+            ) : !createdByImport ? (
+              <div className="flex items-start gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <InformationCircleIcon className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-700">
+                  <p className="font-medium mb-1">The student record will be kept.</p>
+                  <p>
+                    They were already in SchoolMule before this import, which only filled in details
+                    they were missing. Those details stay on the student.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">

@@ -44,6 +44,11 @@ export interface StudentPayload {
    * when the record was entered manually.
    */
   sourceSubmissionId?: string | null;
+  /**
+   * The school's custom fields this student has a value for, and their one-off
+   * notes. Sent only to staff who edit students; absent for everyone else.
+   */
+  customFields?: import('./studentCustomField').StudentCustomFields;
   createdAt: string;
   lastModifiedAt: string;
   // Archive fields - optional to maintain backward compatibility
@@ -51,6 +56,14 @@ export interface StudentPayload {
   archivedAt?: string | null;
   archivedBy?: string | null;
 }
+
+/**
+ * The body of a student create or update. Custom fields travel as a change
+ * (only the fields being set or cleared), not as the whole stored object.
+ */
+export type StudentWriteBody = Omit<StudentPayload, 'studentId' | 'createdAt' | 'lastModifiedAt' | 'customFields'> & {
+  customFields?: import('./studentCustomField').StudentCustomFieldsPatch;
+};
 
 /**
  * Response wrapper for single-student endpoints

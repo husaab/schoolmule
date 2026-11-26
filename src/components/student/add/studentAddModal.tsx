@@ -13,6 +13,8 @@ import { TeacherPayload } from '@/services/types/teacher';
 import StudentFormFields, { StudentFormValues, emptyStudentForm } from '../StudentFormFields';
 import { Button, ModalBody, ModalFooter, ModalHeader } from '../../shared/modalKit';
 import { UserPlusIcon } from '@heroicons/react/24/outline';
+import CustomFieldsSection from '../customFields/CustomFieldsSection';
+import { useCustomFieldsForm } from '../customFields/useCustomFieldsForm';
 
 interface StudentAddModalProps {
   isOpen: boolean;
@@ -29,6 +31,8 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
   // The student's sign-in email is part of their account: `users` (Student accounts).
   const canSetStudentEmail = can(user, 'users');
   const showNotification = useNotificationStore((state) => state.showNotification);
+  // The school's own fields and this student's notes (the form's last section).
+  const custom = useCustomFieldsForm({ isOpen, idPrefix: 'student-add' });
 
   const setField = <K extends keyof StudentFormValues>(field: K, value: StudentFormValues[K]) =>
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -58,6 +62,12 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       showNotification('Name and grade are required', 'error');
       return;
     }
+    const customError = custom.validate();
+    if (customError) {
+      showNotification(customError, 'error');
+      return;
+    }
+    const customFields = custom.body();
 
     const payload = {
       name: values.name.trim(),
@@ -81,6 +91,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
       healthCardNumber: values.healthCardNumber || null,
       medicalNotes: values.medicalNotes || null,
       gender: values.gender || null,
+      ...(customFields && { customFields }),
       // Admins only: any other role's body must not carry the key at all.
       ...(canSetStudentEmail && values.studentEmail.trim() && { studentEmail: values.studentEmail.trim().toLowerCase() })
     };
@@ -122,6 +133,7 @@ const StudentAddModal: React.FC<StudentAddModalProps> = ({ isOpen, onClose, onAd
             idPrefix="student-add"
             showStudentEmail={canSetStudentEmail}
           />
+          <CustomFieldsSection {...custom.section} />
         </ModalBody>
 
         <ModalFooter>
