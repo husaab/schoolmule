@@ -166,3 +166,27 @@ describe('the next round from the school calendar', () => {
     expect(nextRound([])).toEqual([])
   })
 })
+
+describe('who a day is for', () => {
+  it('every teacher, or only the ones ticked: the label, the request and when it can be saved', async () => {
+    const { whoBody, whoLabel, whoReady, pickableTeachers } = await import('./meetings')
+    const t = (teacherId: string, takingPart = true) => ({ teacherId, name: `Ms. ${teacherId}`, takingPart })
+    const staff = [t('Khalil'), t('Saleh'), t('Farouk'), t('Aziz'), t('Noor', false)]
+    expect(whoLabel({ everyone: true, teacherIds: [] }, staff)).toBe('Every teacher')
+    expect(whoLabel({ everyone: false, teacherIds: ['Khalil'] }, staff)).toBe('Only Ms. Khalil')
+    expect(whoLabel({ everyone: false, teacherIds: ['Khalil', 'Saleh'] }, staff)).toBe('Only Ms. Khalil & Ms. Saleh')
+    expect(whoLabel({ everyone: false, teacherIds: ['Khalil', 'Saleh', 'Farouk', 'Aziz', 'Noor'] }, staff)).toBe('Only Ms. Khalil, Ms. Saleh, Ms. Farouk & 2 more')
+    expect(whoLabel({ everyone: false, teacherIds: ['gone'] }, staff)).toBe('No teachers yet')
+
+    expect(whoReady({ everyone: true, teacherIds: [] })).toBe(true)
+    expect(whoReady({ everyone: false, teacherIds: [] })).toBe(false)
+    expect(whoReady({ everyone: false, teacherIds: ['Khalil'] })).toBe(true)
+    // Teachers ticked before switching back to every teacher aren't sent.
+    expect(whoBody({ everyone: true, teacherIds: ['Khalil'] })).toEqual({ everyone: true })
+    expect(whoBody({ everyone: false, teacherIds: ['Khalil'] })).toEqual({ everyone: false, teacherIds: ['Khalil'] })
+
+    // Someone not taking part is only offered on a day they are already on.
+    expect(pickableTeachers(staff).map((x) => x.teacherId)).toEqual(['Khalil', 'Saleh', 'Farouk', 'Aziz'])
+    expect(pickableTeachers(staff, { teacherIds: ['Noor'] }).map((x) => x.teacherId)).toContain('Noor')
+  })
+})

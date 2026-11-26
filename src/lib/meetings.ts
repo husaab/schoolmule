@@ -4,7 +4,7 @@
 // Times are minutes from midnight (930 = 3:30 PM); the server computes every
 // teacher's open times, so this only ever picks among them.
 
-import type { MeetingHow, MeetingMode, ParentMeetingEvent, ParentMeetingTeacher, TimeRange } from '@/services/types/meetings'
+import type { MeetingHow, MeetingMode, ParentMeetingEvent, ParentMeetingTeacher, SetupDay, SetupTeacher, TimeRange } from '@/services/types/meetings'
 import { cleanPhone } from './phone'
 
 export { cleanPhone, telHref } from './phone'
@@ -276,3 +276,30 @@ export function bookedTimesFrom(err: unknown): string[] {
   const data = (err as { data?: { bookings?: { label: string }[] } } | null)?.data
   return Array.isArray(data?.bookings) ? data!.bookings!.map((b) => b.label) : []
 }
+
+// ── Who a day is for (the office's Setup) ──────────────────
+
+/** A day's teachers, chosen on a form: every teacher, or only the ones ticked. */
+export interface DayWho {
+  everyone: boolean
+  teacherIds: string[]
+}
+
+/** The choice is complete: every teacher, or at least one ticked. */
+export const whoReady = (who: DayWho): boolean => who.everyone || who.teacherIds.length > 0
+
+/** What the API takes: the teachers only matter on a day for some of them. */
+export const whoBody = (who: DayWho): { everyone: boolean; teacherIds?: string[] } =>
+  who.everyone ? { everyone: true } : { everyone: false, teacherIds: who.teacherIds }
+
+/** 'Every teacher', or 'Only Ms. Khalil & Mr. Farouk' (three names, then a count). */
+export function whoLabel(day: Pick<SetupDay, 'everyone' | 'teacherIds'>, teachers: Pick<SetupTeacher, 'teacherId' | 'name'>[]): string {
+  if (day.everyone) return 'Every teacher'
+  const names = day.teacherIds.map((id) => teachers.find((t) => t.teacherId === id)?.name).filter((n): n is string => Boolean(n))
+  if (!names.length) return 'No teachers yet'
+  return `Only ${names.length > 3 ? `${names.slice(0, 3).join(', ')} & ${names.length - 3} more` : joinNames(names)}`
+}
+
+/** The teachers the office can tick for a day: those taking part, and anyone already on it. */
+export const pickableTeachers = <T extends Pick<SetupTeacher, 'teacherId' | 'takingPart'>>(teachers: T[], day?: Pick<SetupDay, 'teacherIds'> | null): T[] =>
+  teachers.filter((t) => t.takingPart || Boolean(day?.teacherIds.includes(t.teacherId)))

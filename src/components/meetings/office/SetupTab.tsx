@@ -1,8 +1,9 @@
 'use client'
 
 // The office's Setup tab: days and school hours (with everyone's breaks),
-// meetings and booking, the automatic emails, and the teachers taking part
-// with their own days and hours. Every control saves as it changes; a change
+// who meets families on each day (every teacher, or only some), meetings and
+// booking, the automatic emails, and the teachers taking part with their own
+// days and hours. Every control saves as it changes; a change
 // that would leave a booked family without a time is refused with who's in
 // the way. The side card opens booking (on a date, or now) and deletes.
 
@@ -12,12 +13,15 @@ import { ClockIcon, PencilSquareIcon, PlusIcon, TrashIcon, XMarkIcon, EnvelopeIc
 import Modal from '@/components/shared/modal'
 import { Button, ConfirmBody, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass } from '@/components/shared/modalKit'
 import TeacherHoursModal, { type HoursTeacher } from '@/components/meetings/TeacherHoursModal'
+import { DayTeachersModal, WhoPicker } from './DayTeachers'
 import type { MeetingSetup, SetupDay, SetupTeacher } from '@/services/types/meetings'
 import {
   addMeetingBreak, addMeetingDay, deleteMeetingBreak, deleteMeetingDay, deleteMeetingEvent, scheduleMeetingEvent,
   sendMeetingsLastCall, setMeetingTeacher, unscheduleMeetingEvent, updateMeetingDay, updateMeetingSettings,
 } from '@/services/meetingsService'
-import { bookedTimesFrom, dayLong, instantLabel, parseTime, rangeLabel, timeLabel, toTimeInput } from '@/lib/meetings'
+import {
+  bookedTimesFrom, dayLong, instantLabel, joinNames, parseTime, pickableTeachers, rangeLabel, timeLabel, toTimeInput, weekdayShort, whoBody, whoLabel, whoReady, type DayWho,
+} from '@/lib/meetings'
 import { useMeetingsStore } from '@/store/useMeetingsStore'
 
 interface Props {
@@ -51,6 +55,7 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
   const [editing, setEditing] = useState<SetupTeacher | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [removingDay, setRemovingDay] = useState<SetupDay | null>(null)
+  const [whoDay, setWhoDay] = useState<SetupDay | null>(null)
   // The opening time being typed; null shows the saved one.
   const [opensAtDraft, setOpensAt] = useState<string | null>(null)
   const opensAt = opensAtDraft ?? toLocalInput(setup.opensAt)
@@ -100,16 +105,16 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
         {/* Days and school hours */}
         <section data-tour="meetings.setupDays" className={`${card} p-5`}>
           <h2 className="text-base font-semibold text-slate-900">Days and school hours</h2>
-          <p className="mt-1 text-sm text-slate-500">Every teacher uses these unless you give them their own days and hours in Teachers, below.</p>
+          <p className="mt-1 text-sm text-slate-500">Every teacher uses these unless you give them their own days and hours in Teachers, below. A day can also be only for some teachers, like part-time staff who aren’t in on the other days.</p>
           <div className="mt-4 space-y-3">
             {setup.days.map((d) => (
-              <DayRow key={`${d.dayId}:${d.start}:${d.end}`} day={d} busy={busy} onSave={(patch) => act(`day:${d.dayId}`, () => updateMeetingDay(setup.eventId, d.dayId, patch))}
+              <DayRow key={`${d.dayId}:${d.start}:${d.end}`} day={d} busy={busy} who={whoLabel(d, setup.teachers)} onWho={() => setWhoDay(d)} onSave={(patch) => act(`day:${d.dayId}`, () => updateMeetingDay(setup.eventId, d.dayId, patch))}
                 onRemove={() => setRemovingDay(d)}
                 onAddBreak={(b) => act(`break:${d.dayId}`, () => addMeetingBreak(setup.eventId, d.dayId, b))}
                 onRemoveBreak={(id) => act(`break:${id}`, () => deleteMeetingBreak(setup.eventId, id))}
               />
             ))}
-            <AddDay onAdd={(date) => act('day:new', () => addMeetingDay(setup.eventId, { date }))} />
+            <AddDay teachers={pickableTeachers(setup.teachers)} onAdd={(date, who) => act('day:new', () => addMeetingDay(setup.eventId, { date, ...whoBody(who) }))} />
           </div>
         </section>
 
@@ -269,6 +274,17 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
         }}
       />
 
+      <DayTeachersModal
+        day={whoDay}
+        teachers={setup.teachers}
+        onClose={() => setWhoDay(null)}
+        onSave={async (who) => {
+          await updateMeetingDay(setup.eventId, whoDay!.dayId, whoBody(who))
+          await reload()
+          notify(who.everyone ? 'Every teacher meets families that day.' : 'Saved who meets families that day.', 'success')
+        }}
+      />
+
       <Modal isOpen={deleting} onClose={() => setDeleting(false)} size="md" ariaLabel="Delete these meetings">
         <ModalHeader title="Delete these meetings?" tone="danger" icon={TrashIcon} />
         <ModalBody>
@@ -321,7 +337,14 @@ const SetupTab: React.FC<Props> = ({ setup, onChange, reload, notify }) => {
 
 function daysSummary(setup: MeetingSetup, t: SetupTeacher): React.ReactNode {
   const own = t.days.some((d, i) => d.ownHours || d.breaks.length || d.works !== (setup.days[i]?.everyone ?? true)) || t.slotMinutes
-  if (!own) return <>{setup.days.length > 1 ? 'Every day' : 'The day'}<br /><span className="text-slate-400">School hours</span></>
+  if (!own) {
+    // With a day only for some teachers, "every day" would count a day this teacher isn't on.
+    const theirs = setup.days.filter((d) => d.everyone)
+    const which = setup.days.length === 1 ? 'The day'
+      : theirs.length === setup.days.length ? 'Every day'
+        : theirs.length ? joinNames(theirs.map((d) => weekdayShort(d.date))) : 'No day yet'
+    return <>{which}<br /><span className="text-slate-400">School hours</span></>
+  }
   const lines = t.days.map((d) => {
     const day = setup.days.find((x) => x.dayId === d.dayId)
     if (!day || !d.works) return null
@@ -374,11 +397,14 @@ const EmailRow: React.FC<{ checked: boolean; onChange: (v: boolean) => void; tit
 const DayRow: React.FC<{
   day: SetupDay
   busy: string | null
+  /** 'Every teacher', or 'Only Ms. Khalil'. */
+  who: string
+  onWho: () => void
   onSave: (patch: { start?: number; end?: number }) => void
   onRemove: () => void
   onAddBreak: (b: { start: number; end: number; label: string | null }) => void
   onRemoveBreak: (breakId: string) => void
-}> = ({ day, busy, onSave, onRemove, onAddBreak, onRemoveBreak }) => {
+}> = ({ day, busy, who, onWho, onSave, onRemove, onAddBreak, onRemoveBreak }) => {
   const [start, setStart] = useState(toTimeInput(day.start))
   const [end, setEnd] = useState(toTimeInput(day.end))
   const [adding, setAdding] = useState(false)
@@ -392,7 +418,7 @@ const DayRow: React.FC<{
   return (
     <div className="rounded-xl border border-slate-200 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <p className="w-52 pb-2 text-sm font-semibold text-slate-900">{dayLong(day.date)}{!day.everyone && <span className="block text-xs font-normal text-slate-500">Only for some teachers</span>}</p>
+        <p className="w-52 pb-2 text-sm font-semibold text-slate-900">{dayLong(day.date)}</p>
         <label className="flex flex-col text-xs text-slate-600">Starts<input type="time" step={300} className={`${inputClass} mt-1 !w-32`} value={start} onChange={(e) => setStart(e.target.value)} onBlur={commit} /></label>
         <label className="flex flex-col text-xs text-slate-600">Ends<input type="time" step={300} className={`${inputClass} mt-1 !w-32`} value={end} onChange={(e) => setEnd(e.target.value)} onBlur={commit} /></label>
         <div className="ml-auto pb-1 text-right">
@@ -400,6 +426,14 @@ const DayRow: React.FC<{
           <p className="text-xs text-slate-500">per teacher{day.bookings ? ` · ${day.bookings} booked` : ''}</p>
         </div>
         <button type="button" aria-label={`Remove ${dayLong(day.date)}`} onClick={onRemove} className="mb-1 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><TrashIcon className="h-4 w-4" /></button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="w-52 text-xs text-slate-500">Who meets families</span>
+        <button type="button" aria-label={`Who meets families on ${dayLong(day.date)}: ${who}. Change`} onClick={onWho}
+          className={`-mx-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-left text-xs font-medium hover:bg-cyan-50 ${day.everyone ? 'text-slate-700' : 'text-cyan-800'}`}>
+          <PencilSquareIcon className="h-3.5 w-3.5 shrink-0 text-cyan-700" aria-hidden="true" />
+          {who}
+        </button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="w-52 text-xs text-slate-500">Breaks for everyone</span>
@@ -426,17 +460,26 @@ const DayRow: React.FC<{
   )
 }
 
-const AddDay: React.FC<{ onAdd: (date: string) => void }> = ({ onAdd }) => {
+const EVERY_TEACHER: DayWho = { everyone: true, teacherIds: [] }
+
+const AddDay: React.FC<{ teachers: SetupTeacher[]; onAdd: (date: string, who: DayWho) => void }> = ({ teachers, onAdd }) => {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState('')
+  const [who, setWho] = useState<DayWho>(EVERY_TEACHER)
+  const close = () => { setOpen(false); setDate(''); setWho(EVERY_TEACHER) }
   if (!open) {
     return <Button variant="secondary" onClick={() => setOpen(true)}><PlusIcon className="h-4 w-4" /> Add a day</Button>
   }
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <input type="date" aria-label="New day" className={`${inputClass} !w-48`} value={date} onChange={(e) => setDate(e.target.value)} />
-      <Button disabled={!date} onClick={() => { onAdd(date); setOpen(false); setDate('') }}><ClockIcon className="h-4 w-4" /> Add with school hours</Button>
-      <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+    <div className="space-y-3 rounded-xl border border-dashed border-slate-300 p-4">
+      <label className="flex flex-col text-sm font-medium text-slate-700">New day
+        <input type="date" className={`${inputClass} mt-1.5 !w-48`} value={date} onChange={(e) => setDate(e.target.value)} />
+      </label>
+      <WhoPicker value={who} onChange={setWho} teachers={teachers} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={!date || !whoReady(who)} onClick={() => { onAdd(date, who); close() }}><ClockIcon className="h-4 w-4" /> Add with school hours</Button>
+        <Button variant="secondary" onClick={close}>Cancel</Button>
+      </div>
     </div>
   )
 }

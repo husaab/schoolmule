@@ -106,7 +106,8 @@ export const unscheduleMeetingEvent = (eventId: string) =>
 export const addMeetingDay = (eventId: string, body: { date: string; start?: number; end?: number; everyone?: boolean; teacherIds?: string[] }) =>
   apiClient<MeetingsEnvelope<{ dayId: string }>>(`${ev(eventId)}/days`, { method: 'POST', body })
 
-export const updateMeetingDay = (eventId: string, dayId: string, body: { date?: string; start?: number; end?: number; everyone?: boolean }) =>
+/** `everyone: false` with `teacherIds` makes it a day only for those teachers. */
+export const updateMeetingDay = (eventId: string, dayId: string, body: { date?: string; start?: number; end?: number; everyone?: boolean; teacherIds?: string[] }) =>
   apiClient<MeetingsEnvelope<{ dayId: string }>>(`${ev(eventId)}/days/${encodeURIComponent(dayId)}`, { method: 'PUT', body })
 
 export const deleteMeetingDay = (eventId: string, dayId: string) =>
