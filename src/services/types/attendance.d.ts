@@ -8,6 +8,8 @@ export interface AttendanceEntry {
 export interface GeneralAttendanceRequest {
   attendanceDate: string; // yyyy-mm-dd
   entries: AttendanceEntry[];
+  /** Students whose mark for the day is removed (they go back to unmarked). */
+  cleared?: string[];
   school: string;
 }
 
