@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
 
 // Rating scale labels
@@ -162,28 +163,20 @@ ${pronounGuidance(studentName, gender)}
 
 Generate only the comment text, no additional formatting or labels.`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an experienced early childhood educator writing helpful, developmental progress comments for kindergarten students. Your comments are warm, specific, and focused on the whole child.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_tokens: 200,
-        temperature: 0.7,
-      }),
+    const response = await openaiChat(apiKey, {
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an experienced early childhood educator writing helpful, developmental progress comments for kindergarten students. Your comments are warm, specific, and focused on the whole child.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      maxTokens: 200,
+      temperature: 0.7,
     })
 
     if (!response.ok) {

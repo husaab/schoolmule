@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 
 // POST /api/ai/analytics/chat — the app's first streaming AI route.
 // Body: { context: string, messages: {role, content}[], newMessage: string }
@@ -45,23 +46,15 @@ Never invent data that is not in the snapshot.`
           .slice(-12) // keep the last 12 turns
       : []
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...history,
-          { role: 'user', content: newMessage },
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-        stream: true,
-      }),
+    const openAIResponse = await openaiChat(apiKey, {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history,
+        { role: 'user', content: newMessage },
+      ],
+      maxTokens: 800,
+      temperature: 0.7,
+      stream: true,
     })
 
     if (!openAIResponse.ok || !openAIResponse.body) {

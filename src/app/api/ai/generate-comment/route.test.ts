@@ -6,7 +6,7 @@ vi.mock('@/lib/server/aiSession', () => ({
 
 import { POST } from './route'
 
-type OpenAiBody = { messages: { role: string; content: string }[]; max_tokens: number }
+type OpenAiBody = { messages: { role: string; content: string }[]; max_completion_tokens: number }
 
 const BASE = { studentName: 'Layla Haddad', gender: 'female', subject: 'Math', workHabits: 'G', behavior: 'G', term: 'Term 1', grade: 78.3 }
 
@@ -37,7 +37,7 @@ const call = async (body: Record<string, unknown>) => {
   const res = await POST(req as never)
   expect(res.status).toBe(200)
   const prompt = sent!.messages.find((m) => m.role === 'user')!.content
-  return { prompt, maxTokens: sent!.max_tokens }
+  return { prompt, maxTokens: sent!.max_completion_tokens }
 }
 
 describe('generate-comment', () => {

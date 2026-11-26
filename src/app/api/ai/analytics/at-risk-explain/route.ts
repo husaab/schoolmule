@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 
 // POST /api/ai/analytics/at-risk-explain
 // Body: one student's risk profile (computed deterministically client-side).
@@ -52,21 +53,13 @@ export async function POST(request: NextRequest) {
       .filter(Boolean)
       .join('\n')
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `${profile}\n\nWrite the explanation and suggested next steps.` },
-        ],
-        max_tokens: 250,
-        temperature: 0.6,
-      }),
+    const response = await openaiChat(apiKey, {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `${profile}\n\nWrite the explanation and suggested next steps.` },
+      ],
+      maxTokens: 250,
+      temperature: 0.6,
     })
 
     if (!response.ok) {

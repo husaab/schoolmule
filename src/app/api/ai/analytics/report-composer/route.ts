@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 
 // POST /api/ai/analytics/report-composer
 // Body: { context, sections: string[], audience, schoolName, termName }
@@ -49,21 +50,13 @@ ${scope && scope !== 'Whole School' ? `This report is scoped to: ${scope}. Write
 Start the document with "# ${schoolName || 'School'} — ${scope && scope !== 'Whole School' ? `${scope} — ` : ''}${termName || 'Term'} Performance Summary".
 Output markdown only.`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analytics snapshot:\n${context}\n\nWrite the report.` },
-        ],
-        max_tokens: 1200,
-        temperature: 0.6,
-      }),
+    const response = await openaiChat(apiKey, {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Analytics snapshot:\n${context}\n\nWrite the report.` },
+      ],
+      maxTokens: 1200,
+      temperature: 0.6,
     })
 
     if (!response.ok) {

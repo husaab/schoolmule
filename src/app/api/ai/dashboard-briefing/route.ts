@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 
 // POST /api/ai/dashboard-briefing
 // Body: { context: string }
@@ -36,21 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 })
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `School snapshot:\n${context}\n\nWrite the briefing.` },
-        ],
-        max_tokens: 300,
-        temperature: 0.4,
-      }),
+    const response = await openaiChat(apiKey, {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `School snapshot:\n${context}\n\nWrite the briefing.` },
+      ],
+      maxTokens: 300,
+      temperature: 0.4,
     })
 
     if (!response.ok) {

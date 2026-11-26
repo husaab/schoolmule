@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStaffSession } from '@/lib/server/aiSession'
+import { openaiChat } from '@/lib/server/openaiChat'
 import { pronounGuidance } from '@/lib/aiCommentPronouns'
 import { aiCommentLength } from '@/lib/aiCommentLength'
 import { cleanDetails, detailsPromptSection } from '@/lib/reportCardDetails'
@@ -153,27 +154,19 @@ ${typeof grade === 'number' ? '- Reference the student\'s academic performance n
 
 Generate only the comment text, no additional formatting or labels.`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an experienced teacher writing helpful, constructive report card comments.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_tokens: length.maxTokens,
-        temperature: 0.7,
-      }),
+    const response = await openaiChat(apiKey, {
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an experienced teacher writing helpful, constructive report card comments.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      maxTokens: length.maxTokens,
+      temperature: 0.7,
     })
 
     if (!response.ok) {
