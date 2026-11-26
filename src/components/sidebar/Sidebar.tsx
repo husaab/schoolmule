@@ -33,6 +33,7 @@ import {
   ClockIcon,
   InboxIcon,
   BanknotesIcon,
+  CreditCardIcon,
   CurrencyDollarIcon,
   GlobeAltIcon,
   ArrowTopRightOnSquareIcon
@@ -468,6 +469,7 @@ const Sidebar = () => {
                 isActive={isFinancePath}
               >
                 <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
+                <SubNavItem href="/finance/payments" label="Payments" icon={CreditCardIcon} />
               </DropdownSection>
             )}
 
