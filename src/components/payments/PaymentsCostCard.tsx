@@ -11,7 +11,7 @@ const EXAMPLE_CENTS = 2500
 const PaymentsCostCard: React.FC = () => {
   const fee = cardFeeCents(EXAMPLE_CENTS)
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="h-full rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">What it costs</h2>
       <p className="mt-2 text-sm text-slate-700">
         <span className="font-semibold text-slate-900">{CARD_FEE_PERCENT}% + {formatCents(CARD_FEE_FIXED_CENTS)}</span> per card payment, charged by Stripe.
