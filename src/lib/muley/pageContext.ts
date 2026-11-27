@@ -5,7 +5,7 @@
 // tells the model anything (an id the person can't open is ignored).
 
 export type PageKind =
-  | 'report-comments' | 'gradebook' | 'class' | 'class-attendance' | 'attendance' | 'students' | 'analytics' | 'reports' | 'admin' | 'dashboard'
+  | 'report-comments' | 'gradebook' | 'class' | 'class-attendance' | 'general-attendance' | 'attendance' | 'students' | 'analytics' | 'reports' | 'admin' | 'dashboard'
   | 'parent-grades' | 'parent-attendance' | 'parent-meetings' | 'parent-calendar' | 'parent-classes' | 'parent'
   | 'other'
 
@@ -30,6 +30,7 @@ const ROUTES: { kind: PageKind; pattern: RegExp }[] = [
   { kind: 'gradebook', pattern: new RegExp(`^/gradebook/(?:jk/|sk/)?(${UUID})(?:/|$)`, 'i') },
   { kind: 'class-attendance', pattern: new RegExp(`^/attendance/class/(${UUID})(?:/|$)`, 'i') },
   { kind: 'class', pattern: new RegExp(`^/classes/(${UUID})(?:/|$)`, 'i') },
+  { kind: 'general-attendance', pattern: /^\/attendance\/general(?:\/|$)/ },
   { kind: 'attendance', pattern: /^\/attendance(?:\/|$)/ },
   { kind: 'gradebook', pattern: /^\/gradebook(?:\/|$)/ },
   { kind: 'students', pattern: /^\/students(?:\/|$)/ },
@@ -65,6 +66,7 @@ const KIND_LABEL: Record<PageKind, string | null> = {
   gradebook: 'Gradebook',
   class: 'Class',
   'class-attendance': 'Class attendance',
+  'general-attendance': 'Daily attendance',
   attendance: 'Attendance',
   students: 'Students',
   analytics: 'Analytics',
@@ -115,8 +117,14 @@ export function startersFor(context: PageContext, writes = false): string[] {
       return writes
         ? ['Mark everyone present today', 'Who was absent this week?', 'Who is still unmarked today?']
         : ['Who was absent this week?', 'Who is still unmarked today?', 'How do I take attendance?']
+    case 'general-attendance':
+      return writes
+        ? ['Mark my homeroom present today', 'Who is still unmarked today?', 'Who was absent this week?']
+        : ['Who is still unmarked today?', 'Who was absent this week?']
     case 'attendance':
-      return ['Who was absent this week?', 'How do I take class attendance?', 'Where is general attendance?']
+      return writes
+        ? ['Mark my homeroom present today', 'Who was absent this week?', 'Where is general attendance?']
+        : ['Who was absent this week?', 'How do I take class attendance?', 'Where is general attendance?']
     case 'analytics':
       return ['Who needs attention this term?', 'How are my classes doing this term?', 'How do I compare two terms?']
     case 'admin':

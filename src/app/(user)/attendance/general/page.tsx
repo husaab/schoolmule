@@ -9,6 +9,7 @@ import { getAllStudents } from '@/services/studentService';
 import { getGeneralAttendanceByDate, submitGeneralAttendance } from '@/services/attendanceService';
 import { useUserStore } from '@/store/useUserStore';
 import { useSchoolYearStore } from '@/store/useSchoolYearStore';
+import { generalAttendanceTopic } from '@/lib/muley/dataChanges';
 
 function GeneralAttendanceContent() {
   const school = useUserStore((state) => state.user.school);
@@ -47,6 +48,7 @@ function GeneralAttendanceContent() {
       subtitle="Track daily attendance for all students"
       loadRoster={loadRoster}
       loadMarks={loadMarks}
+      changeTopic={generalAttendanceTopic}
       save={save}
       byGrade
     />

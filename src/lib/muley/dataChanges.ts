@@ -4,7 +4,8 @@
 // attendance roll for that day). The store announces what the save touched,
 // as the server named it, and an open page that shows it reloads.
 //
-// Topics: "attendance:class:<classId>:<date>", "scores:<classId>",
+// Topics: "attendance:class:<classId>:<date>", "attendance:general:<date>"
+// (the school's daily attendance), "scores:<classId>",
 // "stats-exclusions:<classId>" (who counts in the class average) and
 // "school-assets:<schoolCode>" (the logo, stamp and principal signature) and
 // "report-comments:<classId>" (a class's report card comments).
@@ -35,6 +36,7 @@ export function onDataChange(listener: Listener): () => void {
 }
 
 export const classAttendanceTopic = (classId: string, date: string) => `attendance:class:${classId}:${date}`
+export const generalAttendanceTopic = (date: string) => `attendance:general:${date}`
 export const scoresTopic = (classId: string) => `scores:${classId}`
 export const statsExclusionsTopic = (classId: string) => `stats-exclusions:${classId}`
 export const schoolAssetsTopic = (schoolCode: string) => `school-assets:${schoolCode}`

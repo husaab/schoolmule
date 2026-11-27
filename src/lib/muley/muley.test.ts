@@ -272,6 +272,9 @@ describe('the page context', () => {
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/classes/${CLASS}`), true)).toContain('Leave a student out of the class average')
     expect(startersFor(pageContextFor('/analytics'))).toContain('Who needs attention this term?')
+    expect(pageContextFor('/attendance/general')).toEqual({ route: '/attendance/general', kind: 'general-attendance', classId: null })
+    expect(pageLabel(pageContextFor('/attendance/general'))).toBe('Daily attendance')
+    expect(startersFor(pageContextFor('/attendance/general'), true)).toContain('Mark my homeroom present today')
     expect(pageContextFor(`/gradebook/${CLASS}/feedback`)).toEqual({ route: `/gradebook/${CLASS}/feedback`, kind: 'report-comments', classId: CLASS })
     // The class page's tabs come from the query, which is never sent.
     expect(pageContextFor(`/classes/${CLASS}`, 'tab=grades&sub=report-comments')).toEqual({ route: `/classes/${CLASS}`, kind: 'report-comments', classId: CLASS })
