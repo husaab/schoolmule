@@ -114,6 +114,12 @@ export default function HomePage() {
             <p className="mk-rise mk-rise-3 text-[0.95rem] text-slate-600">
               {USAGE_CLAIM}. Book {DEMO_MINUTES} minutes with the founder.
             </p>
+            {/* The app, for people whose school already uses SchoolMule. Not
+                animated in like the rest: Apple's rules forbid animating its badge. */}
+            <div className="mt-1 grid w-full gap-3 border-t border-hairline pt-6 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6">
+              <p className="font-semibold text-ink">Already at a SchoolMule school? Get the app.</p>
+              <StoreBadges from="hero" />
+            </div>
           </div>
           <nav aria-label="SchoolMule for each view" className="mk-rise mk-rise-3 hidden border-t border-hairline lg:block">
             {PRODUCT_LINKS.filter((l) => l.view).map((l) => (
@@ -153,20 +159,17 @@ export default function HomePage() {
             <Lead>Everyone works from the same records, so the grade a teacher enters is the grade a parent sees at home.</Lead>
           </div>
           <ViewTabs />
-          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-            <p className="text-slate-600">
-              Your school already uses SchoolMule?{' '}
-              <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-                Log in
-              </Link>
-              ,{' '}
-              <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-                sign up
-              </Link>{' '}
-              or get the app.
-            </p>
-            <StoreBadges from="home-views" />
-          </div>
+          <p className="mt-10 text-slate-600">
+            Your school already uses SchoolMule?{' '}
+            <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+              Log in
+            </Link>{' '}
+            or{' '}
+            <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+              sign up
+            </Link>
+            .
+          </p>
         </Container>
       </Section>
 
