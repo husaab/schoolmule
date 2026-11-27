@@ -16,6 +16,7 @@ import {
 import type { AssetType, SchoolAsset } from '@/services/types/schoolAsset';
 import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
 import AssetVersions from '@/components/schoolAssets/AssetVersions';
+import { onDataChange, schoolAssetsTopic } from '@/lib/muley/dataChanges';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
 interface AssetUpload {
@@ -92,6 +93,23 @@ const SchoolAssetsPage = () => {
 
     loadSchoolAssets();
   }, [showNotification]);
+
+  // A new image saved (or undone) through Muley, in the panel beside the page: show it.
+  const takeInMuleyChange = useRef<() => void>(() => {});
+  useEffect(() => {
+    takeInMuleyChange.current = () => {
+      void reloadAssets();
+      setVersionsKey((k) => k + 1);
+    };
+  });
+  useEffect(() => {
+    const schoolCode = getCurrentUserSchoolCode();
+    if (!schoolCode) return;
+    const topic = schoolAssetsTopic(schoolCode);
+    return onDataChange((topics) => {
+      if (topics.includes(topic)) takeInMuleyChange.current();
+    });
+  }, []);
 
   // Separate function to reload assets after upload/delete
   const reloadAssets = async () => {

@@ -4,8 +4,9 @@
 // attendance roll for that day). The store announces what the save touched,
 // as the server named it, and an open page that shows it reloads.
 //
-// Topics: "attendance:class:<classId>:<date>", "scores:<classId>" and
-// "stats-exclusions:<classId>" (who counts in the class average).
+// Topics: "attendance:class:<classId>:<date>", "scores:<classId>",
+// "stats-exclusions:<classId>" (who counts in the class average) and
+// "school-assets:<schoolCode>" (the logo, stamp and principal signature).
 
 type Listener = (topics: string[]) => void
 
@@ -35,3 +36,4 @@ export function onDataChange(listener: Listener): () => void {
 export const classAttendanceTopic = (classId: string, date: string) => `attendance:class:${classId}:${date}`
 export const scoresTopic = (classId: string) => `scores:${classId}`
 export const statsExclusionsTopic = (classId: string) => `stats-exclusions:${classId}`
+export const schoolAssetsTopic = (schoolCode: string) => `school-assets:${schoolCode}`

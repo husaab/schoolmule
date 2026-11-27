@@ -18,6 +18,8 @@ import {
   applyAction,
   dismissAction,
   undoAction,
+  uploadAttachment,
+  type AttachmentSource,
   deleteConversation as removeConversation,
   getConversation,
   getMuleySettings,
@@ -38,9 +40,10 @@ type Client = {
   applyAction: typeof applyAction
   undoAction: typeof undoAction
   dismissAction: typeof dismissAction
+  uploadAttachment: typeof uploadAttachment
 }
 
-const REAL: Client = { streamTurn, getMuleySettings, getConversation, listConversations, deleteConversation: removeConversation, applyAction, undoAction, dismissAction }
+const REAL: Client = { streamTurn, getMuleySettings, getConversation, listConversations, deleteConversation: removeConversation, applyAction, undoAction, dismissAction, uploadAttachment }
 let client: Client = REAL
 /** Tests swap the backend for a fake. */
 export const setMuleyClient = (replacement: Partial<Client> | null) => {
@@ -78,12 +81,28 @@ let running: AbortController | null = null
 let nextId = 0
 const localId = () => `local-${Date.now().toString(36)}-${(nextId += 1)}`
 
+/** An image picked in the composer: uploading, ready to send, or refused. */
+export type DraftAttachment = {
+  localId: string
+  name: string
+  /** What the composer and the sent bubble show (a local preview). */
+  previewUrl: string | null
+  status: 'uploading' | 'ready' | 'failed'
+  /** The server's id once uploaded. */
+  id: string | null
+  error: string | null
+}
+
+const MAX_ATTACHMENTS = 3
+
 type MuleyStore = {
   /** Whose panel this is ("userId:VIEW"): the conversation and the draft are theirs only. */
   owner: string | null
   open: boolean
   view: 'chat' | 'history'
   draft: string
+  /** Images picked for the next message. */
+  attachments: DraftAttachment[]
   config: MuleyConfig
   thread: ThreadState
   conversations: ConversationStub[] | null
@@ -95,7 +114,10 @@ type MuleyStore = {
   setOpen: (open: boolean) => void
   setView: (view: 'chat' | 'history') => void
   setDraft: (draft: string) => void
-  send: (text: string, extra?: { choice?: { ref: string | null }; choicesId?: string; optionId?: string; pageContext?: TurnBody['pageContext'] }) => Promise<void>
+  /** Upload an image picked in the composer, to send with the next message. */
+  attach: (source: AttachmentSource, meta: { name: string; previewUrl: string | null }) => Promise<void>
+  removeAttachment: (localId: string) => void
+  send: (text: string, extra?: { choice?: { ref: string | null }; choicesId?: string; optionId?: string; pageContext?: TurnBody['pageContext']; /** Retry: the message sent before, with its images. */ again?: TurnBody }) => Promise<void>
   retry: () => Promise<void>
   stop: () => void
   newConversation: () => void
@@ -111,7 +133,7 @@ type MuleyStore = {
   reset: () => void
 }
 
-const FRESH = { open: false, view: 'chat' as const, draft: '', thread: EMPTY_THREAD, conversations: null, lastSent: null }
+const FRESH = { open: false, view: 'chat' as const, draft: '', attachments: [] as DraftAttachment[], thread: EMPTY_THREAD, conversations: null, lastSent: null }
 
 export const useMuleyStore = create<MuleyStore>()(
   persist(
@@ -168,18 +190,40 @@ export const useMuleyStore = create<MuleyStore>()(
         },
         setDraft: (draft) => set({ draft }),
 
+        attach: async (source, meta) => {
+          if (get().attachments.length >= MAX_ATTACHMENTS) return
+          const id = localId()
+          const update = (change: Partial<DraftAttachment>) =>
+            set((state) => ({ attachments: state.attachments.map((a) => (a.localId === id ? { ...a, ...change } : a)) }))
+          set((state) => ({ attachments: [...state.attachments, { localId: id, name: meta.name, previewUrl: meta.previewUrl, status: 'uploading', id: null, error: null }] }))
+          try {
+            const uploaded = await client.uploadAttachment(source)
+            update({ status: 'ready', id: uploaded.id, name: uploaded.name })
+          } catch (err) {
+            update({ status: 'failed', error: err instanceof Error && err.message ? err.message : "The image couldn't be uploaded." })
+          }
+        },
+        removeAttachment: (id) => set((state) => ({ attachments: state.attachments.filter((a) => a.localId !== id) })),
+
         send: async (text, extra = {}) => {
-          const message = text.trim()
+          // A tapped option never carries the images waiting in the composer; a typed message does.
+          const withFiles = !extra.choice && !extra.again
+          const files = withFiles ? get().attachments : []
+          if (files.some((a) => a.status === 'uploading')) return // Send waits until they are up
+          const ready = files.filter((a) => a.status === 'ready' && a.id)
+          const message = text.trim() || (ready.length > 0 ? (ready.length === 1 ? 'I attached an image.' : 'I attached some images.') : '')
           if (!message || get().thread.status === 'streaming') return
           const body: TurnBody = {
             message,
             conversationId: get().thread.conversationId,
             choice: extra.choice ?? null,
             pageContext: extra.pageContext ?? null,
+            ...(ready.length > 0 && { attachments: ready.map((a) => ({ id: a.id as string, name: a.name })) }),
+            ...(extra.again && extra.again.attachments && { attachments: extra.again.attachments }),
           }
           if (extra.choicesId && extra.optionId) dispatch({ t: 'local:picked', choicesId: extra.choicesId, optionId: extra.optionId })
-          dispatch({ t: 'local:sent', id: localId(), text: message })
-          set({ draft: extra.choice ? get().draft : '', lastSent: body, view: 'chat' })
+          dispatch({ t: 'local:sent', id: localId(), text: message, attachments: ready.map((a) => ({ name: a.name, previewUrl: a.previewUrl })) })
+          set({ draft: extra.choice ? get().draft : '', lastSent: body, view: 'chat', ...(withFiles && { attachments: [] }) })
 
           const controller = new AbortController()
           running = controller
@@ -214,14 +258,14 @@ export const useMuleyStore = create<MuleyStore>()(
             if (messages[messages.length - 1]?.role === 'user') messages.pop()
             return { thread: { ...state.thread, messages, error: null } }
           })
-          await get().send(last.message, { choice: last.choice ?? undefined, pageContext: last.pageContext })
+          await get().send(last.message, { choice: last.choice ?? undefined, pageContext: last.pageContext, again: last })
         },
 
         stop: () => running?.abort(),
 
         newConversation: () => {
           running?.abort()
-          set({ thread: EMPTY_THREAD, view: 'chat', draft: '', lastSent: null })
+          set({ thread: EMPTY_THREAD, view: 'chat', draft: '', attachments: [], lastSent: null })
         },
 
         openConversation: async (id) => {

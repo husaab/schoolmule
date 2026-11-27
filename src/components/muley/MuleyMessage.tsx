@@ -57,7 +57,7 @@ function Trace({ block }: { block: Extract<Block, { kind: 'trace' }> }) {
   )
 }
 
-function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' }>; onNavigate: () => void }) {
+function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' | 'asset_change' }>; onNavigate: () => void }) {
   if (card.type === 'link') {
     if (!isAppPath(card.href)) return null
     return (
@@ -145,6 +145,19 @@ export default function MuleyMessage({ message, onChoose, onNavigate, streaming,
   if (message.role === 'user') {
     return (
       <div className="ml-auto max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-cyan-100 bg-gradient-to-br from-cyan-50 to-teal-50 px-3.5 py-2.5 text-[15px] leading-relaxed text-slate-900">
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {message.attachments.map((a, i) =>
+              a.previewUrl ? (
+                // A local preview of the file they sent (blob: URL).
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={a.previewUrl} alt={a.name} className="h-20 w-20 rounded-xl border border-white object-contain bg-white" />
+              ) : (
+                <span key={i} className="rounded-lg bg-white px-2 py-1 text-xs text-slate-600">{a.name}</span>
+              ),
+            )}
+          </div>
+        )}
         {message.text}
       </div>
     )
@@ -156,7 +169,7 @@ export default function MuleyMessage({ message, onChoose, onNavigate, streaming,
         if (block.kind === 'text') return <Words key={index} text={block.text} />
         if (block.kind === 'trace') return <Trace key={`${block.id}-${index}`} block={block} />
         if (block.kind === 'card') {
-          if (block.card.type === 'change') {
+          if (block.card.type === 'change' || block.card.type === 'asset_change') {
             return <MuleyChangeCard key={`${block.id}-${index}`} card={block.card} entry={actions[block.card.actionId]} onAction={onAction} onAsk={onAsk} streaming={streaming} />
           }
           return <Card key={`${block.id}-${index}`} card={block.card} onNavigate={onNavigate} />

@@ -64,7 +64,9 @@ export function muleyReducer(state: ThreadState, event: StreamEvent | LocalEvent
         error: null,
         messages: [
           ...state.messages,
-          { id: event.id, role: 'user', text: event.text },
+          event.attachments && event.attachments.length > 0
+            ? { id: event.id, role: 'user', text: event.text, attachments: event.attachments }
+            : { id: event.id, role: 'user', text: event.text },
           { id: `${event.id}:answer`, role: 'assistant', blocks: [], status: 'streaming' },
         ],
       }

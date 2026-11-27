@@ -204,3 +204,45 @@ describe('prepared changes', () => {
     expect(useMuleyStore.getState().config).toEqual({ status: 'ready', enabled: true, maxMessageLength: 4000, writes: true })
   })
 })
+
+describe('attached images', () => {
+  const blob = () => new Blob(['png']) as unknown as Parameters<ReturnType<typeof useMuleyStore.getState>['attach']>[0]
+
+  it('uploads a picked image, sends it with the next message, and empties the composer', async () => {
+    const uploadAttachment = vi.fn(async () => ({ id: 'abc.png', name: 'stamp.png', size: 3 }))
+    const streamTurn = scripted([{ t: 'done', reason: 'end' }])
+    setMuleyClient({ uploadAttachment, streamTurn })
+
+    await useMuleyStore.getState().attach(blob(), { name: 'stamp.png', previewUrl: 'blob:1' })
+    expect(useMuleyStore.getState().attachments).toEqual([expect.objectContaining({ status: 'ready', id: 'abc.png', name: 'stamp.png' })])
+
+    await useMuleyStore.getState().send('')
+    expect(streamTurn.mock.calls[0][0]).toMatchObject({ message: 'I attached an image.', attachments: [{ id: 'abc.png', name: 'stamp.png' }] })
+    expect(useMuleyStore.getState().attachments).toEqual([])
+    expect(useMuleyStore.getState().thread.messages[0]).toMatchObject({ role: 'user', attachments: [{ name: 'stamp.png', previewUrl: 'blob:1' }] })
+  })
+
+  it('waits while an image is uploading, keeps a refused one with the reason, and never sends one with a tapped option', async () => {
+    let finish: (value: { id: string; name: string; size: number }) => void = () => {}
+    const streamTurn = scripted([{ t: 'done', reason: 'end' }])
+    setMuleyClient({ uploadAttachment: vi.fn(() => new Promise<{ id: string; name: string; size: number }>((resolve) => { finish = resolve })), streamTurn })
+    const uploading = useMuleyStore.getState().attach(blob(), { name: 'a.png', previewUrl: null })
+    await useMuleyStore.getState().send('use this')
+    expect(streamTurn).not.toHaveBeenCalled()
+    finish({ id: 'a.png', name: 'a.png', size: 1 })
+    await uploading
+
+    // A tapped option goes without the image; the next typed message takes it.
+    await useMuleyStore.getState().send('Yusuf Rahman', { choice: { ref: 's2' } })
+    expect(streamTurn.mock.calls[0][0]).not.toHaveProperty('attachments')
+    expect(useMuleyStore.getState().attachments).toHaveLength(1)
+
+    const { AttachmentRefused } = await import('@/services/muleyService')
+    setMuleyClient({ uploadAttachment: vi.fn(async () => { throw new AttachmentRefused(400, 'FILE_TOO_LARGE', 'Keep the image under 5 MB.') }) })
+    await useMuleyStore.getState().attach(blob(), { name: 'huge.png', previewUrl: null })
+    expect(useMuleyStore.getState().attachments.at(-1)).toMatchObject({ status: 'failed', error: 'Keep the image under 5 MB.' })
+    useMuleyStore.getState().removeAttachment(useMuleyStore.getState().attachments.at(-1)!.localId)
+    expect(useMuleyStore.getState().attachments).toHaveLength(1)
+  })
+})
+

@@ -8,8 +8,10 @@ import type { ActionEntry, MuleyCard } from '@/lib/muley/types'
 
 export type ChangeStep = 'apply' | 'undo' | 'dismiss'
 
+type ChangeCard = Extract<MuleyCard, { type: 'change' | 'asset_change' }>
+
 type Props = {
-  card: Extract<MuleyCard, { type: 'change' }>
+  card: ChangeCard
   entry: ActionEntry | undefined
   onAction: (actionId: string, step: ChangeStep) => void
   /** Ask Muley for something (to prepare the change again with today's values). */
@@ -133,8 +135,47 @@ function Footer({ entry, onAction, onAsk, streaming }: Omit<Props, 'card'>) {
   )
 }
 
+/** The current image beside the new one. A link in an old conversation may have expired: the box says so. */
+function Picture({ label, url, tone }: { label: string; url: string | null; tone: 'now' | 'new' }) {
+  return (
+    <figure className="min-w-0 flex-1">
+      <figcaption className={`mb-1 text-[11px] font-bold uppercase tracking-wide ${tone === 'new' ? 'text-cyan-700' : 'text-slate-500'}`}>{label}</figcaption>
+      <div className={`flex h-28 items-center justify-center overflow-hidden rounded-xl border bg-[repeating-conic-gradient(#f8fafc_0_25%,#ffffff_0_50%)] bg-[length:16px_16px] ${tone === 'new' ? 'border-cyan-200' : 'border-slate-200'}`}>
+        {url ? (
+          // A signed or public storage link: next/image would need every storage host configured.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={`${label} image`} className="max-h-full max-w-full object-contain p-2" />
+        ) : (
+          <span className="px-2 text-center text-xs text-slate-400">{tone === 'now' ? 'None yet' : 'Not available'}</span>
+        )}
+      </div>
+    </figure>
+  )
+}
+
 export default function MuleyChangeCard({ card, entry, onAction, onAsk, streaming }: Props) {
   const badge = entry ? BADGE[entry.action.status] : null
+  if (card.type === 'asset_change') {
+    return (
+      <section aria-label={card.title} className="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-[0_1px_3px_rgba(8,145,178,0.10)]">
+        <header className="flex items-start justify-between gap-3 px-4 pb-2 pt-3">
+          <div className="min-w-0">
+            <h3 className="font-display text-[15px] font-semibold text-slate-900">{card.title}</h3>
+            {card.subtitle && <p className="truncate text-xs text-slate-500">{card.subtitle}</p>}
+          </div>
+          {badge && <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${badge.className}`}>{badge.label}</span>}
+        </header>
+        <div className="flex gap-3 px-4 pb-3">
+          <Picture label="Now" url={card.now} tone="now" />
+          <Picture label="New" url={card.next} tone="new" />
+        </div>
+        {card.note && <p className="px-4 pb-3 text-xs leading-relaxed text-slate-500">{card.note}</p>}
+        <footer className="border-t border-slate-100 bg-slate-50/70 px-4 py-3" aria-live="polite">
+          <Footer entry={entry} onAction={onAction} onAsk={onAsk} streaming={streaming} />
+        </footer>
+      </section>
+    )
+  }
   const [studentLabel = 'Student', nowLabel = 'Now', newLabel = 'New'] = card.columns
   return (
     <section aria-label={card.title} className="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-[0_1px_3px_rgba(8,145,178,0.10)]">

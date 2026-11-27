@@ -11,6 +11,8 @@ import MuleyAvatar from './MuleyAvatar'
 import MuleyMessage from './MuleyMessage'
 import MuleyComposer from './MuleyComposer'
 import { useMuleyStore } from '@/store/useMuleyStore'
+import { useUserStore } from '@/store/useUserStore'
+import { can, isFullAdmin } from '@/lib/permissions'
 import { pageContextFor, pageLabel, startersFor } from '@/lib/muley/pageContext'
 import type { Block, ChoiceOption } from '@/lib/muley/types'
 
@@ -33,8 +35,12 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
   const draft = useMuleyStore((s) => s.draft)
   const conversations = useMuleyStore((s) => s.conversations)
   const config = useMuleyStore((s) => s.config)
-  const { setDraft, send, stop, retry, newConversation, setView, openConversation, deleteConversation, applyAction, undoAction, dismissAction } = useMuleyStore.getState()
+  const attachments = useMuleyStore((s) => s.attachments)
+  const user = useUserStore((s) => s.user)
+  const { attach, removeAttachment, setDraft, send, stop, retry, newConversation, setView, openConversation, deleteConversation, applyAction, undoAction, dismissAction } = useMuleyStore.getState()
   const writes = config.status === 'ready' && config.writes === true
+  // An image is for the school's own stamp, logo or signature: School Assets' permission.
+  const canAttach = writes && (isFullAdmin(user) || can(user, 'school_setup'))
 
   const page = pageContextFor(pathname)
   const streaming = thread.status === 'streaming'
@@ -227,6 +233,10 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
             streaming={streaming}
             maxLength={config.status === 'ready' && config.maxMessageLength ? config.maxMessageLength : 4000}
             autoFocus={view === 'chat'}
+            attachments={attachments}
+            canAttach={canAttach}
+            onAttach={(file) => void attach(file, { name: file.name, previewUrl: URL.createObjectURL(file) })}
+            onRemoveAttachment={removeAttachment}
           />
           <p className="mt-2 text-center text-[11px] text-slate-400">
             {writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}

@@ -28,6 +28,8 @@ export type TurnBody = {
   message: string
   conversationId?: string | null
   choice?: { ref: string | null } | null
+  /** Images uploaded with uploadAttachment, sent with this message. */
+  attachments?: { id: string; name: string }[] | null
   pageContext?: { route: string; classId: string | null } | null
 }
 
@@ -101,6 +103,37 @@ export async function streamTurn(body: TurnBody, onEvent: (event: StreamEvent) =
     clearTimeout(timer)
     signal?.removeEventListener('abort', stop)
   }
+}
+
+export type AttachmentUpload = { id: string; name: string; size: number }
+/** What uploadAttachment takes on this platform: a File the browser picked. */
+export type AttachmentSource = Blob & { name?: string }
+
+/** An upload the server refused (not an image, too large, changes switched off). */
+export class AttachmentRefused extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message)
+    this.name = 'AttachmentRefused'
+  }
+}
+
+/** Upload one image for Muley to use (a new school stamp, logo or signature). Nothing is changed by it. */
+export async function uploadAttachment(file: AttachmentSource): Promise<AttachmentUpload> {
+  const token = getToken()
+  const year = useSchoolYearStore.getState().selectedYearId
+  const form = new FormData()
+  form.append('file', file, file.name || 'image')
+  const res = await fetch(`${baseURL}/assistant/attachments`, {
+    method: 'POST',
+    headers: { ...(token && { Authorization: `Bearer ${token}` }), ...(year && { 'X-School-Year': year }) },
+    body: form,
+  })
+  const data = (await res.json().catch(() => ({}))) as { code?: string; message?: string; data?: AttachmentUpload }
+  if (!res.ok || !data.data) {
+    await handleSessionFailure(res.status, data, token)
+    throw new AttachmentRefused(res.status, data.code || 'REFUSED', data.message || "The image couldn't be uploaded.")
+  }
+  return data.data
 }
 
 export const getMuleySettings = async (): Promise<MuleySettings> =>

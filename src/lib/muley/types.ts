@@ -30,6 +30,17 @@ export type MuleyCard =
       tally: { label: string; count: number }[] | null
       note: string | null
     }
+  /** A new school image Muley prepared (stamp, logo, signature): the current one beside the attached one. */
+  | {
+      type: 'asset_change'
+      actionId: string
+      title: string
+      subtitle?: string | null
+      /** Links to the images; a link in a stored conversation may have expired. */
+      now: string | null
+      next: string | null
+      note: string | null
+    }
 
 /**
  * A prepared change as the server tracks it. pending → applying → applied →
@@ -92,8 +103,11 @@ export type Block =
   | { kind: 'card'; id: string; card: MuleyCard }
   | { kind: 'choices'; id: string; question: string; options: ChoiceOption[]; picked: string | null }
 
+/** An image the person sent with a message, as their bubble shows it. */
+export type SentAttachment = { name: string; previewUrl: string | null }
+
 export type ThreadMessage =
-  | { id: string; role: 'user'; text: string }
+  | { id: string; role: 'user'; text: string; attachments?: SentAttachment[] }
   | { id: string; role: 'assistant'; blocks: Block[]; status: 'streaming' | 'done' | 'stopped' | 'error' }
 
 export type ThreadError = { code: string; message: string; retryable: boolean }
@@ -126,7 +140,7 @@ export type ShownMessage =
 
 /** What the app does itself, told to the reducer the same way as a stream event. */
 export type LocalEvent =
-  | { t: 'local:sent'; id: string; text: string }
+  | { t: 'local:sent'; id: string; text: string; attachments?: SentAttachment[] }
   | { t: 'local:picked'; choicesId: string; optionId: string }
   | { t: 'local:failed'; error: ThreadError }
   | { t: 'local:loaded'; conversationId: string; messages: ShownMessage[]; actions?: ProposedAction[] }
