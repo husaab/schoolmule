@@ -201,6 +201,20 @@ export function skProgressTemplate(): TemplateDoc {
     },
   });
 
+  // The school stamp, centred under the signature row as on the JK report.
+  // The paper SK form has none; Al Haadi asked for it (2026-11-27).
+  const stamp = block<TableBlock>({
+    type: 'table',
+    name: 'School stamp',
+    showWhen: { field: 'assets.stamp', op: 'notEmpty' },
+    columns: [100],
+    borderWidth: 0,
+    outerBorderWidth: 0,
+    cellPadding: 0,
+    marginTop: 10.67,
+    rows: [{ cells: [{ image: { kind: 'asset', asset: 'stamp' }, imageHeight: 128, style: { align: 'center' }, padding: { top: 0, right: 0, bottom: 0, left: 0 } }] }],
+  });
+
   return template({
     docType: 'progress_report',
     size: 'letter',
@@ -210,7 +224,7 @@ export function skProgressTemplate(): TemplateDoc {
     firstHeader,
     header: runningHeader,
     footer,
-    blocks: [studentGrid, key, skills, comments],
+    blocks: [studentGrid, key, skills, comments, stamp],
   });
 }
 

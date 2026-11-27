@@ -278,6 +278,14 @@ describe('JK/SK teacher, teacher assistant and their signatures', () => {
     expect(html.match(/Strengths\/Next Steps for Improvement/g)).toHaveLength(1);
   });
 
+  it('SK progress: the school stamp under the signature row, when the school has one', () => {
+    const data = withPeople('SK', 'progress_report', '');
+    const html = printed(build('progress-sk'), { ...data, assets: { ...data.assets, stamp: 'stamp' } });
+    expect(html.match(/asset:stamp/g)).toHaveLength(1);
+    expect(html.indexOf('asset:stamp')).toBeGreaterThan(html.indexOf('asset:principalSignature'));
+    expect(printed(build('progress-sk'), { ...data, assets: { ...data.assets, stamp: null } })).not.toContain('asset:stamp');
+  });
+
   it('JK progress: both signature boxes take the saved signatures', () => {
     const html = printed(build('progress-jk'), withPeople('JK', 'progress_report', 'Sample Assistant'));
     expect(html).toContain('Teacher Assistant: Sample Assistant');
