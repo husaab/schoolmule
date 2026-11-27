@@ -21,6 +21,7 @@ import type { PaymentsConnection } from '@/services/types/payments'
 import { connectionState, returnMessage } from '@/lib/paymentsConnection'
 import StripeConnectionCard from '@/components/payments/StripeConnectionCard'
 import PaymentsCostCard from '@/components/payments/PaymentsCostCard'
+import PaymentsLedger from '@/components/payments/PaymentsLedger'
 import ConfirmActionModal, { type ConfirmRequest } from '@/components/finance/ConfirmActionModal'
 import { errorMessage } from '@/components/finance/format'
 
@@ -193,7 +194,7 @@ function PaymentsContent() {
       <Navbar />
       <Sidebar />
       <main className="lg:ml-72 pt-20 min-h-screen bg-slate-50">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 lg:p-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 lg:p-8">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
               <CreditCardIcon className="h-7 w-7 text-cyan-500" />
@@ -204,6 +205,9 @@ function PaymentsContent() {
             </p>
           </div>
           {renderBody()}
+          {!loading && !error && connection?.configured && (
+            <PaymentsLedger stripeConnected={Boolean(connection.account && connection.account.status !== 'disconnected')} />
+          )}
         </div>
       </main>
       <ConfirmActionModal request={confirm} onClose={() => setConfirm(null)} />

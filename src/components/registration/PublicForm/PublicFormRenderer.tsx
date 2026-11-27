@@ -7,7 +7,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { PublicFormData } from '@/services/types/registration';
 import { submitPublicForm } from '@/services/registrationPublicService';
+import { formatCents, selectionTotal } from '@/lib/paymentField';
 import FormField from './FormField';
+import PaymentFieldInput from './PaymentFieldInput';
 import SuccessMessage from './SuccessMessage';
 
 interface Props {
@@ -19,20 +21,44 @@ export default function PublicFormRenderer({ form }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The payment field, if the form has one: optional items ticked, and how the family will pay.
+  const paymentField = form.fields.find((f) => f.fieldType === 'payment' && f.payment) ?? null;
+  const online = Boolean(form.payments?.online);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [method, setMethod] = useState<'card' | 'offline'>(online || !paymentField?.payment?.allowOffline ? 'card' : 'offline');
+  const total = paymentField ? selectionTotal(paymentField.payment, picked) : 0;
+  const cantPay = total > 0 && !online && !paymentField?.payment?.allowOffline;
+  // Set when the family chose the office, for the confirmation.
+  const [owedAtOffice, setOwedAtOffice] = useState<{ totalCents: number; payPath: string } | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, string>>();
 
   // Check if user is logged in (has auth token)
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token');
 
   if (submitted) {
-    return <SuccessMessage schoolName={form.schoolName} />;
+    return <SuccessMessage schoolName={form.schoolName} payAtOffice={owedAtOffice} />;
   }
 
   const onSubmit = async (data: Record<string, string>) => {
+    if (cantPay) {
+      setError(`This school can’t take payments online right now. Please contact ${form.schoolName}.`);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await submitPublicForm(form.schoolSlug, form.slug, data);
+      const choice = paymentField ? { itemIds: picked, method: total > 0 ? method : 'card' as const } : null;
+      const res = await submitPublicForm(form.schoolSlug, form.slug, data, {}, choice);
+      const payment = res.data?.payment;
+      if (payment && payment.method === 'card') {
+        // On to Stripe's page; if Stripe couldn't open one, the family's own link offers it again.
+        setRedirecting(true);
+        window.location.assign(payment.checkoutUrl || payment.payPath);
+        return;
+      }
+      if (payment && payment.method === 'offline') setOwedAtOffice({ totalCents: payment.totalCents, payPath: payment.payPath });
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit. Please try again.');
@@ -115,13 +141,27 @@ export default function PublicFormRenderer({ form }: Props) {
         </div>
 
         {form.fields.map((field, index) => (
-          <FormField
-            key={field.fieldId}
-            field={field}
-            register={register}
-            errors={errors}
-            index={index}
-          />
+          field.fieldType === 'payment' ? (
+            <PaymentFieldInput
+              key={field.fieldId}
+              field={field}
+              index={index}
+              picked={picked}
+              onPick={setPicked}
+              method={method}
+              onMethod={setMethod}
+              online={online}
+              schoolName={form.schoolName}
+            />
+          ) : (
+            <FormField
+              key={field.fieldId}
+              field={field}
+              register={register}
+              errors={errors}
+              index={index}
+            />
+          )
         ))}
 
         {/* Error message */}
@@ -135,10 +175,16 @@ export default function PublicFormRenderer({ form }: Props) {
         <div className="flex items-center gap-4 pt-2">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || redirecting || cantPay}
             className="px-8 py-3 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
-            {submitting ? 'Submitting...' : 'Submit'}
+            {redirecting
+              ? 'Opening the payment page…'
+              : submitting
+                ? 'Submitting...'
+                : total > 0 && method === 'card'
+                  ? `Submit and pay ${formatCents(total)}`
+                  : 'Submit'}
           </button>
         </div>
       </form>

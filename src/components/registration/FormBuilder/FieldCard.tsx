@@ -3,6 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { FormField } from '@/services/types/registration';
+import { priceSummary } from '@/lib/paymentField';
 import {
   Bars3Icon,
   PencilSquareIcon,
@@ -17,6 +18,7 @@ const fieldTypeLabels: Record<string, string> = {
   select: 'Dropdown',
   radio: 'Radio',
   textarea: 'Long Text',
+  payment: 'Payment',
 };
 
 interface Props {
@@ -76,6 +78,9 @@ export default function FieldCard({ field, onEdit, onDelete }: Props) {
             <span className="text-xs text-slate-400">
               ({field.options.length} options)
             </span>
+          )}
+          {field.fieldType === 'payment' && field.payment && (
+            <span className="text-xs text-slate-400">· {priceSummary(field.payment)}{field.payment.allowOffline ? ' · or at the office' : ''}</span>
           )}
         </div>
       </div>

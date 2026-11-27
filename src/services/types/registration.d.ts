@@ -1,7 +1,54 @@
 // ─── Enums ──────────────────────────────────────────────────────────
 
 export type FormStatus = 'draft' | 'published' | 'closed';
-export type FieldType = 'text' | 'email' | 'phone' | 'date' | 'select' | 'radio' | 'textarea';
+export type FieldType = 'text' | 'email' | 'phone' | 'date' | 'select' | 'radio' | 'textarea' | 'payment';
+
+// ─── Payment field ──────────────────────────────────────────────────
+
+/** One priced item on a payment field. Prices are whole cents. */
+export interface PaymentItem {
+  id: string;
+  label: string;
+  amountCents: number;
+  /** Always charged; an optional item is only charged when the family ticks it. */
+  required: boolean;
+}
+
+export interface PaymentFieldConfig {
+  items: PaymentItem[];
+  /** The family may choose to pay at the office instead of by card. */
+  allowOffline: boolean;
+  /** For the school's books; never shown to families. */
+  accountingCode?: string | null;
+  currency?: string;
+}
+
+/** Where a response's payment stands. Staff without `finance` see a waived fee as 'settled'. */
+export type ChargeStatus = 'unpaid' | 'partially_paid' | 'paid' | 'partially_refunded' | 'refunded' | 'waived' | 'settled';
+
+/** The way a payment was made, as the lists show it. */
+export interface LastPayment {
+  kind: 'card' | 'cash' | 'cheque' | 'other';
+  cardBrand: string | null;
+  cardLast4: string | null;
+  wallet: string | null;
+}
+
+/** The payment on one form response. */
+export interface SubmissionPayment {
+  chargeId: string;
+  status: ChargeStatus;
+  amountCents: number;
+  amountPaidCents: number;
+  amountRefundedCents: number;
+  chosenMethod: 'card' | 'offline';
+  disputeStatus: string | null;
+  livemode: boolean;
+  lastPayment: LastPayment | null;
+}
+
+/** The submissions list's payment filter. */
+export type PaymentState = 'open' | 'paid' | 'refunded' | 'waived' | 'settled' | 'none';
 export type SubmissionStatus = 'new' | 'reviewed' | 'archived';
 
 // ─── Form ───────────────────────────────────────────────────────────
@@ -29,6 +76,8 @@ export interface FormField {
   placeholder: string | null;
   isRequired: boolean;
   options: string[] | null;
+  /** The price list, on a 'payment' field only. */
+  payment?: PaymentFieldConfig | null;
   sortOrder: number;
 }
 
@@ -52,6 +101,8 @@ export interface FormSubmission {
   importedAt: string | null;
   importedBy: string | null;
   importedStudentName: string | null;
+  /** Null when the response owes nothing. */
+  payment?: SubmissionPayment | null;
 }
 
 // Whether to show all submissions, only those already imported, or only those
@@ -103,6 +154,14 @@ export interface PublicFormData extends RegistrationFormWithFields {
   bannerImageUrl: string | null;
   schoolName: string;
   schoolSlug: string;
+  /** On a form with a payment field: whether the family can pay by card right now. */
+  payments?: { online: boolean; currency: string } | null;
+}
+
+/** What the family chose to pay, sent with the answers. The server prices it. */
+export interface PublicPaymentChoice {
+  itemIds: string[];
+  method: 'card' | 'offline';
 }
 
 export interface PublicFormResponse {
@@ -113,7 +172,11 @@ export interface PublicFormResponse {
 export interface PublicSubmitResponse {
   status: string;
   message: string;
-  data: { submissionId: string };
+  data: {
+    submissionId: string;
+    /** Null when nothing is owed. `checkoutUrl` is Stripe's page; null for paying at the office, or when Stripe couldn't open one (use payPath). */
+    payment?: { token: string; method: 'card' | 'offline'; totalCents: number; payPath: string; checkoutUrl: string | null } | null;
+  };
 }
 
 // ─── Request Bodies ─────────────────────────────────────────────────
@@ -158,6 +221,8 @@ export interface SubmissionFilters {
   fieldFilters?: FieldFilter[];
   // Restricts the list to imported / not-yet-imported submissions.
   importState?: ImportState;
+  // Restricts the list by where the response's payment stands.
+  payment?: PaymentState;
   // Legacy single-sort params (still honored by the backend; not emitted by the UI).
   sortFieldId?: string;
   sortDir?: 'asc' | 'desc';

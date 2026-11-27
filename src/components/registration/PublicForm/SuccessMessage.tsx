@@ -4,11 +4,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
+import { formatCents } from '@/lib/paymentField';
+
 interface Props {
   schoolName: string;
+  /** Set when the family chose to pay at the office. */
+  payAtOffice?: { totalCents: number; payPath: string } | null;
 }
 
-export default function SuccessMessage({ schoolName }: Props) {
+export default function SuccessMessage({ schoolName, payAtOffice = null }: Props) {
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token');
 
   return (
@@ -41,6 +45,15 @@ export default function SuccessMessage({ schoolName }: Props) {
           Thank you for submitting your form. {schoolName} has received your submission
           and will review it shortly.
         </p>
+        {payAtOffice && (
+          <div className="mx-auto mb-6 max-w-md rounded-xl border border-cyan-100 bg-cyan-50 px-5 py-4 text-left">
+            <p className="text-sm font-semibold text-cyan-900">Please pay {formatCents(payAtOffice.totalCents)} at the office</p>
+            <p className="mt-1 text-sm text-cyan-800">
+              Bring cash or a cheque to {schoolName}.{' '}
+              <Link href={payAtOffice.payPath} className="font-medium underline">Keep this link</Link> to check what you owe.
+            </p>
+          </div>
+        )}
         <p className="text-sm text-slate-400">You may close this page.</p>
       </div>
     </div>
