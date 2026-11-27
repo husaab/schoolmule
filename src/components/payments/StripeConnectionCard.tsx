@@ -49,7 +49,7 @@ const StripeConnectionCard: React.FC<StripeConnectionCardProps> = ({ connection,
   const hasAccount = Boolean(account) && copy.state !== 'disconnected' && copy.state !== 'unavailable'
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+    <div className="h-full rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm">
           <CreditCardIcon className="h-6 w-6" />

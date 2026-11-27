@@ -161,30 +161,40 @@ function PaymentsContent() {
         />
       )
     }
-    return (
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <StripeConnectionCard
-            connection={connection}
-            connecting={connecting}
-            checking={checking}
-            onConnect={openStripe}
-            onCheck={() => checkAgain(false)}
-            onDisconnect={askDisconnect}
-          />
-        </div>
+    const connectionCard = (
+      <StripeConnectionCard
+        connection={connection}
+        connecting={connecting}
+        checking={checking}
+        onConnect={openStripe}
+        onCheck={() => checkAgain(false)}
+        onDisconnect={askDisconnect}
+      />
+    )
+    // Before a school is active: the connection card across the top, then what
+    // it costs and what to have ready side by side, the same height. Once
+    // active: the connection beside what it costs, the same height.
+    if (beforeActive) {
+      return (
         <div className="flex flex-col gap-5">
-          <PaymentsCostCard />
-          {beforeActive && (
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          {connectionCard}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <PaymentsCostCard />
+            <div className="h-full rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Have these ready</h2>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-600">
                 {READY_LIST.map((item) => <li key={item}>{item}</li>)}
               </ul>
               <p className="mt-3 text-xs text-slate-500">Stripe checks names against the government registry, so enter them exactly as registered.</p>
             </div>
-          )}
+          </div>
         </div>
+      )
+    }
+    return (
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">{connectionCard}</div>
+        <PaymentsCostCard />
       </div>
     )
   }
