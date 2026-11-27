@@ -244,6 +244,7 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
             onAttach={(file) => void attach(file, { name: file.name, previewUrl: URL.createObjectURL(file) })}
             onRemoveAttachment={removeAttachment}
             tone={tone}
+            voice
           />
           <p className="mt-2 text-center text-[11px] text-slate-400">
             {parent

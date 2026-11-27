@@ -160,15 +160,21 @@ export default function PrivacyPolicyPage() {
         train its models by default.
       </p>
       <p>
-        Muley is an assistant school staff can ask about their classes and about where things
-        are in SchoolMule, in schools that have switched it on. It answers with the asking staff
-        member&apos;s own access, and sends OpenAI their question and the class lists, marks and
-        attendance it looks up to answer it, identified by student name. It never sends
-        Ontario Education Numbers, contact details, health information or passwords, and it
-        cannot change any records. Muley&apos;s conversations are stored by SchoolMule, visible only
-        to the staff member who had them, and deleted 90 days after their last message unless
-        the school sets a different period. Requests to OpenAI are sent with storage turned off;
-        OpenAI may keep them for up to 30 days to monitor for abuse.
+        Muley is an assistant that school staff, and parents and guardians where their school
+        switches it on for families, can ask about their classes or their children and about where
+        things are in SchoolMule. It answers with the person&apos;s own access: a parent sees only
+        their own children&apos;s information that the school shares with families. It sends OpenAI
+        the question and the records it looks up to answer it, such as class lists, published
+        grades, marks and attendance, identified by student name. It never sends Ontario
+        Education Numbers, contact details, health information or passwords. For staff, Muley can
+        prepare changes (attendance, marks, who counts in a class average, or a new school stamp,
+        logo or signature from an image they attach), but nothing changes until the staff member
+        presses Save, and every change is listed for the school&apos;s administrators. Images attached
+        in Muley are deleted after two days. If someone speaks to Muley, the recording is sent to
+        OpenAI to turn it into text and is not kept by SchoolMule. Muley&apos;s conversations are
+        stored by SchoolMule, visible only to the person who had them, and deleted 90 days after
+        their last message unless the school sets a different period. Requests to OpenAI are sent
+        with storage turned off; OpenAI may keep them for up to 30 days to monitor for abuse.
       </p>
 
       <h2>Service providers</h2>

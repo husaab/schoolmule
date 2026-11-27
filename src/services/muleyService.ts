@@ -137,6 +137,33 @@ export async function uploadAttachment(file: AttachmentSource): Promise<Attachme
   return data.data
 }
 
+/** A recording the server couldn't turn into text (too long, nothing heard, voice unavailable). */
+export class TranscribeRefused extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message)
+    this.name = 'TranscribeRefused'
+  }
+}
+
+/** Turn a short recording into text for the composer. Nothing is stored. */
+export async function transcribeAudio(audio: Blob, filename = 'recording'): Promise<string> {
+  const token = getToken()
+  const year = useSchoolYearStore.getState().selectedYearId
+  const form = new FormData()
+  form.append('audio', audio, filename)
+  const res = await fetch(`${baseURL}/assistant/transcribe`, {
+    method: 'POST',
+    headers: { ...(token && { Authorization: `Bearer ${token}` }), ...(year && { 'X-School-Year': year }) },
+    body: form,
+  })
+  const data = (await res.json().catch(() => ({}))) as { code?: string; message?: string; data?: { text: string } }
+  if (!res.ok || !data.data) {
+    await handleSessionFailure(res.status, data, token)
+    throw new TranscribeRefused(res.status, data.code || 'REFUSED', data.message || "Your recording couldn't be turned into text. Try again, or type your message.")
+  }
+  return data.data.text
+}
+
 export const getMuleySettings = async (): Promise<MuleySettings> =>
   (await apiClient<{ status: string; data: MuleySettings }>('/assistant/settings')).data
 
