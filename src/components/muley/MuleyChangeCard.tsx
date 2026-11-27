@@ -3,12 +3,13 @@
 // and the one button that saves it. Nothing is written until the person
 // presses Save; once saved, Undo puts it back for two weeks.
 
+import { useState } from 'react'
 import { ArrowUturnLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import type { ActionEntry, MuleyCard } from '@/lib/muley/types'
 
 export type ChangeStep = 'apply' | 'undo' | 'dismiss'
 
-type ChangeCard = Extract<MuleyCard, { type: 'change' | 'asset_change' }>
+type ChangeCard = Extract<MuleyCard, { type: 'change' | 'asset_change' | 'comment_change' }>
 
 type Props = {
   card: ChangeCard
@@ -153,8 +154,58 @@ function Picture({ label, url, tone }: { label: string; url: string | null; tone
   )
 }
 
+/** One comment: the new text in full, its words against the school's limits, and what it replaces (folded). */
+function CommentItem({ item, limits }: { item: Extract<MuleyCard, { type: 'comment_change' }>['items'][number]; limits: { min: number | null; max: number | null } }) {
+  const [open, setOpen] = useState(false)
+  const over = limits.max !== null && item.words > limits.max
+  const under = limits.min !== null && item.words < limits.min
+  return (
+    <li className="border-b border-slate-100 py-2.5 last:border-0">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="font-medium text-slate-900">{item.name}</span>
+        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${over ? 'bg-rose-50 text-rose-700' : under ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+          {item.words} {item.words === 1 ? 'word' : 'words'}
+        </span>
+      </div>
+      <p className="whitespace-pre-wrap rounded-lg bg-cyan-50/60 px-2.5 py-2 text-[14px] leading-relaxed text-slate-800">{item.next}</p>
+      {item.now ? (
+        <div className="mt-1">
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-800">
+            {open ? 'Hide the comment it replaces' : 'Replaces a saved comment'}
+          </button>
+          {open && <p className="mt-1 whitespace-pre-wrap px-2.5 text-[13px] leading-relaxed text-slate-500 line-through decoration-slate-300">{item.now}</p>}
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-slate-400">No comment saved yet</p>
+      )}
+    </li>
+  )
+}
+
 export default function MuleyChangeCard({ card, entry, onAction, onAsk, streaming }: Props) {
   const badge = entry ? BADGE[entry.action.status] : null
+  if (card.type === 'comment_change') {
+    const range = card.limits.min && card.limits.max ? `${card.limits.min}–${card.limits.max} words` : card.limits.max ? `up to ${card.limits.max} words` : card.limits.min ? `at least ${card.limits.min} words` : null
+    return (
+      <section aria-label={card.title} className="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-[0_1px_3px_rgba(8,145,178,0.10)]">
+        <header className="flex items-start justify-between gap-3 px-4 pb-1 pt-3">
+          <div className="min-w-0">
+            <h3 className="font-display text-[15px] font-semibold text-slate-900">{card.title}</h3>
+            <p className="text-xs text-slate-500">{[card.subtitle, range].filter(Boolean).join(' · ')}</p>
+          </div>
+          {badge && <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${badge.className}`}>{badge.label}</span>}
+        </header>
+        <ul className="max-h-[26rem] overflow-auto px-4">
+          {card.items.map((item) => <CommentItem key={item.name} item={item} limits={card.limits} />)}
+        </ul>
+        {card.hiddenCount > 0 && <p className="px-4 pt-1 text-xs text-slate-500">and {card.hiddenCount} more</p>}
+        {card.note && <p className="px-4 pb-3 pt-1 text-xs leading-relaxed text-slate-500">{card.note}</p>}
+        <footer className="border-t border-slate-100 bg-slate-50/70 px-4 py-3" aria-live="polite">
+          <Footer entry={entry} onAction={onAction} onAsk={onAsk} streaming={streaming} />
+        </footer>
+      </section>
+    )
+  }
   if (card.type === 'asset_change') {
     return (
       <section aria-label={card.title} className="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-[0_1px_3px_rgba(8,145,178,0.10)]">

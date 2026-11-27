@@ -30,6 +30,7 @@ import { gradeBand, readStoredGrades, type StoredGrades } from '@/lib/bulkFeedba
 import { formatCoverage } from '@/lib/gradeEngine'
 import type { ClassFeedbackEntry } from '@/services/types/reportCard'
 import { useCommentAutosave } from '@/hooks/useCommentAutosave'
+import { onDataChange, reportCommentsTopic } from '@/lib/muley/dataChanges'
 import { commentChange, feedbackEntry, REPORT_CARD_FIELDS, type FeedbackEntry } from '@/lib/commentAutosave'
 import { aiLimitsPayload, commentFinished, heldForLength, isReadOnly, wordState, type CommentRule } from '@/lib/commentRules'
 import { CommentRulesNotice, CommentWordCount, overLimitBox } from './CommentRulesNotice'
@@ -216,6 +217,17 @@ export default function ReportCardCommentsWorkspace({ classId, classData, rule, 
   useEffect(() => {
     loadFeedback()
   }, [loadFeedback])
+
+  // Comments saved or undone through Muley, in the panel beside the page:
+  // send anything typed first, then read the class's comments again.
+  const flushComments = comments.flush
+  useEffect(() => {
+    if (!classId) return
+    const topic = reportCommentsTopic(classId)
+    return onDataChange((topics) => {
+      if (topics.includes(topic)) void flushComments().then(loadFeedback, loadFeedback)
+    })
+  }, [classId, flushComments, loadFeedback])
 
   useEffect(() => {
     const el = tableScroller.current

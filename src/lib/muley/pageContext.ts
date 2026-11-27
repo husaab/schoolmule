@@ -5,7 +5,7 @@
 // tells the model anything (an id the person can't open is ignored).
 
 export type PageKind =
-  | 'gradebook' | 'class' | 'class-attendance' | 'attendance' | 'students' | 'analytics' | 'reports' | 'admin' | 'dashboard'
+  | 'report-comments' | 'gradebook' | 'class' | 'class-attendance' | 'attendance' | 'students' | 'analytics' | 'reports' | 'admin' | 'dashboard'
   | 'parent-grades' | 'parent-attendance' | 'parent-meetings' | 'parent-calendar' | 'parent-classes' | 'parent'
   | 'other'
 
@@ -26,6 +26,7 @@ const ROUTES: { kind: PageKind; pattern: RegExp }[] = [
   { kind: 'parent-calendar', pattern: /^\/parent\/calendar(?:\/|$)/ },
   { kind: 'parent-classes', pattern: /^\/parent\/classes(?:\/|$)/ },
   { kind: 'parent', pattern: /^\/parent(?:\/|$)/ },
+  { kind: 'report-comments', pattern: new RegExp(`^/gradebook/(${UUID})/feedback(?:/|$)`, 'i') },
   { kind: 'gradebook', pattern: new RegExp(`^/gradebook/(?:jk/|sk/)?(${UUID})(?:/|$)`, 'i') },
   { kind: 'class-attendance', pattern: new RegExp(`^/attendance/class/(${UUID})(?:/|$)`, 'i') },
   { kind: 'class', pattern: new RegExp(`^/classes/(${UUID})(?:/|$)`, 'i') },
@@ -38,17 +39,29 @@ const ROUTES: { kind: PageKind; pattern: RegExp }[] = [
   { kind: 'dashboard', pattern: /^\/dashboard(?:\/|$)/ },
 ]
 
-/** The page context for a pathname (query and hash are never sent). */
-export function pageContextFor(pathname: string): PageContext {
+/**
+ * The page context for a pathname, and the query when there is one: a class
+ * page's Grades tab is the gradebook, and its Report card comments sub-tab
+ * the comments page (?tab=grades&sub=report-comments). Only the route and
+ * the class id are ever sent; the query never is.
+ */
+export function pageContextFor(pathname: string, search = ''): PageContext {
   const route = (pathname || '/').split(/[?#]/)[0]
   for (const { kind, pattern } of ROUTES) {
     const match = pattern.exec(route)
-    if (match) return { route, kind, classId: match[1] && !kind.startsWith('parent') ? match[1].toLowerCase() : null }
+    if (!match) continue
+    const classId = match[1] && !kind.startsWith('parent') ? match[1].toLowerCase() : null
+    if (kind === 'class' && search) {
+      const query = new URLSearchParams(search)
+      if (query.get('tab') === 'grades') return { route, kind: query.get('sub') === 'report-comments' ? 'report-comments' : 'gradebook', classId }
+    }
+    return { route, kind, classId }
   }
   return { route, kind: 'other', classId: null }
 }
 
 const KIND_LABEL: Record<PageKind, string | null> = {
+  'report-comments': 'Report card comments',
   gradebook: 'Gradebook',
   class: 'Class',
   'class-attendance': 'Class attendance',
@@ -85,6 +98,10 @@ export function startersFor(context: PageContext, writes = false): string[] {
       return ['What is due this week?', 'Is any work missing?']
     case 'parent':
       return ['How is my child doing?', 'What is due this week?', 'When is the next day off?']
+    case 'report-comments':
+      return writes
+        ? ['Write comments for the students who have none', 'Which comments are under the word limit?', 'Make the comments shorter']
+        : ['Which comments are still missing?', 'How do I use a comment bank?']
     case 'gradebook':
       if (!context.classId) return ['Which of my classes have missing work?', 'How do I publish grades to parents?']
       return writes

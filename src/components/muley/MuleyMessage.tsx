@@ -59,7 +59,7 @@ function Trace({ block }: { block: Extract<Block, { kind: 'trace' }> }) {
   )
 }
 
-function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' | 'asset_change' }>; onNavigate: () => void }) {
+function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' | 'asset_change' | 'comment_change' }>; onNavigate: () => void }) {
   if (card.type === 'link') {
     if (!isAppPath(card.href)) return null
     return (
@@ -171,7 +171,7 @@ export default function MuleyMessage({ message, onChoose, onNavigate, streaming,
         if (block.kind === 'text') return <Words key={index} text={block.text} />
         if (block.kind === 'trace') return <Trace key={`${block.id}-${index}`} block={block} />
         if (block.kind === 'card') {
-          if (block.card.type === 'change' || block.card.type === 'asset_change') {
+          if (block.card.type === 'change' || block.card.type === 'asset_change' || block.card.type === 'comment_change') {
             return <MuleyChangeCard key={`${block.id}-${index}`} card={block.card} entry={actions[block.card.actionId]} onAction={onAction} onAsk={onAsk} streaming={streaming} />
           }
           return <Card key={`${block.id}-${index}`} card={block.card} onNavigate={onNavigate} />

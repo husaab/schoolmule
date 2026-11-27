@@ -6,7 +6,8 @@
 //
 // Topics: "attendance:class:<classId>:<date>", "scores:<classId>",
 // "stats-exclusions:<classId>" (who counts in the class average) and
-// "school-assets:<schoolCode>" (the logo, stamp and principal signature).
+// "school-assets:<schoolCode>" (the logo, stamp and principal signature) and
+// "report-comments:<classId>" (a class's report card comments).
 
 type Listener = (topics: string[]) => void
 
@@ -37,3 +38,4 @@ export const classAttendanceTopic = (classId: string, date: string) => `attendan
 export const scoresTopic = (classId: string) => `scores:${classId}`
 export const statsExclusionsTopic = (classId: string) => `stats-exclusions:${classId}`
 export const schoolAssetsTopic = (schoolCode: string) => `school-assets:${schoolCode}`
+export const reportCommentsTopic = (classId: string) => `report-comments:${classId}`

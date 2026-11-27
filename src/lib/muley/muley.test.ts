@@ -272,6 +272,12 @@ describe('the page context', () => {
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/classes/${CLASS}`), true)).toContain('Leave a student out of the class average')
     expect(startersFor(pageContextFor('/analytics'))).toContain('Who needs attention this term?')
+    expect(pageContextFor(`/gradebook/${CLASS}/feedback`)).toEqual({ route: `/gradebook/${CLASS}/feedback`, kind: 'report-comments', classId: CLASS })
+    // The class page's tabs come from the query, which is never sent.
+    expect(pageContextFor(`/classes/${CLASS}`, 'tab=grades&sub=report-comments')).toEqual({ route: `/classes/${CLASS}`, kind: 'report-comments', classId: CLASS })
+    expect(pageContextFor(`/classes/${CLASS}`, 'tab=grades').kind).toBe('gradebook')
+    expect(pageContextFor(`/classes/${CLASS}`, 'tab=people').kind).toBe('class')
+    expect(startersFor(pageContextFor(`/gradebook/${CLASS}/feedback`), true)).toContain('Write comments for the students who have none')
     // The parent portal: its own pages and starters, and never a class id.
     expect(pageContextFor(`/parent/classes/${CLASS}/items/x`)).toEqual({ route: `/parent/classes/${CLASS}/items/x`, kind: 'parent-classes', classId: null })
     expect(pageLabel(pageContextFor('/parent/dashboard'))).toBe('Parent portal')

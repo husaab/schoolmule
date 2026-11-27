@@ -27,9 +27,9 @@ const relative = (iso: string) => {
   return then.toLocaleDateString([], { day: 'numeric', month: 'short' })
 }
 
-type Props = { pathname: string; firstName: string | null; onClose: () => void }
+type Props = { pathname: string; search?: string; firstName: string | null; onClose: () => void }
 
-export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
+export default function MuleyPanel({ pathname, search = '', firstName, onClose }: Props) {
   const reduceMotion = useReducedMotion()
   const view = useMuleyStore((s) => s.view)
   const thread = useMuleyStore((s) => s.thread)
@@ -45,7 +45,7 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
   // An image is for the school's own stamp, logo or signature: School Assets' permission.
   const canAttach = writes && (isFullAdmin(user) || can(user, 'school_setup'))
 
-  const page = pageContextFor(pathname)
+  const page = pageContextFor(pathname, search)
   const streaming = thread.status === 'streaming'
   const scrollRef = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)

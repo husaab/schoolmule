@@ -30,6 +30,18 @@ export type MuleyCard =
       tally: { label: string; count: number }[] | null
       note: string | null
     }
+  /** Report card comments Muley wrote: each in full, beside the one it replaces, with its word count. */
+  | {
+      type: 'comment_change'
+      actionId: string
+      title: string
+      subtitle?: string | null
+      items: { name: string; now: string | null; next: string; words: number }[]
+      hiddenCount: number
+      /** The school's word limits (null: none). */
+      limits: { min: number | null; max: number | null }
+      note: string | null
+    }
   /** A new school image Muley prepared (stamp, logo, signature): the current one beside the attached one. */
   | {
       type: 'asset_change'

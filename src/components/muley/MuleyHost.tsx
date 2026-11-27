@@ -5,7 +5,7 @@
 // and never on sign-in pages, for students, or in an admin's preview.
 
 import { useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import MuleyAvatar from './MuleyAvatar'
 import MuleyPanel, { MuleyPresence } from './MuleyPanel'
 import { useMuleyStore } from '@/store/useMuleyStore'
@@ -16,6 +16,8 @@ import { muleyTone } from './tone'
 
 export default function MuleyHost() {
   const pathname = usePathname() || '/'
+  // The tab a class page is on (?tab=grades&sub=report-comments). Mounted with ssr: false, so this never renders on the server.
+  const search = useSearchParams()?.toString() || ''
   const user = useUserStore((s) => s.user)
   const hydrated = useUserStore((s) => s.hasHydrated)
   const previewing = useImpersonationStore((s) => Boolean(s.session))
@@ -74,7 +76,7 @@ export default function MuleyHost() {
         </button>
       )}
       <MuleyPresence open={open}>
-        <MuleyPanel key="muley-panel" pathname={pathname} firstName={firstName} onClose={close} />
+        <MuleyPanel key="muley-panel" pathname={pathname} search={search} firstName={firstName} onClose={close} />
       </MuleyPresence>
     </>
   )
