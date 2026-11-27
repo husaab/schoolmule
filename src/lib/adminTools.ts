@@ -181,6 +181,14 @@ const pageOnlyGroups: AdminToolGroup[] = [
         keywords: ['finance', 'quickbooks', 'qbo', 'payments', 'invoices', 'overdue'],
         icon: 'finance',
       },
+      {
+        href: '/finance/payments',
+        label: 'Payments',
+        group: 'formsFinance',
+        description: 'Connect Stripe so families can pay your school online.',
+        keywords: ['stripe', 'card', 'fees', 'checkout', 'payouts', 'online payment'],
+        icon: 'finance',
+      },
     ],
   },
   {

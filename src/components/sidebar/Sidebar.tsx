@@ -33,6 +33,7 @@ import {
   ClockIcon,
   InboxIcon,
   BanknotesIcon,
+  CreditCardIcon,
   CurrencyDollarIcon,
   GlobeAltIcon,
   ArrowTopRightOnSquareIcon
@@ -57,6 +58,7 @@ import { useParentClassesSeen } from '@/lib/parentClassesSeen'
 import { accessInfo, canOpenPath } from '@/lib/permissions'
 import { ADMIN_PANEL_OVERVIEW, adminPanelNavFor } from '@/lib/adminPanelNav'
 import { VIEW_WEBSITE_HREF } from '@/lib/websiteVisit'
+import { PARENT_PAYMENTS_ENABLED, PARENT_PAYMENTS_PATH } from '@/lib/parentPayments'
 
 interface NavLink {
   href: string;
@@ -87,7 +89,9 @@ const parentLinks: NavLink[] = [
   { href: '/parent/calendar', label: 'Calendar', icon: CalendarDaysIcon },
   { href: '/parent/feedback', label: 'Feedback', icon: ChatBubbleLeftRightIcon },
   { href: '/parent/report-cards', label: 'Report Cards', icon: DocumentChartBarIcon },
-  { href: '/parent/staff', label: 'Staff Directory', icon: UserGroupIcon }
+  { href: '/parent/staff', label: 'Staff Directory', icon: UserGroupIcon },
+  // What the family owes: built, switched off until schools are ready (src/lib/parentPayments.ts).
+  ...(PARENT_PAYMENTS_ENABLED ? [{ href: PARENT_PAYMENTS_PATH, label: 'Payments', icon: BanknotesIcon }] : []),
 ];
 
 const supportLinks: NavLink[] = [
@@ -468,6 +472,7 @@ const Sidebar = () => {
                 isActive={isFinancePath}
               >
                 <SubNavItem href="/finance/tuition" label="Tuition" icon={CurrencyDollarIcon} />
+                <SubNavItem href="/finance/payments" label="Payments" icon={CreditCardIcon} />
               </DropdownSection>
             )}
 

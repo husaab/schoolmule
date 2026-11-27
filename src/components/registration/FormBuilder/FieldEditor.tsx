@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import type { FormField, FieldType } from '@/services/types/registration';
+import type { PaymentFieldConfig } from '@/services/types/registration';
 import Modal from '@/components/shared/modal';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import PaymentFieldEditor from './PaymentFieldEditor';
+import { defaultPaymentConfig, paymentConfigProblem } from '@/lib/paymentField';
 
 interface Props {
   field: FormField | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (field: FormField) => void;
+  /** Whether the school can take card payments now (for a payment field); null while unknown. */
+  paymentsOnline?: boolean | null;
 }
 
 const fieldTypeLabels: Record<FieldType, string> = {
@@ -20,13 +25,15 @@ const fieldTypeLabels: Record<FieldType, string> = {
   select: 'Dropdown Select',
   radio: 'Radio Buttons',
   textarea: 'Long Text Area',
+  payment: 'Payment',
 };
 
-export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
+export default function FieldEditor({ field, isOpen, onClose, onSave, paymentsOnline = null }: Props) {
   const [label, setLabel] = useState('');
   const [placeholder, setPlaceholder] = useState('');
   const [isRequired, setIsRequired] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
+  const [payment, setPayment] = useState<PaymentFieldConfig>(defaultPaymentConfig);
 
   useEffect(() => {
     if (field) {
@@ -34,20 +41,24 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
       setPlaceholder(field.placeholder || '');
       setIsRequired(field.isRequired);
       setOptions(field.options || []);
+      setPayment(field.payment ?? defaultPaymentConfig());
     }
   }, [field]);
 
   if (!field) return null;
 
   const hasOptions = field.fieldType === 'select' || field.fieldType === 'radio';
+  const isPayment = field.fieldType === 'payment';
+  const paymentProblem = isPayment ? paymentConfigProblem(payment) : null;
 
   const handleSave = () => {
     onSave({
       ...field,
       label: label.trim(),
-      placeholder: placeholder.trim() || null,
-      isRequired,
+      placeholder: isPayment ? null : placeholder.trim() || null,
+      isRequired: isPayment ? false : isRequired,
       options: hasOptions ? options.filter(o => o.trim()) : null,
+      payment: isPayment ? { ...payment, items: payment.items.map((i) => ({ ...i, label: i.label.trim() })) } : null,
     });
     onClose();
   };
@@ -86,6 +97,7 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
         </div>
 
         {/* Placeholder */}
+        {!isPayment && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Placeholder</label>
           <input
@@ -96,8 +108,10 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
           />
         </div>
+        )}
 
-        {/* Required Toggle */}
+        {/* Required Toggle (a payment field is required through its items) */}
+        {!isPayment && (
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -114,6 +128,9 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
           </button>
           <label className="text-sm text-slate-700">Required field</label>
         </div>
+        )}
+
+        {isPayment && <PaymentFieldEditor config={payment} onChange={setPayment} online={paymentsOnline} />}
 
         {/* Options (for select/radio) */}
         {hasOptions && (
@@ -149,6 +166,10 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
           </div>
         )}
 
+        {paymentProblem && payment.items.some((i) => i.label.trim() || i.amountCents > 0) && (
+          <p role="alert" className="text-sm text-rose-600">{paymentProblem}</p>
+        )}
+
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
           <button
@@ -159,7 +180,7 @@ export default function FieldEditor({ field, isOpen, onClose, onSave }: Props) {
           </button>
           <button
             onClick={handleSave}
-            disabled={!label.trim()}
+            disabled={!label.trim() || Boolean(paymentProblem)}
             className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Field

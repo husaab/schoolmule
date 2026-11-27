@@ -34,7 +34,14 @@ import type {
   FieldFilter,
   SubmissionStatus,
   ImportState,
+  PaymentState,
 } from '@/services/types/registration';
+import PaymentChip from '@/components/payments/PaymentChip';
+import { gradeLabel } from '@/lib/paymentRequests';
+import ChargeDetailModal from '@/components/payments/ChargeDetailModal';
+import { formatCents, paidWith, paymentFilterOptions } from '@/lib/paymentField';
+import { useUserStore } from '@/store/useUserStore';
+import { can } from '@/lib/permissions';
 import type { ImportScope } from '@/services/types/registrationImport';
 import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
 import {
@@ -108,6 +115,7 @@ const filtersToPatch = (f: FiltersType): FilterPatch => ({
   fieldFilters: f.fieldFilters && f.fieldFilters.length > 0 ? JSON.stringify(f.fieldFilters) : null,
   status: f.status || null,
   importState: f.importState && f.importState !== 'all' ? f.importState : null,
+  payment: f.payment || null,
   dateFrom: f.dateFrom || null,
   dateTo: f.dateTo || null,
 });
@@ -141,6 +149,7 @@ function FormSubmissionsContent() {
   const fieldFiltersRaw = get('fieldFilters');
   const statusRaw = get('status');
   const importStateRaw = get('importState');
+  const paymentRaw = get('payment');
   const dateFromRaw = get('dateFrom');
   const dateToRaw = get('dateTo');
 
@@ -151,9 +160,16 @@ function FormSubmissionsContent() {
     fieldFilters: parseFieldFiltersFromUrl(fieldFiltersRaw || null),
     status: (statusRaw || undefined) as SubmissionStatus | undefined,
     importState: importStateRaw && importStateRaw !== 'all' ? (importStateRaw as ImportState) : undefined,
+    payment: (paymentRaw || undefined) as PaymentState | undefined,
     dateFrom: dateFromRaw || undefined,
     dateTo: dateToRaw || undefined,
-  }), [pageRaw, limitRaw, sortRaw, legacySortFieldId, legacySortDir, fieldFiltersRaw, statusRaw, importStateRaw, dateFromRaw, dateToRaw]);
+  }), [pageRaw, limitRaw, sortRaw, legacySortFieldId, legacySortDir, fieldFiltersRaw, statusRaw, importStateRaw, paymentRaw, dateFromRaw, dateToRaw]);
+
+  // Payments: a form with a payment field shows each response's payment; the
+  // money actions are for holders of `finance` (Finance → Payments).
+  const user = useUserStore((s) => s.user);
+  const finance = can(user, 'finance');
+  const [chargeOpen, setChargeOpen] = useState<string | null>(null);
 
   // Replace the whole view in one URL write (the child controls hand back a
   // full filter object, already reset to page 1 where that applies).
@@ -176,12 +192,17 @@ function FormSubmissionsContent() {
 
   // Build the column list shown in the table: first 3 fields by default, plus any
   // field referenced by an active sort or filter so users always see those columns.
+  const hasPaymentField = fields.some((f) => f.fieldType === 'payment');
+  // A signed-in parent said which child (or the office linked one): show who each response is for.
+  const hasLinkedStudents = submissions.some((s) => s.studentName);
   const displayedFields = useMemo(() => {
-    const baseColumns = fields.slice(0, 3);
+    // The payment has its own column; its answer is the long summary.
+    const columnFields = fields.filter((f) => f.fieldType !== 'payment');
+    const baseColumns = columnFields.slice(0, 3);
     const extraIds = new Set<string>();
     (filters.sorts || []).forEach((s) => { if (s.fieldId !== 'submittedAt') extraIds.add(s.fieldId); });
     (filters.fieldFilters || []).forEach((f) => extraIds.add(f.fieldId));
-    const extras = fields.filter(
+    const extras = columnFields.filter(
       (f) => extraIds.has(f.fieldId) && !baseColumns.some((b) => b.fieldId === f.fieldId)
     );
     return [...baseColumns, ...extras];
@@ -321,7 +342,7 @@ function FormSubmissionsContent() {
   // selection whenever the underlying list changes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [filters.page, filters.limit, filters.status, filters.importState, filters.dateFrom, filters.dateTo]);
+  }, [filters.page, filters.limit, filters.status, filters.importState, filters.payment, filters.dateFrom, filters.dateTo]);
 
   const toggleSelected = (submissionId: string) => {
     setSelectedIds((prev) => {
@@ -361,6 +382,7 @@ function FormSubmissionsContent() {
       dateTo: filters.dateTo,
       fieldFilters: filters.fieldFilters,
       importState: filters.importState,
+      paymentState: filters.payment,
       sorts: filters.sorts,
     });
     setImportOpen(true);
@@ -392,8 +414,9 @@ function FormSubmissionsContent() {
       setDetailSubmission(null);
       fetchSubmissions();
       showNotification('Submission deleted', 'success');
-    } catch {
-      showNotification('Error deleting submission', 'error');
+    } catch (err) {
+      // A response with a payment recorded is kept; the server says why.
+      showNotification(err instanceof Error && err.message ? err.message : 'Error deleting submission', 'error');
     }
   };
 
@@ -532,7 +555,12 @@ function FormSubmissionsContent() {
 
           {/* Filters + Sort */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-col gap-4">
-            <SubmissionFiltersComponent filters={filters} onChange={updateFilters} statuses={statuses} />
+            <SubmissionFiltersComponent
+              filters={filters}
+              onChange={updateFilters}
+              statuses={statuses}
+              paymentOptions={hasPaymentField ? paymentFilterOptions(finance) : null}
+            />
 
             <div className="flex flex-col lg:flex-row lg:items-start gap-6 border-t border-slate-100 pt-4">
               <div className="lg:w-1/2">
@@ -619,6 +647,12 @@ function FormSubmissionsContent() {
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Imported</th>
+                      {hasLinkedStudents && (
+                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">For</th>
+                      )}
+                      {hasPaymentField && (
+                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
+                      )}
                       {displayedFields.map((f) => {
                         const sortInfo = sortByField.get(f.fieldId);
                         const isSorted = !!sortInfo;
@@ -688,6 +722,26 @@ function FormSubmissionsContent() {
                             onUndo={(s) => setUndoSubmissionId(s.submissionId)}
                           />
                         </td>
+                        {hasLinkedStudents && (
+                          <td className="px-5 py-3.5 whitespace-nowrap text-slate-700">
+                            {sub.studentName ? (
+                              <>{sub.studentName}<span className="ml-1 text-xs text-slate-400">{gradeLabel(sub.studentGrade)}</span></>
+                            ) : <span className="text-slate-300">—</span>}
+                          </td>
+                        )}
+                        {hasPaymentField && (
+                          <td className="px-5 py-3.5 whitespace-nowrap" onClick={(e) => { if (finance && sub.payment) { e.stopPropagation(); setChargeOpen(sub.payment.chargeId); } }}>
+                            {sub.payment ? (
+                              <span className={`inline-flex items-center gap-2 ${finance ? 'cursor-pointer hover:opacity-80' : ''}`} title={finance ? 'Open this payment' : undefined}>
+                                <PaymentChip status={sub.payment.status} offline={sub.payment.chosenMethod === 'offline'} disputeStatus={sub.payment.disputeStatus} />
+                                <span className="text-xs tabular-nums text-slate-600">{formatCents(sub.payment.amountCents)}</span>
+                                {sub.payment.lastPayment && <span className="text-xs text-slate-400">{paidWith(sub.payment.lastPayment)}</span>}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">Nothing to pay</span>
+                            )}
+                          </td>
+                        )}
                         {displayedFields.map((f) => {
                           const isSorted = sortByField.has(f.fieldId);
                           return (
@@ -825,6 +879,21 @@ function FormSubmissionsContent() {
       />
 
       {/* Detail Modal */}
+      <ChargeDetailModal
+        chargeId={chargeOpen}
+        onClose={() => setChargeOpen(null)}
+        onChanged={(c) => {
+          fetchSubmissions();
+          setDetailSubmission((d) => (d && d.payment && d.payment.chargeId === c.chargeId
+            ? {
+                ...d,
+                studentId: c.studentId, studentName: c.studentName, studentGrade: c.studentGrade,
+                payment: { ...d.payment, status: c.status, amountPaidCents: c.amountPaidCents, amountRefundedCents: c.amountRefundedCents },
+              }
+            : d));
+        }}
+      />
+
       <Modal isOpen={detailOpen} onClose={() => setDetailOpen(false)} title="Submission Detail" size="lg">
         {detailSubmission && (
           <div className="flex flex-col">
@@ -836,6 +905,33 @@ function FormSubmissionsContent() {
               </span>
             </div>
 
+            {detailSubmission.studentName && (
+              <p className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="text-xs font-semibold uppercase text-slate-500">For</span>
+                <span className="font-medium text-slate-900">{detailSubmission.studentName}</span>
+                {detailSubmission.studentGrade && <span className="text-slate-500">{gradeLabel(detailSubmission.studentGrade)}</span>}
+              </p>
+            )}
+
+            {detailSubmission.payment && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-700">
+                  <PaymentChip status={detailSubmission.payment.status} offline={detailSubmission.payment.chosenMethod === 'offline'} disputeStatus={detailSubmission.payment.disputeStatus} />
+                  <span className="tabular-nums">{formatCents(detailSubmission.payment.amountPaidCents)} of {formatCents(detailSubmission.payment.amountCents)} paid</span>
+                  {detailSubmission.payment.lastPayment && <span className="text-slate-400">· {paidWith(detailSubmission.payment.lastPayment)}</span>}
+                </div>
+                {finance && (
+                  <button
+                    type="button"
+                    onClick={() => setChargeOpen(detailSubmission.payment!.chargeId)}
+                    className="text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                  >
+                    Open payment
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="divide-y divide-slate-100">
               {fields.map((field) => (
                 <div key={field.fieldId} className="py-3">
@@ -843,7 +939,7 @@ function FormSubmissionsContent() {
                     {field.label}
                     {field.isRequired && <span className="text-rose-500 ml-1">*</span>}
                   </p>
-                  {isEditing ? (
+                  {isEditing && field.fieldType !== 'payment' ? (
                     renderEditField(field)
                   ) : (
                     <p className="text-sm text-slate-900">
