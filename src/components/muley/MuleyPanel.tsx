@@ -173,8 +173,8 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
                 <h3 className="mt-3 font-display text-lg font-semibold text-slate-900">{firstName ? `Hi ${firstName}, I'm Muley` : "Hi, I'm Muley"}</h3>
                 <p className="mt-1 max-w-[30ch] text-sm leading-relaxed text-slate-600">
                   {writes
-                    ? 'I can look up your classes, rosters, marks and attendance, get attendance and marks ready for you to check and save, and show you where anything is in School Mule.'
-                    : 'I can look up your classes, rosters, marks and attendance, and show you where anything is in School Mule.'}
+                    ? 'I can look up your classes, marks and attendance, tell you how a class or a student is doing, get attendance and marks ready for you to check and save, and show you where anything is in School Mule.'
+                    : 'I can look up your classes, marks and attendance, tell you how a class or a student is doing, and show you where anything is in School Mule.'}
                 </p>
                 <div className="mt-5 flex w-full flex-col gap-2">
                   {startersFor(page, writes).map((starter) => (

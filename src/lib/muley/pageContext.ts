@@ -60,8 +60,8 @@ export function startersFor(context: PageContext, writes = false): string[] {
     case 'gradebook':
       if (!context.classId) return ['Which of my classes have missing work?', 'How do I publish grades to parents?']
       return writes
-        ? ['Who has missing work in this class?', 'Enter marks for the last assessment', 'How do I leave a student out of the class average?']
-        : ['Who has missing work in this class?', 'How did the class do on the last assessment?', 'How do I leave a student out of the class average?']
+        ? ['How is this class doing this term?', 'Enter marks for the last assessment', 'How do I leave a student out of the class average?']
+        : ['How is this class doing this term?', 'Who has missing work in this class?', 'How do I leave a student out of the class average?']
     case 'class':
       return writes
         ? ['Who is in this class?', 'Who has missing work in this class?', 'Leave a student out of the class average']
@@ -72,6 +72,8 @@ export function startersFor(context: PageContext, writes = false): string[] {
         : ['Who was absent today?', 'Who is still unmarked today?', 'How do I take attendance?']
     case 'attendance':
       return ['How do I take class attendance?', 'Where is general attendance?']
+    case 'analytics':
+      return ['Who needs attention this term?', 'How are my classes doing this term?', 'How do I compare two terms?']
     case 'admin':
       return ['Where is School Assets?', 'How do I change the school stamp?', 'Where are the report templates?']
     case 'reports':

@@ -270,6 +270,7 @@ describe('the page context', () => {
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`), true)).toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/classes/${CLASS}`), true)).toContain('Leave a student out of the class average')
+    expect(startersFor(pageContextFor('/analytics'))).toContain('Who needs attention this term?')
   })
 })
 
