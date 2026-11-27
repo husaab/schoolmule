@@ -138,7 +138,7 @@ export default function MuleyPanel({ pathname, search = '', firstName, onClose }
         </header>
 
         {view === 'history' ? (
-          <div className="flex-1 overflow-y-auto px-3 py-3">
+          <div className="flex-1 overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
             <h3 className="px-1 pb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Earlier conversations</h3>
             {conversations === null ? (
               <p className="px-1 text-sm text-slate-500">Loading…</p>
@@ -230,28 +230,31 @@ export default function MuleyPanel({ pathname, search = '', firstName, onClose }
           </div>
         )}
 
-        <div className="border-t border-slate-100 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-          <MuleyComposer
-            value={draft}
-            onChange={setDraft}
-            onSend={() => submit(draft)}
-            onStop={stop}
-            streaming={streaming}
-            maxLength={config.status === 'ready' && config.maxMessageLength ? config.maxMessageLength : 4000}
-            autoFocus={view === 'chat'}
-            attachments={attachments}
-            canAttach={canAttach}
-            onAttach={(file) => void attach(file, { name: file.name, previewUrl: URL.createObjectURL(file) })}
-            onRemoveAttachment={removeAttachment}
-            tone={tone}
-            voice
-          />
-          <p className="mt-2 text-center text-[11px] text-slate-400">
-            {parent
-              ? 'Muley sees only what the school shares with you, and can\u2019t change anything.'
-              : writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}
-          </p>
-        </div>
+        {/* The history list is for picking a conversation: the message box comes back with it. */}
+        {view === 'chat' && (
+          <div className="border-t border-slate-100 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+            <MuleyComposer
+              value={draft}
+              onChange={setDraft}
+              onSend={() => submit(draft)}
+              onStop={stop}
+              streaming={streaming}
+              maxLength={config.status === 'ready' && config.maxMessageLength ? config.maxMessageLength : 4000}
+              autoFocus
+              attachments={attachments}
+              canAttach={canAttach}
+              onAttach={(file) => void attach(file, { name: file.name, previewUrl: URL.createObjectURL(file) })}
+              onRemoveAttachment={removeAttachment}
+              tone={tone}
+              voice
+            />
+            <p className="mt-2 text-center text-[11px] text-slate-400">
+              {parent
+                ? 'Muley sees only what the school shares with you, and can\u2019t change anything.'
+                : writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}
+            </p>
+          </div>
+        )}
         <div className="sr-only" aria-live="polite">{announce}</div>
       </motion.aside>
     </>

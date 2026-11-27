@@ -88,7 +88,7 @@ function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' 
             <thead>
               <tr>
                 {card.columns.map((column) => (
-                  <th key={column.key} scope="col" className={`border-b border-slate-100 py-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 ${column.align === 'right' ? 'text-right' : 'text-left'}`}>
+                  <th key={column.key} scope="col" className={`border-b border-slate-100 py-1.5 pr-3 text-[11px] font-bold uppercase tracking-wide text-slate-500 last:pr-0 ${column.align === 'right' ? 'text-right' : 'text-left'}`}>
                     {column.label}
                   </th>
                 ))}
@@ -98,7 +98,7 @@ function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' 
               {card.rows.map((row, index) => (
                 <tr key={index} className="border-b border-slate-50 last:border-0">
                   {card.columns.map((column) => (
-                    <td key={column.key} className={`py-2 tabular-nums text-slate-800 ${column.align === 'right' ? 'text-right font-medium' : ''}`}>
+                    <td key={column.key} className={`py-2 pr-3 tabular-nums text-slate-800 last:pr-0 ${column.align === 'right' ? 'text-right font-medium' : ''}`}>
                       {row[column.key] ?? '—'}
                     </td>
                   ))}
