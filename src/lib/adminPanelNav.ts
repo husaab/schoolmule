@@ -18,6 +18,7 @@ import {
   LockClosedIcon,
   PhotoIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   TableCellsIcon,
   UserGroupIcon,
   UsersIcon,
@@ -56,6 +57,7 @@ export const ADMIN_PANEL_GROUPS: readonly PanelGroup[] = [
       { href: '/admin-panel/school-calendar', label: 'School Calendar', icon: CalendarDaysIcon },
       { href: '/admin-panel/school-assets', label: 'School Assets', icon: PhotoIcon },
       { href: '/admin-panel/report-templates', label: 'Report Templates', icon: DocumentTextIcon },
+      { href: '/admin-panel/muley', label: 'Muley activity', icon: SparklesIcon },
     ],
   },
   {

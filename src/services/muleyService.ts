@@ -9,6 +9,7 @@ import { getToken } from './authService'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { createNdjsonParser } from '@/lib/muley/ndjson'
 import type { ProposedAction, ShownMessage, StreamEvent } from '@/lib/muley/types'
+import type { MuleyLogEntry } from '@/lib/muley/log'
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -208,3 +209,15 @@ export const listMuleySchools = async (): Promise<{ schools: MuleySchool[]; kill
 /** Change some of a school's switches. -> all of them, as saved. */
 export const saveMuleySchool = async (school: string, patch: Partial<MuleySchoolSwitches>): Promise<MuleySchoolSwitches> =>
   (await apiClient<{ status: string; data: MuleySchoolSwitches }>(`/assistant/platform/settings/${encodeURIComponent(school)}`, { method: 'PUT', body: patch })).data
+
+// ── The school's log (Admin Panel → Muley activity) ───────────────
+
+/** One page of the school's log, newest first; `next` asks for the page after. */
+export const getMuleyLog = async ({ status, before }: { status?: string | null; before?: string | null } = {}): Promise<{ entries: MuleyLogEntry[]; next: string | null }> => {
+  const query = new URLSearchParams()
+  if (status) query.set('status', status)
+  if (before) query.set('before', before)
+  const qs = query.toString()
+  const res = await apiClient<{ status: string; data: MuleyLogEntry[]; next: string | null }>(`/assistant/log${qs ? `?${qs}` : ''}`)
+  return { entries: res.data, next: res.next }
+}

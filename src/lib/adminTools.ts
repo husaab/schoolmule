@@ -111,6 +111,11 @@ const META: Record<string, ToolMeta> = {
     keywords: ['report cards', 'progress reports', 'designer', 'layout'],
     icon: 'document',
   },
+  '/admin-panel/muley': {
+    description: 'Every change Muley prepared: who asked, who saved or undid it, and what changed.',
+    keywords: ['assistant', 'ai', 'muley log', 'changes', 'audit'],
+    icon: 'sparkles',
+  },
   '/admin-panel/schedule-planner': {
     description: 'Build and publish weekly timetables from teacher availability.',
     keywords: ['timetable', 'bell times', 'scheduling', 'generate'],

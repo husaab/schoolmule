@@ -217,6 +217,7 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { path: '/admin-panel/school-schedule', rule: OPEN }, // old bookmark, redirects to /school-schedule
   { path: '/admin-panel/roles', rule: FULL_ADMIN },
   { path: '/admin-panel/patch-notes', rule: FULL_ADMIN },
+  { path: '/admin-panel/muley', rule: FULL_ADMIN },
 
   // School-wide areas
   { path: '/staff-attendance', rule: NEEDS('staff_attendance') },

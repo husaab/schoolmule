@@ -7,6 +7,7 @@ import { pageContextFor, pageLabel, startersFor } from './pageContext'
 import { isAppPath, splitText } from './inlineText'
 import { announceDataChange, classAttendanceTopic, onDataChange, scoresTopic } from './dataChanges'
 import type { ProposedAction } from './types'
+import { LOG_STATUS, logTime, logTimeline, type MuleyLogEntry } from './log'
 
 const CLASS = '11111111-2222-4333-8444-555555555555'
 
@@ -289,3 +290,24 @@ describe('text and links', () => {
     for (const bad of ['https://evil.test', '//evil.test', 'javascript:alert(1)', '/a b', '/x"onmouseover', 42, null]) expect(isAppPath(bad)).toBe(false)
   })
 })
+
+describe('the school\'s log', () => {
+  const entry = (over: Partial<MuleyLogEntry> = {}): MuleyLogEntry => ({
+    id: 'a1', kind: 'class_attendance', kindLabel: 'Attendance', status: 'undone', title: 'Class attendance · Math', changes: [],
+    written: 2, error: null, preparedBy: 'Tess Teacher', preparedAs: 'TEACHER', preparedAt: '2026-11-27T19:05:00Z',
+    savedBy: 'Tess Teacher', savedAt: '2026-11-27T19:06:00Z', undoneBy: 'Ada Admin', undoneAt: '2026-11-27T19:09:00Z', expiresAt: null, ...over,
+  })
+
+  it('tells each change\'s story in order, in the same words on every runtime', () => {
+    const lines = logTimeline(entry())
+    expect(lines).toHaveLength(3)
+    expect(lines[0]).toMatch(/^Asked for by Tess Teacher \(teacher\), 27 Nov, \d{1,2}:05 (AM|PM)$/)
+    expect(lines[1]).toMatch(/^Saved by Tess Teacher, .* · 2 values written$/)
+    expect(lines[2]).toMatch(/^Undone by Ada Admin, /)
+    expect(logTimeline(entry({ status: 'pending', savedAt: null, undoneAt: null, expiresAt: '2026-11-28T19:05:00Z' }))[1]).toMatch(/^Not saved yet · expires 28 Nov/)
+    expect(logTimeline(entry({ status: 'applied', written: 0, undoneAt: null }))[1]).toMatch(/nothing needed changing$/)
+    expect(logTime('not a time')).toBe('')
+    expect(LOG_STATUS.applied).toEqual({ label: 'Saved', tone: 'good' })
+  })
+})
+

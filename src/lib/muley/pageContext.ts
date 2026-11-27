@@ -68,10 +68,10 @@ export function startersFor(context: PageContext, writes = false): string[] {
         : ['Who is in this class?', 'Who has missing work in this class?', 'Where are this class\'s settings?']
     case 'class-attendance':
       return writes
-        ? ['Mark everyone present today', 'Who is still unmarked today?', 'Who was absent today?']
-        : ['Who was absent today?', 'Who is still unmarked today?', 'How do I take attendance?']
+        ? ['Mark everyone present today', 'Who was absent this week?', 'Who is still unmarked today?']
+        : ['Who was absent this week?', 'Who is still unmarked today?', 'How do I take attendance?']
     case 'attendance':
-      return ['How do I take class attendance?', 'Where is general attendance?']
+      return ['Who was absent this week?', 'How do I take class attendance?', 'Where is general attendance?']
     case 'analytics':
       return ['Who needs attention this term?', 'How are my classes doing this term?', 'How do I compare two terms?']
     case 'admin':

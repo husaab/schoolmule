@@ -260,7 +260,7 @@ describe('Office Staff test user (spec section 7)', () => {
     // The old bookmark redirects to /school-schedule.
     '/admin-panel/school-schedule',
   ]
-  const DOESNT_GET = ['/classes', '/gradebook', '/analytics', '/finance', '/admin-panel/patch-notes', '/admin-panel/roles']
+  const DOESNT_GET = ['/classes', '/gradebook', '/analytics', '/finance', '/admin-panel/patch-notes', '/admin-panel/roles', '/admin-panel/muley']
   // Decided by authRouting, not by her role (sign-in, onboarding, other portals, Observe).
   const PORTALS = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/verify-email-token', '/school-approval', '/student-invite', '/email-login', '/parent', '/student', '/observe']
   const under = (p: string, list: string[]) => list.some((x) => p === x || p.startsWith(`${x}/`))
