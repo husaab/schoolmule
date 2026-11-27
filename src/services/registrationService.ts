@@ -84,6 +84,7 @@ const serializeSortAndFilters = (params: URLSearchParams, filters: SubmissionFil
   if (filters.importState && filters.importState !== 'all') {
     params.set('importState', filters.importState);
   }
+  if (filters.payment) params.set('payment', filters.payment);
 };
 
 export const getSubmissions = (formId: string, filters: SubmissionFilters = {}) => {
@@ -153,6 +154,14 @@ export const exportSubmissions = async (formId: string, filters: SubmissionFilte
   a.click();
   window.URL.revokeObjectURL(url);
 };
+
+// ─── Payments ───────────────────────────────────────────────────────
+
+/** Whether the school can take card payments now, for the builder's payment field. */
+export const getPaymentAvailability = () =>
+  apiClient<{ status: string; data: { configured: boolean; mode: 'test' | 'live' | null; online: boolean; accountStatus: string | null } }>(
+    '/registration/payment-availability'
+  );
 
 // ─── Badge Count ────────────────────────────────────────────────────
 

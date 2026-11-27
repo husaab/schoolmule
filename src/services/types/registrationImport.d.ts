@@ -1,6 +1,6 @@
 // Types for importing registration form submissions as students.
 
-import type { FieldFilter, SortSpec, SubmissionStatus, ImportState } from './registration';
+import type { FieldFilter, SortSpec, SubmissionStatus, ImportState, PaymentState } from './registration';
 import type { CustomFieldDefinition, NewCustomField } from './studentCustomField';
 
 // ─── Field mapping ──────────────────────────────────────────────────
@@ -105,6 +105,8 @@ export type ImportScope =
       dateTo?: string;
       fieldFilters?: FieldFilter[];
       importState?: ImportState;
+      /** The list's payment filter, so "import all" means what is on screen. */
+      paymentState?: PaymentState;
       sorts?: SortSpec[];
     };
 

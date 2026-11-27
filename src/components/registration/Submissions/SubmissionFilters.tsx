@@ -1,6 +1,6 @@
 'use client';
 
-import type { SubmissionStatus, SubmissionFilters as FiltersType, ImportState } from '@/services/types/registration';
+import type { SubmissionStatus, SubmissionFilters as FiltersType, ImportState, PaymentState } from '@/services/types/registration';
 import type { SubmissionStatusDef } from '@/services/types/registrationStatus';
 import SearchableSelect, { type SearchableOption } from '@/components/ui/SearchableSelect';
 
@@ -17,9 +17,11 @@ interface Props {
   onChange: (filters: FiltersType) => void;
   /** The school's status vocabulary. Replaces a hardcoded new/reviewed/archived list. */
   statuses: SubmissionStatusDef[];
+  /** On a form that asks for payment: the payment filter's choices (lib/paymentField). */
+  paymentOptions?: { value: PaymentState | ''; label: string }[] | null;
 }
 
-export default function SubmissionFilters({ filters, onChange, statuses }: Props) {
+export default function SubmissionFilters({ filters, onChange, statuses, paymentOptions = null }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Status filter */}
@@ -41,6 +43,18 @@ export default function SubmissionFilters({ filters, onChange, statuses }: Props
         ariaLabel="Import state"
         triggerClassName={trigger}
       />
+
+      {/* Payment — only on a form that asks for one */}
+      {paymentOptions && (
+        <SearchableSelect
+          options={paymentOptions.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
+          value={filters.payment || ''}
+          onChange={(v) => onChange({ ...filters, payment: (v || undefined) as PaymentState | undefined, page: 1 })}
+          allLabel="Any payment"
+          ariaLabel="Payment"
+          triggerClassName={trigger}
+        />
+      )}
 
       {/* Date from */}
       <div className="flex items-center gap-1.5">
@@ -65,7 +79,7 @@ export default function SubmissionFilters({ filters, onChange, statuses }: Props
       </div>
 
       {/* Clear filters */}
-      {(filters.status || filters.dateFrom || filters.dateTo ||
+      {(filters.status || filters.dateFrom || filters.dateTo || filters.payment ||
         (filters.importState && filters.importState !== 'all')) && (
         <button
           onClick={() => onChange({ page: 1, limit: 25 })}

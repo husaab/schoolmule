@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,9 @@ import StatusBadge from './StatusBadge';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import * as registrationService from '@/services/registrationService';
 import { prepareUploads, uploadSizeLabel } from '@/lib/uploadPrep';
+import { defaultPaymentConfig } from '@/lib/paymentField';
+import Link from 'next/link';
+import { CreditCardIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -56,6 +59,18 @@ export default function FormBuilder({ form, onSaved }: Props) {
   // Save state
   const [saving, setSaving] = useState(false);
 
+  // Whether the school can take card payments (for the payment field); null until known.
+  const [paymentsOnline, setPaymentsOnline] = useState<boolean | null>(null);
+  const hasPayment = fields.some((f) => f.fieldType === 'payment');
+  const hasEmail = fields.some((f) => f.fieldType === 'email');
+  const paymentField = fields.find((f) => f.fieldType === 'payment');
+  useEffect(() => {
+    if (!hasPayment || paymentsOnline !== null) return;
+    registrationService.getPaymentAvailability()
+      .then((res) => setPaymentsOnline(res.data.online))
+      .catch(() => setPaymentsOnline(null));
+  }, [hasPayment, paymentsOnline]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor)
@@ -82,19 +97,24 @@ export default function FormBuilder({ form, onSaved }: Props) {
   // ─── Field CRUD ─────────────────────────────────────────────────
 
   const addField = useCallback((type: FieldType) => {
+    if (type === 'payment' && fields.some((f) => f.fieldType === 'payment')) {
+      showNotification('This form already has a payment field. Add every item to it.', 'error');
+      return;
+    }
     const newField: FormField = {
       fieldId: crypto.randomUUID(),
       fieldType: type,
-      label: '',
+      label: type === 'payment' ? 'Payment' : '',
       placeholder: null,
       isRequired: false,
       options: (type === 'select' || type === 'radio') ? [''] : null,
+      payment: type === 'payment' ? defaultPaymentConfig() : null,
       sortOrder: fields.length,
     };
     setFields((prev) => [...prev, newField]);
     setEditingField(newField);
     setEditorOpen(true);
-  }, [fields.length]);
+  }, [fields, showNotification]);
 
   const editField = useCallback((fieldId: string) => {
     const field = fields.find((f) => f.fieldId === fieldId);
@@ -148,6 +168,7 @@ export default function FormBuilder({ form, onSaved }: Props) {
         placeholder: f.placeholder,
         isRequired: f.isRequired,
         options: f.options,
+        payment: f.fieldType === 'payment' ? f.payment ?? null : null,
         sortOrder: i,
       }))
     );
@@ -275,7 +296,7 @@ export default function FormBuilder({ form, onSaved }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left: Field Type Selector */}
         <div className="lg:col-span-1">
-          <FieldTypeSelector onAdd={addField} />
+          <FieldTypeSelector onAdd={addField} hasPayment={hasPayment} />
         </div>
 
         {/* Right: Form Settings + Fields */}
@@ -362,6 +383,29 @@ export default function FormBuilder({ form, onSaved }: Props) {
             </div>
           </div>
 
+          {/* What a form that asks for payment still needs */}
+          {hasPayment && (!hasEmail || (paymentsOnline === false && !paymentField?.payment?.allowOffline)) && (
+            <div role="status" className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500" />
+              <div className="space-y-1">
+                {!hasEmail && <p>Add an <strong>Email</strong> field: the receipt for the payment is sent there.</p>}
+                {paymentsOnline === false && !paymentField?.payment?.allowOffline && (
+                  <p>
+                    Card payments are off for your school.{' '}
+                    <Link href="/finance/payments" className="font-medium underline">Connect Stripe</Link>{' '}
+                    or let families pay at the office before publishing.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          {hasPayment && paymentsOnline === true && hasEmail && (
+            <p className="flex items-center gap-2 text-xs text-slate-500">
+              <CreditCardIcon className="h-4 w-4 text-emerald-500" />
+              Card payments are on. Money goes to your school’s Stripe account.
+            </p>
+          )}
+
           {/* Fields List */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="text-sm font-semibold text-slate-700 mb-4">
@@ -419,6 +463,7 @@ export default function FormBuilder({ form, onSaved }: Props) {
           setEditingField(null);
         }}
         onSave={saveField}
+        paymentsOnline={paymentsOnline}
       />
     </div>
   );
