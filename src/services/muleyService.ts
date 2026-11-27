@@ -143,3 +143,35 @@ export const undoAction = async (id: string, key: string): Promise<ProposedActio
 
 export const dismissAction = async (id: string): Promise<ProposedAction> =>
   (await apiClient<{ status: string; data: ProposedAction }>(actionPath(id, 'dismiss'), { method: 'POST' })).data
+
+// ── The platform owner's switches (Observe → Muley) ───────────────
+
+export type MuleySchoolSwitches = {
+  enabled: boolean
+  roleTeacher: boolean
+  roleAdmin: boolean
+  roleParent: boolean
+  /** Muley may prepare changes for the person to save. */
+  allowWrites: boolean
+  allowOutward: boolean
+  selfServe: boolean
+  transcriptRetentionDays: number
+}
+
+export type MuleySchool = {
+  school: string
+  name: string
+  settings: MuleySchoolSwitches
+  updatedAt: string | null
+  lastThirtyDays: { conversations: number; people: number; changesSaved: number }
+}
+
+/** Every school with its switches, and whether the backend's kill switch is thrown. */
+export const listMuleySchools = async (): Promise<{ schools: MuleySchool[]; killSwitch: boolean }> => {
+  const res = await apiClient<{ status: string; data: MuleySchool[]; killSwitch?: boolean }>('/assistant/platform/settings')
+  return { schools: res.data, killSwitch: Boolean(res.killSwitch) }
+}
+
+/** Change some of a school's switches. -> all of them, as saved. */
+export const saveMuleySchool = async (school: string, patch: Partial<MuleySchoolSwitches>): Promise<MuleySchoolSwitches> =>
+  (await apiClient<{ status: string; data: MuleySchoolSwitches }>(`/assistant/platform/settings/${encodeURIComponent(school)}`, { method: 'PUT', body: patch })).data
