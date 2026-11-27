@@ -13,6 +13,7 @@ import MuleyComposer from './MuleyComposer'
 import { useMuleyStore } from '@/store/useMuleyStore'
 import { useUserStore } from '@/store/useUserStore'
 import { can, isFullAdmin } from '@/lib/permissions'
+import { muleyTone } from './tone'
 import { pageContextFor, pageLabel, startersFor } from '@/lib/muley/pageContext'
 import type { Block, ChoiceOption } from '@/lib/muley/types'
 
@@ -39,6 +40,8 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
   const user = useUserStore((s) => s.user)
   const { attach, removeAttachment, setDraft, send, stop, retry, newConversation, setView, openConversation, deleteConversation, applyAction, undoAction, dismissAction } = useMuleyStore.getState()
   const writes = config.status === 'ready' && config.writes === true
+  const parent = user.role === 'PARENT'
+  const tone = muleyTone(user.role)
   // An image is for the school's own stamp, logo or signature: School Assets' permission.
   const canAttach = writes && (isFullAdmin(user) || can(user, 'school_setup'))
 
@@ -109,11 +112,11 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
         }}
         className="fixed inset-x-0 bottom-0 top-3 z-[59] flex flex-col overflow-hidden rounded-t-2xl border-slate-200 bg-white shadow-2xl md:inset-x-auto md:inset-y-0 md:right-0 md:top-0 md:w-[420px] md:rounded-none md:border-l print:hidden"
       >
-        <header className="flex items-center gap-3 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 to-teal-50 px-4 py-3">
+        <header className={`flex items-center gap-3 border-b ${tone.header} px-4 py-3`}>
           <MuleyAvatar size={30} />
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-base font-semibold leading-tight text-slate-900">Muley</h2>
-            <p className="truncate text-xs text-cyan-800">{label ? `On this page: ${label}` : 'Your School Mule assistant'}</p>
+            <p className={`truncate text-xs ${tone.headerText}`}>{label ? `On this page: ${label}` : 'Your School Mule assistant'}</p>
           </div>
           {view === 'chat' ? (
             <>
@@ -178,7 +181,9 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
                 <MuleyAvatar size={88} framed={false} />
                 <h3 className="mt-3 font-display text-lg font-semibold text-slate-900">{firstName ? `Hi ${firstName}, I'm Muley` : "Hi, I'm Muley"}</h3>
                 <p className="mt-1 max-w-[30ch] text-sm leading-relaxed text-slate-600">
-                  {writes
+                  {parent
+                    ? 'I can tell you how your children are doing, what is due, what is coming up at school, and where anything is in the parent portal.'
+                    : writes
                     ? 'I can look up your classes, marks and attendance, tell you how a class or a student is doing, get attendance and marks ready for you to check and save, and show you where anything is in School Mule.'
                     : 'I can look up your classes, marks and attendance, tell you how a class or a student is doing, and show you where anything is in School Mule.'}
                 </p>
@@ -188,7 +193,7 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
                       key={starter}
                       type="button"
                       onClick={() => submit(starter)}
-                      className="cursor-pointer rounded-xl border border-cyan-100 bg-white px-3 py-2 text-left text-sm text-cyan-900 hover:border-cyan-300 hover:bg-cyan-50"
+                      className={`cursor-pointer rounded-xl border bg-white px-3 py-2 text-left text-sm ${tone.starter}`}
                     >
                       {starter}
                     </button>
@@ -207,6 +212,7 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
                     actions={thread.actions || {}}
                     onAction={act}
                     onAsk={submit}
+                    tone={tone}
                   />
                 ))}
                 {thread.error && (
@@ -237,9 +243,12 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
             canAttach={canAttach}
             onAttach={(file) => void attach(file, { name: file.name, previewUrl: URL.createObjectURL(file) })}
             onRemoveAttachment={removeAttachment}
+            tone={tone}
           />
           <p className="mt-2 text-center text-[11px] text-slate-400">
-            {writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}
+            {parent
+              ? 'Muley sees only what the school shares with you, and can\u2019t change anything.'
+              : writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}
           </p>
         </div>
         <div className="sr-only" aria-live="polite">{announce}</div>

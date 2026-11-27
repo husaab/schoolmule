@@ -8,6 +8,7 @@ import { ArrowRightIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/r
 import type { ActionEntry, Block, ChoiceOption, MuleyCard, ThreadMessage } from '@/lib/muley/types'
 import { isAppPath, splitText } from '@/lib/muley/inlineText'
 import MuleyChangeCard, { type ChangeStep } from './MuleyChangeCard'
+import type { MuleyTone } from './tone'
 
 type Props = {
   message: ThreadMessage
@@ -22,6 +23,7 @@ type Props = {
   onAction: (actionId: string, step: ChangeStep) => void
   /** Send Muley a message (a change card's "Prepare it again"). */
   onAsk: (text: string) => void
+  tone: MuleyTone
 }
 
 function Words({ text }: { text: string }) {
@@ -141,10 +143,10 @@ function Choices({ block, onChoose, streaming }: { block: Extract<Block, { kind:
   )
 }
 
-export default function MuleyMessage({ message, onChoose, onNavigate, streaming, actions, onAction, onAsk }: Props) {
+export default function MuleyMessage({ message, onChoose, onNavigate, streaming, actions, onAction, onAsk, tone }: Props) {
   if (message.role === 'user') {
     return (
-      <div className="ml-auto max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-cyan-100 bg-gradient-to-br from-cyan-50 to-teal-50 px-3.5 py-2.5 text-[15px] leading-relaxed text-slate-900">
+      <div className={`ml-auto max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md border ${tone.bubble} px-3.5 py-2.5 text-[15px] leading-relaxed text-slate-900`}>
         {message.attachments && message.attachments.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {message.attachments.map((a, i) =>

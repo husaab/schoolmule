@@ -12,12 +12,13 @@ import { timeAgo } from '@/components/observe/format'
 import { listMuleySchools, saveMuleySchool, type MuleySchool, type MuleySchoolSwitches } from '@/services/muleyService'
 import { useNotificationStore } from '@/store/useNotificationStore'
 
-type BooleanSwitch = 'enabled' | 'roleTeacher' | 'roleAdmin' | 'allowWrites'
+type BooleanSwitch = 'enabled' | 'roleTeacher' | 'roleAdmin' | 'roleParent' | 'allowWrites'
 
 const SWITCHES: { key: BooleanSwitch; label: string; hint: string }[] = [
   { key: 'enabled', label: 'On', hint: 'Muley is on for this school' },
   { key: 'roleTeacher', label: 'Teachers', hint: 'Teachers see Muley' },
   { key: 'roleAdmin', label: 'Admins', hint: 'Administrators see Muley' },
+  { key: 'roleParent', label: 'Parents', hint: 'Parents and guardians see Muley in the parent portal (read-only: their own children)' },
   { key: 'allowWrites', label: 'Changes', hint: 'Muley may prepare attendance, marks and class-average changes for a person to save' },
 ]
 const RETENTION = [30, 60, 90, 180, 365]
@@ -94,7 +95,7 @@ export default function ObserveMuleyPage() {
         padded={false}
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[840px] text-sm">
             <thead>
               <tr className="border-y border-white/[0.06] text-left text-[11px] uppercase tracking-wide text-slate-500">
                 <th scope="col" className="px-5 py-2 font-semibold">School</th>
@@ -155,7 +156,7 @@ export default function ObserveMuleyPage() {
         </div>
       </Panel>
       <p className="px-1 text-xs text-slate-500">
-        Parents can&apos;t be switched on yet: Muley for families waits for the parent API gate. Students never get Muley.
+        For parents Muley only reads: their own children&apos;s published grades, attendance, classwork, the calendar and meetings. Changes are for staff only. Students never get Muley.
       </p>
     </div>
   )

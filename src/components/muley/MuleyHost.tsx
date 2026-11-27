@@ -12,6 +12,7 @@ import { useMuleyStore } from '@/store/useMuleyStore'
 import { useUserStore } from '@/store/useUserStore'
 import { useImpersonationStore } from '@/store/useImpersonationStore'
 import { muleyVisible } from '@/lib/muley/visibility'
+import { muleyTone } from './tone'
 
 export default function MuleyHost() {
   const pathname = usePathname() || '/'
@@ -67,7 +68,7 @@ export default function MuleyHost() {
           aria-label="Open Muley"
           aria-expanded={false}
           title="Ask Muley"
-          className="fixed bottom-4 right-4 z-[54] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white shadow-[0_6px_18px_rgba(8,145,178,0.28)] ring-2 ring-cyan-200 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-300 pb-[env(safe-area-inset-bottom)] lg:bottom-6 lg:right-6 print:hidden"
+          className={`fixed bottom-4 right-4 z-[54] flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white ring-2 ${muleyTone(user.role).launcherRing} transition-transform hover:scale-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-cyan-300 pb-[env(safe-area-inset-bottom)] lg:bottom-6 lg:right-6 print:hidden`}
         >
           <MuleyAvatar size={42} framed={false} />
         </button>

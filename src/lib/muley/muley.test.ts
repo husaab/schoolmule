@@ -272,6 +272,11 @@ describe('the page context', () => {
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/classes/${CLASS}`), true)).toContain('Leave a student out of the class average')
     expect(startersFor(pageContextFor('/analytics'))).toContain('Who needs attention this term?')
+    // The parent portal: its own pages and starters, and never a class id.
+    expect(pageContextFor(`/parent/classes/${CLASS}/items/x`)).toEqual({ route: `/parent/classes/${CLASS}/items/x`, kind: 'parent-classes', classId: null })
+    expect(pageLabel(pageContextFor('/parent/dashboard'))).toBe('Parent portal')
+    expect(startersFor(pageContextFor('/parent/grades'))).toContain('How is my child doing this term?')
+    expect(startersFor(pageContextFor('/parent/meetings'))).toContain('When are my meetings?')
   })
 })
 

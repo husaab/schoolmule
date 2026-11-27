@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react'
 import { ArrowUpIcon, StopIcon } from '@heroicons/react/24/solid'
 import { ExclamationTriangleIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import type { DraftAttachment } from '@/store/useMuleyStore'
+import type { MuleyTone } from './tone'
 
 type Props = {
   value: string
@@ -22,13 +23,14 @@ type Props = {
   canAttach: boolean
   onAttach: (file: File) => void
   onRemoveAttachment: (localId: string) => void
+  tone: MuleyTone
 }
 
 const IMAGE_TYPES = 'image/png,image/jpeg,image/gif'
 
 const touchKeyboard = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
-export default function MuleyComposer({ value, onChange, onSend, onStop, streaming, maxLength, autoFocus, attachments, canAttach, onAttach, onRemoveAttachment }: Props) {
+export default function MuleyComposer({ value, onChange, onSend, onStop, streaming, maxLength, autoFocus, attachments, canAttach, onAttach, onRemoveAttachment, tone }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const picker = useRef<HTMLInputElement>(null)
 
@@ -132,7 +134,7 @@ export default function MuleyComposer({ value, onChange, onSend, onStop, streami
           type="submit"
           disabled={!canSend}
           aria-label="Send"
-          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm hover:from-cyan-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl ${tone.send} text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40`}
         >
           <ArrowUpIcon className="h-4 w-4" />
         </button>
