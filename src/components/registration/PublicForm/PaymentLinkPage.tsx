@@ -13,8 +13,10 @@ import { CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, LockClosedIcon } f
 import { getPublicPayment, startPublicPayment } from '@/services/registrationPublicService';
 import type { PublicPayment } from '@/services/types/payments';
 import { formatCents, paidWith } from '@/lib/paymentField';
+import { formatDay } from '@/lib/paymentRequests';
 
 const SETTLED = new Set(['paid', 'partially_refunded', 'refunded', 'settled']);
+const settledStatus = (status: string) => SETTLED.has(status);
 // How long to wait for Stripe to confirm a payment the family just made.
 const CONFIRM_TRIES = 8;
 const CONFIRM_EVERY_MS = 2500;
@@ -126,9 +128,19 @@ export default function PaymentLinkPage() {
           <div>
             <h1 className="text-xl font-bold text-slate-900">{payment.formTitle}</h1>
             {payment.schoolName && <p className="text-sm text-slate-500">{payment.schoolName}</p>}
+            {(payment.studentName || (payment.dueDate && !settledStatus(payment.status))) && (
+              <p className="mt-1 text-sm text-slate-600">
+                {[
+                  payment.studentName ? `For ${payment.studentName}` : null,
+                  payment.dueDate && !settledStatus(payment.status) ? `Due ${formatDay(payment.dueDate)}` : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
           {payment.testMode && <span className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-500">Test</span>}
         </div>
+
+        {payment.requestDescription && <p className="mt-3 whitespace-pre-line text-sm text-slate-600">{payment.requestDescription}</p>}
 
         <ul className="mt-5 space-y-2">
           {payment.lines.map((line) => (
@@ -177,13 +189,18 @@ export default function PaymentLinkPage() {
               Stripe hasn’t confirmed your payment yet. If you paid, it will show here shortly and a receipt will be emailed to you. Please don’t pay again.
             </p>
           ) : cancelled ? (
-            <p className="text-sm text-slate-700">You left the payment page before paying. Your form was received.</p>
+            <p className="text-sm text-slate-700">
+              You left the payment page before paying.{payment.sourceType === 'request' ? '' : ' Your form was received.'}
+            </p>
           ) : payment.chosenMethod === 'offline' ? (
             <p className="text-sm text-slate-700">
               You chose to pay at the office. Please bring {formatCents(payment.balanceCents)} in cash or a cheque.
             </p>
           ) : (
-            <p className="text-sm text-slate-700">{formatCents(payment.balanceCents)} is still to pay.</p>
+            <p className="text-sm text-slate-700">
+              {formatCents(payment.balanceCents)} is still to pay.
+              {payment.sourceType === 'request' && payment.allowOffline && ' You can pay here by card, or at the office in cash or by cheque.'}
+            </p>
           )}
 
           {!waitingOnStripe && payment.canPayOnline && (
@@ -203,7 +220,9 @@ export default function PaymentLinkPage() {
             </>
           )}
           {!waitingOnStripe && !payment.canPayOnline && payment.chosenMethod !== 'offline' && (
-            <p className="mt-3 text-sm text-amber-800">Online payment isn’t available right now. Please contact the school.</p>
+            <p className="mt-3 text-sm text-amber-800">
+              {payment.allowOffline ? 'Online payment isn’t available right now. Please pay at the office.' : 'Online payment isn’t available right now. Please contact the school.'}
+            </p>
           )}
           {startError && <p role="alert" className="mt-3 text-sm text-rose-600">{startError}</p>}
         </div>

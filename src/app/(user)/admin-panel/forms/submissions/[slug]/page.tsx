@@ -37,6 +37,7 @@ import type {
   PaymentState,
 } from '@/services/types/registration';
 import PaymentChip from '@/components/payments/PaymentChip';
+import { gradeLabel } from '@/lib/paymentRequests';
 import ChargeDetailModal from '@/components/payments/ChargeDetailModal';
 import { formatCents, paidWith, paymentFilterOptions } from '@/lib/paymentField';
 import { useUserStore } from '@/store/useUserStore';
@@ -192,6 +193,8 @@ function FormSubmissionsContent() {
   // Build the column list shown in the table: first 3 fields by default, plus any
   // field referenced by an active sort or filter so users always see those columns.
   const hasPaymentField = fields.some((f) => f.fieldType === 'payment');
+  // A signed-in parent said which child (or the office linked one): show who each response is for.
+  const hasLinkedStudents = submissions.some((s) => s.studentName);
   const displayedFields = useMemo(() => {
     // The payment has its own column; its answer is the long summary.
     const columnFields = fields.filter((f) => f.fieldType !== 'payment');
@@ -644,6 +647,9 @@ function FormSubmissionsContent() {
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                       <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Imported</th>
+                      {hasLinkedStudents && (
+                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">For</th>
+                      )}
                       {hasPaymentField && (
                         <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Payment</th>
                       )}
@@ -716,6 +722,13 @@ function FormSubmissionsContent() {
                             onUndo={(s) => setUndoSubmissionId(s.submissionId)}
                           />
                         </td>
+                        {hasLinkedStudents && (
+                          <td className="px-5 py-3.5 whitespace-nowrap text-slate-700">
+                            {sub.studentName ? (
+                              <>{sub.studentName}<span className="ml-1 text-xs text-slate-400">{gradeLabel(sub.studentGrade)}</span></>
+                            ) : <span className="text-slate-300">—</span>}
+                          </td>
+                        )}
                         {hasPaymentField && (
                           <td className="px-5 py-3.5 whitespace-nowrap" onClick={(e) => { if (finance && sub.payment) { e.stopPropagation(); setChargeOpen(sub.payment.chargeId); } }}>
                             {sub.payment ? (
@@ -872,7 +885,11 @@ function FormSubmissionsContent() {
         onChanged={(c) => {
           fetchSubmissions();
           setDetailSubmission((d) => (d && d.payment && d.payment.chargeId === c.chargeId
-            ? { ...d, payment: { ...d.payment, status: c.status, amountPaidCents: c.amountPaidCents, amountRefundedCents: c.amountRefundedCents } }
+            ? {
+                ...d,
+                studentId: c.studentId, studentName: c.studentName, studentGrade: c.studentGrade,
+                payment: { ...d.payment, status: c.status, amountPaidCents: c.amountPaidCents, amountRefundedCents: c.amountRefundedCents },
+              }
             : d));
         }}
       />
@@ -887,6 +904,14 @@ function FormSubmissionsContent() {
                 {statusFor(detailSubmission.status)?.label || detailSubmission.status}
               </span>
             </div>
+
+            {detailSubmission.studentName && (
+              <p className="flex items-center gap-2 text-sm text-slate-700">
+                <span className="text-xs font-semibold uppercase text-slate-500">For</span>
+                <span className="font-medium text-slate-900">{detailSubmission.studentName}</span>
+                {detailSubmission.studentGrade && <span className="text-slate-500">{gradeLabel(detailSubmission.studentGrade)}</span>}
+              </p>
+            )}
 
             {detailSubmission.payment && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">

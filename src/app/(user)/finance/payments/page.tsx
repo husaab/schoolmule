@@ -206,7 +206,10 @@ function PaymentsContent() {
           </div>
           {renderBody()}
           {!loading && !error && connection?.configured && (
-            <PaymentsLedger stripeConnected={Boolean(connection.account && connection.account.status !== 'disconnected')} />
+            <PaymentsLedger
+              stripeConnected={Boolean(connection.account && connection.account.status !== 'disconnected')}
+              online={Boolean(connection.account?.canTakePayments)}
+            />
           )}
         </div>
       </main>

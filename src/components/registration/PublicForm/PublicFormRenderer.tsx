@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import DOMPurify from 'dompurify';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { PublicFormData } from '@/services/types/registration';
-import { submitPublicForm } from '@/services/registrationPublicService';
+import type { PublicFormChildren, PublicFormData } from '@/services/types/registration';
+import { getPublicFormChildren, submitPublicForm } from '@/services/registrationPublicService';
 import { formatCents, selectionTotal } from '@/lib/paymentField';
 import FormField from './FormField';
 import PaymentFieldInput from './PaymentFieldInput';
 import SuccessMessage from './SuccessMessage';
+import ChildPicker from './ChildPicker';
 
 interface Props {
   form: PublicFormData;
@@ -31,6 +32,19 @@ export default function PublicFormRenderer({ form }: Props) {
   // Set when the family chose the office, for the confirmation.
   const [owedAtOffice, setOwedAtOffice] = useState<{ totalCents: number; payPath: string } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  // A signed-in parent's children at this school, and the one it is for.
+  const [kids, setKids] = useState<PublicFormChildren['children']>([]);
+  const [studentId, setStudentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    getPublicFormChildren(form.schoolSlug, form.slug).then((r) => {
+      if (!live || !r.signedIn) return;
+      setKids(r.children);
+      if (r.children.length === 1) setStudentId(r.children[0].studentId);
+    });
+    return () => { live = false; };
+  }, [form.schoolSlug, form.slug]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, string>>();
 
@@ -50,7 +64,7 @@ export default function PublicFormRenderer({ form }: Props) {
     setError(null);
     try {
       const choice = paymentField ? { itemIds: picked, method: total > 0 ? method : 'card' as const } : null;
-      const res = await submitPublicForm(form.schoolSlug, form.slug, data, {}, choice);
+      const res = await submitPublicForm(form.schoolSlug, form.slug, data, {}, choice, studentId);
       const payment = res.data?.payment;
       if (payment && payment.method === 'card') {
         // On to Stripe's page; if Stripe couldn't open one, the family's own link offers it again.
@@ -139,6 +153,8 @@ export default function PublicFormRenderer({ form }: Props) {
           <input type="text" tabIndex={-1} autoComplete="off" {...register('url')} />
           <input type="text" tabIndex={-1} autoComplete="off" {...register('homepage')} />
         </div>
+
+        <ChildPicker childrenList={kids} value={studentId} onChange={setStudentId} />
 
         {form.fields.map((field, index) => (
           field.fieldType === 'payment' ? (

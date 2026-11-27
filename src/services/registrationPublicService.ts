@@ -1,4 +1,4 @@
-import type { PublicFormResponse, PublicPaymentChoice, PublicSubmitResponse } from './types/registration';
+import type { PublicFormChildren, PublicFormResponse, PublicPaymentChoice, PublicSubmitResponse } from './types/registration';
 import type { PublicPayment } from './types/payments';
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
@@ -22,22 +22,51 @@ export const getPublicForm = async (
   return response.json();
 };
 
+/** The signed-in person's token, if any. Public forms work without one. */
+const authToken = (): string | null =>
+  typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
 /**
- * Submit a public form (no auth required)
+ * A signed-in parent's children at the form's school, so the form can ask
+ * which child it is for. Anyone else (or a failure) gets nobody.
+ */
+export const getPublicFormChildren = async (schoolSlug: string, formSlug: string): Promise<PublicFormChildren> => {
+  const token = authToken();
+  if (!token) return { signedIn: false, children: [] };
+  try {
+    const response = await fetch(
+      `${baseURL}/registration/public/${encodeURIComponent(schoolSlug)}/${encodeURIComponent(formSlug)}/children`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!response.ok) return { signedIn: false, children: [] };
+    const body = await response.json();
+    return body.data as PublicFormChildren;
+  } catch {
+    return { signedIn: false, children: [] };
+  }
+};
+
+/**
+ * Submit a public form (no auth required). With `studentId`, a signed-in
+ * parent says which of their children it is for; the token goes with it.
  */
 export const submitPublicForm = async (
   schoolSlug: string,
   formSlug: string,
   answers: Record<string, string>,
   honeypotFields: { website?: string; url?: string; homepage?: string } = {},
-  payment: PublicPaymentChoice | null = null
+  payment: PublicPaymentChoice | null = null,
+  studentId: string | null = null
 ): Promise<PublicSubmitResponse> => {
+  const token = authToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const response = await fetch(
     `${baseURL}/registration/public/${encodeURIComponent(schoolSlug)}/${encodeURIComponent(formSlug)}/submit`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers, ...honeypotFields, ...(payment ? { payment } : {}) }),
+      headers,
+      body: JSON.stringify({ answers, ...honeypotFields, ...(payment ? { payment } : {}), ...(studentId ? { studentId } : {}) }),
     }
   );
 
