@@ -27,7 +27,8 @@ export default function MuleyHost() {
   useEffect(() => {
     const store = useMuleyStore.getState()
     store.claim(owner)
-    if (owner && !previewing) void store.loadConfig()
+    // Students never get Muley: their account isn't asked about it at all.
+    if (owner && !previewing && !owner.endsWith(':STUDENT')) void store.loadConfig()
   }, [owner, previewing])
 
   const visible = muleyVisible({ pathname, user, previewing, config })

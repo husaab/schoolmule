@@ -10,7 +10,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="Last updated 26 October 2026">
+    <LegalPage title="Privacy Policy" updated="Last updated 27 November 2026">
       <p>
         SchoolMule is school administration software used by schools to manage student
         records, attendance, grades, report cards and registration forms. This policy
@@ -151,13 +151,24 @@ export default function PrivacyPolicyPage() {
 
       <h2>AI features</h2>
       <p>
-        Two features use OpenAI&apos;s API to write text. The weekly summary parents see sends a
+        Some features use OpenAI&apos;s API to write text. The weekly summary parents see sends a
         child&apos;s name, the grades published that week, attendance counts, missing work and
         that week&apos;s teacher comments. Staff tools that draft report card comments or explain
         analytics send the student names, ratings and grades involved. Only what the feature
         needs is sent, never passwords or contact details. The summary is labelled
         as written by AI. Under OpenAI&apos;s API terms, data sent through its API is not used to
         train its models by default.
+      </p>
+      <p>
+        Muley is an assistant school staff can ask about their classes and about where things
+        are in SchoolMule, in schools that have switched it on. It answers with the asking staff
+        member&apos;s own access, and sends OpenAI their question and the class lists, marks and
+        attendance it looks up to answer it, identified by student name. It never sends
+        Ontario Education Numbers, contact details, health information or passwords, and it
+        cannot change any records. Muley&apos;s conversations are stored by SchoolMule, visible only
+        to the staff member who had them, and deleted 90 days after their last message unless
+        the school sets a different period. Requests to OpenAI are sent with storage turned off;
+        OpenAI may keep them for up to 30 days to monitor for abuse.
       </p>
 
       <h2>Service providers</h2>
@@ -171,7 +182,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Vercel</strong> — website hosting and page-view analytics.</li>
         <li><strong>Resend</strong> — transactional email.</li>
         <li><strong>Expo</strong> — delivers the app&apos;s push notifications, through Apple&apos;s and Google&apos;s notification services.</li>
-        <li><strong>OpenAI</strong> — the AI features described above.</li>
+        <li><strong>OpenAI</strong> — the AI features described above, including Muley.</li>
         <li><strong>Intuit QuickBooks</strong> — where a school connects QuickBooks Online, to show tuition balances.</li>
         <li><strong>Calendly</strong> — booking a demo from our website.</li>
         <li><strong>Google</strong> — when you choose to sign in with Google, and where a school has connected the optional Sheets integration described above.</li>
