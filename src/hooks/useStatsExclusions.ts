@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getStatsExclusions, removeStatsExclusion, saveStatsExclusion } from '@/services/classStatsExclusionService'
 import type { StatsExclusion, StatsExclusionInput } from '@/services/types/classStatsExclusion'
+import { onDataChange, statsExclusionsTopic } from '@/lib/muley/dataChanges'
 
 /**
  * Given the student's current exclusion, what to save: the new exclusion,
@@ -57,6 +58,15 @@ export function useStatsExclusions(classId: string | null | undefined): StatsExc
   useEffect(() => {
     void reload()
   }, [reload])
+
+  // Changed through Muley, in the panel beside the page: read the list again.
+  useEffect(() => {
+    if (!classId) return
+    const topic = statsExclusionsTopic(classId)
+    return onDataChange((topics) => {
+      if (topics.includes(topic)) void reload()
+    })
+  }, [classId, reload])
 
   const update = useCallback(
     (studentId: string, decide: StatsExclusionDecision) => {

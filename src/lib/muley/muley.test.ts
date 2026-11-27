@@ -269,6 +269,7 @@ describe('the page context', () => {
     // Where the school lets Muley prepare changes, it offers one.
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`), true)).toContain('Mark everyone present today')
     expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
+    expect(startersFor(pageContextFor(`/classes/${CLASS}`), true)).toContain('Leave a student out of the class average')
   })
 })
 
