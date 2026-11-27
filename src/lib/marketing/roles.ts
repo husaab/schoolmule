@@ -190,7 +190,7 @@ export const ROLE_PAGES: RolePageData[] = [
       },
       {
         q: 'Can I use it on my phone?',
-        a: 'Yes. SchoolMule works in your phone’s browser.',
+        a: 'Yes. SchoolMule works in your phone’s browser, and you can sign in to the SchoolMule app with the same account.',
       },
       {
         q: 'Will it write report card comments for me?',
@@ -207,7 +207,7 @@ export const ROLE_PAGES: RolePageData[] = [
     lead: 'Grades with the teacher’s feedback, a short summary of the week, and a direct line to the teacher, from any phone.',
     metaTitle: 'Parent Portal for Independent Schools',
     metaDescription:
-      'Parents see their child’s grades with the teacher’s feedback, a short summary of the week and the school calendar, and can ask the teacher about a specific grade. No app to install.',
+      'Parents see their child’s grades with the teacher’s feedback, a short summary of the week and the school calendar, and can ask the teacher about a specific grade. No app needed.',
     chapter: 'parents',
     existingUsers: true,
     jobs: [
@@ -233,7 +233,7 @@ export const ROLE_PAGES: RolePageData[] = [
       },
       {
         title: 'Every child, on any phone',
-        text: 'Announcements, the school calendar, attendance and report cards for each of your children. No app to install: emails sign you in with one tap.',
+        text: 'Announcements, the school calendar, attendance and report cards for each of your children. No app needed: emails sign you in with one tap.',
         src: '/marketing/screens/parent-phone.jpg',
         alt: 'The parent overview on a phone, with a switch between children',
         phone: true,
@@ -242,7 +242,7 @@ export const ROLE_PAGES: RolePageData[] = [
     faq: [
       {
         q: 'Do I need to download an app?',
-        a: 'No. SchoolMule works in any browser. When something new is published you get an email, and the link in it signs you in with one tap.',
+        a: 'No. SchoolMule works in any browser. When something new is published you get an email, and the link in it signs you in with one tap. If you’d rather use an app, sign in to the SchoolMule app with the same account.',
       },
       {
         q: 'How do I get an account?',
@@ -298,7 +298,7 @@ export const ROLE_PAGES: RolePageData[] = [
       },
       {
         title: 'On a phone too',
-        text: 'Everything works in a phone’s browser. Students sign in with Google, and young students can use a printed QR card.',
+        text: 'Everything works in a phone’s browser or the SchoolMule app. Students sign in with Google, and young students can use a printed QR card.',
         src: '/marketing/screens/student-phone.jpg',
         alt: "Adam's student home on a phone",
         phone: true,

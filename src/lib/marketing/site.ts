@@ -15,6 +15,12 @@ export const FOUNDER = {
   photo: '/marketing/founder.jpg' as string | null,
 }
 
+// The app's store listings (components/marketing/StoreBadges). The App Store
+// link has no country code, so Apple opens each visitor's own storefront.
+// Google Play lists the app in Canada and the US only.
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6825004676'
+export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.schoolmule.app'
+
 // The only usage claim the founder has approved (2026-10-25). No counts, no
 // school names, no quotes until a school agrees to be named.
 export const USAGE_CLAIM = 'In daily use at Ontario schools'
@@ -95,13 +101,13 @@ export const MARKETING_PAGES = [
 // only trusts lastmod when it is accurate, so bump a page's date when you
 // change what it says (not for styling), and add new pages here.
 export const PAGE_UPDATED: Record<(typeof MARKETING_PAGES)[number] | '/privacy' | '/terms', string> = {
-  '/': '2026-11-06',
+  '/': '2026-11-27',
   '/product': '2026-10-26',
   '/for/school-leaders': '2026-10-26',
-  '/for/teachers': '2026-10-26',
-  '/for/parents': '2026-10-26',
-  '/for/students': '2026-10-26',
-  '/for/islamic-schools': '2026-10-26',
+  '/for/teachers': '2026-11-27',
+  '/for/parents': '2026-11-27',
+  '/for/students': '2026-11-27',
+  '/for/islamic-schools': '2026-11-27',
   '/about': '2026-10-26',
   '/demo': '2026-10-26',
   '/contact': '2026-10-25',

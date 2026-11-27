@@ -53,7 +53,7 @@ const VIEWS: View[] = [
       'A short summary of the week',
       'Grades with the teacher’s feedback',
       'Ask the teacher about a specific grade',
-      'No app to install',
+      'No app needed',
     ],
     href: '/for/parents',
     linkLabel: 'How it works for parents',

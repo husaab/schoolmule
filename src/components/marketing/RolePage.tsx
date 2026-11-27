@@ -7,6 +7,7 @@ import FilmPlayer from './film/FilmPlayer'
 import WatchFilmButton from './film/WatchFilmButton'
 import { PhoneFrame, SampleData, ScreenFrame, Tray } from './frames'
 import JsonLd from './JsonLd'
+import StoreBadges from './StoreBadges'
 import { Accent, Container, cx, H1, H2, Lead, Pill, Section } from './ui'
 import { SAME_MOMENT, type RolePageData } from '@/lib/marketing/roles'
 import { chapter, VIEW_COLOURS, type ViewKey } from '@/lib/marketing/site'
@@ -16,18 +17,28 @@ import { breadcrumbSchema, filmSchema } from '@/lib/marketing/seo'
 // the film, the jobs it does, the same moment from the other three views,
 // and the questions that role asks.
 
-function ExistingUsers({ view }: { view: ViewKey }) {
+// The way in for people whose school already uses SchoolMule: the website,
+// or the app.
+function ExistingUsers({ view, slug }: { view: ViewKey; slug: string }) {
   return (
-    <div className={cx('rounded-2xl px-5 py-4 ring-1 ring-ink/[0.06] sm:flex sm:items-center sm:justify-between sm:gap-6', VIEW_COLOURS[view].wash)}>
-      <p className="font-medium text-ink">Your school already uses SchoolMule?</p>
-      <p className="mt-1 flex gap-5 sm:mt-0">
-        <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-          Log in
-        </Link>
-        <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-          Sign up
-        </Link>
-      </p>
+    <div
+      className={cx(
+        'flex flex-wrap items-center justify-between gap-x-8 gap-y-4 rounded-2xl px-5 py-4 ring-1 ring-ink/[0.06]',
+        VIEW_COLOURS[view].wash,
+      )}
+    >
+      <div className="sm:flex sm:items-center sm:gap-6">
+        <p className="font-medium text-ink">Your school already uses SchoolMule?</p>
+        <p className="mt-1 flex gap-5 sm:mt-0">
+          <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+            Log in
+          </Link>
+          <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+            Sign up
+          </Link>
+        </p>
+      </div>
+      <StoreBadges from={`${slug}-existing`} />
     </div>
   )
 }
@@ -81,7 +92,7 @@ export default function RolePage({ data }: { data: RolePageData }) {
 
       {data.existingUsers && (
         <Container className="pb-4">
-          <ExistingUsers view={data.view} />
+          <ExistingUsers view={data.view} slug={data.slug} />
         </Container>
       )}
 

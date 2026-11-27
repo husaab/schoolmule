@@ -939,6 +939,11 @@ body {
   .mk-rise, .mk-lift, .mk-push, .mk-progress { animation: none; }
 }
 
+/* Apple allows one App Store badge per layout: a page that shows the store
+   badges in its own content (StoreBadges placement="page") hides the footer's.
+   The credit lines stay in the footer either way. */
+.mk:has(main [data-store-badges="page"]) .mk-footer-app { display: none; }
+
 /* FAQ disclosure marker */
 .mk-faq summary::-webkit-details-marker { display: none; }
 .mk-faq summary { list-style: none; }

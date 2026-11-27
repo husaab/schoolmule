@@ -133,7 +133,7 @@ export default function IslamicSchoolsPage() {
           <div className="grid gap-6">
             <H2 id="isl-parents-title">Parents see their own child, and nothing else.</H2>
             <Lead>
-              Grades once you publish them, attendance, announcements and the school calendar, on any phone, with no app to install.
+              Grades once you publish them, attendance, announcements and the school calendar, on any phone, with no app needed.
             </Lead>
             <TextLink href="/for/parents">How it works for parents</TextLink>
           </div>

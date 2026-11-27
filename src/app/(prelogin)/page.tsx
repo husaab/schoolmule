@@ -11,6 +11,7 @@ import FounderNote from '@/components/marketing/FounderNote'
 import JsonLd from '@/components/marketing/JsonLd'
 import QuizStory from '@/components/marketing/QuizStory'
 import ReportSamples from '@/components/marketing/ReportSamples'
+import StoreBadges from '@/components/marketing/StoreBadges'
 import ViewTabs from '@/components/marketing/ViewTabs'
 import WatchFilmButton from '@/components/marketing/film/WatchFilmButton'
 import { PhoneFrame, SampleData, Tray } from '@/components/marketing/frames'
@@ -35,7 +36,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'Do parents need to download an app?',
-    a: 'No. Families get an email when something new is published, and the link in it signs them in with one tap. SchoolMule works in any browser, on a phone or a computer.',
+    a: 'No. Families get an email when something new is published, and the link in it signs them in with one tap. SchoolMule works in any browser, on a phone or a computer, and families who’d like an app can sign in to the SchoolMule app with the same account.',
   },
   {
     q: 'Can it make our report card?',
@@ -152,17 +153,20 @@ export default function HomePage() {
             <Lead>Everyone works from the same records, so the grade a teacher enters is the grade a parent sees at home.</Lead>
           </div>
           <ViewTabs />
-          <p className="mt-10 text-slate-600">
-            Your school already uses SchoolMule?{' '}
-            <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-              Log in
-            </Link>{' '}
-            or{' '}
-            <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
-              sign up
-            </Link>
-            .
-          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <p className="text-slate-600">
+              Your school already uses SchoolMule?{' '}
+              <Link href="/login" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+                Log in
+              </Link>
+              ,{' '}
+              <Link href="/signup" className="font-semibold text-brand-ink underline-offset-4 hover:underline">
+                sign up
+              </Link>{' '}
+              or get the app.
+            </p>
+            <StoreBadges from="home-views" />
+          </div>
         </Container>
       </Section>
 
@@ -234,7 +238,7 @@ export default function HomePage() {
             </div>
             <dl className="grid gap-6 sm:grid-cols-2">
               {[
-                ['No app to install', 'Families get an email when something is new, and sign in from it with one tap.'],
+                ['No app needed', 'Families get an email when something is new, and sign in from it with one tap.'],
                 ['Only their own child', 'And only the grades you’ve chosen to publish.'],
                 ['The week, in a few lines', 'A short summary of how their child is doing, written by AI and labelled that way.'],
                 ['Questions don’t get lost', 'If a parent’s message goes unanswered, SchoolMule can remind the teacher.'],
