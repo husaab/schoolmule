@@ -76,6 +76,8 @@ export const useUserStore = create<UserStore>(
                 import('@/store/useMessagingStore').then((m) => m.useMessagingStore.getState().clear()).catch(() => {})
                 // And the family's or teacher's parent–teacher meetings.
                 import('@/store/useMeetingsStore').then((m) => m.useMeetingsStore.getState().clear()).catch(() => {})
+                // Muley's conversation and draft are this person's only.
+                import('@/store/useMuleyStore').then((m) => m.useMuleyStore.getState().reset()).catch(() => {})
                 // So do the remembered page filters (every sign-out path ends here).
                 clearFilterMemory(getFilterMemoryStorage())
                 // And a student's typed words an assignment refused to save (kept in this tab for them to copy).

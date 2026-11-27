@@ -1,5 +1,6 @@
 'use client'
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AuthGuard from '@/components/AuthGuard';
 import Notification from '@/components/shared/notification';
 import ImpersonationBar from '@/components/impersonation/ImpersonationBar';
@@ -7,6 +8,9 @@ import { Analytics } from "@vercel/analytics/next"
 import ClientErrorReporter from '@/components/observe/ClientErrorReporter';
 import StudentProfileHost from '@/components/student/profile/StudentProfileHost';
 import TourHost from '@/components/tours/TourHost';
+
+// Muley, the assistant: loaded after the page, so it adds nothing to a page's first load.
+const MuleyHost = dynamic(() => import('@/components/muley/MuleyHost'), { ssr: false });
 
 // Everything inside the app (signed-in pages, sign-in and sign-up): the auth
 // guard and the app-wide overlays. app/(user)/layout.tsx wraps it so the
@@ -29,6 +33,8 @@ export default function UserShell({
         </Suspense>
         {/* Guided tours: the New card, spotlight steps and the paused pill. */}
         <TourHost />
+        {/* Muley: the button at the bottom right and its panel (hidden unless switched on for the school). */}
+        <MuleyHost />
       </AuthGuard>
       <ImpersonationBar />
     </>
