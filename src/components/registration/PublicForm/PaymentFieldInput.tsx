@@ -1,11 +1,12 @@
 'use client';
 
 // The payment field as a family fills it in: the items (required ones ticked
-// and fixed, optional ones to tick), the total, and how they will pay. The
-// server works out the real total from the form's own prices.
+// and fixed, optional ones to tick), the total with any tax, and how they
+// will pay. The server works out the real total from the form's own prices.
 
 import type { FormField } from '@/services/types/registration';
-import { formatCents, selectionTotal } from '@/lib/paymentField';
+import { formatCents } from '@/lib/paymentField';
+import { priceWithTax, taxBreakdown } from '@/lib/paymentTax';
 import { LockClosedIcon } from '@heroicons/react/24/outline';
 
 interface Props {
@@ -23,7 +24,9 @@ interface Props {
 export default function PaymentFieldInput({ field, index, picked, onPick, method, onMethod, online, schoolName }: Props) {
   const config = field.payment;
   if (!config) return null;
-  const total = selectionTotal(config, picked);
+  const price = priceWithTax(config, picked);
+  const total = price.totalCents;
+  const tax = taxBreakdown(total, price.taxes);
   const allowOffline = config.allowOffline;
   const noWayToPay = total > 0 && !online && !allowOffline;
 
@@ -57,10 +60,25 @@ export default function PaymentFieldInput({ field, index, picked, onPick, method
         })}
       </ul>
 
-      <div className="mt-4 flex items-baseline justify-between border-t border-slate-100 pt-3">
+      {tax.addedRows.length > 0 && (
+        <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-600">Subtotal</span>
+            <span className="tabular-nums text-slate-900">{formatCents(tax.subtotalCents)}</span>
+          </div>
+          {tax.addedRows.map((row, i) => (
+            <div key={`${row.label}-${i}`} className="flex justify-between">
+              <span className="text-slate-600">{row.label}</span>
+              <span className="tabular-nums text-slate-900">{formatCents(row.cents)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={`flex items-baseline justify-between border-t border-slate-100 pt-3 ${tax.addedRows.length > 0 ? 'mt-3' : 'mt-4'}`}>
         <span className="text-sm font-semibold text-slate-900">Total</span>
         <span className="text-lg font-bold text-slate-900 tabular-nums">{formatCents(total)}</span>
       </div>
+      {tax.includedNote && <p className="mt-1 text-right text-xs text-slate-500">{tax.includedNote}</p>}
 
       {total > 0 && (online || allowOffline) && (
         <fieldset className="mt-4 space-y-2">
@@ -83,7 +101,7 @@ export default function PaymentFieldInput({ field, index, picked, onPick, method
       {total > 0 && method === 'card' && online && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-slate-500">
           <LockClosedIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          You’ll pay on a secure Stripe page. {schoolName} will appear on your card statement.
+          You’ll pay securely through Stripe. {schoolName} will appear on your card statement.
         </p>
       )}
       {noWayToPay && (

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { FormField, FieldType } from '@/services/types/registration';
 import type { PaymentFieldConfig } from '@/services/types/registration';
+import type { LiveTaxRate } from '@/services/types/payments';
 import Modal from '@/components/shared/modal';
 import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import PaymentFieldEditor from './PaymentFieldEditor';
@@ -15,6 +16,8 @@ interface Props {
   onSave: (field: FormField) => void;
   /** Whether the school can take card payments now (for a payment field); null while unknown. */
   paymentsOnline?: boolean | null;
+  /** The school's live tax rates (for a payment field); null while unknown. */
+  taxRates?: LiveTaxRate[] | null;
 }
 
 const fieldTypeLabels: Record<FieldType, string> = {
@@ -28,24 +31,18 @@ const fieldTypeLabels: Record<FieldType, string> = {
   payment: 'Payment',
 };
 
-export default function FieldEditor({ field, isOpen, onClose, onSave, paymentsOnline = null }: Props) {
-  const [label, setLabel] = useState('');
-  const [placeholder, setPlaceholder] = useState('');
-  const [isRequired, setIsRequired] = useState(false);
-  const [options, setOptions] = useState<string[]>([]);
-  const [payment, setPayment] = useState<PaymentFieldConfig>(defaultPaymentConfig);
+export default function FieldEditor(props: Props) {
+  if (!props.field) return null;
+  // A fresh editor for each field, so its state starts from the field itself.
+  return <FieldEditorForm key={props.field.fieldId} {...props} field={props.field} />;
+}
 
-  useEffect(() => {
-    if (field) {
-      setLabel(field.label);
-      setPlaceholder(field.placeholder || '');
-      setIsRequired(field.isRequired);
-      setOptions(field.options || []);
-      setPayment(field.payment ?? defaultPaymentConfig());
-    }
-  }, [field]);
-
-  if (!field) return null;
+function FieldEditorForm({ field, isOpen, onClose, onSave, paymentsOnline = null, taxRates = null }: Props & { field: FormField }) {
+  const [label, setLabel] = useState(field.label);
+  const [placeholder, setPlaceholder] = useState(field.placeholder || '');
+  const [isRequired, setIsRequired] = useState(field.isRequired);
+  const [options, setOptions] = useState<string[]>(field.options || []);
+  const [payment, setPayment] = useState<PaymentFieldConfig>(() => field.payment ?? defaultPaymentConfig());
 
   const hasOptions = field.fieldType === 'select' || field.fieldType === 'radio';
   const isPayment = field.fieldType === 'payment';
@@ -130,7 +127,7 @@ export default function FieldEditor({ field, isOpen, onClose, onSave, paymentsOn
         </div>
         )}
 
-        {isPayment && <PaymentFieldEditor config={payment} onChange={setPayment} online={paymentsOnline} />}
+        {isPayment && <PaymentFieldEditor config={payment} onChange={setPayment} online={paymentsOnline} taxRates={taxRates} />}
 
         {/* Options (for select/radio) */}
         {hasOptions && (

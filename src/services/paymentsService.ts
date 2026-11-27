@@ -9,6 +9,7 @@ import type {
   PaymentRequestDetail,
   PaymentRequestInput,
   PaymentRequestTarget,
+  PaymentSettings,
   PaymentsConnection,
   PaymentsOverview,
   PaymentsRoster,
@@ -58,6 +59,7 @@ const listQuery = (filters: ChargeListFilters = {}) => {
   if (filters.requestId) params.set("requestId", filters.requestId);
   if (filters.studentId) params.set("studentId", filters.studentId);
   if (filters.source) params.set("source", filters.source);
+  if (filters.tax) params.set("tax", filters.tax);
   if (filters.q) params.set("q", filters.q);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
@@ -121,6 +123,27 @@ export const searchPaymentStudents = (q: string) =>
 /** The Overview tab in one call: tiles, months, each form and request, the latest activity. */
 export const getPaymentsOverview = () =>
   apiClient<ApiEnvelope<PaymentsOverview>>(`${BASE}/overview`);
+
+// ─── Settings: the school's tax number and tax rates ────────────────
+// Every call answers with the whole settings, as GET gives them.
+
+export const getPaymentSettings = () =>
+  apiClient<ApiEnvelope<PaymentSettings>>(`${BASE}/settings`);
+
+/** Empty clears it. */
+export const updatePaymentSettings = (body: { taxNumber: string | null }) =>
+  apiClient<ApiEnvelope<PaymentSettings>, typeof body>(`${BASE}/settings`, { method: "PUT", body });
+
+/** `percent` as typed, e.g. "13" or "9.975". */
+export const addTaxRate = (body: { name: string; percent: string }) =>
+  apiClient<ApiEnvelope<PaymentSettings>, typeof body>(`${BASE}/tax-rates`, { method: "POST", body });
+
+export const updateTaxRate = (taxRateId: string, body: { name?: string; percent?: string }) =>
+  apiClient<ApiEnvelope<PaymentSettings>, typeof body>(`${BASE}/tax-rates/${encodeURIComponent(taxRateId)}`, { method: "PATCH", body });
+
+/** Removes a rate from the pickers. Forms and requests that use it keep it. */
+export const removeTaxRate = (taxRateId: string) =>
+  apiClient<ApiEnvelope<PaymentSettings>>(`${BASE}/tax-rates/${encodeURIComponent(taxRateId)}`, { method: "DELETE" });
 
 // ─── Payment requests ───────────────────────────────────────────────
 

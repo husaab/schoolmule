@@ -5,7 +5,7 @@
 // payment, waive what is left, refund card money, email the family a link to
 // pay, take back an entry recorded by mistake, or say which child a form
 // payment is for. Every action asks first and keeps the modal open on an
-// error.
+// error. Under the items: the tax, as the family's page shows it.
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { BanknotesIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
@@ -18,6 +18,7 @@ import {
 import type { Charge, ChargePayment, OfflineKind, StudentMatch } from '@/services/types/payments';
 import { formatDay, gradeLabel } from '@/lib/paymentRequests';
 import { centsToInput, formatCents, isOpenDispute, paidWith, parseDollars, paymentKindLabel } from '@/lib/paymentField';
+import { taxBreakdown } from '@/lib/paymentTax';
 import { errorMessage } from '@/components/finance/format';
 import PaymentChip from './PaymentChip';
 
@@ -26,6 +27,8 @@ interface Props {
   onClose: () => void;
   /** After any change, with the charge as it now stands. */
   onChanged?: (charge: Charge) => void;
+  /** The school (or the form) uses tax, so a charge without any says "Untaxed". */
+  taxContext?: boolean;
 }
 
 type Panel = null | 'offline' | 'waive' | 'refund' | 'link' | 'student' | { void: ChargePayment };
@@ -38,7 +41,7 @@ function historyLine(p: ChargePayment): string {
   return paymentKindLabel(p.kind);
 }
 
-export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Props) {
+export default function ChargeDetailModal({ chargeId, onClose, onChanged, taxContext = false }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
   const [charge, setCharge] = useState<Charge | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -133,6 +136,7 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
   const refundable = charge?.refundableCents ?? 0;
 
   const isRequest = charge?.sourceType === 'request';
+  const tax = charge ? taxBreakdown(charge.amountCents, charge.taxSummary) : null;
   // Who hears about it: whoever gave an email, otherwise (a request) the student's guardians.
   const emailTo = charge?.payerEmail || (isRequest ? 'the student’s guardians' : null);
   const linkStudent = (studentId: string | null, name: string | null) =>
@@ -214,11 +218,34 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
               <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
                 {(charge.lines || []).map((l) => (
                   <li key={l.lineId} className="flex justify-between px-3 py-2 text-sm">
-                    <span className="text-slate-700">{l.label}</span>
+                    <span className="text-slate-700">
+                      {l.label}
+                      {tax?.hasTax && l.taxCents > 0 && l.taxName && <span className="ml-1.5 text-xs text-slate-400">{l.taxName}</span>}
+                    </span>
                     <span className="tabular-nums text-slate-900">{formatCents(l.amountCents)}</span>
                   </li>
                 ))}
+                {tax && tax.addedRows.length > 0 && (
+                  <>
+                    <li className="flex justify-between px-3 py-2 text-sm">
+                      <span className="text-slate-500">Subtotal</span>
+                      <span className="tabular-nums text-slate-700">{formatCents(tax.subtotalCents)}</span>
+                    </li>
+                    {tax.addedRows.map((row, i) => (
+                      <li key={`${row.label}-${i}`} className="flex justify-between px-3 py-2 text-sm">
+                        <span className="text-slate-500">{row.label}</span>
+                        <span className="tabular-nums text-slate-700">{formatCents(row.cents)}</span>
+                      </li>
+                    ))}
+                    <li className="flex justify-between px-3 py-2 text-sm font-semibold text-slate-900">
+                      <span>Total</span>
+                      <span className="tabular-nums">{formatCents(tax.totalCents)}</span>
+                    </li>
+                  </>
+                )}
               </ul>
+              {tax?.includedNote && <p className="mt-1 text-xs text-slate-500">{tax.includedNote}</p>}
+              {tax && !tax.hasTax && taxContext && <p className="mt-1 text-xs text-slate-500">Untaxed</p>}
               {charge.accountingCode && <p className="mt-1 text-xs text-slate-500">Accounting code {charge.accountingCode}</p>}
             </section>
 

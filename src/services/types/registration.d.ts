@@ -5,13 +5,32 @@ export type FieldType = 'text' | 'email' | 'phone' | 'date' | 'select' | 'radio'
 
 // ─── Payment field ──────────────────────────────────────────────────
 
+/** How a payment's tax is applied: added on top of the prices, or already in them. */
+export type TaxMode = 'added' | 'included';
+
+/**
+ * The tax rate on one item, as the server describes it on every read.
+ * `rateMilli` is thousandths of a percent: 13% is 13000, 9.975% is 9975.
+ */
+export interface ItemTax {
+  name: string;
+  rateMilli: number;
+  /** Staff reads only: the school has since removed the rate (it still applies here). */
+  archived?: boolean;
+}
+
 /** One priced item on a payment field. Prices are whole cents. */
 export interface PaymentItem {
   id: string;
   label: string;
+  /** The price as typed: before tax when tax is added, with tax in it when included. */
   amountCents: number;
   /** Always charged; an optional item is only charged when the family ticks it. */
   required: boolean;
+  /** Staff reads and saves: one of the school's tax rates, or null for no tax. Families never get it. */
+  taxRateId?: string | null;
+  /** The rate's name and size, or null for no tax. The server ignores it on a save. */
+  tax?: ItemTax | null;
 }
 
 export interface PaymentFieldConfig {
@@ -21,6 +40,8 @@ export interface PaymentFieldConfig {
   /** For the school's books; never shown to families. */
   accountingCode?: string | null;
   currency?: string;
+  /** One mode for the whole field. Missing means 'added'. */
+  taxMode?: TaxMode;
 }
 
 /** Where a response's payment stands. Staff without `finance` see a waived fee as 'settled'. */
@@ -107,6 +128,8 @@ export interface FormSubmission {
   studentGrade?: string | null;
   /** Null when the response owes nothing. */
   payment?: SubmissionPayment | null;
+  /** Set when the office entered this response for a family (Record a payment); the staff member's name. */
+  enteredByName?: string | null;
 }
 
 // Whether to show all submissions, only those already imported, or only those
@@ -187,8 +210,11 @@ export interface PublicSubmitResponse {
   message: string;
   data: {
     submissionId: string;
-    /** Null when nothing is owed. `checkoutUrl` is Stripe's page; null for paying at the office, or when Stripe couldn't open one (use payPath). */
-    payment?: { token: string; method: 'card' | 'offline'; totalCents: number; payPath: string; checkoutUrl: string | null } | null;
+    /**
+     * Null when nothing is owed. `checkoutUrl` is Stripe's page; null for paying at the office, or when Stripe couldn't open one (use payPath).
+     * `totalCents` is what the family owes, with any added tax; `taxCents` is all the tax in it.
+     */
+    payment?: { token: string; method: 'card' | 'offline'; totalCents: number; taxCents?: number; payPath: string; checkoutUrl: string | null } | null;
   };
 }
 

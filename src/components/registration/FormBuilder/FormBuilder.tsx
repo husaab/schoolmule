@@ -18,6 +18,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import type { FormField, FieldType, RegistrationFormWithFields } from '@/services/types/registration';
+import type { LiveTaxRate } from '@/services/types/payments';
 import FieldCard from './FieldCard';
 import FieldEditor from './FieldEditor';
 import FieldTypeSelector from './FieldTypeSelector';
@@ -59,15 +60,19 @@ export default function FormBuilder({ form, onSaved }: Props) {
   // Save state
   const [saving, setSaving] = useState(false);
 
-  // Whether the school can take card payments (for the payment field); null until known.
+  // Whether the school can take card payments, and its tax rates (for the payment field); null until known.
   const [paymentsOnline, setPaymentsOnline] = useState<boolean | null>(null);
+  const [taxRates, setTaxRates] = useState<LiveTaxRate[] | null>(null);
   const hasPayment = fields.some((f) => f.fieldType === 'payment');
   const hasEmail = fields.some((f) => f.fieldType === 'email');
   const paymentField = fields.find((f) => f.fieldType === 'payment');
   useEffect(() => {
     if (!hasPayment || paymentsOnline !== null) return;
     registrationService.getPaymentAvailability()
-      .then((res) => setPaymentsOnline(res.data.online))
+      .then((res) => {
+        setPaymentsOnline(res.data.online);
+        setTaxRates(res.data.taxRates ?? null);
+      })
       .catch(() => setPaymentsOnline(null));
   }, [hasPayment, paymentsOnline]);
 
@@ -464,6 +469,7 @@ export default function FormBuilder({ form, onSaved }: Props) {
         }}
         onSave={saveField}
         paymentsOnline={paymentsOnline}
+        taxRates={taxRates}
       />
     </div>
   );
