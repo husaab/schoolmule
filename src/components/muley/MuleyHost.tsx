@@ -25,17 +25,29 @@ export default function MuleyHost() {
   const owner = hydrated && user.id && user.role ? `${user.id}:${user.role}` : null
 
   useEffect(() => {
+    // Until the signed-in person is read back from storage, there is no one to
+    // claim the panel for: claiming "nobody" then would wipe it after a reload.
+    if (!hydrated) return
     const store = useMuleyStore.getState()
     store.claim(owner)
     // Students never get Muley: their account isn't asked about it at all.
     if (owner && !previewing && !owner.endsWith(':STUDENT')) void store.loadConfig()
-  }, [owner, previewing])
+  }, [hydrated, owner, previewing])
 
   const visible = muleyVisible({ pathname, user, previewing, config })
 
+  // Close it where it doesn't belong (a sign-in page, switched off). Before
+  // the server has answered, it isn't known yet, so a reload keeps it open.
   useEffect(() => {
-    if (!visible && open) useMuleyStore.getState().setOpen(false)
-  }, [visible, open])
+    if (open && !visible && config.status === 'ready') useMuleyStore.getState().setOpen(false)
+  }, [visible, open, config.status])
+
+  // Open when the page was reloaded: bring the conversation back once Muley shows.
+  useEffect(() => {
+    if (!visible) return
+    const store = useMuleyStore.getState()
+    if (store.open) store.setOpen(true)
+  }, [visible])
 
   if (!visible) return null
 

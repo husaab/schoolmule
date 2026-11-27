@@ -68,6 +68,19 @@ export function savedFromEntries(entries: readonly AttendanceEntry[]): SavedAtte
   return saved
 }
 
+/**
+ * The marks to show once the day was saved somewhere else (through Muley,
+ * beside the roll): what is saved now, with every change the person has made
+ * on screen and not saved yet kept as they made it.
+ */
+export function withSavedElsewhere(marks: AttendanceMarks, saved: SavedAttendance, fresh: SavedAttendance): AttendanceMarks {
+  const next: AttendanceMarks = { ...fresh }
+  for (const [studentId, status] of Object.entries(marks)) {
+    if ((status ?? null) !== (saved[studentId] ?? null)) next[studentId] = status ?? null
+  }
+  return next
+}
+
 /** The saved state once `marks` has been stored: every mark that is set. */
 export function savedFrom(marks: AttendanceMarks): SavedAttendance {
   const saved: SavedAttendance = {}

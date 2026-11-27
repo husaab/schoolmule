@@ -93,6 +93,12 @@ School Mule is a comprehensive school management system with separate frontend a
 ### AI model
 - Every AI feature names its model in one helper per repo: `src/lib/server/openaiChat.ts` (web routes) and `schoolmule-backend/services/openaiChat.js`. Default `gpt-6-luna`; `OPENAI_MODEL` overrides it.
 
+### Muley, the assistant (2026-11-27)
+- **Backend** (`schoolmule-backend/services/assistant/`): an agent loop over OpenAI's Responses API behind `POST /api/assistant/turns`, streamed as JSON lines. Tools call the app's own routes with the person's token (`tools/dispatcher.js`), so Muley can only do what the person could; the model sees short refs (`c1`, `s2`), never ids, and no education numbers or contact details.
+- **On or off**: one `ai_assistant_settings` row per school (no row means off; per role; `allow_writes` lets it prepare changes). `ASSISTANT_ENABLED=false` switches it off everywhere. The platform owner sets a school with `PUT /api/assistant/platform/settings/:school`.
+- **Changes**: a tool only *prepares* a change (`assistant_actions`, status `pending`) and shows a Now/New card; nothing is written until the person presses Save (`POST /assistant/actions/:id/apply` with the preview's hash). Save re-reads the data and refuses with the students that changed since the preview (409 `STALE`, `data.conflicts`); Undo works for 14 days. Kinds live in `services/assistant/actions/kinds.js` (class attendance, scores).
+- **Web**: `components/muley/` (launcher, panel, `MuleyChangeCard`), `store/useMuleyStore.ts`, `lib/muley/` (stream reducer, page context). After a Save or Undo the store announces topics (`lib/muley/dataChanges.ts`); the class attendance roll and the gradebook reload when theirs is named. A new kind of change needs its page to listen for its topic.
+
 ## Custom Types (Enums)
 
 - **school**: Enum for different schools

@@ -8,7 +8,7 @@ import apiClient, { handleSessionFailure } from './apiClient'
 import { getToken } from './authService'
 import { useSchoolYearStore } from '@/store/useSchoolYearStore'
 import { createNdjsonParser } from '@/lib/muley/ndjson'
-import type { ShownMessage, StreamEvent } from '@/lib/muley/types'
+import type { ProposedAction, ShownMessage, StreamEvent } from '@/lib/muley/types'
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL
 
@@ -22,7 +22,7 @@ export type MuleySettings = {
 }
 
 export type ConversationStub = { id: string; title: string | null; createdAt: string; lastMessageAt: string }
-export type StoredConversation = { id: string; title: string | null; messages: ShownMessage[] }
+export type StoredConversation = { id: string; title: string | null; messages: ShownMessage[]; actions?: ProposedAction[] }
 
 export type TurnBody = {
   message: string
@@ -117,3 +117,29 @@ export const renameConversation = (id: string, title: string) =>
 
 export const deleteConversation = (id: string) =>
   apiClient(`/assistant/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+// A prepared change. A refusal is an ApiError whose `data` says more: the
+// students whose values moved since the preview (`conflicts`), or the change
+// as it now stands (`action`).
+const actionPath = (id: string, step: string) => `/assistant/actions/${encodeURIComponent(id)}/${step}`
+
+/**
+ * Save a change. `hash` is the one the preview came with; `key` is the same
+ * for every try of one press, so a retry after a dropped connection can't
+ * save twice.
+ */
+export const applyAction = async (id: string, hash: string, key: string): Promise<ProposedAction> =>
+  (await apiClient<{ status: string; data: ProposedAction }>(actionPath(id, 'apply'), {
+    method: 'POST',
+    body: { expectedHash: hash },
+    headers: { 'Idempotency-Key': key },
+  })).data
+
+export const undoAction = async (id: string, key: string): Promise<ProposedAction> =>
+  (await apiClient<{ status: string; data: ProposedAction }>(actionPath(id, 'undo'), {
+    method: 'POST',
+    headers: { 'Idempotency-Key': key },
+  })).data
+
+export const dismissAction = async (id: string): Promise<ProposedAction> =>
+  (await apiClient<{ status: string; data: ProposedAction }>(actionPath(id, 'dismiss'), { method: 'POST' })).data

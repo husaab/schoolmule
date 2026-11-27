@@ -54,17 +54,20 @@ const KIND_LABEL: Record<PageKind, string | null> = {
 /** "On this page: …" before the server has named the class, or null for a page with nothing to say. */
 export const pageLabel = (context: PageContext): string | null => KIND_LABEL[context.kind]
 
-/** A few things to ask, chosen for the page. Read-only: Muley can't change anything yet. */
-export function startersFor(context: PageContext): string[] {
+/** A few things to ask, chosen for the page. `writes`: the school lets Muley prepare changes to save. */
+export function startersFor(context: PageContext, writes = false): string[] {
   switch (context.kind) {
     case 'gradebook':
-      return context.classId
-        ? ['Who has missing work in this class?', 'How did the class do on the last assessment?', 'How do I leave a student out of the class average?']
-        : ['Which of my classes have missing work?', 'How do I publish grades to parents?']
+      if (!context.classId) return ['Which of my classes have missing work?', 'How do I publish grades to parents?']
+      return writes
+        ? ['Who has missing work in this class?', 'Enter marks for the last assessment', 'How do I leave a student out of the class average?']
+        : ['Who has missing work in this class?', 'How did the class do on the last assessment?', 'How do I leave a student out of the class average?']
     case 'class':
       return ['Who is in this class?', 'Who has missing work in this class?', 'Where are this class\'s settings?']
     case 'class-attendance':
-      return ['Who was absent today?', 'Who is still unmarked today?', 'How do I take attendance?']
+      return writes
+        ? ['Mark everyone present today', 'Who is still unmarked today?', 'Who was absent today?']
+        : ['Who was absent today?', 'Who is still unmarked today?', 'How do I take attendance?']
     case 'attendance':
       return ['How do I take class attendance?', 'Where is general attendance?']
     case 'admin':

@@ -1,12 +1,13 @@
 'use client'
 // One message in Muley's panel: the person's words in a bubble, or Muley's
 // answer as the pieces it arrived in (words, what a tool looked up, a table,
-// a button that opens a page, options to tap).
+// a button that opens a page, options to tap, a change to save).
 
 import Link from 'next/link'
 import { ArrowRightIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import type { Block, ChoiceOption, MuleyCard, ThreadMessage } from '@/lib/muley/types'
+import type { ActionEntry, Block, ChoiceOption, MuleyCard, ThreadMessage } from '@/lib/muley/types'
 import { isAppPath, splitText } from '@/lib/muley/inlineText'
+import MuleyChangeCard, { type ChangeStep } from './MuleyChangeCard'
 
 type Props = {
   message: ThreadMessage
@@ -15,6 +16,12 @@ type Props = {
   /** A link card was followed (the phone sheet closes so the page shows). */
   onNavigate: () => void
   streaming: boolean
+  /** The changes prepared in this conversation, by id. */
+  actions: Record<string, ActionEntry>
+  /** Save, Undo or Dismiss pressed on a change card. */
+  onAction: (actionId: string, step: ChangeStep) => void
+  /** Send Muley a message (a change card's "Prepare it again"). */
+  onAsk: (text: string) => void
 }
 
 function Words({ text }: { text: string }) {
@@ -50,7 +57,7 @@ function Trace({ block }: { block: Extract<Block, { kind: 'trace' }> }) {
   )
 }
 
-function Card({ card, onNavigate }: { card: MuleyCard; onNavigate: () => void }) {
+function Card({ card, onNavigate }: { card: Exclude<MuleyCard, { type: 'change' }>; onNavigate: () => void }) {
   if (card.type === 'link') {
     if (!isAppPath(card.href)) return null
     return (
@@ -134,7 +141,7 @@ function Choices({ block, onChoose, streaming }: { block: Extract<Block, { kind:
   )
 }
 
-export default function MuleyMessage({ message, onChoose, onNavigate, streaming }: Props) {
+export default function MuleyMessage({ message, onChoose, onNavigate, streaming, actions, onAction, onAsk }: Props) {
   if (message.role === 'user') {
     return (
       <div className="ml-auto max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-cyan-100 bg-gradient-to-br from-cyan-50 to-teal-50 px-3.5 py-2.5 text-[15px] leading-relaxed text-slate-900">
@@ -148,7 +155,12 @@ export default function MuleyMessage({ message, onChoose, onNavigate, streaming 
       {message.blocks.map((block, index) => {
         if (block.kind === 'text') return <Words key={index} text={block.text} />
         if (block.kind === 'trace') return <Trace key={`${block.id}-${index}`} block={block} />
-        if (block.kind === 'card') return <Card key={`${block.id}-${index}`} card={block.card} onNavigate={onNavigate} />
+        if (block.kind === 'card') {
+          if (block.card.type === 'change') {
+            return <MuleyChangeCard key={`${block.id}-${index}`} card={block.card} entry={actions[block.card.actionId]} onAction={onAction} onAsk={onAsk} streaming={streaming} />
+          }
+          return <Card key={`${block.id}-${index}`} card={block.card} onNavigate={onNavigate} />
+        }
         return <Choices key={`${block.id}-${index}`} block={block} onChoose={onChoose} streaming={streaming} />
       })}
       {thinking && (

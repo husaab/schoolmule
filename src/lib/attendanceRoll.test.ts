@@ -11,6 +11,7 @@ import {
   savedFromEntries,
   shiftDay,
   toggleMark,
+  withSavedElsewhere,
 } from './attendanceRoll'
 
 describe('toggleMark', () => {
@@ -96,6 +97,26 @@ describe('savedFrom', () => {
   it('leaves nothing to save once stored', () => {
     const marks = { s1: 'PRESENT' as const, s2: null }
     expect(countChanges(marks, savedFrom(marks))).toBe(0)
+  })
+})
+
+describe('withSavedElsewhere', () => {
+  it('takes what was saved elsewhere, keeping changes made on screen and not saved', () => {
+    const saved = { s1: 'PRESENT' as const, s2: 'ABSENT' as const, s3: 'LATE' as const }
+    // On screen: s2 changed to Late, s3 cleared, s4 newly marked; s1 untouched.
+    const marks = { s1: 'PRESENT' as const, s2: 'LATE' as const, s3: null, s4: 'ABSENT' as const }
+    // Saved through Muley meanwhile: s1 Absent, s5 Present.
+    const fresh = { s1: 'ABSENT' as const, s2: 'ABSENT' as const, s3: 'LATE' as const, s5: 'PRESENT' as const }
+
+    const next = withSavedElsewhere(marks, saved, fresh)
+
+    expect(next).toEqual({ s1: 'ABSENT', s2: 'LATE', s3: null, s4: 'ABSENT', s5: 'PRESENT' })
+    expect(attendanceChanges(next, fresh)).toEqual({ entries: [{ studentId: 's2', status: 'LATE' }, { studentId: 's4', status: 'ABSENT' }], cleared: ['s3'] })
+  })
+
+  it('is exactly what is saved when nothing was changed on screen', () => {
+    const saved = { s1: 'PRESENT' as const }
+    expect(withSavedElsewhere({ ...saved }, saved, { s1: 'LATE', s2: 'ABSENT' })).toEqual({ s1: 'LATE', s2: 'ABSENT' })
   })
 })
 

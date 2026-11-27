@@ -3,12 +3,21 @@
 // screen. Only the panel's place (open, the conversation id, the draft) is
 // kept, in this tab's session storage, under the person and view it belongs
 // to; the messages themselves always come back from the server.
+//
+// A change Muley prepared is saved, undone or dismissed only from here, when
+// the person presses the button on its card. A save tells any open page that
+// shows the same data to reload (lib/muley/dataChanges).
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { muleyReducer } from '@/lib/muley/reducer'
-import { EMPTY_THREAD, type StreamEvent, type ThreadState } from '@/lib/muley/types'
+import { EMPTY_THREAD, type ActionConflict, type ActionProblem, type ProposedAction, type StreamEvent, type ThreadState } from '@/lib/muley/types'
+import { announceDataChange } from '@/lib/muley/dataChanges'
+import { isApiError } from '@/services/apiClient'
 import {
+  applyAction,
+  dismissAction,
+  undoAction,
   deleteConversation as removeConversation,
   getConversation,
   getMuleySettings,
@@ -26,12 +35,43 @@ type Client = {
   getConversation: typeof getConversation
   listConversations: typeof listConversations
   deleteConversation: typeof removeConversation
+  applyAction: typeof applyAction
+  undoAction: typeof undoAction
+  dismissAction: typeof dismissAction
 }
 
-let client: Client = { streamTurn, getMuleySettings, getConversation, listConversations, deleteConversation: removeConversation }
+const REAL: Client = { streamTurn, getMuleySettings, getConversation, listConversations, deleteConversation: removeConversation, applyAction, undoAction, dismissAction }
+let client: Client = REAL
 /** Tests swap the backend for a fake. */
 export const setMuleyClient = (replacement: Partial<Client> | null) => {
-  client = replacement ? { ...client, ...replacement } : { streamTurn, getMuleySettings, getConversation, listConversations, deleteConversation: removeConversation }
+  client = replacement ? { ...client, ...replacement } : REAL
+}
+
+type Step = 'apply' | 'undo' | 'dismiss'
+
+// One key per press, kept until the server has answered it: pressing again
+// after a dropped connection is the same press, and the server saves it once.
+const pressKeys = new Map<string, string>()
+// Not a secret: it only tells two tries of one press apart from two presses.
+const newKey = () => {
+  const random = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto
+  return typeof random?.randomUUID === 'function' ? random.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+}
+
+/** What a refused press means for the card, and whether the server answered at all. */
+function problemOf(err: unknown, step: Step): { problem: ActionProblem; action: ProposedAction | null; answered: boolean } {
+  if (isApiError(err)) {
+    const data = (err.data && typeof err.data === 'object' ? err.data : {}) as { conflicts?: ActionConflict[]; action?: ProposedAction }
+    return {
+      problem: { code: err.code || 'FAILED', message: err.message, conflicts: Array.isArray(data.conflicts) ? data.conflicts : [] },
+      action: data.action ?? null,
+      answered: true,
+    }
+  }
+  const message = step === 'dismiss'
+    ? "School Mule couldn't be reached. Check your connection and try again."
+    : `School Mule couldn't be reached. Press ${step === 'apply' ? 'Save' : 'Undo'} again: it won't be done twice.`
+  return { problem: { code: 'offline', message, conflicts: [] }, action: null, answered: false }
 }
 
 let running: AbortController | null = null
@@ -62,6 +102,12 @@ type MuleyStore = {
   openConversation: (id: string) => Promise<void>
   loadConversations: () => Promise<void>
   deleteConversation: (id: string) => Promise<void>
+  /** Save the prepared change the person was shown. */
+  applyAction: (id: string) => Promise<void>
+  /** Put a saved change back as it was. */
+  undoAction: (id: string) => Promise<void>
+  /** The person doesn't want a prepared change. */
+  dismissAction: (id: string) => Promise<void>
   reset: () => void
 }
 
@@ -71,6 +117,24 @@ export const useMuleyStore = create<MuleyStore>()(
   persist(
     (set, get) => {
       const dispatch = (event: StreamEvent | Parameters<typeof muleyReducer>[1]) => set((state) => ({ thread: muleyReducer(state.thread, event) }))
+
+      const press = async (id: string, step: Step, call: (key: string) => Promise<ProposedAction>) => {
+        dispatch({ t: 'local:action-busy', id, busy: step })
+        const slot = `${id}:${step}`
+        const key = pressKeys.get(slot) ?? newKey()
+        pressKeys.set(slot, key)
+        try {
+          const action = await call(key)
+          pressKeys.delete(slot)
+          dispatch({ t: 'local:action-settled', id, action, problem: null })
+          if (step !== 'dismiss') announceDataChange(action.topics)
+        } catch (err) {
+          const { problem, action, answered } = problemOf(err, step)
+          if (answered) pressKeys.delete(slot)
+          dispatch({ t: 'local:action-settled', id, action, problem })
+        }
+      }
+      const entryOf = (id: string) => get().thread.actions?.[id]
 
       return {
         owner: null,
@@ -86,7 +150,7 @@ export const useMuleyStore = create<MuleyStore>()(
         loadConfig: async () => {
           try {
             const settings = await client.getMuleySettings()
-            set({ config: { status: 'ready', enabled: Boolean(settings.enabled), maxMessageLength: settings.maxMessageLength } })
+            set({ config: { status: 'ready', enabled: Boolean(settings.enabled), maxMessageLength: settings.maxMessageLength, writes: Boolean(settings.capabilities?.writes) } })
           } catch {
             set({ config: { status: 'ready', enabled: false } })
           }
@@ -165,7 +229,7 @@ export const useMuleyStore = create<MuleyStore>()(
           set({ view: 'chat' })
           try {
             const stored = await client.getConversation(id)
-            dispatch({ t: 'local:loaded', conversationId: stored.id, messages: stored.messages })
+            dispatch({ t: 'local:loaded', conversationId: stored.id, messages: stored.messages, actions: stored.actions })
           } catch {
             // Deleted elsewhere, or not this person's: start afresh.
             set({ thread: EMPTY_THREAD })
@@ -188,6 +252,24 @@ export const useMuleyStore = create<MuleyStore>()(
           }))
         },
 
+        applyAction: async (id) => {
+          const entry = entryOf(id)
+          if (!entry || entry.busy || entry.action.status !== 'pending') return
+          await press(id, 'apply', (key) => client.applyAction(id, entry.action.hash, key))
+        },
+
+        undoAction: async (id) => {
+          const entry = entryOf(id)
+          if (!entry || entry.busy || entry.action.status !== 'applied' || !entry.action.canUndo) return
+          await press(id, 'undo', (key) => client.undoAction(id, key))
+        },
+
+        dismissAction: async (id) => {
+          const entry = entryOf(id)
+          if (!entry || entry.busy || entry.action.status !== 'pending') return
+          await press(id, 'dismiss', () => client.dismissAction(id))
+        },
+
         reset: () => {
           running?.abort()
           set({ owner: null, config: { status: 'unknown' }, ...FRESH })
@@ -198,6 +280,11 @@ export const useMuleyStore = create<MuleyStore>()(
       name: 'muley-panel',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ owner: state.owner, open: state.open, draft: state.draft, thread: { ...EMPTY_THREAD, conversationId: state.thread.conversationId } }),
+      // A tab saved by an older version has a thread without some fields: fill them in.
+      merge: (persisted, current) => {
+        const saved = (persisted && typeof persisted === 'object' ? persisted : {}) as Partial<MuleyStore>
+        return { ...current, ...saved, thread: { ...EMPTY_THREAD, ...(saved.thread || {}) } }
+      },
     },
   ),
 )

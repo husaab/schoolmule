@@ -67,6 +67,7 @@ import type { ThreadStub } from '@/services/types/messaging'
 import NewConversationModal from '@/components/messaging/NewConversationModal'
 import { useMessagingStore } from '@/store/useMessagingStore'
 import { useScoreAutosave } from '@/hooks/useScoreAutosave'
+import { onDataChange, scoresTopic } from '@/lib/muley/dataChanges'
 import type { CellValue } from '@/lib/scoreAutosaveQueue'
 import {
   applySavedScores,
@@ -341,6 +342,18 @@ export default function GradebookWorkspace({
       console.error('Error refreshing scores matrix:', err)
     }
   }, [classId, pendingMap, dropLocal, forgetGoneKeys, loadOverlay])
+
+  // Marks saved or undone through Muley, in the panel beside the gradebook:
+  // send anything typed first, then read the class's marks again.
+  const flushTyped = autosave.flush
+  useEffect(
+    () =>
+      onDataChange((topics) => {
+        if (!topics.includes(scoresTopic(classId))) return
+        void flushTyped().then(refreshScoresMatrix, refreshScoresMatrix)
+      }),
+    [classId, flushTyped, refreshScoresMatrix],
+  )
 
   // Missing / excused flags save straight away (after any typed score), then
   // the matrix is re-read.

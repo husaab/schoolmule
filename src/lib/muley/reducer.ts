@@ -6,7 +6,7 @@
 // any stream.
 
 import { EMPTY_THREAD } from './types'
-import type { Block, LocalEvent, ShownMessage, StreamEvent, ThreadMessage, ThreadState } from './types'
+import type { ActionEntry, Block, LocalEvent, ShownMessage, StreamEvent, ThreadMessage, ThreadState } from './types'
 
 type Assistant = Extract<ThreadMessage, { role: 'assistant' }>
 
@@ -19,6 +19,13 @@ const withAnswer = (state: ThreadState, change: (answer: Assistant) => Assistant
 
 const addBlock = (state: ThreadState, block: Block): ThreadState =>
   withAnswer(state, (answer) => ({ ...answer, blocks: [...answer.blocks, block] }))
+
+/** Change one prepared change, if it is on screen. A session stored before changes existed has no `actions`. */
+const withAction = (state: ThreadState, id: string, change: (entry: ActionEntry) => ActionEntry): ThreadState => {
+  const entry = state.actions?.[id]
+  if (!entry) return state
+  return { ...state, actions: { ...state.actions, [id]: change(entry) } }
+}
 
 /** A stored conversation as thread messages: each run of tool results and words between two of the person's messages is one answer. */
 function fromStored(messages: ShownMessage[]): ThreadMessage[] {
@@ -97,6 +104,15 @@ export function muleyReducer(state: ThreadState, event: StreamEvent | LocalEvent
     case 'choices':
       return addBlock(state, { kind: 'choices', id: event.id, question: event.question, options: event.options, picked: null })
 
+    case 'action':
+      return { ...state, actions: { ...state.actions, [event.action.id]: { action: event.action, busy: null, problem: null } } }
+
+    case 'local:action-busy':
+      return withAction(state, event.id, (entry) => ({ ...entry, busy: event.busy, problem: null }))
+
+    case 'local:action-settled':
+      return withAction(state, event.id, (entry) => ({ action: event.action ?? entry.action, busy: null, problem: event.problem }))
+
     case 'error':
       return { ...state, error: { code: event.code, message: event.message, retryable: event.retryable } }
 
@@ -126,7 +142,14 @@ export function muleyReducer(state: ThreadState, event: StreamEvent | LocalEvent
       }
 
     case 'local:loaded':
-      return { conversationId: event.conversationId, contextLabel: null, messages: fromStored(event.messages), status: 'idle', error: null }
+      return {
+        conversationId: event.conversationId,
+        contextLabel: null,
+        messages: fromStored(event.messages),
+        status: 'idle',
+        error: null,
+        actions: Object.fromEntries((event.actions || []).map((action) => [action.id, { action, busy: null, problem: null }])),
+      }
 
     case 'local:reset':
       return EMPTY_THREAD

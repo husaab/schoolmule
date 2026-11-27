@@ -16,6 +16,56 @@ export type MuleyCard =
       rows: Record<string, string | number | null>[]
     }
   | { type: 'link'; label: string; href: string }
+  /** A change Muley prepared: what each student has now and what they would have. Saved only when the person presses Save. */
+  | {
+      type: 'change'
+      actionId: string
+      title: string
+      subtitle?: string | null
+      columns: string[]
+      rows: { name: string; now: string; next: string }[]
+      /** Rows past the ones shown. */
+      hiddenCount: number
+      /** How the day would end up ("Present 21", "Absent 2"), for attendance. */
+      tally: { label: string; count: number }[] | null
+      note: string | null
+    }
+
+/**
+ * A prepared change as the server tracks it. pending → applying → applied →
+ * undoing → undone; rejected is dismissed, expired is a preview too old to save.
+ */
+export type ActionStatus = 'pending' | 'applying' | 'applied' | 'undoing' | 'undone' | 'rejected' | 'expired'
+
+export type ProposedAction = {
+  id: string
+  kind: string
+  status: ActionStatus
+  title: string
+  /** Sent back with Save, so the server saves exactly the change the person was shown. */
+  hash: string
+  expiresAt: string
+  applyLabel: string
+  doneLabel: string
+  undoLabel: string
+  undoneLabel: string
+  canUndo: boolean
+  /** What a save touches ("scores:<classId>"), so an open page can reload it. */
+  topics: string[]
+  error: string | null
+}
+
+/** A student whose value changed after the preview, so nothing was saved. */
+export type ActionConflict = { name: string; was: string; now: string }
+
+export type ActionProblem = { code: string; message: string; conflicts: ActionConflict[] }
+
+/** A prepared change on screen: the server's view of it, and what the person's last press came to. */
+export type ActionEntry = {
+  action: ProposedAction
+  busy: 'apply' | 'undo' | 'dismiss' | null
+  problem: ActionProblem | null
+}
 
 export type ChoiceOption = { id: string; label: string; ref: string | null }
 
@@ -28,6 +78,8 @@ export type StreamEvent =
   | { t: 'tool'; id: string; state: 'finished'; ok: boolean; summary: string | null }
   | { t: 'card'; id: string; card: MuleyCard }
   | { t: 'choices'; id: string; question: string; options: ChoiceOption[] }
+  /** A tool prepared a change; its card follows. */
+  | { t: 'action'; action: ProposedAction }
   | { t: 'usage'; in: number; cachedIn: number; out: number }
   | { t: 'error'; code: string; message: string; retryable: boolean }
   | { t: 'ping' }
@@ -53,6 +105,8 @@ export type ThreadState = {
   messages: ThreadMessage[]
   status: 'idle' | 'streaming'
   error: ThreadError | null
+  /** The changes prepared in this conversation, by id. */
+  actions: Record<string, ActionEntry>
 }
 
 /** A stored message as GET /assistant/conversations/:id returns it. */
@@ -75,7 +129,10 @@ export type LocalEvent =
   | { t: 'local:sent'; id: string; text: string }
   | { t: 'local:picked'; choicesId: string; optionId: string }
   | { t: 'local:failed'; error: ThreadError }
-  | { t: 'local:loaded'; conversationId: string; messages: ShownMessage[] }
+  | { t: 'local:loaded'; conversationId: string; messages: ShownMessage[]; actions?: ProposedAction[] }
+  | { t: 'local:action-busy'; id: string; busy: 'apply' | 'undo' | 'dismiss' }
+  /** A press came back: the change as it now stands (when the server said), and what went wrong (or null). */
+  | { t: 'local:action-settled'; id: string; action: ProposedAction | null; problem: ActionProblem | null }
   | { t: 'local:reset' }
 
-export const EMPTY_THREAD: ThreadState = { conversationId: null, contextLabel: null, messages: [], status: 'idle', error: null }
+export const EMPTY_THREAD: ThreadState = { conversationId: null, contextLabel: null, messages: [], status: 'idle', error: null, actions: {} }

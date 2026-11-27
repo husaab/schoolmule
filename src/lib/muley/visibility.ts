@@ -9,7 +9,7 @@ import { isPublicFormPath, isPublicSchedulePath, isStudentPath, onboardingStep, 
 
 export type MuleyConfig =
   | { status: 'unknown' }
-  | { status: 'ready'; enabled: boolean; maxMessageLength?: number }
+  | { status: 'ready'; enabled: boolean; maxMessageLength?: number; /** The school lets Muley prepare changes to save. */ writes?: boolean }
 
 const NO_MULEY = [
   '/observe', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/verify-email-token',

@@ -9,6 +9,7 @@ import { savedFromEntries, type AttendanceChanges } from '@/lib/attendanceRoll';
 import { getGradeLabel } from '@/lib/schoolUtils';
 import { getStudentsInClass, getClassById } from '@/services/classService';
 import { getClassAttendanceByDate, submitClassAttendance } from '@/services/attendanceService';
+import { classAttendanceTopic } from '@/lib/muley/dataChanges';
 import type { ClassPayload } from '@/services/types/class';
 import { useUserStore } from '@/store/useUserStore';
 
@@ -54,6 +55,8 @@ function ClassAttendanceContent() {
     [classId, school],
   );
 
+  const changeTopic = useCallback((date: string) => classAttendanceTopic(classId, date), [classId]);
+
   const named = cls?.classId === classId ? cls : null;
   const subtitle = named
     ? [`Grade ${getGradeLabel(named.grade)}`, named.teacherName].filter(Boolean).join(' · ')
@@ -67,6 +70,7 @@ function ClassAttendanceContent() {
       loadRoster={loadRoster}
       loadMarks={loadMarks}
       save={save}
+      changeTopic={changeTopic}
     />
   );
 }

@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createNdjsonParser } from './ndjson'
 import { muleyReducer } from './reducer'
 import { EMPTY_THREAD, type StreamEvent, type ThreadState } from './types'
 import { muleyVisible } from './visibility'
 import { pageContextFor, pageLabel, startersFor } from './pageContext'
 import { isAppPath, splitText } from './inlineText'
+import { announceDataChange, classAttendanceTopic, onDataChange, scoresTopic } from './dataChanges'
+import type { ProposedAction } from './types'
 
 const CLASS = '11111111-2222-4333-8444-555555555555'
 
@@ -137,6 +139,93 @@ describe('the conversation reducer', () => {
   })
 })
 
+const proposed = (over: Partial<ProposedAction> = {}): ProposedAction => ({
+  id: 'a1',
+  kind: 'class_attendance',
+  status: 'pending',
+  title: 'Class attendance · Math · 2026-11-27',
+  hash: 'h1',
+  expiresAt: '2026-11-28T12:00:00.000Z',
+  applyLabel: 'Save 2 marks',
+  doneLabel: 'Saved 2 marks',
+  undoLabel: 'Undo',
+  undoneLabel: 'Undone. 2 marks put back as they were.',
+  canUndo: false,
+  topics: [`attendance:class:${CLASS}:2026-11-27`],
+  error: null,
+  ...over,
+})
+
+describe('prepared changes in the conversation', () => {
+  const run = (events: Parameters<typeof muleyReducer>[1][], from: ThreadState = EMPTY_THREAD) => events.reduce(muleyReducer, from)
+  const changeCard = {
+    type: 'change' as const, actionId: 'a1', title: 'Class attendance · Math', subtitle: '2026-11-27', columns: ['Student', 'Now', 'New'],
+    rows: [{ name: 'Yusuf', now: 'unmarked', next: 'Absent' }], hiddenCount: 0, tally: [{ label: 'Absent', count: 1 }], note: null,
+  }
+
+  it('keeps the change a tool prepared beside its card', () => {
+    const state = run([
+      { t: 'local:sent', id: 'm1', text: 'mark yusuf absent' },
+      { t: 'action', action: proposed() },
+      { t: 'card', id: 'call-1', card: changeCard },
+      { t: 'done', reason: 'end' },
+    ])
+    expect(state.actions.a1).toEqual({ action: proposed(), busy: null, problem: null })
+    const answer = state.messages[1]
+    expect(answer.role === 'assistant' && answer.blocks).toEqual([{ kind: 'card', id: 'call-1', card: changeCard }])
+  })
+
+  it('follows a press: busy, then the change as the server now has it, or what went wrong', () => {
+    const shown = run([{ t: 'action', action: proposed() }])
+    const busy = run([{ t: 'local:action-busy', id: 'a1', busy: 'apply' }], shown)
+    expect(busy.actions.a1.busy).toBe('apply')
+
+    const saved = run([{ t: 'local:action-settled', id: 'a1', action: proposed({ status: 'applied', canUndo: true }), problem: null }], busy)
+    expect(saved.actions.a1).toMatchObject({ busy: null, problem: null, action: { status: 'applied', canUndo: true } })
+
+    const problem = { code: 'STALE', message: 'Some of these changed.', conflicts: [{ name: 'Yusuf', was: 'unmarked', now: 'Late' }] }
+    const stale = run([{ t: 'local:action-busy', id: 'a1', busy: 'apply' }, { t: 'local:action-settled', id: 'a1', action: null, problem }], shown)
+    expect(stale.actions.a1).toEqual({ action: proposed(), busy: null, problem })
+
+    // A press for a change that is not on screen (another conversation) changes nothing.
+    expect(run([{ t: 'local:action-busy', id: 'zz', busy: 'apply' }], shown)).toBe(shown)
+  })
+
+  it('brings back the changes of a stored conversation, and copes with a tab saved before changes existed', () => {
+    const loaded = run([{ t: 'local:loaded', conversationId: 'c1', messages: [], actions: [proposed({ status: 'applied', canUndo: true })] }])
+    expect(loaded.actions.a1.action.status).toBe('applied')
+    expect(run([{ t: 'local:loaded', conversationId: 'c1', messages: [] }]).actions).toEqual({})
+
+    const old = { conversationId: null, contextLabel: null, messages: [], status: 'idle', error: null } as unknown as ThreadState
+    expect(run([{ t: 'local:action-busy', id: 'a1', busy: 'apply' }], old)).toBe(old)
+    expect(run([{ t: 'action', action: proposed() }], old).actions.a1.action.id).toBe('a1')
+  })
+})
+
+describe('pages hearing about a change saved through Muley', () => {
+  it('tells every listener the topics, until it stops listening', () => {
+    const heard: string[][] = []
+    const stop = onDataChange((topics) => heard.push(topics))
+    announceDataChange([scoresTopic(CLASS)])
+    announceDataChange([])
+    stop()
+    announceDataChange([classAttendanceTopic(CLASS, '2026-11-27')])
+    expect(heard).toEqual([[`scores:${CLASS}`]])
+  })
+
+  it('keeps telling the others when one listener fails', () => {
+    const heard: string[] = []
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stopBroken = onDataChange(() => { throw new Error('broken page') })
+    const stop = onDataChange((topics) => heard.push(...topics))
+    announceDataChange(['x'])
+    stopBroken()
+    stop()
+    quiet.mockRestore()
+    expect(heard).toEqual(['x'])
+  })
+})
+
 describe('where Muley shows', () => {
   const teacher = { id: 'u1', role: 'TEACHER', isVerifiedEmail: true, isVerifiedSchool: true }
   const on = { status: 'ready' as const, enabled: true }
@@ -177,6 +266,9 @@ describe('the page context', () => {
     expect(pageLabel(pageContextFor('/settings'))).toBeNull()
     expect(startersFor(pageContextFor(`/gradebook/${CLASS}`))).toContain('How do I leave a student out of the class average?')
     expect(startersFor(pageContextFor('/settings')).length).toBeGreaterThan(0)
+    // Where the school lets Muley prepare changes, it offers one.
+    expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`), true)).toContain('Mark everyone present today')
+    expect(startersFor(pageContextFor(`/attendance/class/${CLASS}`))).not.toContain('Mark everyone present today')
   })
 })
 

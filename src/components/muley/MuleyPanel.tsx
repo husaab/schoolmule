@@ -33,7 +33,8 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
   const draft = useMuleyStore((s) => s.draft)
   const conversations = useMuleyStore((s) => s.conversations)
   const config = useMuleyStore((s) => s.config)
-  const { setDraft, send, stop, retry, newConversation, setView, openConversation, deleteConversation } = useMuleyStore.getState()
+  const { setDraft, send, stop, retry, newConversation, setView, openConversation, deleteConversation, applyAction, undoAction, dismissAction } = useMuleyStore.getState()
+  const writes = config.status === 'ready' && config.writes === true
 
   const page = pageContextFor(pathname)
   const streaming = thread.status === 'streaming'
@@ -66,6 +67,11 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
   }
   const followLink = () => {
     if (window.matchMedia('(max-width: 767px)').matches) onClose()
+  }
+  const act = (actionId: string, step: 'apply' | 'undo' | 'dismiss') => {
+    if (step === 'apply') void applyAction(actionId)
+    else if (step === 'undo') void undoAction(actionId)
+    else void dismissAction(actionId)
   }
 
   const label = thread.contextLabel || pageLabel(page)
@@ -166,10 +172,12 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
                 <MuleyAvatar size={88} framed={false} />
                 <h3 className="mt-3 font-display text-lg font-semibold text-slate-900">{firstName ? `Hi ${firstName}, I'm Muley` : "Hi, I'm Muley"}</h3>
                 <p className="mt-1 max-w-[30ch] text-sm leading-relaxed text-slate-600">
-                  I can look up your classes, rosters, marks and attendance, and show you where anything is in School Mule.
+                  {writes
+                    ? 'I can look up your classes, rosters, marks and attendance, get attendance and marks ready for you to check and save, and show you where anything is in School Mule.'
+                    : 'I can look up your classes, rosters, marks and attendance, and show you where anything is in School Mule.'}
                 </p>
                 <div className="mt-5 flex w-full flex-col gap-2">
-                  {startersFor(page).map((starter) => (
+                  {startersFor(page, writes).map((starter) => (
                     <button
                       key={starter}
                       type="button"
@@ -184,7 +192,16 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
             ) : (
               <div className="flex flex-col gap-5">
                 {thread.messages.map((message) => (
-                  <MuleyMessage key={message.id} message={message} onChoose={choose} onNavigate={followLink} streaming={streaming} />
+                  <MuleyMessage
+                    key={message.id}
+                    message={message}
+                    onChoose={choose}
+                    onNavigate={followLink}
+                    streaming={streaming}
+                    actions={thread.actions || {}}
+                    onAction={act}
+                    onAsk={submit}
+                  />
                 ))}
                 {thread.error && (
                   <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
@@ -211,7 +228,9 @@ export default function MuleyPanel({ pathname, firstName, onClose }: Props) {
             maxLength={config.status === 'ready' && config.maxMessageLength ? config.maxMessageLength : 4000}
             autoFocus={view === 'chat'}
           />
-          <p className="mt-2 text-center text-[11px] text-slate-400">Muley reads with your access. It can&apos;t change anything yet.</p>
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            {writes ? 'Muley works with your access, and saves nothing until you press Save.' : 'Muley reads with your access. It can\u2019t change anything yet.'}
+          </p>
         </div>
         <div className="sr-only" aria-live="polite">{announce}</div>
       </motion.aside>

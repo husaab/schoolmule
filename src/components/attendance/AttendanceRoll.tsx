@@ -49,11 +49,13 @@ import {
   savedFrom,
   shiftDay,
   toggleMark,
+  withSavedElsewhere,
   type AttendanceChanges,
   type AttendanceMarks,
   type SavedAttendance,
 } from '@/lib/attendanceRoll'
 import { guardedLinkTarget } from '@/lib/leaveGuard'
+import { onDataChange } from '@/lib/muley/dataChanges'
 import { getGradeLabel, getGradeNumericValue, getGradeOptions, type GradeValue } from '@/lib/schoolUtils'
 import type { AttendanceStatus } from '@/services/types/attendance'
 import type { AvatarSpec } from '@/services/types/profile'
@@ -80,6 +82,8 @@ interface AttendanceRollProps {
   save: (date: string, changes: AttendanceChanges) => Promise<void>
   /** One section per grade, with the grade filter (the whole school's roll). */
   byGrade?: boolean
+  /** What a change saved through Muley announces for a day (lib/muley/dataChanges): the day on screen takes it in. */
+  changeTopic?: (date: string) => string
 }
 
 // ── Looks ───────────────────────────────────────────────────────────────────
@@ -183,7 +187,7 @@ interface LoadFailure {
 }
 type Leaving = { date: string } | { href: string }
 
-export default function AttendanceRoll({ title, subtitle, back, loadRoster, loadMarks, save, byGrade = false }: AttendanceRollProps) {
+export default function AttendanceRoll({ title, subtitle, back, loadRoster, loadMarks, save, byGrade = false, changeTopic }: AttendanceRollProps) {
   const router = useRouter()
   const filters = useFilterParams()
   const { get, setParams } = filters
@@ -224,6 +228,25 @@ export default function AttendanceRoll({ title, subtitle, back, loadRoster, load
       cancelled = true
     }
   }, [loadMarks, date, dayAttempt])
+
+  // Attendance for this day saved (or undone) through Muley, in the panel
+  // beside the roll: read the day again, keeping anything marked and not saved.
+  useEffect(() => {
+    if (!changeTopic) return
+    const topic = changeTopic(date)
+    return onDataChange((topics) => {
+      if (!topics.includes(topic)) return
+      loadMarks(date).then(
+        (fresh) =>
+          setDay((d) =>
+            d && d.loader === loadMarks && d.date === date ? { ...d, saved: fresh, marks: withSavedElsewhere(d.marks, d.saved, fresh) } : d,
+          ),
+        () => {
+          // The marks on screen stay; the next visit to the day reads them again.
+        },
+      )
+    })
+  }, [changeTopic, date, loadMarks])
 
   const students = roster?.loader === loadRoster ? roster.students : null
   const rosterError = !students && rosterFailure?.loader === loadRoster && rosterFailure.attempt === rosterAttempt
