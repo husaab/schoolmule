@@ -1,6 +1,6 @@
 // Finance → Payments: a school's Stripe connection, and the ledger.
 
-import type { ChargeStatus, LastPayment } from './registration';
+import type { ChargeStatus, LastPayment, TaxMode } from './registration';
 
 /** Where the school stands. See payments_stripe_connect_migration.sql. */
 export type PaymentAccountStatus = 'onboarding' | 'pending' | 'active' | 'restricted' | 'disconnected';
@@ -37,13 +37,49 @@ export interface PaymentsConnection {
   account: PaymentAccount | null;
 }
 
+// ─── Tax (Finance → Payments → Settings) ────────────────────────────
+
+/** One of the school's tax rates. `rateMilli` is thousandths of a percent: 13% is 13000. */
+export interface TaxRate {
+  taxRateId: string;
+  name: string;
+  rateMilli: number;
+  /** Removed: hidden from pickers, but forms and requests that name it keep it. */
+  archived: boolean;
+}
+
+/** A live rate, as the form builder gets them (GET /registration/payment-availability). */
+export type LiveTaxRate = Pick<TaxRate, 'taxRateId' | 'name' | 'rateMilli'>;
+
+/** GET /payments/settings: live rates first by name, then removed ones. */
+export interface PaymentSettings {
+  /** Shown on receipts, e.g. a GST/HST number. */
+  taxNumber: string | null;
+  taxRates: TaxRate[];
+}
+
+/** One rate's share of a charge's tax, for one mode. */
+export interface ChargeTax {
+  name: string;
+  rateMilli: number;
+  cents: number;
+  /** Already in the prices (true), or added on top (false). */
+  included: boolean;
+}
+
 // ─── The ledger: what is owed and what happened ─────────────────────
 
 export interface ChargeLine {
   lineId: string;
   itemId: string | null;
   label: string;
+  /** The price as typed: before tax when tax is added, with tax in it when included. */
   amountCents: number;
+  /** The line's tax either way; 0 when untaxed. The name and rate are the line's own copy. */
+  taxCents: number;
+  taxName: string | null;
+  taxRateMilli: number | null;
+  taxIncluded: boolean;
 }
 
 export type ChargePaymentKind = 'card' | 'cash' | 'cheque' | 'other' | 'waiver' | 'refund';
@@ -84,7 +120,12 @@ export interface Charge {
   description: string;
   payerEmail: string | null;
   currency: string;
+  /** What the family owes, with any added tax. */
   amountCents: number;
+  /** All the charge's tax, added and included; 0 when untaxed. */
+  taxCents: number;
+  /** One entry per rate and mode, largest first; empty when untaxed. Always in the detail; lists may leave it out. */
+  taxSummary?: ChargeTax[];
   amountPaidCents: number;
   amountRefundedCents: number;
   balanceCents: number;
@@ -106,6 +147,8 @@ export interface Charge {
 
 export interface PaymentsSummary {
   collectedThisMonthCents: number;
+  /** The tax inside what was collected this month, less refunds. */
+  taxCollectedThisMonthCents: number;
   refundedThisMonthCents: number;
   outstandingCents: number;
   outstandingCount: number;
@@ -121,6 +164,8 @@ export interface ChargeListFilters {
   studentId?: string | null;
   /** Forms or payment requests only. */
   source?: 'form' | 'request' | null;
+  /** Only payments with tax, or only those without. */
+  tax?: 'taxed' | 'untaxed' | null;
   q?: string | null;
   page?: number;
   limit?: number;
@@ -144,6 +189,22 @@ export interface PayoutsData {
 
 export type OfflineKind = 'cash' | 'cheque' | 'other';
 
+/**
+ * POST /registration/forms/:formId/office-payments: cash for a student who
+ * never submitted the form. Makes the response, its charge and the payment.
+ */
+export interface OfficePaymentInput {
+  studentId: string;
+  /** The optional items paid for; required items always count. */
+  itemIds?: string[];
+  kind: OfflineKind;
+  /** Null (or left out) means the whole amount owed. */
+  amountCents?: number | null;
+  note?: string | null;
+  /** Email a receipt to the student's guardians (the default). */
+  sendReceipt?: boolean;
+}
+
 /** What a family's payment link shows (/pay/<token>). */
 export interface PublicPayment {
   schoolName: string | null;
@@ -159,7 +220,15 @@ export interface PublicPayment {
   allowOffline: boolean;
   currency: string;
   lines: ChargeLine[];
+  /** What the family owes, with any added tax. */
   amountCents: number;
+  /** `amountCents` less the added tax. */
+  subtotalCents: number;
+  taxCents: number;
+  /** One entry per rate and mode, largest first; empty when untaxed. */
+  taxSummary: ChargeTax[];
+  /** The school's tax number, for the receipt. */
+  taxNumber: string | null;
   amountPaidCents: number;
   amountRefundedCents: number;
   balanceCents: number;
@@ -189,7 +258,18 @@ export interface PaymentRequest {
   title: string;
   description: string | null;
   currency: string;
+  /** The price as typed, per student (before tax when tax is added). */
   amountCents: number;
+  /** The request's tax rate, or null for none. The name and size are the rate's own, even once removed. */
+  taxRateId: string | null;
+  taxName: string | null;
+  taxRateMilli: number | null;
+  /** The rate has been removed from Settings since. */
+  taxArchived: boolean;
+  taxMode: TaxMode;
+  taxPerStudentCents: number;
+  /** What each family owes: the amount, with the tax when it is added. */
+  totalPerStudentCents: number;
   /** "YYYY-MM-DD" */
   dueDate: string | null;
   allowOffline: boolean;
@@ -224,6 +304,9 @@ export interface PaymentRequestInput {
   dueDate: string | null;
   allowOffline: boolean;
   accountingCode: string | null;
+  /** Changing either counts as changing the amount (refused once anyone has paid). */
+  taxRateId?: string | null;
+  taxMode?: TaxMode;
 }
 
 export interface RosterStudent {

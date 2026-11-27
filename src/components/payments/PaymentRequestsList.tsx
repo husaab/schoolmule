@@ -11,7 +11,7 @@ import { Button } from '@/components/shared/modalKit';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { listPaymentRequests } from '@/services/paymentsService';
 import type { PaymentRequest } from '@/services/types/payments';
-import { dueStatus, settledPercent } from '@/lib/paymentRequests';
+import { dueStatus, perStudentLabel, settledPercent } from '@/lib/paymentRequests';
 import { formatCents } from '@/lib/paymentField';
 import { errorMessage } from '@/components/finance/format';
 import PaymentRequestEditor from './PaymentRequestEditor';
@@ -83,7 +83,7 @@ export default function PaymentRequestsList({ online, onOpen, reloadKey }: Props
                       {r.stats.open === 0 && r.stats.students > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200">All settled</span>}
                     </div>
                     <p className="text-xs text-slate-500">
-                      {formatCents(r.amountCents)} per student · {r.stats.students} {r.stats.students === 1 ? 'student' : 'students'}
+                      {perStudentLabel(r)} · {r.stats.students} {r.stats.students === 1 ? 'student' : 'students'}
                     </p>
                   </div>
                   <div className="w-full sm:w-56">

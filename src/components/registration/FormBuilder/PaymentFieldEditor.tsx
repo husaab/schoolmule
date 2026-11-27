@@ -1,27 +1,37 @@
 'use client';
 
 // The payment field's settings in the builder: its price list (each item a
-// name, a price, and whether every family pays it), whether families may pay
-// at the office instead, and an accounting code for the school's books.
-// Prices are edited as text and kept as whole cents.
+// name, a price, whether every family pays it, and its tax once the school
+// has rates), whether the prices are before tax or include it, whether
+// families may pay at the office instead, and an accounting code for the
+// school's books. Prices are edited as text and kept as whole cents.
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import type { PaymentFieldConfig, PaymentItem } from '@/services/types/registration';
+import type { PaymentFieldConfig, PaymentItem, TaxMode } from '@/services/types/registration';
+import type { LiveTaxRate } from '@/services/types/payments';
 import { MAX_ITEMS, centsToInput, formatCents, newPaymentItem, parseDollars, priceSummary } from '@/lib/paymentField';
+import { rateChoices, taxModeOf } from '@/lib/paymentTax';
 
 interface Props {
   config: PaymentFieldConfig;
   onChange: (config: PaymentFieldConfig) => void;
   /** Whether the school can take card payments now; null while unknown. */
   online: boolean | null;
+  /** The school's live tax rates; null while unknown. */
+  taxRates?: LiveTaxRate[] | null;
 }
 
 const input =
   'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent';
 
-export default function PaymentFieldEditor({ config, onChange, online }: Props) {
+const TAX_MODES: [TaxMode, string][] = [
+  ['added', 'Tax is added on top of these prices'],
+  ['included', 'These prices already include tax'],
+];
+
+export default function PaymentFieldEditor({ config, onChange, online, taxRates = null }: Props) {
   // What is typed in each price box, so "25." can be typed on the way to "25.50".
   const [priceText, setPriceText] = useState<Record<string, string>>(
     () => Object.fromEntries(config.items.map((i) => [i.id, centsToInput(i.amountCents)])),
@@ -47,6 +57,15 @@ export default function PaymentFieldEditor({ config, onChange, online }: Props) 
     const [item] = next.splice(index, 1);
     next.splice(index + by, 0, item);
     setItems(next);
+  };
+
+  // Tax: a picker on each item once the school has a rate (or an item still names a removed one).
+  const rates = taxRates ?? [];
+  const anyTaxed = config.items.some((i) => i.taxRateId);
+  const setTax = (item: PaymentItem, taxRateId: string) => {
+    if (!taxRateId) return update(item.id, { taxRateId: null, tax: null });
+    const rate = rates.find((r) => r.taxRateId === taxRateId);
+    if (rate) update(item.id, { taxRateId, tax: { name: rate.name, rateMilli: rate.rateMilli } });
   };
 
   return (
@@ -107,6 +126,18 @@ export default function PaymentFieldEditor({ config, onChange, online }: Props) 
                       </button>
                     ))}
                   </div>
+                  {(rates.length > 0 || item.taxRateId) && (
+                    <select
+                      value={item.taxRateId ?? ''}
+                      onChange={(e) => setTax(item, e.target.value)}
+                      aria-label={`Item ${index + 1} tax`}
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      {rateChoices(rates, item.taxRateId, item.tax).map((c) => (
+                        <option key={c.value || 'none'} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  )}
                   <div className="ml-auto flex items-center gap-1">
                     <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move item ${index + 1} up`} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-30">
                       <ArrowUpIcon className="h-4 w-4" />
@@ -129,6 +160,26 @@ export default function PaymentFieldEditor({ config, onChange, online }: Props) 
             Add item
           </button>
         )}
+        {anyTaxed && (
+          <fieldset className="mt-3 space-y-1.5">
+            <legend className="sr-only">How tax applies to these prices</legend>
+            {TAX_MODES.map(([mode, label]) => (
+              <label key={mode} className="flex items-start gap-2.5 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name="payment-tax-mode"
+                  checked={taxModeOf(config.taxMode) === mode}
+                  onChange={() => onChange({ ...config, taxMode: mode })}
+                  className="mt-0.5 h-4 w-4 border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {taxRates !== null && rates.length === 0 && !anyTaxed && (
+          <p className="mt-3 text-xs text-slate-400">To add tax, set up your rates in Finance → Payments → Settings.</p>
+        )}
       </div>
 
       <div>
@@ -141,7 +192,7 @@ export default function PaymentFieldEditor({ config, onChange, online }: Props) 
               to take them, or let families pay at the office.
             </>
           ) : (
-            'Card, Apple Pay and Google Pay, on a secure Stripe page.'
+            'Card, Apple Pay and Google Pay, processed securely by Stripe.'
           )}
         </p>
         <label className="mt-2 flex items-start gap-2.5 text-sm text-slate-700">

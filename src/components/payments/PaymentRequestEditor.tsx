@@ -1,18 +1,21 @@
 'use client';
 
 // A new payment request, or an edit to one. New: the name, the amount per
-// student, a due date and a note for families, then who it goes to. Sending
-// makes a payment for each student and emails their guardians a link. Edit:
-// the same details (the amount only while nobody has paid).
+// student, its tax (once the school has a rate), a due date and a note for
+// families, then who it goes to. Sending makes a payment for each student and
+// emails their guardians a link. Edit: the same details (the amount and its
+// tax only while nobody has paid).
 
 import React, { useEffect, useState } from 'react';
 import { PaperAirplaneIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
-import { Button, Field, FieldRow, FormSection, ModalBody, ModalFooter, ModalHeader, inputClass, textareaClass } from '@/components/shared/modalKit';
-import { createPaymentRequest, getPaymentsRoster, updatePaymentRequest } from '@/services/paymentsService';
-import type { PaymentRequest, PaymentRequestDetail, PaymentRequestTarget, PaymentsRoster } from '@/services/types/payments';
-import { audienceStudents, emptyTarget, requestDraftProblem, targetIsEmpty } from '@/lib/paymentRequests';
+import { Button, Field, FieldRow, FormSection, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass, textareaClass } from '@/components/shared/modalKit';
+import { createPaymentRequest, getPaymentSettings, getPaymentsRoster, updatePaymentRequest } from '@/services/paymentsService';
+import type { PaymentRequest, PaymentRequestDetail, PaymentRequestTarget, PaymentsRoster, TaxRate } from '@/services/types/payments';
+import type { TaxMode } from '@/services/types/registration';
+import { audienceStudents, emptyTarget, requestDraftProblem, requestPrice, requestPriceLine, requestTaxFields, targetIsEmpty } from '@/lib/paymentRequests';
 import { centsToInput, formatCents, parseDollars } from '@/lib/paymentField';
+import { rateChoices } from '@/lib/paymentTax';
 import { errorMessage } from '@/components/finance/format';
 import AudiencePicker from './AudiencePicker';
 
@@ -34,10 +37,14 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
   const [description, setDescription] = useState('');
   const [allowOffline, setAllowOffline] = useState(true);
   const [accountingCode, setAccountingCode] = useState('');
+  const [taxRateId, setTaxRateId] = useState('');
+  const [taxMode, setTaxMode] = useState<TaxMode>('added');
   const [notify, setNotify] = useState(true);
   const [target, setTarget] = useState<Required<PaymentRequestTarget>>(emptyTarget());
   const [roster, setRoster] = useState<PaymentsRoster | null>(null);
   const [rosterError, setRosterError] = useState<string | null>(null);
+  // The school's tax rates, read each time the editor opens (Settings may have changed them).
+  const [rates, setRates] = useState<TaxRate[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +56,8 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
     setDescription(request?.description || '');
     setAllowOffline(request ? request.allowOffline : true);
     setAccountingCode(request?.accountingCode || '');
+    setTaxRateId(request?.taxRateId || '');
+    setTaxMode(request?.taxMode === 'included' ? 'included' : 'added');
     setNotify(true);
     setTarget(emptyTarget());
     setError(null);
@@ -57,9 +66,29 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
     }
   }, [isOpen, request, roster]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let live = true;
+    getPaymentSettings()
+      .then((r) => { if (live) setRates(r.data.taxRates); })
+      // Without the list, a request keeps the rate it has; nothing new can be picked.
+      .catch(() => { if (live) setRates([]); });
+    return () => { live = false; };
+  }, [isOpen]);
+
   const paidAlready = Boolean(request && (request.stats.collectedCents > 0 || request.stats.settled > 0));
   const amountCents = parseDollars(amountText);
   const count = roster ? audienceStudents(roster, target).length : 0;
+
+  // The request's own rate, named by the request when Settings no longer lists it.
+  const ownTax = request?.taxRateId && request.taxName ? { name: request.taxName, rateMilli: request.taxRateMilli ?? 0 } : null;
+  const chosenRate = taxRateId
+    ? (rates ?? []).find((r) => r.taxRateId === taxRateId) ?? (taxRateId === request?.taxRateId ? ownTax : null)
+    : null;
+  const taxChoices = rateChoices(rates ?? [], taxRateId || null, taxRateId === request?.taxRateId ? ownTax : null);
+  const showTax = (rates ?? []).some((r) => !r.archived) || Boolean(taxRateId) || Boolean(request?.taxRateId);
+  const price = amountCents ? requestPrice(amountCents, chosenRate, taxMode) : null;
+  const priceLine = price && taxRateId ? requestPriceLine(price) : null;
 
   const save = async () => {
     const problem = requestDraftProblem({ title, amountText, dueDate });
@@ -74,6 +103,7 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
       description: description.trim() || null,
       allowOffline,
       accountingCode: accountingCode.trim() || null,
+      ...requestTaxFields(editing ? request : null, { taxRateId: taxRateId || null, taxMode }),
     };
     setBusy(true);
     setError(null);
@@ -112,6 +142,33 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
               <input id="req-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} />
             </Field>
           </FieldRow>
+          {showTax && (
+            <FieldRow>
+              <Field label="Tax" htmlFor="req-tax" hint={paidAlready ? 'Families have paid, so the tax is fixed too.' : undefined}>
+                <select id="req-tax" value={taxRateId} onChange={(e) => setTaxRateId(e.target.value)} disabled={paidAlready} className={selectClass}>
+                  {taxChoices.map((c) => <option key={c.value || 'none'} value={c.value}>{c.label}</option>)}
+                </select>
+              </Field>
+              {taxRateId ? (
+                <fieldset disabled={paidAlready} className="space-y-1.5 sm:pt-7">
+                  <legend className="sr-only">How the tax applies</legend>
+                  {([['added', 'Tax is added on top of this amount'], ['included', 'This amount already includes tax']] as const).map(([mode, label]) => (
+                    <label key={mode} className="flex items-start gap-2 text-sm text-slate-700">
+                      <input
+                        type="radio"
+                        name="req-tax-mode"
+                        checked={taxMode === mode}
+                        onChange={() => setTaxMode(mode)}
+                        className="mt-0.5 h-4 w-4 border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : <div />}
+            </FieldRow>
+          )}
+          {priceLine && <p className="text-sm text-slate-600">{priceLine}</p>}
           <Field label="A note for families" htmlFor="req-desc" hint="Optional. It goes in the email and on their payment page.">
             <textarea id="req-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} className={textareaClass} placeholder="Covers the bus and museum entry. The trip is on December 15." />
           </Field>
@@ -147,9 +204,9 @@ export default function PaymentRequestEditor({ isOpen, request, online, onClose,
       </ModalBody>
       <ModalFooter>
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
-          {!editing && amountCents && count > 0 && (
+          {!editing && price && count > 0 && (
             <span className="mr-auto text-sm text-slate-500">
-              {count} × {formatCents(amountCents)} = <span className="font-semibold text-slate-900">{formatCents(count * amountCents)}</span>
+              {count} × {formatCents(price.totalCents)} = <span className="font-semibold text-slate-900">{formatCents(count * price.totalCents)}</span>
             </span>
           )}
           <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>

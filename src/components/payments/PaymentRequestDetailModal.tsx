@@ -15,7 +15,7 @@ import {
   addPaymentRequestStudents, deletePaymentRequest, getPaymentRequest, getPaymentsRoster, remindPaymentRequest, removePaymentRequestCharge,
 } from '@/services/paymentsService';
 import type { PaymentRequestCharge, PaymentRequestDetail, PaymentRequestTarget, PaymentsRoster } from '@/services/types/payments';
-import { dueStatus, emptyTarget, formatDay, gradeLabel, settledPercent, targetIsEmpty } from '@/lib/paymentRequests';
+import { dueStatus, emptyTarget, formatDay, gradeLabel, perStudentLabel, settledPercent, targetIsEmpty } from '@/lib/paymentRequests';
 import { formatCents } from '@/lib/paymentField';
 import { errorMessage } from '@/components/finance/format';
 import PaymentChip from './PaymentChip';
@@ -29,6 +29,8 @@ interface Props {
   onClose: () => void;
   /** After any change (or a delete), so the list can reload. */
   onChanged: () => void;
+  /** The school uses tax: a family's payment without any says "Untaxed". */
+  taxContext?: boolean;
 }
 
 type Panel = null | 'remind' | 'add' | 'delete' | { remove: PaymentRequestCharge };
@@ -36,7 +38,7 @@ type Panel = null | 'remind' | 'add' | 'delete' | { remove: PaymentRequestCharge
 const DUE_TONE = { neutral: 'text-slate-600', soon: 'text-amber-700', overdue: 'text-rose-700' } as const;
 const isOpenStatus = (s: string) => s === 'unpaid' || s === 'partially_paid';
 
-export default function PaymentRequestDetailModal({ requestId, online, onClose, onChanged }: Props) {
+export default function PaymentRequestDetailModal({ requestId, online, onClose, onChanged, taxContext = false }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
   const [request, setRequest] = useState<PaymentRequestDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export default function PaymentRequestDetailModal({ requestId, online, onClose, 
       <Modal isOpen={Boolean(requestId)} onClose={busy ? () => {} : onClose} closeOnEscape={!busy && !panel} size="4xl" ariaLabel="Payment request">
         <ModalHeader
           title={request?.title || 'Payment request'}
-          subtitle={request ? `${formatCents(request.amountCents)} per student${request.dueDate ? ` · due ${formatDay(request.dueDate)}` : ''}${request.createdByName ? ` · sent by ${request.createdByName}` : ''}` : undefined}
+          subtitle={request ? `${perStudentLabel(request)}${request.dueDate ? ` · due ${formatDay(request.dueDate)}` : ''}${request.createdByName ? ` · sent by ${request.createdByName}` : ''}` : undefined}
           icon={ClipboardDocumentListIcon}
           actions={request && !panel ? <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button> : null}
         />
@@ -279,7 +281,7 @@ export default function PaymentRequestDetailModal({ requestId, online, onClose, 
         )}
       </Modal>
 
-      <ChargeDetailModal chargeId={openCharge} onClose={() => setOpenCharge(null)} onChanged={() => { load(); onChanged(); }} />
+      <ChargeDetailModal chargeId={openCharge} onClose={() => setOpenCharge(null)} onChanged={() => { load(); onChanged(); }} taxContext={taxContext || Boolean(request?.taxRateId)} />
       <PaymentRequestEditor
         isOpen={editing}
         request={request}

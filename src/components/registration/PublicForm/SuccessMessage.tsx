@@ -5,15 +5,18 @@ import Image from 'next/image';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 import { formatCents } from '@/lib/paymentField';
+import { taxBreakdown } from '@/lib/paymentTax';
+import type { ChargeTax } from '@/services/types/payments';
 
 interface Props {
   schoolName: string;
-  /** Set when the family chose to pay at the office. */
-  payAtOffice?: { totalCents: number; payPath: string } | null;
+  /** Set when the family chose to pay at the office. `taxes`: the tax in the total, when there is any. */
+  payAtOffice?: { totalCents: number; payPath: string; taxes?: ChargeTax[] } | null;
 }
 
 export default function SuccessMessage({ schoolName, payAtOffice = null }: Props) {
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token');
+  const tax = payAtOffice ? taxBreakdown(payAtOffice.totalCents, payAtOffice.taxes) : null;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -48,7 +51,26 @@ export default function SuccessMessage({ schoolName, payAtOffice = null }: Props
         {payAtOffice && (
           <div className="mx-auto mb-6 max-w-md rounded-xl border border-cyan-100 bg-cyan-50 px-5 py-4 text-left">
             <p className="text-sm font-semibold text-cyan-900">Please pay {formatCents(payAtOffice.totalCents)} at the office</p>
-            <p className="mt-1 text-sm text-cyan-800">
+            {tax && tax.addedRows.length > 0 && (
+              <dl className="mt-2 space-y-1 border-t border-cyan-100 pt-2 text-sm text-cyan-900">
+                <div className="flex justify-between">
+                  <dt>Subtotal</dt>
+                  <dd className="tabular-nums">{formatCents(tax.subtotalCents)}</dd>
+                </div>
+                {tax.addedRows.map((row, i) => (
+                  <div key={`${row.label}-${i}`} className="flex justify-between">
+                    <dt>{row.label}</dt>
+                    <dd className="tabular-nums">{formatCents(row.cents)}</dd>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold">
+                  <dt>Total</dt>
+                  <dd className="tabular-nums">{formatCents(tax.totalCents)}</dd>
+                </div>
+              </dl>
+            )}
+            {tax?.includedNote && <p className="mt-1 text-xs text-cyan-800">{tax.includedNote}</p>}
+            <p className={`${tax?.hasTax ? 'mt-2' : 'mt-1'} text-sm text-cyan-800`}>
               Bring cash or a cheque to {schoolName}.{' '}
               <Link href={payAtOffice.payPath} className="font-medium underline">Keep this link</Link> to check what you owe.
             </p>

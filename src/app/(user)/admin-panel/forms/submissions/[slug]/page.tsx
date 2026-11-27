@@ -39,7 +39,9 @@ import type {
 import PaymentChip from '@/components/payments/PaymentChip';
 import { gradeLabel } from '@/lib/paymentRequests';
 import ChargeDetailModal from '@/components/payments/ChargeDetailModal';
+import OfficePaymentModal from '@/components/payments/OfficePaymentModal';
 import { formatCents, paidWith, paymentFilterOptions } from '@/lib/paymentField';
+import { fieldHasTax } from '@/lib/paymentTax';
 import { useUserStore } from '@/store/useUserStore';
 import { can } from '@/lib/permissions';
 import type { ImportScope } from '@/services/types/registrationImport';
@@ -57,6 +59,7 @@ import {
   Cog6ToothIcon,
   ArrowDownTrayIcon,
   TagIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
 
 // ─── URL (de)serialization ───────────────────────────────────────────
@@ -170,6 +173,9 @@ function FormSubmissionsContent() {
   const user = useUserStore((s) => s.user);
   const finance = can(user, 'finance');
   const [chargeOpen, setChargeOpen] = useState<string | null>(null);
+  // Record a payment for a student whose family never filled the form in. The key gives each opening a fresh form.
+  const [officeOpen, setOfficeOpen] = useState(false);
+  const [officeKey, setOfficeKey] = useState(0);
 
   // Replace the whole view in one URL write (the child controls hand back a
   // full filter object, already reset to page 1 where that applies).
@@ -193,6 +199,7 @@ function FormSubmissionsContent() {
   // Build the column list shown in the table: first 3 fields by default, plus any
   // field referenced by an active sort or filter so users always see those columns.
   const hasPaymentField = fields.some((f) => f.fieldType === 'payment');
+  const paymentConfig = fields.find((f) => f.fieldType === 'payment')?.payment ?? null;
   // A signed-in parent said which child (or the office linked one): show who each response is for.
   const hasLinkedStudents = submissions.some((s) => s.studentName);
   const displayedFields = useMemo(() => {
@@ -532,6 +539,16 @@ function FormSubmissionsContent() {
                 <TagIcon className="w-4 h-4" />
                 Statuses
               </Link>
+              {finance && paymentConfig && (
+                <button
+                  onClick={() => { setOfficeKey((k) => k + 1); setOfficeOpen(true); }}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                  title="Record cash or a cheque for a student whose family didn’t fill in the form"
+                >
+                  <BanknotesIcon className="w-4 h-4" />
+                  Record a payment
+                </button>
+              )}
               <button
                 onClick={() => setMappingOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
@@ -697,6 +714,14 @@ function FormSubmissionsContent() {
                         </td>
                         <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">
                           {new Date(sub.submittedAt).toLocaleDateString('en-CA')}
+                          {sub.enteredByName && (
+                            <span
+                              title={`Entered by ${sub.enteredByName}`}
+                              className="mt-1 block w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                            >
+                              Entered by the office
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5">
                           <select
@@ -878,9 +903,24 @@ function FormSubmissionsContent() {
         onUndone={fetchSubmissions}
       />
 
+      {/* Cash for a student who never submitted the form */}
+      {finance && paymentConfig && (
+        <OfficePaymentModal
+          key={officeKey}
+          isOpen={officeOpen}
+          formId={form.formId}
+          formTitle={form.title}
+          config={paymentConfig}
+          onClose={() => setOfficeOpen(false)}
+          onRecorded={() => { setOfficeOpen(false); fetchSubmissions(); }}
+          onOpenCharge={(chargeId) => { setOfficeOpen(false); setChargeOpen(chargeId); }}
+        />
+      )}
+
       {/* Detail Modal */}
       <ChargeDetailModal
         chargeId={chargeOpen}
+        taxContext={fieldHasTax(paymentConfig)}
         onClose={() => setChargeOpen(null)}
         onChanged={(c) => {
           fetchSubmissions();
@@ -899,7 +939,14 @@ function FormSubmissionsContent() {
           <div className="flex flex-col">
             <div className="space-y-4 px-6 py-4">
             <div className="flex items-center justify-between text-sm text-slate-500">
-              <span>Submitted: {new Date(detailSubmission.submittedAt).toLocaleString('en-CA')}</span>
+              <span>
+                Submitted: {new Date(detailSubmission.submittedAt).toLocaleString('en-CA')}
+                {detailSubmission.enteredByName && (
+                  <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    Entered by the office · {detailSubmission.enteredByName}
+                  </span>
+                )}
+              </span>
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadgeClass(statusFor(detailSubmission.status)?.color)}`}>
                 {statusFor(detailSubmission.status)?.label || detailSubmission.status}
               </span>

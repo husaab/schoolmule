@@ -4,6 +4,7 @@
 // always works out the total itself.
 
 import type { ChargeStatus, LastPayment, PaymentFieldConfig, PaymentItem, PaymentState } from '@/services/types/registration'
+import { addedTaxParts, includedNote, priceWithTax, taxNames } from './paymentTax'
 
 export const MAX_ITEMS = 20
 export const MIN_ITEM_CENTS = 50
@@ -56,26 +57,67 @@ export function paymentConfigProblem(config: PaymentFieldConfig | null | undefin
   return null
 }
 
-/** The price range a family can be charged: required items, up to every item. */
+/** The price range a family can be charged, with any added tax: required items, up to every item. */
 export function priceRange(config: PaymentFieldConfig | null | undefined): { min: number; max: number } {
   const items = config?.items ?? []
-  const min = items.filter((i) => i.required).reduce((s, i) => s + i.amountCents, 0)
-  const max = items.reduce((s, i) => s + i.amountCents, 0)
-  return { min, max }
+  return {
+    min: priceWithTax(config, []).totalCents,
+    max: priceWithTax(config, items.map((i) => i.id)).totalCents,
+  }
 }
 
-/** "Parents pay $25.00", "Parents pay $25.00 to $31.00", "Optional, up to $6.00". */
+/**
+ * "Parents pay $25.00", "Parents pay $25.00 to $31.00", "Optional, up to $6.00".
+ * With tax: "Parents pay $28.25 ($25.00 + $3.25 HST)", "Parents pay $28.25 to
+ * $35.03 with HST", "Parents pay $25.00 (includes $2.88 HST)".
+ */
 export function priceSummary(config: PaymentFieldConfig | null | undefined): string {
   const { min, max } = priceRange(config)
   if (max === 0) return 'No items yet'
-  if (min === 0) return `Optional, up to ${formatCents(max)}`
-  return min === max ? `Parents pay ${formatCents(min)}` : `Parents pay ${formatCents(min)} to ${formatCents(max)}`
+  const all = priceWithTax(config, (config?.items ?? []).map((i) => i.id))
+  if (all.taxes.length === 0) {
+    if (min === 0) return `Optional, up to ${formatCents(max)}`
+    return min === max ? `Parents pay ${formatCents(min)}` : `Parents pay ${formatCents(min)} to ${formatCents(max)}`
+  }
+  const included = all.taxes.every((t) => t.included)
+  const names = taxNames(all.taxes)
+  if (min === 0) return `Optional, up to ${formatCents(max)}${included ? ` (prices include ${names})` : ` with ${names}`}`
+  if (min === max) {
+    const note = includedNote(all.taxes)
+    return included && note
+      ? `Parents pay ${formatCents(all.totalCents)} (${note.charAt(0).toLowerCase()}${note.slice(1)})`
+      : `Parents pay ${formatCents(all.totalCents)} (${formatCents(all.subtotalCents)} + ${addedTaxParts(all.taxes)})`
+  }
+  return `Parents pay ${formatCents(min)} to ${formatCents(max)}${included ? ` (prices include ${names})` : ` with ${names}`}`
 }
 
-/** The family's total for what they ticked; required items always count. */
+/** The family's total for what they ticked, with any added tax; required items always count. */
 export function selectionTotal(config: PaymentFieldConfig | null | undefined, picked: string[]): number {
-  const chosen = new Set(picked)
-  return (config?.items ?? []).filter((i) => i.required || chosen.has(i.id)).reduce((s, i) => s + i.amountCents, 0)
+  return priceWithTax(config, picked).totalCents
+}
+
+// ─── Cash for a student who never submitted the form ─────────────────
+
+/** What to fix before the office records a payment for a student, or null. The server decides. */
+export function officePaymentProblem(draft: { studentId: string | null; totalCents: number; amountCents: number | null }): string | null {
+  if (!draft.studentId) return 'Choose the student this payment is for.'
+  if (draft.totalCents <= 0) return 'Tick what the family is paying for.'
+  if (!draft.amountCents || draft.amountCents <= 0) return 'Enter the amount received.'
+  if (draft.amountCents > draft.totalCents) return `That’s more than the ${formatCents(draft.totalCents)} owed.`
+  return null
+}
+
+/**
+ * The payment the student already has on this form, when the server refused
+ * a second one (409 ALREADY_ON_FORM, `data.chargeId`); otherwise null. Reads
+ * the error apiClient throws (its `code` and `data`) without importing it.
+ */
+export function alreadyOnFormChargeId(err: unknown): string | null {
+  if (!err || typeof err !== 'object') return null
+  const { code, data } = err as { code?: unknown; data?: unknown }
+  if (code !== 'ALREADY_ON_FORM' || !data || typeof data !== 'object') return null
+  const chargeId = (data as { chargeId?: unknown }).chargeId
+  return typeof chargeId === 'string' && chargeId ? chargeId : null
 }
 
 // ─── Wording a payment's state ────────────────────────────────────────

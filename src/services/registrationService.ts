@@ -11,6 +11,8 @@ import type {
   FormField,
   SubmissionFilters,
 } from './types/registration';
+import type { ApiEnvelope } from './types/finance';
+import type { Charge, LiveTaxRate, OfficePaymentInput } from './types/payments';
 
 // ─── Forms ──────────────────────────────────────────────────────────
 
@@ -157,11 +159,24 @@ export const exportSubmissions = async (formId: string, filters: SubmissionFilte
 
 // ─── Payments ───────────────────────────────────────────────────────
 
-/** Whether the school can take card payments now, for the builder's payment field. */
+/** Whether the school can take card payments now, and its live tax rates, for the builder's payment field. */
 export const getPaymentAvailability = () =>
-  apiClient<{ status: string; data: { configured: boolean; mode: 'test' | 'live' | null; online: boolean; accountStatus: string | null } }>(
-    '/registration/payment-availability'
-  );
+  apiClient<{
+    status: string;
+    data: { configured: boolean; mode: 'test' | 'live' | null; online: boolean; accountStatus: string | null; taxRates?: LiveTaxRate[] };
+  }>('/registration/payment-availability');
+
+/**
+ * Cash, cheque or another payment for a student who never submitted the form
+ * (finance permission): the office's response, its charge and the payment in
+ * one go. Refused with 409 ALREADY_ON_FORM (`data.chargeId`) when the student
+ * already has a payment on this form.
+ */
+export const recordOfficePayment = (formId: string, body: OfficePaymentInput) =>
+  apiClient<ApiEnvelope<Charge>, OfficePaymentInput>(`/registration/forms/${encodeURIComponent(formId)}/office-payments`, {
+    method: 'POST',
+    body,
+  });
 
 // ─── Badge Count ────────────────────────────────────────────────────
 

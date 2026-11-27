@@ -14,6 +14,7 @@ import { getPublicPayment, startPublicPayment } from '@/services/registrationPub
 import type { PublicPayment } from '@/services/types/payments';
 import { formatCents, paidWith } from '@/lib/paymentField';
 import { formatDay } from '@/lib/paymentRequests';
+import { taxBreakdown } from '@/lib/paymentTax';
 import { canPayHere, stripePublishableKey } from '@/lib/stripeEmbedded';
 import EmbeddedStripePayment from '@/components/payments/EmbeddedStripePayment';
 
@@ -129,6 +130,9 @@ export default function PaymentLinkPage() {
 
   const settled = SETTLED.has(payment.status);
   const waitingOnStripe = Boolean(sessionId) && !settled;
+  const tax = taxBreakdown(payment.amountCents, payment.taxSummary);
+  // The school's tax number goes with a taxed payment only; an untaxed one reads as before.
+  const taxNumber = tax.hasTax ? payment.taxNumber : null;
 
   return shell(
     <div className="space-y-4">
@@ -159,10 +163,25 @@ export default function PaymentLinkPage() {
             </li>
           ))}
         </ul>
+        {tax.addedRows.length > 0 && (
+          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-600">Subtotal</span>
+              <span className="font-medium text-slate-900 tabular-nums">{formatCents(payment.subtotalCents ?? tax.subtotalCents)}</span>
+            </div>
+            {tax.addedRows.map((row, i) => (
+              <div key={`${row.label}-${i}`} className="flex justify-between gap-3">
+                <span className="text-slate-600">{row.label}</span>
+                <span className="font-medium text-slate-900 tabular-nums">{formatCents(row.cents)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="mt-3 flex justify-between border-t border-slate-100 pt-3 text-sm font-semibold text-slate-900">
           <span>Total</span>
           <span className="tabular-nums">{formatCents(payment.amountCents)}</span>
         </div>
+        {tax.includedNote && <p className="mt-1 text-right text-xs text-slate-500">{tax.includedNote}</p>}
         {payment.amountRefundedCents > 0 && (
           <div className="mt-1 flex justify-between text-sm text-rose-700">
             <span>Refunded</span>
@@ -182,6 +201,7 @@ export default function PaymentLinkPage() {
               {payment.card && <p className="mt-0.5">Paid with {paidWith({ kind: 'card', cardBrand: payment.card.brand, cardLast4: payment.card.last4, wallet: payment.card.wallet })}</p>}
               {payment.paidAt && <p>{dateOf(payment.paidAt)}</p>}
               <p className="mt-2 text-emerald-800">Reference {payment.reference}. A receipt was emailed to you.</p>
+              {taxNumber && <p className="text-emerald-800">Tax no. {taxNumber}</p>}
             </div>
           </div>
         </div>

@@ -1,35 +1,40 @@
 'use client';
 
 // Finance → Payments, below the Stripe card: what families owe and have paid,
-// from forms and payment requests. Summary tiles, then four tabs: Overview
+// from forms and payment requests. Summary tiles, then five tabs: Overview
 // (months, each form and request, latest activity), Payments (the list:
-// filter, search, page, export), Requests (ask families to pay), and Payouts
-// to the school's bank. A payment opens the charge, where the office records,
-// waives and refunds; a request opens the request.
+// filter, search, page, export), Requests (ask families to pay), Payouts to
+// the school's bank, and Settings (tax rates and the tax number). A payment
+// opens the charge, where the office records, waives and refunds; a request
+// opens the request. The list's Tax column and filter appear once the school
+// has set up tax.
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import StatTile from '@/components/ui/StatTile';
 import EmptyState from '@/components/ui/EmptyState';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { downloadChargesCsv, getPaymentsOverview, getPaymentsSummary, getPayouts, listCharges } from '@/services/paymentsService';
-import type { Charge, ChargeListFilters, ChargeListStatus, PaymentsOverview as Overview, PaymentsSummary, PayoutsData } from '@/services/types/payments';
+import { downloadChargesCsv, getPaymentSettings, getPaymentsOverview, getPaymentsSummary, getPayouts, listCharges } from '@/services/paymentsService';
+import type { Charge, ChargeListFilters, ChargeListStatus, PaymentSettings, PaymentsOverview as Overview, PaymentsSummary, PayoutsData } from '@/services/types/payments';
 import { formatCents, paidWith } from '@/lib/paymentField';
 import { gradeLabel } from '@/lib/paymentRequests';
+import { ledgerShowsTax } from '@/lib/paymentTax';
 import { errorMessage } from '@/components/finance/format';
 import PaymentChip from './PaymentChip';
 import ChargeDetailModal from './ChargeDetailModal';
 import PaymentsOverview from './PaymentsOverview';
 import PaymentRequestsList from './PaymentRequestsList';
 import PaymentRequestDetailModal from './PaymentRequestDetailModal';
+import PaymentSettingsPanel from './PaymentSettingsPanel';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
 
-type Tab = 'overview' | 'payments' | 'requests' | 'payouts';
+type Tab = 'overview' | 'payments' | 'requests' | 'payouts' | 'settings';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'overview', label: 'Overview' },
   { value: 'payments', label: 'Payments' },
   { value: 'requests', label: 'Requests' },
   { value: 'payouts', label: 'Payouts' },
+  { value: 'settings', label: 'Settings' },
 ];
 
 const SOURCE_FILTERS: { value: '' | 'form' | 'request'; label: string }[] = [
@@ -37,6 +42,15 @@ const SOURCE_FILTERS: { value: '' | 'form' | 'request'; label: string }[] = [
   { value: 'form', label: 'Forms' },
   { value: 'request', label: 'Requests' },
 ];
+
+// "All" reads as "All sources" beside the source filter, so it says what it covers.
+const TAX_FILTERS: { value: '' | 'taxed' | 'untaxed'; label: string }[] = [
+  { value: '', label: 'Taxed or untaxed' },
+  { value: 'taxed', label: 'Taxed' },
+  { value: 'untaxed', label: 'Untaxed' },
+];
+
+const filterSelect = 'rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 const STATUS_FILTERS: { value: ChargeListStatus | ''; label: string }[] = [
   { value: '', label: 'All' },
@@ -67,6 +81,11 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<ChargeListStatus | ''>('');
   const [source, setSource] = useState<'' | 'form' | 'request'>('');
+  const [taxFilter, setTaxFilter] = useState<'' | 'taxed' | 'untaxed'>('');
+  // The school's tax rates and tax number (the Settings tab, and whether the list shows tax).
+  const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsKey, setSettingsKey] = useState(0);
   // A form picked on the Overview: the list shows only its payments.
   const [scope, setScope] = useState<{ formId: string; title: string } | null>(null);
   const [openRequest, setOpenRequest] = useState<string | null>(null);
@@ -81,7 +100,7 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
   const [exporting, setExporting] = useState(false);
   const limit = 25;
 
-  const filters: ChargeListFilters = { status: status || null, q: search || null, source: source || null, formId: scope?.formId || null };
+  const filters: ChargeListFilters = { status: status || null, q: search || null, source: source || null, tax: taxFilter || null, formId: scope?.formId || null };
 
   const loadSummary = useCallback(async () => {
     try {
@@ -105,15 +124,22 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
   const loadList = useCallback(async () => {
     setError(null);
     try {
-      const list = await listCharges({ status: status || null, q: search || null, source: source || null, formId: scope?.formId || null, page, limit });
+      const list = await listCharges({ status: status || null, q: search || null, source: source || null, tax: taxFilter || null, formId: scope?.formId || null, page, limit });
       setRows(list.data);
       setTotal(list.pagination.total);
     } catch (err) {
       setError(errorMessage(err, 'Could not load payments'));
     }
-  }, [status, search, source, scope, page]);
+  }, [status, search, source, taxFilter, scope, page]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
+  useEffect(() => {
+    let live = true;
+    getPaymentSettings()
+      .then((res) => { if (live) { setSettings(res.data); setSettingsError(null); } })
+      .catch((err) => { if (live) setSettingsError(errorMessage(err, 'Could not load your payment settings')); });
+    return () => { live = false; };
+  }, [settingsKey]);
   useEffect(() => { if (tab === 'overview') loadOverview(); }, [tab, loadOverview, reloadKey]);
   useEffect(() => { if (tab === 'payments') loadList(); }, [tab, loadList, reloadKey]);
 
@@ -146,11 +172,21 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
   };
 
   const pages = Math.max(1, Math.ceil(total / limit));
+  // Rates removed since still count: their payments are in the list.
+  const showsTax = ledgerShowsTax(settings?.taxRates.length ?? 0, rows);
+  const taxCollected = summary?.taxCollectedThisMonthCents ?? 0;
+  const filtered = Boolean(status || search || source || scope || taxFilter);
 
   return (
     <section className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Collected this month" value={summary ? formatCents(summary.collectedThisMonthCents) : '—'} loading={!summary} tone="good" />
+        <StatTile
+          label="Collected this month"
+          value={summary ? formatCents(summary.collectedThisMonthCents) : '—'}
+          sub={taxCollected > 0 ? `includes ${formatCents(taxCollected)} tax` : undefined}
+          loading={!summary}
+          tone="good"
+        />
         <StatTile label="Still owed" value={summary ? formatCents(summary.outstandingCents) : '—'} sub={summary ? `${summary.outstandingCount} ${summary.outstandingCount === 1 ? 'payment' : 'payments'}` : undefined} loading={!summary} tone={summary && summary.outstandingCents > 0 ? 'warn' : 'neutral'} />
         <StatTile label="Refunded this month" value={summary ? formatCents(summary.refundedThisMonthCents) : '—'} loading={!summary} />
         <StatTile label="Open disputes" value={summary ? summary.openDisputes : '—'} loading={!summary} tone={summary && summary.openDisputes > 0 ? 'bad' : 'neutral'} />
@@ -180,6 +216,8 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
         />
       ) : tab === 'requests' ? (
         <PaymentRequestsList online={online} onOpen={setOpenRequest} reloadKey={reloadKey} />
+      ) : tab === 'settings' ? (
+        <PaymentSettingsPanel settings={settings} error={settingsError} onRetry={() => setSettingsKey((k) => k + 1)} onChange={setSettings} />
       ) : tab === 'payments' ? (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center">
@@ -206,9 +244,19 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
                 value={source}
                 onChange={(e) => { setSource(e.target.value as typeof source); setPage(1); }}
                 aria-label="Source"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className={filterSelect}
               >
                 {SOURCE_FILTERS.map((f) => <option key={f.value || 'all'} value={f.value}>{f.label}</option>)}
+              </select>
+            )}
+            {(showsTax || taxFilter) && (
+              <select
+                value={taxFilter}
+                onChange={(e) => { setTaxFilter(e.target.value as typeof taxFilter); setPage(1); }}
+                aria-label="Tax"
+                className={filterSelect}
+              >
+                {TAX_FILTERS.map((f) => <option key={f.value || 'all'} value={f.value}>{f.label}</option>)}
               </select>
             )}
             <div className="relative sm:ml-auto sm:w-64">
@@ -228,8 +276,8 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
           ) : rows.length === 0 ? (
             <EmptyState
               icon={BanknotesIcon}
-              title={status || search || source || scope ? 'No payments match' : 'No payments yet'}
-              description={status || search || source || scope ? 'Try another filter or search.' : 'Send a payment request, or add a Payment field to a form. What families pay shows here.'}
+              title={filtered ? 'No payments match' : 'No payments yet'}
+              description={filtered ? 'Try another filter or search.' : 'Send a payment request, or add a Payment field to a form. What families pay shows here.'}
             />
           ) : (
             <>
@@ -243,6 +291,7 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
                       <th className="px-5 py-3">Email</th>
                       <th className="px-5 py-3">Status</th>
                       <th className="px-5 py-3 text-right">Amount</th>
+                      {showsTax && <th className="px-5 py-3 text-right">Tax</th>}
                       <th className="px-5 py-3">Paid with</th>
                       <th className="px-5 py-3 text-right">Stripe fee</th>
                       <th className="px-5 py-3 text-right">Still owed</th>
@@ -259,6 +308,9 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
                         <td className="max-w-[200px] truncate px-5 py-3 text-slate-600">{c.payerEmail}</td>
                         <td className="px-5 py-3"><PaymentChip status={c.status} offline={c.chosenMethod === 'offline'} disputeStatus={c.disputeStatus} /></td>
                         <td className="px-5 py-3 text-right text-slate-900">{formatCents(c.amountCents)}</td>
+                        {showsTax && (
+                          <td className="px-5 py-3 text-right text-slate-600">{c.taxCents ? formatCents(c.taxCents) : <span className="text-slate-300">—</span>}</td>
+                        )}
                         <td className="whitespace-nowrap px-5 py-3 text-slate-600">{paidWith(c.lastPayment)}</td>
                         <td className="px-5 py-3 text-right text-slate-500">{c.stripeFeeCents ? formatCents(c.stripeFeeCents) : ''}</td>
                         <td className="px-5 py-3 text-right text-slate-900">{c.balanceCents ? formatCents(c.balanceCents) : ''}</td>
@@ -317,8 +369,8 @@ export default function PaymentsLedger({ stripeConnected, online }: Props) {
         </div>
       )}
 
-      <ChargeDetailModal chargeId={open} onClose={() => setOpen(null)} onChanged={changed} />
-      <PaymentRequestDetailModal requestId={openRequest} online={online} onClose={() => setOpenRequest(null)} onChanged={changed} />
+      <ChargeDetailModal chargeId={open} onClose={() => setOpen(null)} onChanged={changed} taxContext={showsTax} />
+      <PaymentRequestDetailModal requestId={openRequest} online={online} onClose={() => setOpenRequest(null)} onChanged={changed} taxContext={showsTax} />
     </section>
   );
 }

@@ -7,7 +7,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { PublicFormChildren, PublicFormData } from '@/services/types/registration';
 import { getPublicFormChildren, submitPublicForm } from '@/services/registrationPublicService';
-import { formatCents, selectionTotal } from '@/lib/paymentField';
+import { formatCents } from '@/lib/paymentField';
+import { priceWithTax } from '@/lib/paymentTax';
+import type { ChargeTax } from '@/services/types/payments';
 import FormField from './FormField';
 import PaymentFieldInput from './PaymentFieldInput';
 import SuccessMessage from './SuccessMessage';
@@ -29,10 +31,12 @@ export default function PublicFormRenderer({ form }: Props) {
   const online = Boolean(form.payments?.online);
   const [picked, setPicked] = useState<string[]>([]);
   const [method, setMethod] = useState<'card' | 'offline'>(online || !paymentField?.payment?.allowOffline ? 'card' : 'offline');
-  const total = paymentField ? selectionTotal(paymentField.payment, picked) : 0;
+  // What the family pays, with any added tax (the server prices it again).
+  const price = paymentField ? priceWithTax(paymentField.payment, picked) : null;
+  const total = price?.totalCents ?? 0;
   const cantPay = total > 0 && !online && !paymentField?.payment?.allowOffline;
   // Set when the family chose the office, for the confirmation.
-  const [owedAtOffice, setOwedAtOffice] = useState<{ totalCents: number; payPath: string } | null>(null);
+  const [owedAtOffice, setOwedAtOffice] = useState<{ totalCents: number; payPath: string; taxes?: ChargeTax[] } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   // Paying inside this page (Stripe's embedded form) after the form is sent.
   const payHere = online && canPayHere(stripePublishableKey(), form.payments?.testMode);
@@ -102,7 +106,11 @@ export default function PublicFormRenderer({ form }: Props) {
         window.location.assign(payment.checkoutUrl || payment.payPath);
         return;
       }
-      if (payment && payment.method === 'offline') setOwedAtOffice({ totalCents: payment.totalCents, payPath: payment.payPath });
+      if (payment && payment.method === 'offline') {
+        // The tax rows are this page's own sums; shown only when they come to the server's total.
+        const taxes = price && price.totalCents === payment.totalCents ? price.taxes : [];
+        setOwedAtOffice({ totalCents: payment.totalCents, payPath: payment.payPath, taxes });
+      }
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit. Please try again.');
