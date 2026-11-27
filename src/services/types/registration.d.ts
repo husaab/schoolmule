@@ -101,6 +101,10 @@ export interface FormSubmission {
   importedAt: string | null;
   importedBy: string | null;
   importedStudentName: string | null;
+  /** The child it is for: picked by a signed-in parent on the form, or linked by the office. */
+  studentId?: string | null;
+  studentName?: string | null;
+  studentGrade?: string | null;
   /** Null when the response owes nothing. */
   payment?: SubmissionPayment | null;
 }
@@ -167,6 +171,12 @@ export interface PublicPaymentChoice {
 export interface PublicFormResponse {
   status: string;
   data: PublicFormData;
+}
+
+/** A signed-in parent's children at a public form's school. */
+export interface PublicFormChildren {
+  signedIn: boolean;
+  children: { studentId: string; name: string; grade: string }[];
 }
 
 export interface PublicSubmitResponse {

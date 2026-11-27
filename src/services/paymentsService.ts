@@ -5,12 +5,20 @@ import type {
   ChargeListFilters,
   OfflineKind,
   PaymentAccount,
+  PaymentRequest,
+  PaymentRequestDetail,
+  PaymentRequestInput,
+  PaymentRequestTarget,
   PaymentsConnection,
+  PaymentsOverview,
+  PaymentsRoster,
   PaymentsSummary,
   PayoutsData,
+  StudentMatch,
 } from "./types/payments";
 
-// Finance → Payments API (finance permission). Today: the school's Stripe connection.
+// Finance → Payments API (finance permission): the school's Stripe connection,
+// the overview, the ledger, payment requests and payouts.
 const BASE = "/payments";
 
 /** The school's connection as SchoolMule last saw it. Does not call Stripe. */
@@ -47,6 +55,9 @@ const listQuery = (filters: ChargeListFilters = {}) => {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.formId) params.set("formId", filters.formId);
+  if (filters.requestId) params.set("requestId", filters.requestId);
+  if (filters.studentId) params.set("studentId", filters.studentId);
+  if (filters.source) params.set("source", filters.source);
   if (filters.q) params.set("q", filters.q);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
@@ -95,6 +106,60 @@ export const voidChargePayment = (chargeId: string, paymentId: string) =>
 
 export const getPayouts = () =>
   apiClient<ApiEnvelope<PayoutsData>>(`${BASE}/payouts`);
+
+/** Says which child a form payment is for, or none (null). */
+export const setChargeStudent = (chargeId: string, studentId: string | null) =>
+  apiClient<ApiEnvelope<Charge>, { studentId: string | null }>(`${BASE}/charges/${encodeURIComponent(chargeId)}/student`, {
+    method: "PUT",
+    body: { studentId },
+  });
+
+/** Students matching a name (two letters or more), this school year. */
+export const searchPaymentStudents = (q: string) =>
+  apiClient<ApiEnvelope<StudentMatch[]>>(`${BASE}/students?q=${encodeURIComponent(q)}`);
+
+/** The Overview tab in one call: tiles, months, each form and request, the latest activity. */
+export const getPaymentsOverview = () =>
+  apiClient<ApiEnvelope<PaymentsOverview>>(`${BASE}/overview`);
+
+// ─── Payment requests ───────────────────────────────────────────────
+
+export const listPaymentRequests = () =>
+  apiClient<ApiEnvelope<PaymentRequest[]>>(`${BASE}/requests`);
+
+export const getPaymentRequest = (requestId: string) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>>(`${BASE}/requests/${encodeURIComponent(requestId)}`);
+
+/** The year's students and classes, for choosing who a request goes to. */
+export const getPaymentsRoster = () =>
+  apiClient<ApiEnvelope<PaymentsRoster>>(`${BASE}/requests/roster`);
+
+/** Sends a request: a charge for each student, and an email to their guardians (unless notify is false). */
+export const createPaymentRequest = (body: PaymentRequestInput & PaymentRequestTarget & { notify?: boolean }) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>, typeof body>(`${BASE}/requests`, { method: "POST", body });
+
+/** Edits a request. The amount can change only while nobody has paid. */
+export const updatePaymentRequest = (requestId: string, body: Partial<PaymentRequestInput>) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>, typeof body>(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: "PATCH", body });
+
+/** Deletes a request nobody has paid anything on. */
+export const deletePaymentRequest = (requestId: string) =>
+  apiClient<ApiEnvelope<{ deleted: boolean }>>(`${BASE}/requests/${encodeURIComponent(requestId)}`, { method: "DELETE" });
+
+/** Sends the request to more students; anyone asked already is skipped. */
+export const addPaymentRequestStudents = (requestId: string, body: PaymentRequestTarget & { notify?: boolean }) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>, typeof body>(`${BASE}/requests/${encodeURIComponent(requestId)}/students`, { method: "POST", body });
+
+/** Takes a student off a request (only before anything was paid). */
+export const removePaymentRequestCharge = (requestId: string, chargeId: string) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>>(
+    `${BASE}/requests/${encodeURIComponent(requestId)}/charges/${encodeURIComponent(chargeId)}`,
+    { method: "DELETE" }
+  );
+
+/** Emails a reminder to every family that still owes. */
+export const remindPaymentRequest = (requestId: string) =>
+  apiClient<ApiEnvelope<PaymentRequestDetail>>(`${BASE}/requests/${encodeURIComponent(requestId)}/remind`, { method: "POST" });
 
 /** The CSV of the list as filtered (finance permission). */
 export const chargesCsvPath = (filters: ChargeListFilters = {}) => `${BASE}/charges.csv${listQuery(filters)}`;

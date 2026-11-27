@@ -1,22 +1,42 @@
 'use client';
 
-// Finance → Payments, below the Stripe card: what families owe and have paid
-// across every form. Summary tiles, the list (filter, search, page, export),
-// and the payouts Stripe has sent to the school's bank. A row opens the
-// charge, where the office records, waives and refunds.
+// Finance → Payments, below the Stripe card: what families owe and have paid,
+// from forms and payment requests. Summary tiles, then four tabs: Overview
+// (months, each form and request, latest activity), Payments (the list:
+// filter, search, page, export), Requests (ask families to pay), and Payouts
+// to the school's bank. A payment opens the charge, where the office records,
+// waives and refunds; a request opens the request.
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import StatTile from '@/components/ui/StatTile';
 import EmptyState from '@/components/ui/EmptyState';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { downloadChargesCsv, getPaymentsSummary, getPayouts, listCharges } from '@/services/paymentsService';
-import type { Charge, ChargeListStatus, PaymentsSummary, PayoutsData } from '@/services/types/payments';
+import { downloadChargesCsv, getPaymentsOverview, getPaymentsSummary, getPayouts, listCharges } from '@/services/paymentsService';
+import type { Charge, ChargeListFilters, ChargeListStatus, PaymentsOverview as Overview, PaymentsSummary, PayoutsData } from '@/services/types/payments';
 import { formatCents, paidWith } from '@/lib/paymentField';
+import { gradeLabel } from '@/lib/paymentRequests';
 import { errorMessage } from '@/components/finance/format';
 import PaymentChip from './PaymentChip';
 import ChargeDetailModal from './ChargeDetailModal';
+import PaymentsOverview from './PaymentsOverview';
+import PaymentRequestsList from './PaymentRequestsList';
+import PaymentRequestDetailModal from './PaymentRequestDetailModal';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
+
+type Tab = 'overview' | 'payments' | 'requests' | 'payouts';
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'payments', label: 'Payments' },
+  { value: 'requests', label: 'Requests' },
+  { value: 'payouts', label: 'Payouts' },
+];
+
+const SOURCE_FILTERS: { value: '' | 'form' | 'request'; label: string }[] = [
+  { value: '', label: 'All sources' },
+  { value: 'form', label: 'Forms' },
+  { value: 'request', label: 'Requests' },
+];
 
 const STATUS_FILTERS: { value: ChargeListStatus | ''; label: string }[] = [
   { value: '', label: 'All' },
@@ -33,15 +53,24 @@ const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-
 interface Props {
   /** Whether Stripe is connected here (payouts only exist then). */
   stripeConnected: boolean;
+  /** Whether card payments are on right now (connected and active). */
+  online: boolean;
 }
 
-export default function PaymentsLedger({ stripeConnected }: Props) {
+export default function PaymentsLedger({ stripeConnected, online }: Props) {
   const showNotification = useNotificationStore((s) => s.showNotification);
-  const [tab, setTab] = useState<'payments' | 'payouts'>('payments');
+  const [tab, setTab] = useState<Tab>('overview');
   const [summary, setSummary] = useState<PaymentsSummary | null>(null);
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
   const [rows, setRows] = useState<Charge[] | null>(null);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<ChargeListStatus | ''>('');
+  const [source, setSource] = useState<'' | 'form' | 'request'>('');
+  // A form picked on the Overview: the list shows only its payments.
+  const [scope, setScope] = useState<{ formId: string; title: string } | null>(null);
+  const [openRequest, setOpenRequest] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -52,22 +81,47 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
   const [exporting, setExporting] = useState(false);
   const limit = 25;
 
+  const filters: ChargeListFilters = { status: status || null, q: search || null, source: source || null, formId: scope?.formId || null };
+
+  const loadSummary = useCallback(async () => {
+    try {
+      setSummary((await getPaymentsSummary()).data);
+    } catch {
+      // The tiles stay as they were; the tab below says what failed.
+    }
+  }, []);
+
+  const loadOverview = useCallback(async () => {
+    setOverviewError(null);
+    try {
+      const res = await getPaymentsOverview();
+      setOverview(res.data);
+      setSummary(res.data.summary);
+    } catch (err) {
+      setOverviewError(errorMessage(err, 'Could not load the overview'));
+    }
+  }, []);
+
   const loadList = useCallback(async () => {
     setError(null);
     try {
-      const [list, sum] = await Promise.all([
-        listCharges({ status: status || null, q: search || null, page, limit }),
-        getPaymentsSummary(),
-      ]);
+      const list = await listCharges({ status: status || null, q: search || null, source: source || null, formId: scope?.formId || null, page, limit });
       setRows(list.data);
       setTotal(list.pagination.total);
-      setSummary(sum.data);
     } catch (err) {
       setError(errorMessage(err, 'Could not load payments'));
     }
-  }, [status, search, page]);
+  }, [status, search, source, scope, page]);
 
-  useEffect(() => { loadList(); }, [loadList]);
+  useEffect(() => { loadSummary(); }, [loadSummary]);
+  useEffect(() => { if (tab === 'overview') loadOverview(); }, [tab, loadOverview, reloadKey]);
+  useEffect(() => { if (tab === 'payments') loadList(); }, [tab, loadList, reloadKey]);
+
+  /** After a change anywhere (a charge, a request): every view reloads when next shown. */
+  const changed = () => {
+    setReloadKey((k) => k + 1);
+    loadSummary();
+  };
 
   // Search as you stop typing.
   useEffect(() => {
@@ -83,7 +137,7 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
   const exportCsv = async () => {
     setExporting(true);
     try {
-      await downloadChargesCsv({ status: status || null, q: search || null });
+      await downloadChargesCsv(filters);
     } catch (err) {
       showNotification(errorMessage(err, 'Could not export'), 'error');
     } finally {
@@ -102,21 +156,31 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
         <StatTile label="Open disputes" value={summary ? summary.openDisputes : '—'} loading={!summary} tone={summary && summary.openDisputes > 0 ? 'bad' : 'neutral'} />
       </div>
 
-      <div className="flex gap-5 border-b border-slate-200" role="tablist">
-        {(['payments', 'payouts'] as const).map((t) => (
+      <div className="flex gap-5 overflow-x-auto border-b border-slate-200" role="tablist">
+        {TABS.map((t) => (
           <button
-            key={t}
+            key={t.value}
             role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-0.5 pb-2 text-sm font-medium transition-colors ${tab === t ? 'border-cyan-600 text-cyan-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            aria-selected={tab === t.value}
+            onClick={() => setTab(t.value)}
+            className={`-mb-px shrink-0 border-b-2 px-0.5 pb-2 text-sm font-medium transition-colors ${tab === t.value ? 'border-cyan-600 text-cyan-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
-            {t === 'payments' ? 'Payments' : 'Payouts'}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'payments' ? (
+      {tab === 'overview' ? (
+        <PaymentsOverview
+          overview={overview}
+          error={overviewError}
+          onOpenRequest={setOpenRequest}
+          onOpenForm={(formId, title) => { setScope({ formId, title }); setSource(''); setStatus(''); setPage(1); setTab('payments'); }}
+          onOpenCharge={setOpen}
+        />
+      ) : tab === 'requests' ? (
+        <PaymentRequestsList online={online} onOpen={setOpenRequest} reloadKey={reloadKey} />
+      ) : tab === 'payments' ? (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center">
             <div className="flex flex-wrap gap-1.5">
@@ -130,9 +194,26 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
                 </button>
               ))}
             </div>
+            {scope ? (
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-cyan-50 py-1 pl-3 pr-1.5 text-xs font-medium text-cyan-800 ring-1 ring-cyan-200">
+                <span className="truncate">{scope.title}</span>
+                <button type="button" onClick={() => { setScope(null); setPage(1); }} aria-label="Show every form and request" className="rounded-full p-0.5 hover:bg-cyan-100">
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ) : (
+              <select
+                value={source}
+                onChange={(e) => { setSource(e.target.value as typeof source); setPage(1); }}
+                aria-label="Source"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                {SOURCE_FILTERS.map((f) => <option key={f.value || 'all'} value={f.value}>{f.label}</option>)}
+              </select>
+            )}
             <div className="relative sm:ml-auto sm:w-64">
               <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search form or email" aria-label="Search payments" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search student, form or email" aria-label="Search payments" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
             </div>
             <button onClick={exportCsv} disabled={exporting} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               <ArrowDownTrayIcon className="h-4 w-4" />
@@ -147,8 +228,8 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
           ) : rows.length === 0 ? (
             <EmptyState
               icon={BanknotesIcon}
-              title={status || search ? 'No payments match' : 'No payments yet'}
-              description={status || search ? 'Try another filter or search.' : 'Add a Payment field to a form. What families pay through it shows here.'}
+              title={status || search || source || scope ? 'No payments match' : 'No payments yet'}
+              description={status || search || source || scope ? 'Try another filter or search.' : 'Send a payment request, or add a Payment field to a form. What families pay shows here.'}
             />
           ) : (
             <>
@@ -158,6 +239,7 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
                     <tr className="border-b border-slate-100 bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                       <th className="px-5 py-3">Date</th>
                       <th className="px-5 py-3">For</th>
+                      <th className="px-5 py-3">Student</th>
                       <th className="px-5 py-3">Email</th>
                       <th className="px-5 py-3">Status</th>
                       <th className="px-5 py-3 text-right">Amount</th>
@@ -170,7 +252,10 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
                     {rows.map((c) => (
                       <tr key={c.chargeId} onClick={() => setOpen(c.chargeId)} className="cursor-pointer border-b border-slate-50 hover:bg-cyan-50/30">
                         <td className="whitespace-nowrap px-5 py-3 text-slate-600">{day(c.createdAt)}</td>
-                        <td className="max-w-[220px] truncate px-5 py-3 font-medium text-slate-900">{c.formTitle || c.description}</td>
+                        <td className="max-w-[220px] truncate px-5 py-3 font-medium text-slate-900">{c.formTitle || c.requestTitle || c.description}</td>
+                        <td className="max-w-[180px] truncate px-5 py-3 text-slate-700">
+                          {c.studentName ? <>{c.studentName}<span className="ml-1 text-xs text-slate-400">{gradeLabel(c.studentGrade)}</span></> : <span className="text-slate-300">—</span>}
+                        </td>
                         <td className="max-w-[200px] truncate px-5 py-3 text-slate-600">{c.payerEmail}</td>
                         <td className="px-5 py-3"><PaymentChip status={c.status} offline={c.chosenMethod === 'offline'} disputeStatus={c.disputeStatus} /></td>
                         <td className="px-5 py-3 text-right text-slate-900">{formatCents(c.amountCents)}</td>
@@ -232,7 +317,8 @@ export default function PaymentsLedger({ stripeConnected }: Props) {
         </div>
       )}
 
-      <ChargeDetailModal chargeId={open} onClose={() => setOpen(null)} onChanged={() => loadList()} />
+      <ChargeDetailModal chargeId={open} onClose={() => setOpen(null)} onChanged={changed} />
+      <PaymentRequestDetailModal requestId={openRequest} online={online} onClose={() => setOpenRequest(null)} onChanged={changed} />
     </section>
   );
 }

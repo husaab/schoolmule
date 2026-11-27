@@ -64,11 +64,23 @@ export interface ChargePayment {
   voidedAt: string | null;
 }
 
+export type ChargeSource = 'form_submission' | 'request';
+
 export interface Charge {
   chargeId: string;
+  /** A form response, or a payment request the office sent. */
+  sourceType: ChargeSource;
   submissionId: string | null;
   formId: string | null;
   formTitle: string | null;
+  requestId: string | null;
+  requestTitle: string | null;
+  /** A request's due date, "YYYY-MM-DD". */
+  dueDate: string | null;
+  /** The child it is for: picked by a signed-in parent, linked by the office, or the request's student. */
+  studentId: string | null;
+  studentName: string | null;
+  studentGrade: string | null;
   description: string;
   payerEmail: string | null;
   currency: string;
@@ -105,6 +117,10 @@ export type ChargeListStatus = 'open' | 'unpaid' | 'partially_paid' | 'paid' | '
 export interface ChargeListFilters {
   status?: ChargeListStatus | null;
   formId?: string | null;
+  requestId?: string | null;
+  studentId?: string | null;
+  /** Forms or payment requests only. */
+  source?: 'form' | 'request' | null;
   q?: string | null;
   page?: number;
   limit?: number;
@@ -131,8 +147,16 @@ export type OfflineKind = 'cash' | 'cheque' | 'other';
 /** What a family's payment link shows (/pay/<token>). */
 export interface PublicPayment {
   schoolName: string | null;
+  sourceType: ChargeSource;
+  /** The form's title, or the request's. */
   formTitle: string;
   formPath: string | null;
+  /** A request's own words for the family. */
+  requestDescription: string | null;
+  dueDate: string | null;
+  studentName: string | null;
+  /** Whether paying at the office is fine. */
+  allowOffline: boolean;
   currency: string;
   lines: ChargeLine[];
   amountCents: number;
@@ -146,4 +170,164 @@ export interface PublicPayment {
   card: { brand: string | null; last4: string | null; wallet: string | null } | null;
   reference: string;
   testMode: boolean;
+}
+
+// ─── Payment requests: the office asks families to pay ──────────────
+
+export interface PaymentRequestStats {
+  students: number;
+  settled: number;
+  open: number;
+  expectedCents: number;
+  collectedCents: number;
+  outstandingCents: number;
+  waivedCents: number;
+}
+
+export interface PaymentRequest {
+  requestId: string;
+  title: string;
+  description: string | null;
+  currency: string;
+  amountCents: number;
+  /** "YYYY-MM-DD" */
+  dueDate: string | null;
+  allowOffline: boolean;
+  accountingCode: string | null;
+  createdAt: string;
+  createdByName: string | null;
+  stats: PaymentRequestStats;
+}
+
+export interface PaymentRequestCharge extends Charge {
+  /** Where the request's emails went. */
+  guardianEmails: string[];
+}
+
+export interface PaymentRequestDetail extends PaymentRequest {
+  charges: PaymentRequestCharge[];
+  /** After an action: what it did. */
+  result?: { added?: number; removed?: boolean; reminded?: number; open?: number };
+}
+
+/** Who a request goes to: whole grades, whole classes, picked students. */
+export interface PaymentRequestTarget {
+  grades?: string[];
+  classIds?: string[];
+  studentIds?: string[];
+}
+
+export interface PaymentRequestInput {
+  title: string;
+  description: string | null;
+  amountCents: number;
+  dueDate: string | null;
+  allowOffline: boolean;
+  accountingCode: string | null;
+}
+
+export interface RosterStudent {
+  studentId: string;
+  name: string;
+  grade: string;
+  classIds: string[];
+  /** Someone to email: a parent account, or a mother's or father's email. */
+  hasGuardianEmail: boolean;
+}
+
+export interface RosterClass {
+  classId: string;
+  name: string;
+  grade: string;
+  teacherName: string;
+  studentCount: number;
+}
+
+export interface PaymentsRoster {
+  students: RosterStudent[];
+  classes: RosterClass[];
+}
+
+export interface StudentMatch {
+  studentId: string;
+  name: string;
+  grade: string;
+}
+
+// ─── The overview ────────────────────────────────────────────────────
+
+export interface PaymentsMonth {
+  /** "YYYY-MM" */
+  month: string;
+  cardCents: number;
+  officeCents: number;
+  refundedCents: number;
+  stripeFeeCents: number;
+}
+
+export interface PaymentsCollection {
+  source: 'form' | 'request';
+  id: string;
+  title: string;
+  slug?: string;
+  dueDate: string | null;
+  createdAt: string;
+  stats: {
+    count: number;
+    settled: number;
+    open: number;
+    expectedCents: number;
+    collectedCents: number;
+    outstandingCents: number;
+    waivedCents: number;
+  };
+}
+
+export interface PaymentsActivity {
+  paymentId: string;
+  chargeId: string;
+  kind: ChargePaymentKind;
+  status: ChargePayment['status'];
+  amountCents: number;
+  createdAt: string;
+  title: string;
+  sourceType: ChargeSource;
+  studentName: string | null;
+  payerEmail: string | null;
+  paidWith: string | null;
+}
+
+export interface PaymentsOverview {
+  summary: PaymentsSummary;
+  months: PaymentsMonth[];
+  collections: PaymentsCollection[];
+  activity: PaymentsActivity[];
+}
+
+// ─── The parent portal's Payments page ───────────────────────────────
+
+export interface ParentPaymentEntry {
+  chargeId: string;
+  title: string;
+  sourceType: ChargeSource;
+  studentName: string | null;
+  currency: string;
+  amountCents: number;
+  amountPaidCents: number;
+  amountRefundedCents: number;
+  balanceCents: number;
+  status: ChargeStatus;
+  dueDate: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  canPayOnline: boolean;
+  /** The family's own payment page. */
+  payPath: string;
+}
+
+export interface ParentPayments {
+  owing: ParentPaymentEntry[];
+  history: ParentPaymentEntry[];
+  totalOwingCents: number;
+  canPayOnline: boolean;
 }

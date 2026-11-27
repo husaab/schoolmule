@@ -3,16 +3,20 @@
 // One charge, for the office (finance permission): what was asked for, what
 // happened, and what can be done next. Record cash, cheque or another
 // payment, waive what is left, refund card money, email the family a link to
-// pay, or take back an entry recorded by mistake. Every action asks first and
-// keeps the modal open on an error.
+// pay, take back an entry recorded by mistake, or say which child a form
+// payment is for. Every action asks first and keeps the modal open on an
+// error.
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { BanknotesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/modal';
 import { Button, ModalBody, ModalFooter, ModalHeader, inputClass, selectClass } from '@/components/shared/modalKit';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { getCharge, recordOfflinePayment, refundCharge, sendPaymentLink, voidChargePayment, waiveCharge } from '@/services/paymentsService';
-import type { Charge, ChargePayment, OfflineKind } from '@/services/types/payments';
+import {
+  getCharge, recordOfflinePayment, refundCharge, searchPaymentStudents, sendPaymentLink, setChargeStudent, voidChargePayment, waiveCharge,
+} from '@/services/paymentsService';
+import type { Charge, ChargePayment, OfflineKind, StudentMatch } from '@/services/types/payments';
+import { formatDay, gradeLabel } from '@/lib/paymentRequests';
 import { centsToInput, formatCents, isOpenDispute, paidWith, parseDollars, paymentKindLabel } from '@/lib/paymentField';
 import { errorMessage } from '@/components/finance/format';
 import PaymentChip from './PaymentChip';
@@ -24,7 +28,7 @@ interface Props {
   onChanged?: (charge: Charge) => void;
 }
 
-type Panel = null | 'offline' | 'waive' | 'refund' | 'link' | { void: ChargePayment };
+type Panel = null | 'offline' | 'waive' | 'refund' | 'link' | 'student' | { void: ChargePayment };
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -46,6 +50,8 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
   const [sendReceipt, setSendReceipt] = useState(true);
+  const [studentQuery, setStudentQuery] = useState('');
+  const [studentMatches, setStudentMatches] = useState<StudentMatch[]>([]);
 
   const load = useCallback(async () => {
     if (!chargeId) return;
@@ -64,8 +70,22 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
     load();
   }, [load]);
 
+  // Students matching the name typed in the "which child" panel.
+  useEffect(() => {
+    if (panel !== 'student') return;
+    const q = studentQuery.trim();
+    if (q.length < 2) { setStudentMatches([]); return; }
+    let live = true;
+    const t = setTimeout(() => {
+      searchPaymentStudents(q).then((r) => live && setStudentMatches(r.data)).catch(() => live && setStudentMatches([]));
+    }, 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [panel, studentQuery]);
+
   const open = (next: Panel) => {
     setError(null);
+    setStudentQuery('');
+    setStudentMatches([]);
     setNote('');
     setSendReceipt(true);
     setKind('cash');
@@ -104,6 +124,7 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
       return run(() => refundCharge(charge.chargeId, { amountCents, note: note.trim() || null }), 'Refund sent');
     }
     if (panel === 'link') return run(() => sendPaymentLink(charge.chargeId), 'Payment link emailed');
+    if (panel === 'student') return;
     return run(() => voidChargePayment(charge.chargeId, panel.void.paymentId), 'Entry removed');
   };
 
@@ -111,7 +132,14 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
   const owed = charge?.balanceCents ?? 0;
   const refundable = charge?.refundableCents ?? 0;
 
-  const panelTitle = panel === 'offline' ? 'Record a payment'
+  const isRequest = charge?.sourceType === 'request';
+  // Who hears about it: whoever gave an email, otherwise (a request) the student's guardians.
+  const emailTo = charge?.payerEmail || (isRequest ? 'the student’s guardians' : null);
+  const linkStudent = (studentId: string | null, name: string | null) =>
+    charge && run(() => setChargeStudent(charge.chargeId, studentId), studentId ? `Linked to ${name}` : 'Student unlinked');
+
+  const panelTitle = panel === 'student' ? 'Which child is this for?'
+    : panel === 'offline' ? 'Record a payment'
     : panel === 'waive' ? `Waive ${formatCents(owed)}`
       : panel === 'refund' ? 'Refund to the card'
         : panel === 'link' ? 'Email a payment link'
@@ -124,10 +152,10 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
           : 'Remove entry';
 
   return (
-    <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} size="lg" ariaLabel="Payment">
+    <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} closeOnEscape={!busy && !panel} size="lg" ariaLabel="Payment">
       <ModalHeader
-        title={charge?.formTitle || charge?.description || 'Payment'}
-        subtitle={charge?.payerEmail || undefined}
+        title={charge?.formTitle || charge?.requestTitle || charge?.description || 'Payment'}
+        subtitle={charge?.payerEmail || (charge?.sourceType === 'request' ? 'Payment request' : undefined)}
         icon={BanknotesIcon}
         actions={charge ? <PaymentChip status={charge.status} offline={charge.chosenMethod === 'offline'} disputeStatus={charge.disputeStatus} /> : null}
       />
@@ -147,6 +175,25 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
                 The family disputed this card payment with their bank. Respond in your Stripe Dashboard; Stripe holds the money until it’s decided.
               </div>
             )}
+
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><UserIcon className="h-4 w-4" /></span>
+              <div className="min-w-0 flex-1 text-sm">
+                {charge.studentName ? (
+                  <p className="font-medium text-slate-900">{charge.studentName} <span className="font-normal text-slate-500">{gradeLabel(charge.studentGrade)}</span></p>
+                ) : (
+                  <p className="text-slate-500">Not linked to a student</p>
+                )}
+                {isRequest && (
+                  <p className="text-xs text-slate-500">Payment request{charge.dueDate ? ` · due ${formatDay(charge.dueDate)}` : ''}</p>
+                )}
+              </div>
+              {!isRequest && !panel && (
+                <button type="button" onClick={() => open('student')} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50">
+                  {charge.studentName ? 'Change' : 'Link a student'}
+                </button>
+              )}
+            </div>
 
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
@@ -209,12 +256,40 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
                   })}
                 </ul>
               )}
-              {charge.linkSentAt && <p className="mt-2 text-xs text-slate-500">Payment link last emailed {when(charge.linkSentAt)}.</p>}
+              {charge.linkSentAt && <p className="mt-2 text-xs text-slate-500">Payment link last emailed {when(charge.linkSentAt)}</p>}
             </section>
 
             {panel && (
               <section className="space-y-3 rounded-xl border border-cyan-100 bg-cyan-50/40 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">{panelTitle}</h3>
+                {panel === 'student' && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        value={studentQuery}
+                        onChange={(e) => setStudentQuery(e.target.value)}
+                        placeholder="Type the student’s name"
+                        aria-label="Student name"
+                        autoFocus
+                        className={`${inputClass} pl-9`}
+                      />
+                    </div>
+                    {studentMatches.length > 0 && (
+                      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+                        {studentMatches.map((m) => (
+                          <li key={m.studentId}>
+                            <button type="button" disabled={busy} onClick={() => linkStudent(m.studentId, m.name)} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-cyan-50 disabled:opacity-50">
+                              <span className="text-slate-800">{m.name}</span>
+                              <span className="text-xs text-slate-500">{gradeLabel(m.grade)}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {studentQuery.trim().length >= 2 && studentMatches.length === 0 && <p className="text-xs text-slate-500">No student by that name this year.</p>}
+                  </div>
+                )}
                 {panel === 'offline' && (
                   <>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -236,8 +311,8 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
                       <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className={`${inputClass} mt-1`} placeholder="e.g. Cheque 1043" />
                     </label>
                     <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input type="checkbox" checked={sendReceipt} onChange={(e) => setSendReceipt(e.target.checked)} disabled={!charge.payerEmail} className="h-4 w-4 rounded border-slate-300 text-cyan-600" />
-                      Email a receipt{charge.payerEmail ? ` to ${charge.payerEmail}` : ' (no email on this response)'}
+                      <input type="checkbox" checked={sendReceipt} onChange={(e) => setSendReceipt(e.target.checked)} disabled={!emailTo} className="h-4 w-4 rounded border-slate-300 text-cyan-600" />
+                      Email a receipt{emailTo ? ` to ${emailTo}` : ' (no email on this response)'}
                     </label>
                   </>
                 )}
@@ -266,7 +341,9 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
                   </>
                 )}
                 {panel === 'link' && (
-                  <p className="text-sm text-slate-600">{charge.payerEmail} gets an email with a button to pay {formatCents(owed)} by card.</p>
+                  <p className="text-sm text-slate-600">
+                    {isRequest && !charge.payerEmail ? 'The student’s guardians get a reminder' : `${charge.payerEmail} gets an email`} with a button to pay {formatCents(owed)} by card.
+                  </p>
                 )}
                 {typeof panel === 'object' && panel && (
                   <p className="text-sm text-slate-600">
@@ -276,7 +353,11 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
                 {error && <p role="alert" className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
                 <div className="flex justify-end gap-2">
                   <Button variant="secondary" onClick={() => setPanel(null)} disabled={busy}>Cancel</Button>
-                  <Button variant={panel === 'refund' || typeof panel === 'object' ? 'danger' : 'primary'} onClick={confirm} loading={busy}>{confirmLabel}</Button>
+                  {panel === 'student' ? (
+                    charge.studentId && <Button variant="secondary" onClick={() => linkStudent(null, null)} loading={busy}>Unlink {charge.studentName}</Button>
+                  ) : (
+                    <Button variant={panel === 'refund' || typeof panel === 'object' ? 'danger' : 'primary'} onClick={confirm} loading={busy}>{confirmLabel}</Button>
+                  )}
                 </div>
               </section>
             )}
@@ -286,7 +367,7 @@ export default function ChargeDetailModal({ chargeId, onClose, onChanged }: Prop
       {charge && !panel && (
         <ModalFooter>
           <div className="flex w-full flex-wrap justify-end gap-2">
-            {owed > 0 && charge.payerEmail && <Button variant="secondary" onClick={() => open('link')}>Email payment link</Button>}
+            {owed > 0 && emailTo && <Button variant="secondary" onClick={() => open('link')}>Email payment link</Button>}
             {owed > 0 && <Button variant="secondary" onClick={() => open('waive')}>Waive</Button>}
             {refundable > 0 && <Button variant="secondary" onClick={() => open('refund')}>Refund</Button>}
             {owed > 0 && <Button onClick={() => open('offline')}>Record a payment</Button>}
