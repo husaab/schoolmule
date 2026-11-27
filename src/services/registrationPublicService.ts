@@ -106,6 +106,23 @@ export const getPublicPayment = (token: string, sessionId?: string | null) =>
     `${encodeURIComponent(token)}${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''}`
   );
 
-/** Opens Stripe's page for what is still owed. `url` is null when it turned out to be paid already. */
-export const startPublicPayment = (token: string) =>
-  paymentRequest<{ url: string | null; paid: boolean }>(`${encodeURIComponent(token)}/checkout`, { method: 'POST' });
+/** What opening a payment gives back: Stripe's page (`url`), or what Stripe.js needs to show the form inside ours. */
+export interface StartedPayment {
+  url: string | null;
+  /** Embedded only: the Checkout Session's client secret, and the school's account it is on. */
+  clientSecret?: string | null;
+  stripeAccountId?: string | null;
+  /** It turned out to be paid already. */
+  paid: boolean;
+}
+
+/**
+ * Opens a payment for what is still owed: Stripe's own page by default, or
+ * (`ui: 'embedded'`) Stripe's form to show inside our page.
+ */
+export const startPublicPayment = (token: string, ui: 'hosted' | 'embedded' = 'hosted') =>
+  paymentRequest<StartedPayment>(`${encodeURIComponent(token)}/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ui }),
+  });

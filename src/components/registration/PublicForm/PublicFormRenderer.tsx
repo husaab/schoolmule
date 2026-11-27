@@ -12,6 +12,8 @@ import FormField from './FormField';
 import PaymentFieldInput from './PaymentFieldInput';
 import SuccessMessage from './SuccessMessage';
 import ChildPicker from './ChildPicker';
+import EmbeddedStripePayment from '@/components/payments/EmbeddedStripePayment';
+import { canPayHere, stripePublishableKey } from '@/lib/stripeEmbedded';
 
 interface Props {
   form: PublicFormData;
@@ -32,6 +34,9 @@ export default function PublicFormRenderer({ form }: Props) {
   // Set when the family chose the office, for the confirmation.
   const [owedAtOffice, setOwedAtOffice] = useState<{ totalCents: number; payPath: string } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  // Paying inside this page (Stripe's embedded form) after the form is sent.
+  const payHere = online && canPayHere(stripePublishableKey(), form.payments?.testMode);
+  const [paying, setPaying] = useState<{ token: string; totalCents: number; payPath: string } | null>(null);
   // A signed-in parent's children at this school, and the one it is for.
   const [kids, setKids] = useState<PublicFormChildren['children']>([]);
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -55,6 +60,23 @@ export default function PublicFormRenderer({ form }: Props) {
     return <SuccessMessage schoolName={form.schoolName} payAtOffice={owedAtOffice} />;
   }
 
+  if (paying) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="rounded-2xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-sm font-medium text-emerald-700">Your form was received.</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Pay {formatCents(paying.totalCents)}</h1>
+          <p className="mb-5 text-sm text-slate-500">{form.title} · {form.schoolName}</p>
+          <EmbeddedStripePayment
+            token={paying.token}
+            onPaid={() => window.location.assign(paying.payPath)}
+            onUnavailable={() => window.location.assign(paying.payPath)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const onSubmit = async (data: Record<string, string>) => {
     if (cantPay) {
       setError(`This school can’t take payments online right now. Please contact ${form.schoolName}.`);
@@ -63,9 +85,17 @@ export default function PublicFormRenderer({ form }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      const choice = paymentField ? { itemIds: picked, method: total > 0 ? method : 'card' as const } : null;
+      const paysCard = total > 0 && method === 'card';
+      const choice = paymentField
+        ? { itemIds: picked, method: total > 0 ? method : 'card' as const, ...(paysCard && payHere ? { ui: 'embedded' as const } : {}) }
+        : null;
       const res = await submitPublicForm(form.schoolSlug, form.slug, data, {}, choice, studentId);
       const payment = res.data?.payment;
+      if (payment && payment.method === 'card' && payHere) {
+        // Stripe's form right here; if it can't load, the family's own link offers Stripe's page.
+        setPaying({ token: payment.token, totalCents: payment.totalCents, payPath: payment.payPath });
+        return;
+      }
       if (payment && payment.method === 'card') {
         // On to Stripe's page; if Stripe couldn't open one, the family's own link offers it again.
         setRedirecting(true);

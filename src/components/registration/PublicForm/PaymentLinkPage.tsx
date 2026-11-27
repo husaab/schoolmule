@@ -14,6 +14,8 @@ import { getPublicPayment, startPublicPayment } from '@/services/registrationPub
 import type { PublicPayment } from '@/services/types/payments';
 import { formatCents, paidWith } from '@/lib/paymentField';
 import { formatDay } from '@/lib/paymentRequests';
+import { canPayHere, stripePublishableKey } from '@/lib/stripeEmbedded';
+import EmbeddedStripePayment from '@/components/payments/EmbeddedStripePayment';
 
 const SETTLED = new Set(['paid', 'partially_refunded', 'refunded', 'settled']);
 const settledStatus = (status: string) => SETTLED.has(status);
@@ -34,6 +36,9 @@ export default function PaymentLinkPage() {
   const [confirming, setConfirming] = useState(Boolean(sessionId));
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  // Stripe's form inside this page, and whether it failed here (then Stripe's own page).
+  const [payingHere, setPayingHere] = useState(false);
+  const [hereFailed, setHereFailed] = useState(false);
   const tries = useRef(0);
 
   const load = useCallback(async () => {
@@ -72,8 +77,12 @@ export default function PaymentLinkPage() {
   }, []);
 
   const pay = async () => {
-    setStarting(true);
     setStartError(null);
+    if (payment && !hereFailed && canPayHere(stripePublishableKey(), payment.testMode)) {
+      setPayingHere(true);
+      return;
+    }
+    setStarting(true);
     try {
       const res = await startPublicPayment(token);
       if (res.url) {
@@ -203,7 +212,20 @@ export default function PaymentLinkPage() {
             </p>
           )}
 
-          {!waitingOnStripe && payment.canPayOnline && (
+          {!waitingOnStripe && payment.canPayOnline && payingHere && (
+            <div className="mt-4">
+              <EmbeddedStripePayment
+                token={token}
+                onPaid={() => { setPayingHere(false); load(); }}
+                onUnavailable={() => {
+                  setPayingHere(false);
+                  setHereFailed(true);
+                  setStartError('The payment form couldn’t open here. Pay on Stripe’s secure page instead.');
+                }}
+              />
+            </div>
+          )}
+          {!waitingOnStripe && payment.canPayOnline && !payingHere && (
             <>
               <button
                 type="button"
@@ -211,11 +233,11 @@ export default function PaymentLinkPage() {
                 disabled={starting}
                 className="mt-4 w-full rounded-lg bg-cyan-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-cyan-700 disabled:opacity-50"
               >
-                {starting ? 'Opening the payment page…' : `${payment.chosenMethod === 'offline' ? 'Pay online instead' : 'Pay'} ${formatCents(payment.balanceCents)}`}
+                {starting ? 'Opening the payment page…' : hereFailed ? `Pay ${formatCents(payment.balanceCents)} on Stripe’s page` : `${payment.chosenMethod === 'offline' ? 'Pay online instead' : 'Pay'} ${formatCents(payment.balanceCents)}`}
               </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-500">
                 <LockClosedIcon className="h-3.5 w-3.5" />
-                Card, Apple Pay or Google Pay on a secure Stripe page.
+                Card, Apple Pay or Google Pay, processed securely by Stripe.
               </p>
             </>
           )}

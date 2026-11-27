@@ -159,13 +159,16 @@ export interface PublicFormData extends RegistrationFormWithFields {
   schoolName: string;
   schoolSlug: string;
   /** On a form with a payment field: whether the family can pay by card right now. */
-  payments?: { online: boolean; currency: string } | null;
+  /** `testMode`: whether this server takes payments in Stripe's test mode (null without Stripe). */
+  payments?: { online: boolean; currency: string; testMode?: boolean | null } | null;
 }
 
 /** What the family chose to pay, sent with the answers. The server prices it. */
 export interface PublicPaymentChoice {
   itemIds: string[];
   method: 'card' | 'offline';
+  /** 'embedded': the page pays inside itself, so the server opens no Stripe page. */
+  ui?: 'embedded';
 }
 
 export interface PublicFormResponse {
